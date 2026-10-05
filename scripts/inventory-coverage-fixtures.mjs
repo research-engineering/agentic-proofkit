@@ -36,6 +36,30 @@ export function sourceSetInput() {
     sourceTexts: [{path, text}]};
 }
 
+export function twoSourceSetInput({duplicateFalsifier = false, nullFalsifiers = false} = {}) {
+  const source = sourceSetInput(), first = inventoryInput(), second = inventoryInput();
+  first.sourceId = "source.one"; second.sourceId = "source.two";
+  second.entries[0].testId = "test.two";
+  second.entries[0].falsifier.negativeCaseId = "negative.two";
+  if (!duplicateFalsifier) second.entries[0].falsifier.falsifierId = "falsifier.two";
+  if (nullFalsifiers) for (const entry of [first.entries[0], second.entries[0]]) {
+    entry.falsifier = null; entry.oracle = null; entry.evidenceClass = "proof_route_candidate";
+  }
+  source.sources = []; source.sourceTexts = [];
+  for (const item of [first, second]) {
+    const text = JSON.stringify(wrappedInventory(item)), path = `specs/${item.sourceId}.json`;
+    source.sources.push([item.sourceId, path, createHash("sha256").update(text).digest("hex"), "test_evidence_inventory_fragment", [note]]);
+    source.sourceTexts.push({path, text});
+  }
+  return source;
+}
+
+export function ownerInvariantRegistry() {
+  return {schemaVersion: 1, registryId: "registry.one", nonClaims: [note], invariants: [{
+    ownerInvariantId: "invariant.one", ownerId: "owner.one", sourcePath: "specs/owner.json", summary: "Invalid inputs are rejected.", nonClaims: [],
+  }]};
+}
+
 export function discoveryInput() {
   return {schemaVersion: 1, authority: "caller_owned_test_discovery", draftId: "draft.one", repository: {repositoryId: "repo.one"},
     runner: {runnerId: "runner.one", runnerKind: "go_test", commandRef: "test.one", environmentClass: "local-go"},

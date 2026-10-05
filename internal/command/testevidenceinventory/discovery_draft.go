@@ -7,6 +7,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 )
 
 const discoveryDraftReportKind = "proofkit.test-inventory-discovery-draft"
@@ -114,6 +115,10 @@ func BuildDiscoveryDraft(raw any) (report.Record, int, error) {
 			rule("test_inventory.discovery_draft.candidate_only", "passed", "Discovery draft projection emits candidate route-only inventory rows that cannot close semantic coverage."),
 		},
 		NonClaims: admit.StringSliceToAny(discoveryScopeNonClaims(input)),
+	}
+	findings, err := secretjson.Scan(record.JSONValue(), "test_inventory_discovery")
+	if err != nil || len(findings) != 0 {
+		return report.Record{}, 1, fmt.Errorf("test inventory discovery projection contains inadmissible report-visible text")
 	}
 	return record, 0, nil
 }

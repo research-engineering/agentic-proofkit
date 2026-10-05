@@ -5,7 +5,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {annotatedInventoryInput, directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, proofInventoryInput, sourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
+import {annotatedInventoryInput, directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, ownerInvariantRegistry, proofInventoryInput, sourceSetInput, twoSourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_INVENTORY_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -77,6 +77,71 @@ test("inventory modes use real CLI branches and preserve stdin pointer and compa
     }
   }
   native(inventory, discoveryInput(), {flags: ["--projection", "discovery-draft", "--normalized-inventory"], exit: 1, report: false});
+});
+
+test("discovery rejects unsafe composed identities and preserves safe maximum-length IDs", () => {
+  const unsafe = ["eyJabc", "def"].join(".");
+  for (const field of ["draftId", "testId"]) for (const id of ["ordinary.id", "a".repeat(256), unsafe]) {
+    const input = discoveryInput();
+    if (field === "draftId") input.draftId = id;
+    else input.discoveredTests[0].testId = id;
+    validates(inventory, "input", input);
+    if (id === unsafe) {
+      native(inventory, input, {flags: ["--projection", "discovery-draft"], exit: 1, report: false, compare: false, absent: [id]});
+    } else {
+      const output = native(inventory, input, {flags: ["--projection", "discovery-draft"]});
+      const candidate = output.diagnostics.find(row => row.key === "candidateInventory").value;
+      assert.equal(candidate.inventoryId, `${input.draftId}.candidate_inventory`);
+      assert.equal(candidate.authority, "caller_owned_test_discovery_candidate_inventory");
+      assert.equal(candidate.entries[0].testId, input.discoveredTests[0].testId);
+    }
+  }
+});
+
+test("source-set identity admission spans distinct fragments before reporting or normalization", () => {
+  const duplicate = twoSourceSetInput({duplicateFalsifier: true});
+  validates(inventory, "input", duplicate);
+  for (const row of duplicate.sourceTexts) native(inventory, JSON.parse(row.text));
+  for (const flags of [[], ["--normalized-inventory"]]) {
+    native(inventory, duplicate, {flags, exit: 1, report: false, compare: false});
+  }
+  for (const options of [{}, {nullFalsifiers: true}]) {
+    const input = twoSourceSetInput(options);
+    const normalized = native(inventory, input, {flags: ["--normalized-inventory"]});
+    assert.equal(normalized.inventory.entries.length, 2);
+    assert.deepEqual(normalized.entrySources.map(row => row.testId), ["test.one", "test.two"]);
+    const composed = native(composer, normalizedComposeInput(normalized));
+    assert.deepEqual(composed.normalizedTestEvidenceInventory, normalized);
+    native(view, composed, {exit: null});
+  }
+});
+
+test("populated invariant registry preserves required structure across composer and view", () => {
+  const input = directComposeInput(); input.ownerInvariantRegistry = ownerInvariantRegistry();
+  input.testEvidenceInventory.entries[0].ownerInvariantRefs = ["invariant.one"];
+  validates(composer, "input", input);
+  const output = native(composer, input);
+  assert.deepEqual(output.ownerInvariantRegistry, input.ownerInvariantRegistry);
+  native(view, output, {exit: null});
+  for (const [command, direction, baseline] of [[composer, "input", input], [composer, "output", output], [view, "input", output]]) {
+    const check = (change, label) => {
+      const modified = structuredClone(baseline); change(modified.ownerInvariantRegistry);
+      validates(command, direction, modified, false, label);
+      if (direction === "input") native(command, modified, {exit: 1, report: false});
+    };
+    for (const [level, keys] of [["registry", ["schemaVersion", "registryId", "nonClaims", "invariants"]],
+      ["row", ["ownerInvariantId", "ownerId", "sourcePath", "summary", "nonClaims"]]]) {
+      const record = registry => level === "row" ? registry.invariants[0] : registry;
+      for (const key of keys) {
+        check(registry => {delete record(registry)[key];}, `${level} missing ${key}`);
+        for (const value of [null, false]) check(registry => {record(registry)[key] = value;}, `${level} invalid ${key}`);
+      }
+      check(registry => {record(registry).unknown = true;}, `${level} unknown field`);
+    }
+    check(registry => {registry.invariants = [null];}, "null invariant row");
+    check(registry => {registry.nonClaims = [];}, "empty registry nonClaims");
+    check(registry => {registry.schemaVersion = 2;}, "wrong registry version");
+  }
 });
 
 test("proof-derived normalized mappings preserve their whole CLI chain and numeric bound", () => {
