@@ -43,11 +43,13 @@ function invoke(command, input, argv = [command, "--input", "-"]) {
   const result = spawnSync(binary, argv, {input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
   assert.equal(result.error, undefined); assert.equal(result.signal, null); return result;
 }
-const sortedText = values => values.map(x => x.trim()).sort();
-const tuple = (x, level) => [x.producerId, x.producerClass, x.proofClass, x.receiptKind, x.environmentClass, x.provenanceRuleRef.trim(), x.artifactRetentionRuleRef.trim(), level];
+const utf8Order = (a, b) => Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"));
+const normalizedText = text => text.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, "");
+const sortedText = values => values.map(normalizedText).sort(utf8Order);
+const tuple = (x, level) => [x.producerId, x.producerClass, x.proofClass, x.receiptKind, x.environmentClass, normalizedText(x.provenanceRuleRef), normalizedText(x.artifactRetentionRuleRef), level];
 function producerSemantics(input, output) {
-  const changes = [...input.admissionChanges].sort((a, b) => a.changeId.localeCompare(b.changeId));
-  const receipts = [...input.mergeObligationReceiptRefs].sort((a, b) => a.receiptId.localeCompare(b.receiptId));
+  const changes = [...input.admissionChanges].sort((a, b) => utf8Order(a.changeId, b.changeId));
+  const receipts = [...input.mergeObligationReceiptRefs].sort((a, b) => utf8Order(a.receiptId, b.receiptId));
   const newTuples = new Set(changes.filter(x => x.toAdmissionLevel === "merge_satisfying").map(x => JSON.stringify(tuple(x, x.toAdmissionLevel))));
   const self = receipts.filter(x => x.satisfiesMergeObligation && newTuples.has(JSON.stringify(tuple(x, x.producerAdmissionClass))));
   const failures = [];
@@ -62,13 +64,13 @@ function producerSemantics(input, output) {
     if (x.producerAdmissionClass !== "merge_satisfying") failures.push(`merge-obligation receipt ${x.receiptId} does not use a merge_satisfying producer class`);
     if (self.includes(x)) failures.push(`merge-obligation receipt ${x.receiptId} uses newly admitted producer tuple: ${tuple(x, x.producerAdmissionClass).join("|")}`);
   }
-  failures.sort();
+  failures.sort(utf8Order);
   assert.equal(output.reportId, input.guardId); assert.equal(output.state, failures.length ? "failed" : "passed");
   assert.deepEqual(output.summary, {admissionChangeCount: changes.length, declaredMergeObligationReceiptCount: receipts.filter(x => x.satisfiesMergeObligation).length,
     failureCount: failures.length, newlyMergeSatisfyingTupleCount: newTuples.size, policyChanged: input.baselinePolicyDigest !== input.proposedPolicyDigest, selfProofReceiptCount: self.length});
   const policy = {baselinePolicyDigest: input.baselinePolicyDigest, nonClaimRefs: input.nonClaimRefs, policyChangeDigest: input.policyChangeDigest,
-    policyChangeId: input.policyChangeId, policyId: input.policyId, policyOwner: input.policyOwner.trim(), policySurfaceRefs: sortedText(input.policySurfaceRefs), proposedPolicyDigest: input.proposedPolicyDigest};
-  const projected = self.map(x => Object.fromEntries(["artifactRetentionRuleRef", "environmentClass", "nonClaimRefs", "producerClass", "producerId", "proofClass", "proofReceiptDigest", "proofReceiptRef", "provenanceRuleRef", "receiptId", "receiptKind"].map(key => [key, typeof x[key] === "string" ? x[key].trim() : x[key]])));
+    policyChangeId: input.policyChangeId, policyId: input.policyId, policyOwner: normalizedText(input.policyOwner), policySurfaceRefs: sortedText(input.policySurfaceRefs), proposedPolicyDigest: input.proposedPolicyDigest};
+  const projected = self.map(x => Object.fromEntries(["artifactRetentionRuleRef", "environmentClass", "nonClaimRefs", "producerClass", "producerId", "proofClass", "proofReceiptDigest", "proofReceiptRef", "provenanceRuleRef", "receiptId", "receiptKind"].map(key => [key, typeof x[key] === "string" ? normalizedText(x[key]) : x[key]])));
   assert.deepEqual(output.diagnostics, [{key: "failures", value: failures}, {key: "policy", value: policy}, {key: "selfProofReceipts", value: projected}]);
   assert.deepEqual(output.ruleResults, [
     {ruleId: "proofkit.producer-policy-self-proof.boundary", status: "passed", message: "proofkit validates caller-provided producer-policy self-proof facts without authenticating producers or approving merge", diagnostics: []},
@@ -78,15 +80,15 @@ function producerSemantics(input, output) {
 }
 function migrationSemantics(input, output) {
   const owners = new Set(input.sourceProofOwners.map(x => x.ownerId)), targets = new Set(input.targetProofkitRefs.map(x => x.targetId));
-  const records = [...input.parityRecords].sort((a, b) => a.evidenceId.localeCompare(b.evidenceId)).map(x => {
+  const records = [...input.parityRecords].sort((a, b) => utf8Order(a.evidenceId, b.evidenceId)).map(x => {
     const findings = [];
     if (!owners.has(x.sourceOwnerId)) findings.push(`migration parity record ${x.evidenceId} references unknown source owner: ${x.sourceOwnerId}`);
     if (!targets.has(x.targetId)) findings.push(`migration parity record ${x.evidenceId} references unknown target: ${x.targetId}`);
     if (x.status === "caller_declared_match" && x.legacyDigest !== x.proofkitDigest) findings.push(`migration parity record ${x.evidenceId} declares a match but digests differ`);
     if (x.status === "caller_declared_mismatch" && x.legacyDigest === x.proofkitDigest) findings.push(`migration parity record ${x.evidenceId} declares a mismatch but digests are equal`);
     if (x.status !== "caller_declared_match") findings.push(`migration parity record ${x.evidenceId} is not admitted: ${x.status}`);
-    return {...x, evidenceRefs: sortedText(x.evidenceRefs), receiptRefs: [...x.receiptRefs].sort(), nonClaims: sortedText(x.nonClaims),
-      legacySubjectRef: x.legacySubjectRef.trim(), proofkitSubjectRef: x.proofkitSubjectRef.trim(), reason: x.reason.trim(), findings: findings.sort()};
+    return {...x, evidenceRefs: sortedText(x.evidenceRefs), receiptRefs: [...x.receiptRefs].sort(utf8Order), nonClaims: sortedText(x.nonClaims),
+      legacySubjectRef: normalizedText(x.legacySubjectRef), proofkitSubjectRef: normalizedText(x.proofkitSubjectRef), reason: normalizedText(x.reason), findings: findings.sort(utf8Order)};
   });
   const failures = records.flatMap(x => x.findings), admitted = records.filter(x => !x.findings.length);
   assert.equal(output.reportId, input.paritySetId); assert.equal(output.state, failures.length ? "failed" : "passed");
@@ -103,7 +105,7 @@ function migrationSemantics(input, output) {
 function semantics(command, input, output) {
   assert.equal(output.schemaVersion, 1); assert.equal(output.reportKind, "proofkit." + command);
   (command === producer ? producerSemantics : migrationSemantics)(input, output);
-  assert.deepEqual(output.nonClaims, [...builtin[command], ...sortedText(input.nonClaims)].sort());
+  assert.deepEqual(output.nonClaims, [...builtin[command], ...sortedText(input.nonClaims)].sort(utf8Order));
 }
 
 test("authority guards conserve75predecessor streams and independently check native report meanings", () => {
@@ -202,4 +204,44 @@ test("producer tuple identity is injective despite admitted path delimiter colli
   check(0, 1);
   receipt.provenanceRuleRef = change.provenanceRuleRef; receipt.artifactRetentionRuleRef = change.artifactRetentionRuleRef; check(1, 1);
   input.admissionChanges.push({...structuredClone(change), changeId: "change.other", provenanceRuleRef: "docs/a", artifactRetentionRuleRef: "b|docs/c"}); check(1, 2);
+});
+
+test("mixed raw IDs preserve native ordinal record order", () => {
+  for (const command of [producer, migration]) {
+    const input = validInput(command);
+    if (command === producer) {
+      const base = input.mergeObligationReceiptRefs[0]; base.producerId = input.admissionChanges[0].producerId;
+      input.mergeObligationReceiptRefs = ["receipt.a", "receipt._", "receipt.A"].map(receiptId => ({...structuredClone(base), receiptId}));
+    } else {
+      const base = input.parityRecords[0];
+      input.parityRecords = ["evidence.a", "evidence._", "evidence.A"].map(evidenceId => ({...structuredClone(base), evidenceId}));
+    }
+    assert.equal(validators[command].input(input), true);
+    const result = invoke(command, JSON.stringify(input));
+    assert.equal(result.status, command === producer ? 1 : 0); assert.equal(result.stderr, "");
+    const output = JSON.parse(result.stdout); assert.equal(validators[command].output(output), true);
+    const key = command === producer ? "selfProofReceipts" : "migrationParity", id = command === producer ? "receiptId" : "evidenceId";
+    assert.deepEqual(output.diagnostics.find(x => x.key === key).value.map(x => x[id]), command === producer ? ["receipt.A", "receipt._", "receipt.a"] : ["evidence.A", "evidence._", "evidence.a"]);
+    semantics(command, input, output);
+  }
+});
+
+test("Unicode caller text preserves native trim and UTF8 order", () => {
+  for (const command of [producer, migration]) {
+    const input = validInput(command);
+    input.nonClaims = command === producer ? ["\u0085Alpha\u0085", "\uE000 text", "\uFEFFBeta\uFEFF", "\u{10000} text"] : ["\u{10000} text", "\u0085Alpha\u0085", "\uFEFFBeta\uFEFF", "\uE000 text"];
+    if (command === producer) input.policyOwner = "\u0085owner\u0085";
+    else {
+      input.parityRecords[0].reason = "\u0085Reason\u0085";
+      input.parityRecords[0].legacySubjectRef = "\uFEFFSubject\uFEFF";
+      input.parityRecords[0].nonClaims = ["\u{10000} inner", "\uE000 inner"];
+    }
+    assert.equal(validators[command].input(input), true);
+    const result = invoke(command, JSON.stringify(input));
+    assert.equal(result.status, 0); assert.equal(result.stderr, "");
+    const output = JSON.parse(result.stdout); assert.equal(validators[command].output(output), true);
+    assert.ok(output.nonClaims.includes("Alpha")); assert.ok(output.nonClaims.includes("\uFEFFBeta\uFEFF"));
+    assert.deepEqual(output.nonClaims.filter(x => x.endsWith(" text")), ["\uE000 text", "\u{10000} text"]);
+    semantics(command, input, output);
+  }
 });
