@@ -284,9 +284,14 @@ test("direct inventory input clauses distinguish optional data from required rec
 test("normalized receiving records preserve independent parent field constraints", () => {
   for (const [seed, flags] of [[inventoryInput(), []], [sourceSetInput(), []], [proofInventoryInput(), ["--projection", "proof-binding-derived"]]]) {
     const envelope = native(inventory, seed, {flags: [...flags, "--normalized-inventory"]});
+    assert.equal(envelope.sourceAuthority, seed.authority === "caller_owned_inventory_source_set" ? "caller_owned_inventory_source_set" : "caller_owned_inventory");
+    validates(inventory, "output", {...envelope, sourceAuthority: "foreign"}, false, "normalized/sourceAuthority output enum");
     const input = normalizedComposeInput(envelope), output = native(composer, input, {compare: !envelope.projectionKind});
-    for (const [command, baseline] of [[composer, input], [view, output]]) {
-      const reject = rejectionCheck(command, "input", baseline), rootPath = ["normalizedTestEvidenceInventory"];
+    const invalidOutput = structuredClone(output); invalidOutput.normalizedTestEvidenceInventory.sourceAuthority = "foreign";
+    validates(composer, "output", invalidOutput, false, "normalized/sourceAuthority output enum");
+    for (const [command, direction, baseline] of [[inventory, "output", envelope], [composer, "output", output], [composer, "input", input], [view, "input", output]]) {
+      const reject = rejectionCheck(command, direction, baseline), rootPath = command === inventory ? [] : ["normalizedTestEvidenceInventory"];
+      const normalized = value => at(value, rootPath);
       const records = [[rootPath, ["schemaVersion", "normalizedKind", "normalizedInventoryId", "sourceAuthority", "sourceCount", "sourceColumns", "sources", "entrySources", "inputPaths", "inventory", "nonClaims"]]];
       if (envelope.entrySources.length) records.push([[...rootPath, "entrySources", 0], ["path", "sourceId", "testId"]]);
       if (envelope.projectionSummary) {
@@ -300,28 +305,31 @@ test("normalized receiving records preserve independent parent field constraints
           for (const invalid of [null, false]) reject(value => {at(value, path)[key] = invalid;}, `normalized/${path}/${key} invalid`);
         }
       }
-      for (const key of ["sources", "entrySources", "inputPaths", "nonClaims"]) reject(value => {value.normalizedTestEvidenceInventory[key] = [null];}, `normalized/${key} item`);
-      reject(value => {value.normalizedTestEvidenceInventory.nonClaims = [];}, "normalized/nonClaims minimum");
+      for (const key of ["sources", "entrySources", "inputPaths", "nonClaims"]) reject(value => {normalized(value)[key] = [null];}, `normalized/${key} item`);
+      reject(value => {normalized(value).nonClaims = [];}, "normalized/nonClaims minimum");
       for (const [key, invalid] of [["schemaVersion", 2], ["normalizedKind", "foreign"], ["sourceAuthority", "foreign"], ["sourceCount", -1], ["sourceCount", 0.5]]) {
-        reject(value => {value.normalizedTestEvidenceInventory[key] = invalid;}, `normalized/${key} domain`);
+        reject(value => {normalized(value)[key] = invalid;}, `normalized/${key} domain`);
       }
-      for (let index = 0; index < 5; index++) reject(value => {value.normalizedTestEvidenceInventory.sourceColumns[index] = "foreign";}, `normalized/header/${index}`);
+      for (let index = 0; index < 5; index++) reject(value => {normalized(value).sourceColumns[index] = "foreign";}, `normalized/header/${index}`);
       for (const extra of [false, true]) reject(value => {
-        const columns = value.normalizedTestEvidenceInventory.sourceColumns;
+        const columns = normalized(value).sourceColumns;
         if (extra) columns.push("foreign"); else columns.pop();
       }, "normalized/header width");
       if (envelope.sources.length) {
-        for (let index = 0; index < 5; index++) reject(value => {value.normalizedTestEvidenceInventory.sources[0][index] = false;}, `normalized/source/${index}`);
+        for (let index = 0; index < 5; index++) reject(value => {normalized(value).sources[0][index] = false;}, `normalized/source/${index}`);
         for (const extra of [false, true]) reject(value => {
-          const row = value.normalizedTestEvidenceInventory.sources[0];
+          const row = normalized(value).sources[0];
           if (extra) row.push("foreign"); else row.pop();
         }, "normalized/source width");
-        reject(value => {value.normalizedTestEvidenceInventory.sources[0][3] = "foreign";}, "normalized/source role");
-        reject(value => {value.normalizedTestEvidenceInventory.sources[0][4] = [];}, "normalized/source nonClaims minimum");
+        reject(value => {normalized(value).sources[0][3] = "foreign";}, "normalized/source role");
+        reject(value => {normalized(value).sources[0][4] = [];}, "normalized/source nonClaims minimum");
       }
       if (envelope.projectionSummary) {
-        for (const key of ["entryCount", "commandRefCount"]) for (const invalid of [-1, 0.5]) reject(value => {value.normalizedTestEvidenceInventory.projectionSummary[key] = invalid;}, `normalized/summary/${key} count`);
-        reject(value => {value.normalizedTestEvidenceInventory.projectionSummary.routeEntryMappings = [null];}, "normalized/mapping item");
+        for (const key of ["entryCount", "commandRefCount"]) for (const invalid of [-1, 0.5]) reject(value => {normalized(value).projectionSummary[key] = invalid;}, `normalized/summary/${key} count`);
+        reject(value => {normalized(value).projectionSummary.routeEntryMappings = [null];}, "normalized/mapping item");
+        reject(value => {normalized(value).projectionKind = "foreign";}, "normalized/projectionKind domain");
+        reject(value => {normalized(value).projectionSummary.schemaVersion = 1;}, "normalized/summary version");
+        reject(value => {normalized(value).projectionSummary.routeEntryMappings[0].role = "foreign";}, "normalized/mapping role");
       }
     }
   }
