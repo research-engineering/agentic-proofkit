@@ -7,13 +7,26 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 )
 
 const discoveryDraftReportKind = "proofkit.test-inventory-discovery-draft"
 const discoveryAuthority = "caller_owned_test_discovery"
 const discoveryCandidateInventoryAuthority = "caller_owned_test_discovery_candidate_inventory"
 const discoveryCandidateInventoryKind = "proofkit.test-inventory-discovery-draft.candidate-inventory"
+
+const (
+	discoveryCandidateOnly    = "candidate_only"
+	discoveryMissingAnchor    = "missing_declared_route_anchor"
+	discoveryMissingAssertion = "missing_declared_assertion_signal"
+	discoveryFragileSelector  = "selector_fragility"
+)
+
+var discoveryActionTypes = map[string]struct{}{
+	discoveryCandidateOnly:    {},
+	discoveryMissingAnchor:    {},
+	discoveryMissingAssertion: {},
+	discoveryFragileSelector:  {},
+}
 
 var runnerKindSet = map[string]struct{}{
 	"generic":    {},
@@ -87,7 +100,10 @@ func BuildDiscoveryDraft(raw any) (report.Record, int, error) {
 	}
 	warnings := discoveryWarnings(input)
 	sort.Strings(warnings)
-	actions := discoveryActions(input, warnings)
+	actions, err := discoveryActions(input, warnings)
+	if err != nil {
+		return report.Record{}, 1, err
+	}
 	candidateInventory := discoveryCandidateInventory(input)
 	record := report.Record{
 		SchemaVersion: 1,
@@ -116,9 +132,8 @@ func BuildDiscoveryDraft(raw any) (report.Record, int, error) {
 		},
 		NonClaims: admit.StringSliceToAny(discoveryScopeNonClaims(input)),
 	}
-	findings, err := secretjson.Scan(record.JSONValue(), "test_inventory_discovery")
-	if err != nil || len(findings) != 0 {
-		return report.Record{}, 1, fmt.Errorf("test inventory discovery projection contains inadmissible report-visible text")
+	if err := admitReportText(record); err != nil {
+		return report.Record{}, 1, err
 	}
 	return record, 0, nil
 }
@@ -348,20 +363,20 @@ func discoveryWarnings(input discoveryDraftInput) []string {
 	warnings := []string{}
 	for _, test := range input.DiscoveredTests {
 		if len(test.CandidateRequirementRefs) == 0 && len(test.OwnerInvariantRefs) == 0 {
-			warnings = append(warnings, "missing_declared_route_anchor:"+test.TestID)
+			warnings = append(warnings, discoveryMissingAnchor+":"+test.TestID)
 		}
 		if !hasDeclaredAssertionSignal(test.OracleSignals) {
-			warnings = append(warnings, "missing_declared_assertion_signal:"+test.TestID)
+			warnings = append(warnings, discoveryMissingAssertion+":"+test.TestID)
 		}
 		if fragileSelectorSignals(test.SelectorSignals) {
-			warnings = append(warnings, "selector_fragility:"+test.TestID)
+			warnings = append(warnings, discoveryFragileSelector+":"+test.TestID)
 		}
-		warnings = append(warnings, "candidate_only:"+test.TestID)
+		warnings = append(warnings, discoveryCandidateOnly+":"+test.TestID)
 	}
 	return sortedUnique(warnings)
 }
 
-func discoveryActions(input discoveryDraftInput, warnings []string) []map[string]any {
+func discoveryActions(input discoveryDraftInput, warnings []string) ([]map[string]any, error) {
 	actions := []map[string]any{}
 	for _, warning := range warnings {
 		parts := strings.SplitN(warning, ":", 2)
@@ -369,7 +384,10 @@ func discoveryActions(input discoveryDraftInput, warnings []string) []map[string
 			continue
 		}
 		testID := parts[1]
-		actionType := parts[0]
+		actionType, err := admit.Enum(parts[0], discoveryActionTypes, "test inventory discovery action type")
+		if err != nil {
+			return nil, err
+		}
 		message := discoveryActionMessage(actionType)
 		actions = append(actions, map[string]any{
 			"actionId":   "proofkit.test-inventory-draft." + testID + "." + strings.ReplaceAll(actionType, "_", "-"),
@@ -383,18 +401,18 @@ func discoveryActions(input discoveryDraftInput, warnings []string) []map[string
 	sort.Slice(actions, func(left, right int) bool {
 		return actions[left]["actionId"].(string) < actions[right]["actionId"].(string)
 	})
-	return actions
+	return actions, nil
 }
 
 func discoveryActionMessage(actionType string) string {
 	switch actionType {
-	case "candidate_only":
+	case discoveryCandidateOnly:
 		return "Materialize owner-reviewed strict test-evidence-inventory before using this test as coverage evidence."
-	case "missing_declared_route_anchor":
+	case discoveryMissingAnchor:
 		return "Attach the test to a stable requirement or owner invariant before materializing declared route mapping."
-	case "selector_fragility":
+	case discoveryFragileSelector:
 		return "Review selector stability before materializing this test as durable evidence."
-	case "missing_declared_assertion_signal":
+	case discoveryMissingAssertion:
 		return "Declare at least one assertion-capable signal or keep the candidate as route-only evidence."
 	default:
 		return "Review discovered test before materializing strict inventory."

@@ -9,6 +9,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 )
 
 const ReportKind = "proofkit.test-evidence-inventory"
@@ -185,6 +186,9 @@ func Build(raw any) (report.Record, int, error) {
 	if err != nil {
 		return report.Record{}, 1, err
 	}
+	if err := admitReportText(result.Report); err != nil {
+		return report.Record{}, 1, err
+	}
 	return result.Report, result.ExitCode, nil
 }
 
@@ -194,6 +198,9 @@ func BuildNormalized(raw any) (map[string]any, int, error) {
 		return nil, 1, err
 	}
 	if result.ExitCode != 0 {
+		if err := admitReportText(result.Report); err != nil {
+			return nil, 1, err
+		}
 		return result.Report.JSONValue(), result.ExitCode, nil
 	}
 	output, err := normalizedInventoryValue(result.Inventory)
@@ -201,6 +208,15 @@ func BuildNormalized(raw any) (map[string]any, int, error) {
 		return nil, 1, err
 	}
 	return output, 0, nil
+}
+
+// Check only emitted reports: Evaluate also feeds projections that omit them.
+func admitReportText(record report.Record) error {
+	findings, err := secretjson.Scan(record.JSONValue(), "test_inventory")
+	if err != nil || len(findings) != 0 {
+		return errors.New("test evidence inventory report contains inadmissible report-visible text")
+	}
+	return nil
 }
 
 // InventoryValue returns the admitted direct inventory projection owned by this package.

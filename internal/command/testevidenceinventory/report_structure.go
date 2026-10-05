@@ -64,7 +64,7 @@ func DiscoveryOutputShape() jsonshape.Shape {
 	}
 	action := jsonshape.Object(
 		jsonshape.Required("actionId", text), jsonshape.Required("commandRef", text),
-		jsonshape.Required("message", text), jsonshape.Required("testId", text), jsonshape.Required("type", text),
+		jsonshape.Required("message", text), jsonshape.Required("testId", text), jsonshape.Required("type", jsonshape.Enum(discoveryActionTypes)),
 		jsonshape.Required("severity", jsonshape.StringLiteral("review")),
 	)
 	diagnostics := jsonshape.Tuple(

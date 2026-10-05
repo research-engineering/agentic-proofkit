@@ -99,3 +99,64 @@ func TestSourceSetFalsifierIdentityIsCollectionWide(t *testing.T) {
 		}
 	}
 }
+
+func TestInventoryAdmitsOnlyActualReportEgress(t *testing.T) {
+	for _, severity := range []string{"warning", "failure"} {
+		input := validInventory(t).(map[string]any)
+		entry := input["entries"].([]any)[0].(map[string]any)
+		entry["testId"] = "password"
+		entry["qualityFindings"] = []any{map[string]any{
+			"findingId": "finding.one", "class": "tautology", "severity": severity,
+			"ownerReviewState": "candidate", "evidenceRefs": []any{"password"}, "nonClaims": []any{"Synthetic finding only."},
+		}}
+		if _, err := Evaluate(input); err != nil {
+			t.Fatalf("semantic evaluation must not validate an unused presentation: %v", err)
+		}
+		record, code, err := Build(input)
+		if err == nil || code != 1 || record.Diagnostics != nil || record.ReportKind != "" {
+			t.Fatalf("unsafe ordinary report escaped: code=%d err=%v", code, err)
+		}
+		if strings.Contains(err.Error(), "quality_finding:tautology:password:") {
+			t.Fatal("report error disclosed the derived sensitive text")
+		}
+		output, code, err := BuildNormalized(input)
+		if severity == "failure" {
+			if err == nil || code != 1 || output != nil {
+				t.Fatalf("unsafe fallback report escaped: code=%d err=%v", code, err)
+			}
+			continue
+		}
+		if err != nil || code != 0 || output["normalizedKind"] != NormalizedInventoryKind {
+			t.Fatalf("safe normalized data was rejected: code=%d err=%v", code, err)
+		}
+		encoded, err := json.Marshal(output)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wire, err := admission.DecodeJSON(bytes.NewReader(encoded), int64(len(encoded)+1))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := AdmitNormalizedProjection(wire, nil, "safe normalized"); err != nil {
+			t.Fatalf("safe normalized re-admission changed: %v", err)
+		}
+	}
+}
+
+func TestDiscoveryActionsUseClosedOwnerVocabulary(t *testing.T) {
+	input, err := admitDiscoveryDraftInput(validDiscoveryDraft())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range []string{"candidate_only", "missing_declared_assertion_signal", "missing_declared_route_anchor", "selector_fragility"} {
+		actions, err := discoveryActions(input, []string{kind + ":test.one"})
+		if err != nil || len(actions) != 1 || actions[0]["type"] != kind {
+			t.Fatalf("supported discovery kind %s: %v", kind, err)
+		}
+	}
+	for _, kind := range []string{"", "foreign"} {
+		if actions, err := discoveryActions(input, []string{kind + ":test.one"}); err == nil || actions != nil {
+			t.Fatal("unsupported discovery kind was emitted")
+		}
+	}
+}

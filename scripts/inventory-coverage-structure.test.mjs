@@ -58,6 +58,155 @@ function native(command, input, {flags = [], exit = 0, report = true, carrier = 
   return output;
 }
 
+function rejectionCheck(command, direction, baseline, flags = []) {
+  return (mutate, label) => {
+    const changed = structuredClone(baseline); mutate(changed);
+    validates(command, direction, changed, false, label);
+    if (direction === "input") native(command, changed, {flags, exit: 1, report: false});
+  };
+}
+
+test("ordinary and fallback report egress stay separate from safe normalized data", () => {
+  for (const testId of ["test.safe", "password"]) for (const severity of ["warning", "failure"]) {
+    const input = annotatedInventoryInput(); input.entries[0].testId = testId;
+    input.entries[0].qualityFindings[0].evidenceRefs = [testId];
+    input.entries[0].qualityFindings[0].severity = severity;
+    for (const normalized of [false, true]) {
+      const flags = normalized ? ["--normalized-inventory"] : [];
+      const unsafe = testId === "password" && (!normalized || severity === "failure");
+      if (unsafe) {
+        native(inventory, input, {flags, exit: 1, report: false, compare: false, absent: ["quality_finding:tautology:password:"]});
+      } else {
+        const output = native(inventory, input, {flags, exit: severity === "failure" ? 1 : 0});
+        assert.equal(output.normalizedKind === "proofkit.test-evidence-inventory.normalized", normalized && severity === "warning");
+      }
+    }
+  }
+});
+
+test("discovery input records and finite vocabularies have independent clause witnesses", () => {
+  const input = discoveryInput(), flags = ["--projection", "discovery-draft"];
+  for (const path of [[], ["repository"], ["runner"], ["discoveredTests", 0]]) at(input, path).nonClaims = [];
+  native(inventory, input, {flags});
+  const reject = rejectionCheck(inventory, "input", input, flags);
+  const records = [
+    [[], ["schemaVersion", "authority", "draftId", "repository", "runner", "discoveredTests"]],
+    [["repository"], ["repositoryId"]],
+    [["runner"], ["runnerId", "runnerKind", "commandRef", "environmentClass"]],
+    [["discoveredTests", 0], ["testId", "ownerId", "selector", "sourcePath", "title", "candidateRequirementRefs", "ownerInvariantRefs", "oracleSignals", "selectorSignals"]],
+  ];
+  for (const [path, required] of records) {
+    reject(value => {at(value, path).foreign = true;}, `${path} extra field`);
+    for (const key of required) {
+      reject(value => {delete at(value, path)[key];}, `${path}/${key} missing`);
+      for (const value of [null, false]) reject(record => {at(record, path)[key] = value;}, `${path}/${key} invalid`);
+    }
+    for (const absent of [false, true]) {
+      const value = structuredClone(input);
+      if (absent) delete at(value, path).nonClaims; else at(value, path).nonClaims = null;
+      validates(inventory, "input", value); native(inventory, value, {flags});
+    }
+    reject(value => {at(value, path).nonClaims = [false];}, `${path} nonClaims item`);
+  }
+  for (const [path, values, array] of [
+    [["runner", "runnerKind"], ["generic", "go_test", "node_test", "playwright", "pytest", "vitest"], false],
+    [["discoveredTests", 0, "oracleSignals"], ["assertion_present", "expected_exception", "no_assertion_observed", "snapshot_only", "status_or_exit_assertion", "unknown"], true],
+    [["discoveredTests", 0, "selectorSignals"], ["first_or_last_selector", "nth_selector", "raw_css_selector", "role_selector", "structured_selector", "test_id_selector", "text_selector", "unknown", "xpath_selector"], true],
+  ]) {
+    const assign = (record, value) => {at(record, path.slice(0, -1))[path.at(-1)] = array ? [value] : value;};
+    for (const value of values) {
+      const positive = structuredClone(input); assign(positive, value);
+      validates(inventory, "input", positive); native(inventory, positive, {flags});
+    }
+    for (const value of ["", "foreign", null, 1]) reject(record => assign(record, value), `${path} enum`);
+  }
+  reject(value => {value.discoveredTests = [];}, "discovery tests minimum");
+  reject(value => {value.discoveredTests = [null];}, "discovery test item");
+  reject(value => {value.schemaVersion = 2;}, "discovery version");
+  reject(value => {value.authority = "foreign";}, "discovery authority");
+});
+
+test("discovery action types expose exactly the producer routing vocabulary", () => {
+  const input = discoveryInput(), row = input.discoveredTests[0];
+  row.candidateRequirementRefs = []; row.oracleSignals = []; row.selectorSignals = ["raw_css_selector"];
+  const output = native(inventory, input, {flags: ["--projection", "discovery-draft"]});
+  const actions = output.diagnostics.find(row => row.key === "agentActionPlan").value;
+  assert.deepEqual(actions.map(row => row.type).sort(), ["candidate_only", "missing_declared_assertion_signal", "missing_declared_route_anchor", "selector_fragility"]);
+  for (const value of ["", "foreign"]) {
+    const changed = structuredClone(output); changed.diagnostics.find(row => row.key === "agentActionPlan").value[0].type = value;
+    validates(inventory, "output", changed, false, "discovery action enum");
+  }
+});
+
+test("coverage parent records preserve required fields nullable modes and universe domains", () => {
+  const normalized = native(inventory, inventoryInput(), {flags: ["--normalized-inventory"]});
+  for (const input of [directComposeInput(), normalizedComposeInput(normalized)]) {
+    const compact = Object.hasOwn(input, "normalizedTestEvidenceInventory");
+    input.ownerInvariantRegistry = ownerInvariantRegistry();
+    input.options = {scope: "scope.one"}; input.localEnvironmentPolicy = {authority: "caller_provided", localEnvironmentClasses: ["local-go"]};
+    input.coverageUniverse.commandRefs = ["test.one"];
+    for (const [key, surfaceId, path] of [["codeSurfaces", "code.one", "src/one.go"], ["specSurfaces", "spec.one", "specs/requirements.v2.json"], ["testSurfaces", "test.surface", "tests/one.go"]]) {
+      input.coverageUniverse[key] = [{surfaceId, ownerId: "owner.one", path}];
+    }
+    const output = native(composer, input); native(view, output, {exit: null});
+    for (const [command, direction, baseline] of [[composer, "input", input], [composer, "output", output], [view, "input", output]]) {
+      const reject = rejectionCheck(command, direction, baseline);
+      const records = [
+        [["coverageUniverse"], ["schemaVersion", "authority", "universeId", "completenessDeclaration", "ownerIds", "commandRefs", "codeSurfaces", "specSurfaces", "testSurfaces", "nonClaims"]],
+        ...["codeSurfaces", "specSurfaces", "testSurfaces"].map(key => [["coverageUniverse", key, 0], ["surfaceId", "ownerId", "path"]]),
+        [["localEnvironmentPolicy"], ["authority", "localEnvironmentClasses"]], [["options"], []],
+      ];
+      for (const [path, required] of records) {
+        reject(value => {at(value, path).foreign = true;}, `${path} extra field`);
+        for (const key of required) {
+          reject(value => {delete at(value, path)[key];}, `${path}/${key} missing`);
+          for (const value of [null, false]) reject(record => {at(record, path)[key] = value;}, `${path}/${key} invalid`);
+        }
+      }
+      for (const key of ["ownerIds", "nonClaims"]) reject(value => {value.coverageUniverse[key] = [];}, `universe ${key} minimum`);
+      for (const key of ["ownerIds", "nonClaims", "commandRefs", "codeSurfaces", "specSurfaces", "testSurfaces"]) {
+        reject(value => {value.coverageUniverse[key] = [false];}, `universe ${key} item`);
+      }
+      for (const value of ["foreign", ""]) {
+        reject(record => {record.coverageUniverse.completenessDeclaration = value;}, "universe completeness enum");
+        reject(record => {record.coverageUniverse.authority = value;}, "universe authority");
+        reject(record => {record.localEnvironmentPolicy.authority = value;}, "local policy authority");
+      }
+      reject(value => {value.coverageUniverse.schemaVersion = 2;}, "universe version");
+      reject(value => {value.localEnvironmentPolicy.localEnvironmentClasses = [false];}, "local policy item");
+      for (const value of [null, false]) reject(record => {record.options.scope = value;}, "options scope type");
+      for (const completeness of ["full_repository", "selected_owner_surfaces", "selected_paths_advisory"]) {
+        const positive = structuredClone(baseline); positive.coverageUniverse.completenessDeclaration = completeness;
+        validates(command, direction, positive);
+        if (direction === "input") native(command, positive, {exit: command === view ? null : 0});
+      }
+      const rootRequired = ["schemaVersion", "viewInputId", "coverageUniverse", "requirementSource", compact ? "compactProofContract" : "requirementProofBinding"];
+      if (compact) rootRequired.push("localEnvironmentPolicy");
+      if (command === composer && direction === "input") rootRequired.push("composerInputId", "selectedOwnerIds", compact ? "normalizedTestEvidenceInventory" : "testEvidenceInventory");
+      if (direction === "output") {
+        rootRequired.push("compactProofContract", "requirementProofBinding", "testEvidenceInventory", "options", "ownerInvariantRegistry", "localEnvironmentPolicy");
+        if (compact) rootRequired.push("normalizedTestEvidenceInventory");
+      }
+      const nullable = new Set(["options", "ownerInvariantRegistry", ...(compact ? ["requirementProofBinding"] : ["compactProofContract", "localEnvironmentPolicy"])]);
+      for (const key of new Set(rootRequired)) {
+        const missing = structuredClone(baseline); delete missing[key];
+        validates(command, direction, missing, false, `root required ${key}`);
+        if (direction === "input") native(command, missing, {exit: 1, report: false});
+        reject(value => {value[key] = false;}, `root type ${key}`);
+        if (!nullable.has(key)) reject(value => {value[key] = null;}, `root nonnull ${key}`);
+      }
+      reject(value => {value.foreign = true;}, "parent root extra field");
+      reject(value => {value.schemaVersion = 2;}, "parent root version");
+      if (command === composer && direction === "input") reject(value => {value.selectedOwnerIds = [];}, "selected owner minimum");
+      for (const key of ["options", "ownerInvariantRegistry", ...(!compact ? ["localEnvironmentPolicy"] : [])]) {
+        const positive = structuredClone(baseline); positive[key] = null;
+        validates(command, direction, positive);
+        if (direction === "input") native(command, positive, {exit: command === view ? null : 0});
+      }
+    }
+  }
+});
+
 test("inventory modes use real CLI branches and preserve stdin pointer and compact carriers", () => {
   for (const [input, flags] of [[inventoryInput(), []], [sourceSetInput(), []], [wrappedInventory(), []], [wrappedInventory(sourceSetInput()), []],
     [discoveryInput(), ["--projection", "discovery-draft"]], [proofInventoryInput(), ["--projection", "proof-binding-derived"]]]) {
