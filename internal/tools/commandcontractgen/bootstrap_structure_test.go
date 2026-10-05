@@ -89,3 +89,45 @@ func TestBootstrapOutputOwnerDoesNotReuseArbitraryInputMode(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestBootstrapJSONValueAnnotationsRemainNonSemantic(t *testing.T) {
+	owner, ok := nativeStructureOwner("proofkit.self-check.input.v1.json-schema")
+	if !ok {
+		t.Fatal("missing bootstrap owner")
+	}
+	withoutDescription := owner
+	withoutDescription.schema = func() (map[string]any, error) {
+		return map[string]any{"$schema": "https://json-schema.org/draft/2020-12/schema"}, nil
+	}
+	definition, err := withoutDescription.definition()
+	if err != nil {
+		t.Fatalf("optional description was required: %v", err)
+	}
+	if version, err := withoutDescription.contractVersion(definition); err != nil || version != "1" {
+		t.Fatalf("annotation-free version=%s error=%v", version, err)
+	}
+	variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
+	if !reflect.DeepEqual(variant["schema"], map[string]any{"$schema": "https://json-schema.org/draft/2020-12/schema"}) {
+		t.Fatal("optional annotation changed the accepted value domain")
+	}
+	for _, description := range []any{nil, false, json.Number("1"), "", " \t ", []any{}, map[string]any{}} {
+		bad := owner
+		bad.schema = func() (map[string]any, error) {
+			value := selfcheck.InputStructure()
+			value["description"] = description
+			return value, nil
+		}
+		if _, err := bad.definition(); err == nil {
+			t.Fatalf("invalid present description accepted: %T", description)
+		}
+	}
+	for _, schema := range []map[string]any{{}, {"$schema": nil}, {"$schema": "foreign"},
+		{"$schema": "https://json-schema.org/draft/2020-12/schema", "properties": map[string]any{}},
+	} {
+		bad := owner
+		bad.schema = func() (map[string]any, error) { return schema, nil }
+		if _, err := bad.definition(); err == nil {
+			t.Fatal("missing dialect or constraint keyword accepted")
+		}
+	}
+}

@@ -756,9 +756,17 @@ func (owner nativeStructure) root(schema map[string]any) (map[string]any, error)
 		if err := validateNativeVersion(owner.outOfBandVersion); err != nil {
 			return nil, err
 		}
-		description, ok := schema["description"].(string)
-		if len(schema) != 2 || schema["$schema"] != "https://json-schema.org/draft/2020-12/schema" || !ok || strings.TrimSpace(description) == "" {
-			return nil, fmt.Errorf("arbitrary JSON input permits only dialect and description annotations")
+		if err := rejectUnknownKeys(schema, []string{"$schema", "description"}, "arbitrary JSON input schema"); err != nil {
+			return nil, err
+		}
+		if schema["$schema"] != "https://json-schema.org/draft/2020-12/schema" {
+			return nil, fmt.Errorf("arbitrary JSON input requires the declared dialect")
+		}
+		if raw, present := schema["description"]; present {
+			description, ok := raw.(string)
+			if !ok || strings.TrimSpace(description) == "" {
+				return nil, fmt.Errorf("arbitrary JSON input description must be nonempty text when present")
+			}
 		}
 		// This is a field-navigation summary, not an object constraint on input.
 		return map[string]any{"properties": map[string]any{}, "required": []any{}}, nil
