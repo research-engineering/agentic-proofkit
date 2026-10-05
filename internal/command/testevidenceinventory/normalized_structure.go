@@ -11,7 +11,7 @@ import (
 // NormalizedInputStructure preserves the receiving domain, including wrapped
 // direct inventories and absent or null projection markers. Joins stay native.
 func NormalizedInputStructure() map[string]any {
-	fields := normalizedFields(DirectBoundaryShape())
+	fields := normalizedFields(DirectBoundaryShape(), false)
 	fields = append(fields,
 		jsonshape.Optional("projectionKind", jsonshape.Nullable(jsonshape.StringLiteral(ProofBindingProjectionKind))),
 		jsonshape.Optional("projectionSummary", jsonshape.Nullable(projectionSummaryShape())))
@@ -29,7 +29,7 @@ func NormalizedInputStructure() map[string]any {
 }
 
 func NormalizedOutputStructure() map[string]any {
-	return jsonshape.Object(normalizedFields(CanonicalInventoryShape())...).JSONSchema()
+	return jsonshape.Object(normalizedFields(CanonicalInventoryShape(), true)...).JSONSchema()
 }
 
 // NormalizedProjectionStructure describes re-admission's canonical envelope.
@@ -38,19 +38,20 @@ func NormalizedProjectionStructure() map[string]any {
 	schema := NormalizedInputStructure()
 	properties := schema["properties"].(map[string]any)
 	properties["inventory"] = CanonicalInventoryShape().JSONSchema()
+	properties["sources"] = jsonshape.Array(sourceRowShape(true), 0).JSONSchema()
 	properties["projectionKind"] = jsonshape.StringLiteral(ProofBindingProjectionKind).JSONSchema()
 	properties["projectionSummary"] = projectionSummaryShape().JSONSchema()
 	return schema
 }
 
 func ProofBindingNormalizedOutputStructure() map[string]any {
-	fields := normalizedFields(CanonicalInventoryShape())
+	fields := normalizedFields(CanonicalInventoryShape(), true)
 	fields = append(fields, jsonshape.Required("projectionKind", jsonshape.StringLiteral(ProofBindingProjectionKind)),
 		jsonshape.Required("projectionSummary", projectionSummaryShape()))
 	return jsonshape.Object(fields...).JSONSchema()
 }
 
-func normalizedFields(inventory jsonshape.Shape) []jsonshape.Property {
+func normalizedFields(inventory jsonshape.Shape, canonical bool) []jsonshape.Property {
 	text := jsonshape.String()
 	columns := make([]jsonshape.Shape, len(sourceSetColumns))
 	for i, name := range sourceSetColumns {
@@ -63,7 +64,7 @@ func normalizedFields(inventory jsonshape.Shape) []jsonshape.Property {
 		jsonshape.Required("sourceAuthority", jsonshape.Enum(map[string]struct{}{directAuthority: {}, sourceSetAuthority: {}})),
 		jsonshape.Required("sourceCount", jsonshape.IntegerMinimum(0)),
 		jsonshape.Required("sourceColumns", jsonshape.Tuple(columns...)),
-		jsonshape.Required("sources", jsonshape.Array(sourceRowShape(), 0)),
+		jsonshape.Required("sources", jsonshape.Array(sourceRowShape(canonical), 0)),
 		jsonshape.Required("entrySources", jsonshape.Array(jsonshape.Object(
 			jsonshape.Required("path", text), jsonshape.Required("sourceId", text), jsonshape.Required("testId", text),
 		), 0)),
@@ -85,7 +86,7 @@ func projectionSummaryShape() jsonshape.Shape {
 		jsonshape.Required("commandRefCount", jsonshape.IntegerMinimum(0)),
 		jsonshape.Required("routeEntryMappings", jsonshape.Array(jsonshape.Object(
 			jsonshape.Required("bindingRecordId", text), jsonshape.Required("requirementId", text),
-			jsonshape.Required("resolutionOrderIndex", jsonshape.IntegerMinimum(0)),
+			jsonshape.Required("resolutionOrderIndex", jsonshape.IntegerRange(0, compactproofcontract.MaxResolutionOrderIndex)),
 			jsonshape.Required("role", jsonshape.StringLiteral(compactproofcontract.FalsificationWitnessRole)),
 			jsonshape.Required("scenarioId", text), jsonshape.Required("selector", text),
 			jsonshape.Required("surfaceId", text), jsonshape.Required("testId", text), jsonshape.Required("witnessRouteId", text),

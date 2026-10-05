@@ -5,10 +5,10 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, proofInventoryInput, sourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
+import {annotatedInventoryInput, directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, proofInventoryInput, sourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
-const contract = JSON.parse(readFileSync(new URL("proofkit/cli-contract.v2.json", root), "utf8"));
+const contract = JSON.parse(readFileSync(process.env.PROOFKIT_INVENTORY_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
 const inventory = "test-evidence-inventory", composer = "requirement-coverage-input-compose", view = "requirement-coverage-view";
 const validators = new Map();
 for (const command of [inventory, composer, view]) for (const direction of ["input", "output"]) {
@@ -32,7 +32,7 @@ function validates(command, direction, value, expected = true, label = "") {
   assert.equal(check(value), expected, `${command}/${direction}/${label}: ${JSON.stringify(check.errors)}`);
 }
 
-function native(command, input, {flags = [], exit = 0, report = true, carrier = "stdin", compare = true} = {}) {
+function native(command, input, {flags = [], exit = 0, report = true, carrier = "stdin", compare = true, absent = []} = {}) {
   let args = [command, "--input", "-", ...flags], bytes = JSON.stringify(input);
   if (carrier === "pointer") {
     const path = join(directory, "input.json");
@@ -42,6 +42,7 @@ function native(command, input, {flags = [], exit = 0, report = true, carrier = 
   const invoke = path => spawnSync(path, args, {input: bytes, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
   assert.equal(result.error, undefined); assert.equal(result.signal, null);
+  for (const value of absent) assert.equal((result.stdout + result.stderr).includes(value), false, "caller value disclosed");
   if (exit === null) assert.ok([0, 1].includes(result.status), result.stderr);
   else assert.equal(result.status, exit, result.stderr);
   if (process.env.PROOFKIT_INVENTORY_BASELINE && compare) {
@@ -76,6 +77,172 @@ test("inventory modes use real CLI branches and preserve stdin pointer and compa
     }
   }
   native(inventory, discoveryInput(), {flags: ["--projection", "discovery-draft", "--normalized-inventory"], exit: 1, report: false});
+});
+
+test("proof-derived normalized mappings preserve their whole CLI chain and numeric bound", () => {
+  for (const order of [0, Number.MAX_SAFE_INTEGER]) {
+    const proof = proofInventoryInput(); proof.compactProofContract.bindings[0][8][3] = order;
+    const normalized = native(inventory, proof, {flags: ["--projection", "proof-binding-derived", "--normalized-inventory"]});
+    const input = normalizedComposeInput(normalized); input.compactProofContract = proof.compactProofContract;
+    validates(composer, "input", input);
+    const output = native(composer, input, {compare: false});
+    assert.deepEqual(output.normalizedTestEvidenceInventory, normalized);
+    assert.equal(normalized.projectionSummary.routeEntryMappings[0].resolutionOrderIndex, order);
+    const coverage = native(view, output, {exit: 1, compare: false});
+    assert.equal(coverage.requirementCoverage[0].coverageState, "proof_route_candidate_only");
+    assert.equal(coverage.failures.some(value => value.includes("unknown_command_or_witness_ref:") && value.endsWith(normalized.inventory.entries[0].witnessRefs[0])), false);
+    for (const [command, direction, baseline, envelope] of [
+      [inventory, "output", normalized, value => value],
+      [composer, "input", input, value => value.normalizedTestEvidenceInventory],
+      [composer, "output", output, value => value.normalizedTestEvidenceInventory],
+      [view, "input", output, value => value.normalizedTestEvidenceInventory],
+    ]) {
+      for (const invalid of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1, null, "1"]) {
+        const changed = structuredClone(baseline);
+        envelope(changed).projectionSummary.routeEntryMappings[0].resolutionOrderIndex = invalid;
+        validates(command, direction, changed, false, "mapping numeric bound");
+        if (direction === "input") native(command, changed, {exit: 1, report: false});
+      }
+      const row = envelope(baseline).projectionSummary.routeEntryMappings[0];
+      assert.deepEqual(Object.keys(row).sort(), ["bindingRecordId", "requirementId", "resolutionOrderIndex", "role", "scenarioId", "selector", "surfaceId", "testId", "witnessRouteId"]);
+      for (const key of Object.keys(row)) {
+        const changed = structuredClone(baseline); delete envelope(changed).projectionSummary.routeEntryMappings[0][key];
+        validates(command, direction, changed, false, `missing mapping ${key}`);
+        if (direction === "input") native(command, changed, {exit: 1, report: false});
+      }
+    }
+  }
+});
+
+test("raw SHA whitespace normalizes but emitted source metadata remains canonical", () => {
+  const expected = native(inventory, sourceSetInput(), {flags: ["--normalized-inventory"]});
+  for (const padding of [" ", "\u0085\u2000"]) {
+    const source = sourceSetInput(); source.sources[0][2] = padding + source.sources[0][2] + padding;
+    for (const input of [source, wrappedInventory(source)]) {
+      validates(inventory, "input", input);
+      assert.deepEqual(native(inventory, input, {flags: ["--normalized-inventory"]}), expected);
+    }
+    const envelope = structuredClone(expected); envelope.sources[0][2] = padding + envelope.sources[0][2] + padding;
+    validates(inventory, "output", envelope, false, "emitted digest is canonical");
+    const input = normalizedComposeInput(envelope); validates(composer, "input", input);
+    const output = native(composer, input);
+    assert.deepEqual(output.normalizedTestEvidenceInventory, expected);
+    const paddedOutput = structuredClone(output); paddedOutput.normalizedTestEvidenceInventory = envelope;
+    validates(composer, "output", paddedOutput, false);
+    validates(view, "input", paddedOutput);
+    assert.deepEqual(native(view, paddedOutput, {exit: null}), native(view, output, {exit: null}));
+  }
+  for (const digest of ["", " ", "a".repeat(63), "A".repeat(64), ` ${"a".repeat(63)}z `]) {
+    const input = sourceSetInput(); input.sources[0][2] = digest;
+    validates(inventory, "input", input, false); native(inventory, input, {exit: 1, report: false});
+    const envelope = structuredClone(expected); envelope.sources[0][2] = digest;
+    const compose = normalizedComposeInput(envelope);
+    validates(composer, "input", compose, false); native(composer, compose, {exit: 1, report: false});
+  }
+});
+
+test("normalized projection markers are jointly absent null or populated", () => {
+  const proof = proofInventoryInput();
+  const normalized = native(inventory, proof, {flags: ["--projection", "proof-binding-derived", "--normalized-inventory"]});
+  const ordinary = native(inventory, inventoryInput(), {flags: ["--normalized-inventory"]});
+  for (const [original, mutate] of [
+    [normalized, value => {delete value.projectionKind;}],
+    [normalized, value => {delete value.projectionSummary;}],
+    [normalized, value => {value.projectionKind = null;}],
+    [normalized, value => {value.projectionSummary = null;}],
+    [normalized, value => {value.projectionKind = "foreign";}],
+    [normalized, value => {value.projectionSummary.schemaVersion = 1;}],
+    [normalized, value => {value.projectionSummary.routeEntryMappings[0].role = "positive";}],
+  ]) {
+    const envelope = structuredClone(original); mutate(envelope);
+    const input = normalizedComposeInput(envelope);
+    validates(composer, "input", input, false); native(composer, input, {exit: 1, report: false});
+  }
+  for (const markers of [{}, {projectionKind: null}, {projectionSummary: null}, {projectionKind: null, projectionSummary: null}]) {
+    const input = normalizedComposeInput({...ordinary, ...markers});
+    validates(composer, "input", input);
+    const output = native(composer, input);
+    assert.equal(Object.hasOwn(output.normalizedTestEvidenceInventory, "projectionKind"), false);
+    assert.equal(Object.hasOwn(output.normalizedTestEvidenceInventory, "projectionSummary"), false);
+  }
+});
+
+test("rare inventory fields survive normalization composition and coverage", () => {
+  const input = annotatedInventoryInput(), entry = input.entries[0];
+  const normalized = native(inventory, input, {flags: ["--normalized-inventory"]});
+  assert.deepEqual(normalized.inventory.entries[0], entry);
+  const direct = directComposeInput(); direct.testEvidenceInventory = normalized.inventory;
+  const output = native(composer, direct);
+  assert.deepEqual(output.testEvidenceInventory.entries[0], entry);
+  const coverage = native(view, output, {exit: null});
+  const retained = coverage.requirementCoverage[0].tests.find(row => row.testId === entry.testId);
+  for (const [key, value] of Object.entries(entry.falsifier)) assert.deepEqual(retained[key], value);
+  for (const key of ["qualityFindings", "nonClaims"]) assert.deepEqual(retained[key], entry[key]);
+  for (const scope of ["legacy.one", "legacy.two"]) {
+    const scoped = structuredClone(output); scoped.options = {scope};
+    validates(view, "input", scoped);
+    assert.deepEqual(native(view, scoped, {exit: null}), coverage);
+  }
+});
+
+test("unsafe derived identity is refused at the public normalized CLI boundary", () => {
+  const input = inventoryInput(); input.inventoryId = ["eyJabc", "def"].join(".");
+  native(inventory, input);
+  native(inventory, input, {flags: ["--normalized-inventory"], exit: 1, report: false,
+    compare: false, absent: [input.inventoryId, input.inventoryId + ".normalized"]});
+});
+
+function at(value, path) { return path.reduce((record, key) => record[key], value); }
+function objectPaths(value, path = []) {
+  if (value === null || typeof value !== "object") return [];
+  return [...(Array.isArray(value) ? [] : [path]),
+    ...Object.entries(value).flatMap(([key, child]) => objectPaths(child, [...path, key]))];
+}
+
+test("new inventory output records have independent required key null type and count controls", () => {
+  const failedInput = inventoryInput(); failedInput.entries[0].commandRefs = [];
+  const draftInput = discoveryInput(); draftInput.discoveredTests[0].oracleSignals = [];
+  const fixtures = [
+    native(inventory, inventoryInput()),
+    native(inventory, failedInput, {exit: 1}),
+    native(inventory, draftInput, {flags: ["--projection", "discovery-draft"]}),
+    native(inventory, sourceSetInput(), {flags: ["--normalized-inventory"]}),
+    native(inventory, annotatedInventoryInput(), {flags: ["--normalized-inventory"]}),
+    native(inventory, proofInventoryInput(), {flags: ["--projection", "proof-binding-derived", "--normalized-inventory"]}),
+  ];
+  for (const baseline of fixtures) {
+    for (const path of objectPaths(baseline)) {
+      const original = at(baseline, path);
+      const unknown = structuredClone(baseline); at(unknown, path).undeclared = true;
+      validates(inventory, "output", unknown, false, `${path}/unknown`);
+      for (const [key, value] of Object.entries(original)) {
+        // Only inventory-level identity annotations and declaration refs are optional.
+        const optional = (original.authority === "caller_owned_inventory" && ["ownerId", "sourceId"].includes(key)) || key === "supersessionDeclarationRef";
+        const missing = structuredClone(baseline); delete at(missing, path)[key];
+        validates(inventory, "output", missing, optional, `${path}/${key}/presence`);
+        const wrong = structuredClone(baseline); at(wrong, path)[key] = typeof value === "string" ? 0 : "wrong-type";
+        validates(inventory, "output", wrong, false, `${path}/${key}/type`);
+        const nullable = key === "falsifier" || key === "oracle";
+        const nil = structuredClone(baseline); at(nil, path)[key] = null;
+        validates(inventory, "output", nil, nullable, `${path}/${key}/null`);
+        if (typeof value === "number") {
+          const negative = structuredClone(baseline); at(negative, path)[key] = -1;
+          validates(inventory, "output", negative, false, `${path}/${key}/nonnegative`);
+          const fraction = structuredClone(baseline); at(fraction, path)[key] = 0.5;
+          validates(inventory, "output", fraction, false, `${path}/${key}/integer`);
+        }
+      }
+    }
+    if (baseline.reportKind) {
+      for (const field of ["diagnostics", "ruleResults"]) {
+        for (const operation of ["remove", "append"]) {
+          const changed = structuredClone(baseline);
+          if (operation === "remove") changed[field].pop(); else changed[field].push(structuredClone(changed[field][0]));
+          validates(inventory, "output", changed, false, `${field}/${operation}`);
+        }
+      }
+    }
+  }
 });
 
 test("failed normalized reports remain reports and discovery fallback remains advisory", () => {

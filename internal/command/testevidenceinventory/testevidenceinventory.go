@@ -560,7 +560,7 @@ func admitEntry(raw any) (Entry, error) {
 	if err != nil {
 		return Entry{}, err
 	}
-	witnessRefs, err := sortedWitnessRefs(record["witnessRefs"], fmt.Sprintf("test evidence inventory %s witnessRefs", testID))
+	witnessRefs, err := AdmitWitnessRefs(record["witnessRefs"], fmt.Sprintf("test evidence inventory %s witnessRefs", testID))
 	if err != nil {
 		return Entry{}, err
 	}
@@ -997,7 +997,8 @@ func sortedRuleIDs(raw any, context string, allowEmpty bool) ([]string, error) {
 	return admit.PreserveSortedText(result, context, allowEmpty)
 }
 
-func sortedWitnessRefs(raw any, context string) ([]string, error) {
+// AdmitWitnessRefs owns the union of stable rule IDs and content-bound routes.
+func AdmitWitnessRefs(raw any, context string) ([]string, error) {
 	values, ok := raw.([]any)
 	if !ok {
 		return nil, fmt.Errorf("%s must be an array", context)

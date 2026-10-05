@@ -17,6 +17,15 @@ export function wrappedInventory(inventory = inventoryInput()) {
   return {schema: "proofkit.requirement-test-inventory.v1", inventory};
 }
 
+export function annotatedInventoryInput() {
+  const input = inventoryInput(), entry = input.entries[0];
+  entry.falsifier.supersessionDeclarationRef = "declaration.one";
+  entry.nonClaims = ["A retained caller boundary, not native proof."];
+  entry.qualityFindings = [{findingId: "finding.one", class: "tautology", severity: "warning", ownerReviewState: "candidate",
+    evidenceRefs: ["test.one"], nonClaims: ["Synthetic warning, not confirmed test harm."]}];
+  return input;
+}
+
 export function sourceSetInput() {
   const inventory = inventoryInput(); inventory.sourceId = "source.one";
   const text = JSON.stringify(wrappedInventory(inventory));

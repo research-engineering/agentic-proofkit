@@ -43,16 +43,22 @@ func SourceSetInputShape() jsonshape.Shape {
 		jsonshape.Required("inventoryId", text),
 		jsonshape.Required("nonClaims", jsonshape.Array(text, 1)),
 		jsonshape.Required("sourceColumns", jsonshape.Tuple(columns...)),
-		jsonshape.Required("sources", jsonshape.Array(sourceRowShape(), 1)),
+		jsonshape.Required("sources", jsonshape.Array(sourceRowShape(false), 1)),
 		jsonshape.Required("sourceTexts", jsonshape.Array(jsonshape.Object(
 			jsonshape.Required("path", text), jsonshape.Required("text", text),
 		), 1)),
 	)
 }
 
-func sourceRowShape() jsonshape.Shape {
+func sourceRowShape(canonical bool) jsonshape.Shape {
+	digest := jsonshape.StringGrammar(`[a-f0-9]{64}`)
+	if !canonical {
+		digest = jsonshape.WhitespaceStringGrammar(func(space string) string {
+			return "[" + space + "]*[a-f0-9]{64}[" + space + "]*"
+		})
+	}
 	return jsonshape.Tuple(jsonshape.String(), jsonshape.String(),
-		jsonshape.StringGrammar(`[a-f0-9]{64}`), jsonshape.Enum(sourceRoles),
+		digest, jsonshape.Enum(sourceRoles),
 		jsonshape.Array(jsonshape.String(), 1))
 }
 

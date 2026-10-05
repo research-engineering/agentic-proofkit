@@ -142,6 +142,9 @@ func admitRetainedUnknownReferenceDiagnostics(record map[string]any, failures []
 		for _, witness := range append(stringArray(row["witnessRefs"]), stringArray(row["witnessSelectors"])...) {
 			knownWitnesses[witness] = struct{}{}
 		}
+		for _, rawRoute := range anyArray(row["declaredWitnessRoutes"]) {
+			knownWitnesses[stringValue(rawRoute.(map[string]any)["witnessRouteId"])] = struct{}{}
+		}
 	}
 	for _, raw := range record["ownerInvariantCoverage"].([]any) {
 		knownOwnerInvariants[stringValue(raw.(map[string]any)["ownerInvariantId"])] = struct{}{}

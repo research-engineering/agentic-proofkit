@@ -65,9 +65,12 @@ func admitProjectedTestSemantics(raw any, context string) ([]testevidenceinvento
 		if err != nil {
 			return nil, err
 		}
-		witnessRefs, err := admitProjectedRuleIDs(test["witnessRefs"], testContext+" witnessRefs")
+		witnessRefs, err := testevidenceinventory.AdmitWitnessRefs(test["witnessRefs"], testContext+" witnessRefs")
 		if err != nil {
 			return nil, err
+		}
+		if !slices.Equal(witnessRefs, stringArray(test["witnessRefs"])) {
+			return nil, fmt.Errorf("%s witnessRefs must retain canonical wire values", testContext)
 		}
 		selector, err := admit.DisplayOnlyCommandText(test["selector"], testContext+" selector")
 		if err != nil {

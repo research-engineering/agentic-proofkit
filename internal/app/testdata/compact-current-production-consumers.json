@@ -53,6 +53,7 @@
     "internal/command/requirementcoverageview/output_row_structure.go",
     "internal/command/requirementcoverageview/output_semantics.go",
     "internal/command/requirementcoverageview/output_structure.go",
+    "internal/command/requirementcoverageview/output_test_projection.go",
     "internal/command/requirementcoverageview/projection.go",
     "internal/command/requirementcoverageview/requirementcoverageview.go",
     "internal/command/requirementcoverageview/types.go",

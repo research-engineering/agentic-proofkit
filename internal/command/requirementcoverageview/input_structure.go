@@ -31,6 +31,9 @@ func InputStructure() (map[string]any, error) {
 		"normalizedInventory":  testevidenceinventory.NormalizedInputStructure(),
 	}
 	properties := schema["properties"].(map[string]any)
+	options := OptionsShape().JSONSchema()
+	options["properties"].(map[string]any)["scope"].(map[string]any)["description"] = "Legacy compatibility field: native admission requires a RuleID, but its value has no selection effect. coverageUniverse owns the coverage scope."
+	properties["options"] = nullableStructure(options)
 	properties["requirementSource"] = source
 	properties["requirementProofBinding"] = nullableStructure(requirementbinding.InputStructure())
 	properties["compactProofContract"] = nullableStructure(map[string]any{"$ref": "#/$defs/compactProofContract"})
