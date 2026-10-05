@@ -101,6 +101,9 @@ func admitSourceSetInventory(record map[string]any) (Inventory, error) {
 	if err := assertUnique(entryIDs(entries), "test evidence inventory source set testIds"); err != nil {
 		return Inventory{}, err
 	}
+	if err := assertUnique(falsifierIDs(entries), "test evidence inventory source set falsifierIds"); err != nil {
+		return Inventory{}, err
+	}
 	sort.Strings(inputPaths)
 	return Inventory{
 		Authority: authority, Entries: entries, EntrySources: entrySources, InputPaths: inputPaths, InventoryID: inventoryID,

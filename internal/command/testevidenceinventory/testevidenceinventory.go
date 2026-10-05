@@ -9,10 +9,12 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 )
 
 const ReportKind = "proofkit.test-evidence-inventory"
 const NormalizedInventoryKind = "proofkit.test-evidence-inventory.normalized"
+const normalizedInventoryIDSuffix = ".normalized"
 const directAuthority = "caller_owned_inventory"
 const sourceSetAuthority = "caller_owned_inventory_source_set"
 const wrappedInventorySchema = "proofkit.requirement-test-inventory.v1"
@@ -184,6 +186,9 @@ func Build(raw any) (report.Record, int, error) {
 	if err != nil {
 		return report.Record{}, 1, err
 	}
+	if err := admitReportText(result.Report); err != nil {
+		return report.Record{}, 1, err
+	}
 	return result.Report, result.ExitCode, nil
 }
 
@@ -193,9 +198,25 @@ func BuildNormalized(raw any) (map[string]any, int, error) {
 		return nil, 1, err
 	}
 	if result.ExitCode != 0 {
+		if err := admitReportText(result.Report); err != nil {
+			return nil, 1, err
+		}
 		return result.Report.JSONValue(), result.ExitCode, nil
 	}
-	return normalizedInventoryValue(result.Inventory), 0, nil
+	output, err := normalizedInventoryValue(result.Inventory)
+	if err != nil {
+		return nil, 1, err
+	}
+	return output, 0, nil
+}
+
+// Check only emitted reports: Evaluate also feeds projections that omit them.
+func admitReportText(record report.Record) error {
+	findings, err := secretjson.Scan(record.JSONValue(), "test_inventory")
+	if err != nil || len(findings) != 0 {
+		return errors.New("test evidence inventory report contains inadmissible report-visible text")
+	}
+	return nil
 }
 
 // InventoryValue returns the admitted direct inventory projection owned by this package.
@@ -282,10 +303,14 @@ func EvaluateDirect(raw any) (Result, error) {
 	return result, nil
 }
 
-func normalizedInventoryValue(inventory Inventory) map[string]any {
+func normalizedInventoryValue(inventory Inventory) (map[string]any, error) {
+	normalizedID, err := admitNormalizedInventoryID(inventory.InventoryID+normalizedInventoryIDSuffix, "normalizedInventoryId")
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"schemaVersion":         json.Number("1"),
-		"normalizedInventoryId": inventory.InventoryID + ".normalized",
+		"normalizedInventoryId": normalizedID,
 		"normalizedKind":        NormalizedInventoryKind,
 		"sourceAuthority":       inventory.Authority,
 		"sourceCount":           json.Number(fmt.Sprintf("%d", inventory.SourceCount)),
@@ -298,7 +323,7 @@ func normalizedInventoryValue(inventory Inventory) map[string]any {
 			"Normalized test evidence inventory is a deterministic projection over explicit caller-owned inventory input.",
 			"Normalized test evidence inventory does not discover repository files, execute tests, authenticate receipts, or approve merge, release, rollout, or repository policy.",
 		})),
-	}
+	}, nil
 }
 
 func sourceRowsToAny(rows []SourceMetadata) []any {
@@ -551,7 +576,7 @@ func admitEntry(raw any) (Entry, error) {
 	if err != nil {
 		return Entry{}, err
 	}
-	witnessRefs, err := sortedWitnessRefs(record["witnessRefs"], fmt.Sprintf("test evidence inventory %s witnessRefs", testID))
+	witnessRefs, err := AdmitWitnessRefs(record["witnessRefs"], fmt.Sprintf("test evidence inventory %s witnessRefs", testID))
 	if err != nil {
 		return Entry{}, err
 	}
@@ -938,37 +963,6 @@ func diagnosticClassifications(diagnostics []string, severity string) []map[stri
 	return result
 }
 
-func diagnosticClassID(diagnostic string) string {
-	switch {
-	case strings.HasPrefix(diagnostic, "candidate_only:"):
-		return "candidate_only"
-	case strings.HasPrefix(diagnostic, "declared_duplicate_falsifier:"):
-		return "declared_duplicate_falsifier"
-	case strings.HasPrefix(diagnostic, "invalid_falsifier_supersession:"):
-		return "invalid_falsifier_supersession"
-	case strings.HasPrefix(diagnostic, "missing_declared_route_anchor:"):
-		return "missing_declared_route_anchor"
-	case strings.HasPrefix(diagnostic, "missing_executable_command_ref:"):
-		return "missing_executable_command_ref"
-	case strings.HasPrefix(diagnostic, "quality_finding:"):
-		parts := strings.SplitN(diagnostic, ":", 4)
-		if len(parts) >= 2 {
-			return parts[1]
-		}
-	case strings.HasPrefix(diagnostic, "proof_route_candidate:"):
-		return "proof_route_candidate"
-	case strings.HasPrefix(diagnostic, "route_only_nonclaim:"):
-		return "routing_smoke_only"
-	case strings.HasPrefix(diagnostic, "selector_fragility:"):
-		return "selector_fragility"
-	case strings.HasPrefix(diagnostic, "incomplete_declared_oracle_metadata:"):
-		return "incomplete_declared_oracle_metadata"
-	case strings.HasPrefix(diagnostic, "wrong_evidence_boundary:"):
-		return "wrong_evidence_boundary"
-	}
-	return "unclassified_test_inventory_gap"
-}
-
 func mapsToAny(values []map[string]any) []any {
 	result := make([]any, 0, len(values))
 	for _, value := range values {
@@ -1019,7 +1013,8 @@ func sortedRuleIDs(raw any, context string, allowEmpty bool) ([]string, error) {
 	return admit.PreserveSortedText(result, context, allowEmpty)
 }
 
-func sortedWitnessRefs(raw any, context string) ([]string, error) {
+// AdmitWitnessRefs owns the union of stable rule IDs and content-bound routes.
+func AdmitWitnessRefs(raw any, context string) ([]string, error) {
 	values, ok := raw.([]any)
 	if !ok {
 		return nil, fmt.Errorf("%s must be an array", context)

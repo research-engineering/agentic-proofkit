@@ -40,7 +40,7 @@ func nativeChildBindings() []nativeChildBinding {
 		{"requirement-browser-server", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "01-coverage-compact"},
 		{"requirement-coverage-input-compose", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
 		{"requirement-coverage-input-compose", "output", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
-		{"requirement-coverage-view", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "01-coverage-compact"},
+		{"requirement-coverage-view", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
 		{"requirement-impact-input-compose", "input", compactV2DefinitionID, [][]string{{"baseCompactProofContract"}, {"currentCompactProofContract"}}, ""},
 		{"test-evidence-inventory", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "03-proof-binding-derived"},
 		{"requirement-proof-source-set", "output", compactV2DefinitionID, [][]string{{"resolverInput"}}, ""},

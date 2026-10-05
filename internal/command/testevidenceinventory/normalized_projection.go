@@ -47,6 +47,22 @@ type NormalizedProjection struct {
 	Result    Result
 }
 
+func admitNormalizedInventoryID(raw any, context string) (string, error) {
+	value, err := admit.RuleID(raw, context)
+	if err == nil {
+		return value, nil
+	}
+	text, ok := raw.(string)
+	if !ok || len(text) <= admit.MaxRuleIDBytes {
+		return "", err
+	}
+	// A valid base bounds this derived form without widening generic RuleIDs.
+	if _, baseErr := admit.RuleID(strings.TrimSuffix(text, normalizedInventoryIDSuffix), context); baseErr == nil && !admit.ContainsSecretLikeValue(text) {
+		return text, nil
+	}
+	return "", err
+}
+
 func AdmitNormalizedProjection(raw any, directInventory any, context string) (NormalizedProjection, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
@@ -61,7 +77,8 @@ func AdmitNormalizedProjection(raw any, directInventory any, context string) (No
 	if record["normalizedKind"] != NormalizedInventoryKind {
 		return NormalizedProjection{}, fmt.Errorf("%s normalizedKind must be %s", context, NormalizedInventoryKind)
 	}
-	if _, err := admit.RuleID(record["normalizedInventoryId"], context+" normalizedInventoryId"); err != nil {
+	normalizedID, err := admitNormalizedInventoryID(record["normalizedInventoryId"], context+" normalizedInventoryId")
+	if err != nil {
 		return NormalizedProjection{}, err
 	}
 	sourceAuthority, err := admit.Enum(record["sourceAuthority"], map[string]struct{}{directAuthority: {}, sourceSetAuthority: {}}, context+" sourceAuthority")
@@ -139,7 +156,7 @@ func AdmitNormalizedProjection(raw any, directInventory any, context string) (No
 	}
 	envelope := map[string]any{
 		"schemaVersion":         json.Number("1"),
-		"normalizedInventoryId": record["normalizedInventoryId"],
+		"normalizedInventoryId": normalizedID,
 		"normalizedKind":        record["normalizedKind"],
 		"sourceAuthority":       sourceAuthority,
 		"sourceCount":           json.Number(fmt.Sprintf("%d", sourceCount)),

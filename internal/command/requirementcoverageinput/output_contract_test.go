@@ -26,7 +26,7 @@ func TestNormalizedComposeOutputFitsPublishedClosedRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	contract := decoded.(map[string]any)
-	const definitionID = "proofkit.requirement-coverage-input-compose.output.v3.root-shape"
+	const definitionID = "proofkit.requirement-coverage-input-compose.output.v3.json-schema"
 	for _, raw := range contract["contractDefinitions"].([]any) {
 		definition := raw.(map[string]any)
 		if definition["definitionId"] != definitionID {

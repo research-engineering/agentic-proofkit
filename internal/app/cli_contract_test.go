@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "e4ec3a0cb120351972522be65b7624ce8e0c92ed9d12b1e8f7d384139dd472b7"
+	cliContractPublicABISHA256               = "05de3d494a3144e7c5fcc0aa89fd3d689bff8ff22db7927285a9dc884d9ba074"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -547,6 +547,11 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.impact.output.v2.json-schema":                                   {},
 			"proofkit.requirement-impact-input-compose.input.v3.json-schema":          {},
 			"proofkit.requirement-impact-input-compose.output.v2.json-schema":         {},
+			"proofkit.requirement-coverage-input-compose.input.v3.json-schema":        {},
+			"proofkit.requirement-coverage-input-compose.output.v3.json-schema":       {},
+			"proofkit.requirement-coverage-view.input.v3.json-schema":                 {},
+			"proofkit.test-evidence-inventory.input.v3.json-schema":                   {},
+			"proofkit.test-evidence-inventory.output.v2.json-schema":                  {},
 			"proofkit.requirement-bindings.output.v1.json-schema":                     {},
 			"proofkit.evidence-graph.output.v1.json-schema":                           {},
 			"proofkit.proof-slice.output.v1.json-schema":                              {},
@@ -1500,7 +1505,7 @@ func TestCoverageComposerRequiredFieldSummaryMatchesRootDefinition(t *testing.T)
 	if len(variants) != 1 {
 		t.Fatalf("coverage composer root variants = %d, want one", len(variants))
 	}
-	want := []any{"composerInputId", "coverageUniverse", "localEnvironmentPolicy", "options", "ownerInvariantRegistry", "requirementSource", "schemaVersion", "selectedOwnerIds", "viewInputId"}
+	want := []any{"composerInputId", "coverageUniverse", "requirementSource", "schemaVersion", "selectedOwnerIds", "viewInputId"}
 	if !reflect.DeepEqual(variants[0].(map[string]any)["requiredFields"], want) {
 		t.Fatal("coverage composer root definition changed required fields")
 	}
@@ -2337,10 +2342,11 @@ func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing
 		"flaky_time",
 		"implementation_mirror",
 		"import_cost_leak",
+		"incomplete_declared_oracle_metadata",
 		"invalid_falsifier_supersession",
+		"missing_declared_route_anchor",
 		"missing_edge",
 		"missing_executable_command_ref",
-		"missing_declared_route_anchor",
 		"mock_tests_mock",
 		"over_broad_integration",
 		"proof_route_candidate",
@@ -2349,7 +2355,7 @@ func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing
 		"snapshot_without_oracle",
 		"tautology",
 		"unasserted_diagnostic",
-		"incomplete_declared_oracle_metadata",
+		"unclassified_test_inventory_gap",
 		"wrong_boundary",
 		"wrong_evidence_boundary",
 	}, "test evidence inventory classification ids")
@@ -2378,6 +2384,7 @@ func TestRequirementCoverageInputComposeContractDescribesDirectViewInput(t *test
 	normalized := modes["normalized"].(map[string]any)
 	assertStringSet(t, stringsFromAny(normalized["requires"].([]any)), []string{
 		"compactProofContract",
+		"localEnvironmentPolicy",
 		"normalizedTestEvidenceInventory",
 	}, "requirement coverage input compose normalized required fields")
 	assertStringSet(t, stringsFromAny(normalized["forbids"].([]any)), []string{

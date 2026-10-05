@@ -17,6 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
 	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofbindingtestinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/publicapi"
@@ -27,6 +28,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageinput"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementdiff"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
@@ -37,6 +39,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateevidence"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
 	"github.com/research-engineering/agentic-proofkit/internal/command/witnessplan"
@@ -59,6 +62,7 @@ type nativeStructure struct {
 	wireVersion          json.Number
 	versionField         string
 	outOfBandVersion     json.Number
+	aggregateVersion     json.Number // Contract version for variants with independent wire headers.
 	optionalInputVersion bool
 	semanticVersion      uint // Zero follows the wire version; nonzero identifies changed semantics.
 }
@@ -434,6 +438,39 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.requirement-impact-input-compose.output.v2.json-schema", direction: "output", wireVersion: json.Number("2"),
 		predecessors: []string{"proofkit.requirement-impact-input-compose.output.v2.root-shape"}, commands: []string{"requirement-impact-input-compose"},
 		schema: func() (map[string]any, error) { return requirementimpactinput.OutputStructure(), nil },
+	}, {
+		id: "proofkit.test-evidence-inventory.input.v3.json-schema", direction: "input", aggregateVersion: "3",
+		predecessors: []string{"proofkit.test-evidence-inventory.input.v3.root-shape"}, commands: []string{"test-evidence-inventory"},
+		variants: []nativeStructureVariant{
+			{id: "01-direct-inventory", when: "without --projection; direct inventory", schema: func() (map[string]any, error) { return testevidenceinventory.DirectInputShape().JSONSchema(), nil }},
+			{id: "02-discovery-draft", when: "--projection discovery-draft", schema: func() (map[string]any, error) { return testevidenceinventory.DiscoveryInputShape().JSONSchema(), nil }},
+			{id: "03-proof-binding-derived", when: "--projection proof-binding-derived", schema: proofbindingtestinventory.InputStructure},
+			{id: "04-source-set", when: "without --projection; source-set inventory", schema: func() (map[string]any, error) { return testevidenceinventory.SourceSetInputShape().JSONSchema(), nil }},
+			{id: "05-wrapped-inventory", when: "without --projection; wrapped inventory", schema: func() (map[string]any, error) { return testevidenceinventory.WrappedInputShape().JSONSchema(), nil }},
+		},
+	}, {
+		id: "proofkit.test-evidence-inventory.output.v2.json-schema", direction: "output", aggregateVersion: "2",
+		predecessors: []string{"proofkit.test-evidence-inventory.output.v2.root-shape"}, commands: []string{"test-evidence-inventory"},
+		variants: []nativeStructureVariant{
+			{id: "01-normalized-direct", when: "--normalized-inventory without --projection; passed inventory", schema: func() (map[string]any, error) { return testevidenceinventory.NormalizedOutputStructure(), nil }},
+			{id: "02-normalized-proof-binding", when: "--normalized-inventory --projection proof-binding-derived; passed inventory", schema: func() (map[string]any, error) {
+				return testevidenceinventory.ProofBindingNormalizedOutputStructure(), nil
+			}},
+			{id: "03-report", when: "without --normalized-inventory except --projection discovery-draft; or --normalized-inventory failure report", schema: func() (map[string]any, error) { return testevidenceinventory.ReportOutputShape().JSONSchema(), nil }},
+			{id: "04-discovery-report", when: "--projection discovery-draft without --normalized-inventory", schema: func() (map[string]any, error) { return testevidenceinventory.DiscoveryOutputShape().JSONSchema(), nil }},
+		},
+	}, {
+		id: "proofkit.requirement-coverage-input-compose.input.v3.json-schema", direction: "input",
+		predecessors: []string{"proofkit.requirement-coverage-input-compose.input.v3.root-shape"}, commands: []string{"requirement-coverage-input-compose"},
+		schema: requirementcoverageinput.InputStructure,
+	}, {
+		id: "proofkit.requirement-coverage-input-compose.output.v3.json-schema", direction: "output",
+		predecessors: []string{"proofkit.requirement-coverage-input-compose.output.v3.root-shape"}, commands: []string{"requirement-coverage-input-compose"},
+		schema: requirementcoverageinput.OutputStructure,
+	}, {
+		id: "proofkit.requirement-coverage-view.input.v3.json-schema", direction: "input",
+		predecessors: []string{"proofkit.requirement-coverage-view.input.v3.root-shape"}, commands: []string{"requirement-coverage-view"},
+		schema: requirementcoverageview.InputStructure,
 	}}
 }
 
@@ -505,6 +542,14 @@ func (owner nativeStructure) contractID(command string, wireVersion json.Number)
 
 func (owner nativeStructure) contractVersion(definition map[string]any) (json.Number, error) {
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	if owner.aggregateVersion != "" {
+		for _, raw := range variants {
+			if _, err := owner.root(raw.(map[string]any)["schema"].(map[string]any)); err != nil {
+				return "", err
+			}
+		}
+		return owner.aggregateVersion, nil
+	}
 	if owner.optionalInputVersion {
 		var version json.Number
 		for _, raw := range variants {
@@ -581,6 +626,9 @@ func (owner nativeStructure) summary(version json.Number) []any {
 	if owner.outOfBandVersion != "" {
 		identity = "contractSchemaVersion=" + version.String() + " (out-of-band; no serialized schemaVersion field)"
 	}
+	if owner.aggregateVersion != "" {
+		identity = "contractSchemaVersion=" + version.String() + " (aggregate; wire headers are defined per variant)"
+	}
 	return []any{identity, "structural JSON Schema definition " + owner.id + "; canonicalization and semantic validity remain native admission obligations"}
 }
 
@@ -590,6 +638,10 @@ func nativeInputRootSummary(id string, definition map[string]any) ([]string, err
 	if !ok {
 		return nil, nil
 	}
+	return owner.inputRootSummary(definition)
+}
+
+func (owner nativeStructure) inputRootSummary(definition map[string]any) ([]string, error) {
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
 	result := make([]string, 0, len(variants))
 	for _, raw := range variants {
@@ -602,10 +654,18 @@ func nativeInputRootSummary(id string, definition map[string]any) ([]string, err
 		properties := root["properties"].(map[string]any)
 		fields := make([]string, 0, len(properties))
 		for _, name := range sortedKeys(properties) {
-			if name == owner.schemaVersionField() {
+			if name == owner.schemaVersionField() && owner.aggregateVersion == "" {
 				continue
 			}
 			field, _ := properties[name].(map[string]any)
+			if value, literal := field["const"]; literal && owner.aggregateVersion != "" {
+				encoded, err := canonicalJSON(value)
+				if err != nil {
+					return nil, err
+				}
+				fields = append(fields, name+"="+string(encoded))
+				continue
+			}
 			if schema["type"] == "object" {
 				switch field["type"] {
 				case "array":
@@ -634,6 +694,16 @@ func nativeSchemaVersion(schema map[string]any, versionField string) (json.Numbe
 }
 
 func (owner nativeStructure) root(schema map[string]any) (map[string]any, error) {
+	if owner.aggregateVersion != "" {
+		if len(owner.variants) < 2 || owner.schema != nil || owner.versionField != "" || owner.wireVersion != "" ||
+			owner.outOfBandVersion != "" || owner.optionalInputVersion || owner.semanticVersion != 0 {
+			return nil, fmt.Errorf("aggregate contract version requires multiple variants without other version modes")
+		}
+		if err := validateNativeVersion(owner.aggregateVersion); err != nil {
+			return nil, err
+		}
+		return schema, validateNativeClosedObject(schema)
+	}
 	if owner.optionalInputVersion {
 		if owner.direction != "input" || owner.outOfBandVersion != "" || owner.wireVersion != "" {
 			return nil, fmt.Errorf("optional inline version requires an input owner without version overrides")
@@ -789,7 +859,7 @@ func admitNativeStructureConsumers(contract map[string]any, definitions map[stri
 					return fmt.Errorf("%s %s contract violates native structure consumer ownership", name, direction)
 				}
 				if isConsumer {
-					if owner.semanticVersion != 0 {
+					if owner.semanticVersion != 0 || owner.aggregateVersion != "" {
 						definition, exists := definitions[owner.id]
 						if !exists {
 							return fmt.Errorf("%s %s contract lacks its native structural owner", name, direction)

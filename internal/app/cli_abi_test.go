@@ -360,7 +360,7 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			stdin:             cliCoverageInput(cliCoverageInventory()),
 			wantStatus:        0,
 			wantStdoutJSON:    true,
-			wantInputVariant:  "02-coverage-structured",
+			wantInputVariant:  "01-root",
 			wantOutputVariant: "02-report",
 			wantStdoutHas: []string{
 				`"viewKind": "proofkit.requirement-coverage-view"`,

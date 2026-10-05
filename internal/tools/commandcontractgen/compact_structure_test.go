@@ -67,7 +67,7 @@ func TestCompactChildBindingsHaveExactIndependentConsumers(t *testing.T) {
 		{"requirement-browser-server", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "01-coverage-compact"},
 		{"requirement-coverage-input-compose", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
 		{"requirement-coverage-input-compose", "output", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
-		{"requirement-coverage-view", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "01-coverage-compact"},
+		{"requirement-coverage-view", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
 		{"requirement-impact-input-compose", "input", compactV2DefinitionID, [][]string{{"baseCompactProofContract"}, {"currentCompactProofContract"}}, ""},
 		{"test-evidence-inventory", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "03-proof-binding-derived"},
 		{"requirement-proof-source-set", "output", compactV2DefinitionID, [][]string{{"resolverInput"}}, ""},
@@ -89,7 +89,7 @@ func TestCompactChildBindingsHaveExactIndependentConsumers(t *testing.T) {
 		direction := commandAt(contract, row.command)[row.direction+"Contract"].(map[string]any)
 		root := definitions[direction["rootDefinitionRef"].(string)]
 		wantKind := "root_shape_only"
-		if row.command == "requirement-impact-input-compose" {
+		if slices.Contains([]string{"requirement-impact-input-compose", "requirement-coverage-input-compose", "requirement-coverage-view", "test-evidence-inventory"}, row.command) {
 			wantKind = "structural_json_schema"
 		}
 		if root.Content["fieldTree"].(map[string]any)["kind"] != wantKind {
