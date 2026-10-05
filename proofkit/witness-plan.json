@@ -2010,6 +2010,7 @@
         "proofkit/cli-contract.v2.json",
         "proofkit/witness-plan.json",
         "scripts/boundary-structure.test.mjs",
+        "scripts/explicit-input-structure.test.mjs",
         "scripts/impact-fixtures.mjs",
         "scripts/impact-structure.test.mjs",
         "scripts/inventory-coverage-fixtures.mjs",

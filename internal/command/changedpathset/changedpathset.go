@@ -68,6 +68,9 @@ var changedPathSetNonClaims = []string{
 	"Changed path set reports do not prove source freshness, source completeness, receipt freshness, merge approval, release approval, or rollout approval.",
 }
 
+var inputKeys = []string{"nonClaims", "preexistingFailures", "reportId", "schemaVersion", "sources"}
+var sourceKeys = []string{"paths", "sourceId"}
+
 func Build(raw any) (Result, error) {
 	input, err := admitInput(raw)
 	if err != nil {
@@ -287,7 +290,7 @@ func admitInput(raw any) (Input, error) {
 	if !ok {
 		return Input{}, fmt.Errorf("changed path set report input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"nonClaims", "preexistingFailures", "reportId", "schemaVersion", "sources"}, "changed path set report input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "changed path set report input"); err != nil {
 		return Input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -327,7 +330,7 @@ func sourceInputs(raw any) ([]SourceInput, error) {
 		if !ok {
 			return nil, fmt.Errorf("changed path set source %d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"paths", "sourceId"}, fmt.Sprintf("changed path set source %d", index+1)); err != nil {
+		if err := admit.KnownKeys(record, sourceKeys, fmt.Sprintf("changed path set source %d", index+1)); err != nil {
 			return nil, err
 		}
 		sourceID, err := admit.RuleID(record["sourceId"], fmt.Sprintf("changed path set source %d sourceId", index+1))

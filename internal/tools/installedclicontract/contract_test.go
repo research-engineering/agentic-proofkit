@@ -144,8 +144,12 @@ func TestAdmitCommandRouteTokenBoundariesAreExact(t *testing.T) {
 }
 
 func TestAdmitContractResourceBoundsAreExact(t *testing.T) {
+	const expectedBytes = 4 << 20
+	if MaximumContractBytes != expectedBytes {
+		t.Fatal("machine-contract ceiling differs from its resource policy")
+	}
 	base := contractFixture(`{"command":"one"}`)
-	exactBytes := append(append([]byte(nil), base...), bytes.Repeat([]byte(" "), MaximumContractBytes-len(base))...)
+	exactBytes := append(append([]byte(nil), base...), bytes.Repeat([]byte(" "), expectedBytes-len(base))...)
 	if _, err := Admit(exactBytes); err != nil {
 		t.Fatalf("exact byte limit rejected: %v", err)
 	}

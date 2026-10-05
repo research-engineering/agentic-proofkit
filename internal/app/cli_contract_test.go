@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "05de3d494a3144e7c5fcc0aa89fd3d689bff8ff22db7927285a9dc884d9ba074"
+	cliContractPublicABISHA256               = "bdcf7e2200bf59de409eb1c1837542b6549a8b82c4817ac68f093c32977c5314"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -201,7 +201,7 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 			required:     []string{"canonicalEnvelope", "schemaVersion", "sourceSet", "sources"},
 		},
 		{
-			definitionID: "proofkit.secret-scan.input.v1.root-shape",
+			definitionID: "proofkit.secret-scan.input.v1.json-schema",
 			allowed:      []string{"files", "nonClaims", "reportId", "schemaVersion", "suppressions"},
 			required:     []string{"files", "nonClaims", "reportId", "schemaVersion"},
 		},
@@ -535,6 +535,10 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 	}
 	if structural {
 		if _, admitted := map[string]struct{}{
+			"proofkit.changed-path-set.input.v1.json-schema":                          {},
+			"proofkit.changed-path-set.output.v1.json-schema":                         {},
+			"proofkit.secret-scan.input.v1.json-schema":                               {},
+			"proofkit.secret-scan.output.v1.json-schema":                              {},
 			"proofkit.selective-gate-plan.input.v1.json-schema":                       {},
 			"proofkit.selective-gate-plan.output.v1.json-schema":                      {},
 			"proofkit.selective-gate-evidence.input.v1.json-schema":                   {},

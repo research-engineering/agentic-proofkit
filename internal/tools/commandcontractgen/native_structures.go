@@ -11,6 +11,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionchecklist"
 	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
+	"github.com/research-engineering/agentic-proofkit/internal/command/changedpathset"
 	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
@@ -37,6 +38,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
+	"github.com/research-engineering/agentic-proofkit/internal/command/secretscan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateevidence"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
@@ -471,6 +473,26 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.requirement-coverage-view.input.v3.json-schema", direction: "input",
 		predecessors: []string{"proofkit.requirement-coverage-view.input.v3.root-shape"}, commands: []string{"requirement-coverage-view"},
 		schema: requirementcoverageview.InputStructure,
+	}, {
+		id: "proofkit.changed-path-set.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.changed-path-set.input.v1.root-shape"}, commands: []string{"changed-path-set"},
+		schema: func() (map[string]any, error) { return changedpathset.InputStructure(), nil },
+	}, {
+		id: "proofkit.changed-path-set.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.changed-path-set.output.v1.root-shape"}, commands: []string{"changed-path-set"},
+		variants: []nativeStructureVariant{
+			{id: "01-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return changedpathset.OutputStructure(), nil }},
+			{id: "02-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return changedpathset.EnvelopeStructure(), nil }},
+			{id: "03-invalid-input-envelope", when: "--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.secret-scan.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.secret-scan.input.v1.root-shape"}, commands: []string{"secret-scan"},
+		schema: func() (map[string]any, error) { return secretscan.InputStructure(), nil },
+	}, {
+		id: "proofkit.secret-scan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.secret-scan.output.v1.root-shape"}, commands: []string{"secret-scan"},
+		schema: func() (map[string]any, error) { return secretscan.OutputStructure(), nil },
 	}}
 }
 
