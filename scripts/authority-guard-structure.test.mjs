@@ -269,3 +269,20 @@ test("Unicode caller text preserves native trim and UTF8 order", () => {
     semantics(command, input, output);
   }
 });
+
+test("mixed migration records preserve cardinality counters and admitted refs in failed reports", () => {
+  const input = validInput(migration), owner = input.sourceProofOwners[0], target = input.targetProofkitRefs[0], base = input.parityRecords[0];
+  input.sourceProofOwners = [{...owner, ownerId: "owner.b"}, {...owner, ownerId: "owner.a"}];
+  input.targetProofkitRefs = [{...target, targetId: "target.b"}, {...target, targetId: "target.a"}];
+  input.parityRecords = ["caller_declared_not_run", "caller_declared_match", "caller_declared_mismatch", "caller_declared_not_comparable", "caller_declared_match"].map((status, i) => ({
+    ...structuredClone(base), evidenceId: `evidence.multi.${i}`, sourceOwnerId: i % 2 ? "owner.a" : "owner.b", targetId: i % 2 ? "target.b" : "target.a", status,
+    proofkitDigest: status === "caller_declared_mismatch" ? "sha256:" + "b".repeat(64) : base.proofkitDigest, receiptRefs: ["receipt.example"],
+  }));
+  assert.equal(validators[migration].input(input), true);
+  const result = invoke(migration, JSON.stringify(input)); assert.equal(result.status, 1); assert.equal(result.stderr, "");
+  const output = JSON.parse(result.stdout); assert.equal(validators[migration].output(output), true);
+  assert.deepEqual(output.summary, {admittedParityClaimCount: 2, callerDeclaredMatchCount: 2, callerDeclaredMismatchCount: 1, callerDeclaredNotComparableCount: 1,
+    callerDeclaredNotRunCount: 1, failureCount: 3, parityRecordCount: 5, sourceProofOwnerCount: 2, targetProofkitRefCount: 2});
+  assert.deepEqual(output.diagnostics[0].value.map(x => x.evidenceId), ["evidence.multi.1", "evidence.multi.4"]);
+  migrationSemantics(input, output);
+});

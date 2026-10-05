@@ -51,7 +51,7 @@ before(() => {
 after(() => { if (directory) rmSync(directory, {recursive: true, force: true}); });
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 function invoke(row) {
-  const result = spawnSync(binary, row.argv, {input: "{}", encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20,
+  const result = spawnSync(binary, row.argv, {stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20,
     env: {...process.env, AGENTIC_PROOFKIT_LAUNCHER_PROFILE: row.launcherProfile || "path", AGENTIC_PROOFKIT_PYTHON_EXECUTABLE: row.pythonExecutable || ""}});
   assert.equal(result.error, undefined); assert.equal(result.signal, null); return result;
 }
