@@ -207,6 +207,149 @@ test("coverage parent records preserve required fields nullable modes and univer
   }
 });
 
+test("proof-derived input parents expose every required and optional clause", () => {
+  const input = proofInventoryInput(), flags = ["--projection", "proof-binding-derived"];
+  validates(inventory, "input", input); native(inventory, input, {flags});
+  const reject = rejectionCheck(inventory, "input", input, flags);
+  for (const [path, keys] of [[[], ["schemaVersion", "inventoryId", "commandRefPolicy", "requirementSource", "compactProofContract"]], [["commandRefPolicy"], ["prefix"]]]) {
+    reject(value => {at(value, path).foreign = true;}, `proof/${path} extra field`);
+    for (const key of keys) {
+      reject(value => {delete at(value, path)[key];}, `proof/${path}/${key} missing`);
+      for (const invalid of [null, false]) reject(value => {at(value, path)[key] = invalid;}, `proof/${path}/${key} invalid`);
+    }
+  }
+  reject(value => {value.schemaVersion = 2;}, "proof version");
+  for (const nonClaims of [null, [], ["Synthetic declaration."]]) {
+    const value = {...input, nonClaims}; validates(inventory, "input", value); native(inventory, value, {flags});
+  }
+  for (const nonClaims of [false, [false]]) reject(value => {value.nonClaims = nonClaims;}, "proof nonClaims type");
+});
+
+test("direct inventory input clauses distinguish optional data from required records", () => {
+  const input = annotatedInventoryInput();
+  const verify = (value, valid, label) => {
+    for (const wire of [value, wrappedInventory(value)]) {
+      validates(inventory, "input", wire, valid, label);
+      native(inventory, wire, {exit: valid ? null : 1, report: valid});
+    }
+  };
+  const reject = (mutate, label) => {const value = structuredClone(input); mutate(value); verify(value, false, label);};
+  const rowPath = ["entries", 0];
+  const records = [
+    [[], ["schemaVersion", "authority", "inventoryId", "entries", "nonClaims"]],
+    [rowPath, ["testId", "ownerId", "sourcePath", "selector", "evidenceClass", "requirementRefs", "ownerInvariantRefs", "commandRefs", "witnessRefs", "nonClaims"]],
+    [[...rowPath, "falsifier"], ["falsifierId", "negativeCaseId", "wrongImplementationClassId", "dominanceGroup", "supersedes"]],
+    [[...rowPath, "oracle"], ["oracleId", "oracleKind", "assertionSummary", "expectedPublicOutcome"]],
+    [[...rowPath, "qualityFindings", 0], ["findingId", "class", "severity", "ownerReviewState", "evidenceRefs", "nonClaims"]],
+  ];
+  for (const [path, keys] of records) {
+    reject(value => {at(value, path).foreign = true;}, `direct/${path} extra field`);
+    for (const key of keys) {
+      reject(value => {delete at(value, path)[key];}, `direct/${path}/${key} missing`);
+      for (const invalid of [null, false]) reject(value => {at(value, path)[key] = invalid;}, `direct/${path}/${key} invalid`);
+    }
+  }
+  for (const path of [["ownerId"], ["sourceId"], [...rowPath, "falsifier"], [...rowPath, "oracle"], [...rowPath, "qualityFindings"], [...rowPath, "falsifier", "supersessionDeclarationRef"]]) {
+    for (const absent of [false, true]) {
+      const value = structuredClone(input), record = at(value, path.slice(0, -1));
+      if (absent) delete record[path.at(-1)]; else record[path.at(-1)] = null;
+      verify(value, true, `direct/${path} optional absence/null`);
+    }
+    reject(value => {at(value, path.slice(0, -1))[path.at(-1)] = false;}, `direct/${path} optional type`);
+  }
+  const arrays = [["entries"], ["nonClaims"], ...["requirementRefs", "ownerInvariantRefs", "commandRefs", "witnessRefs", "nonClaims", "qualityFindings"].map(key => [...rowPath, key]),
+    [...rowPath, "falsifier", "supersedes"], [...rowPath, "qualityFindings", 0, "evidenceRefs"], [...rowPath, "qualityFindings", 0, "nonClaims"]];
+  for (const path of arrays) {
+    reject(value => {at(value, path.slice(0, -1))[path.at(-1)] = [false];}, `direct/${path} item`);
+    const minimum = path.length === 1 && path[0] === "nonClaims" || path.includes("qualityFindings") && path.length > 3;
+    const empty = structuredClone(input); at(empty, path.slice(0, -1))[path.at(-1)] = [];
+    verify(empty, !minimum, `direct/${path} minimum`);
+  }
+  for (const [path, values] of [
+    [[...rowPath, "evidenceClass"], ["benchmark", "declared_contract_admission_route", "declared_property_or_fuzz_route", "declared_semantic_falsifier_route", "governance_or_release", "helper_or_testkit", "proof_route_candidate", "routing_smoke_nonclaim"]],
+    [[...rowPath, "qualityFindings", 0, "class"], ["duplicate_falsifier_candidate", "empty_oracle", "fixture_leak_risk", "flaky_time", "implementation_mirror", "import_cost_leak", "missing_edge", "mock_tests_mock", "over_broad_integration", "snapshot_without_oracle", "tautology", "unasserted_diagnostic", "wrong_boundary"]],
+    [[...rowPath, "qualityFindings", 0, "severity"], ["failure", "warning"]],
+    [[...rowPath, "qualityFindings", 0, "ownerReviewState"], ["candidate", "confirmed"]],
+  ]) {
+    for (const item of values) {
+      const value = structuredClone(input); at(value, path.slice(0, -1))[path.at(-1)] = item;
+      verify(value, true, `direct/${path} admitted enum`);
+    }
+    reject(value => {at(value, path.slice(0, -1))[path.at(-1)] = "foreign";}, `direct/${path} enum`);
+  }
+  reject(value => {value.schemaVersion = 2;}, "direct version");
+  reject(value => {value.authority = "foreign";}, "direct authority");
+});
+
+test("normalized receiving records preserve independent parent field constraints", () => {
+  for (const [seed, flags] of [[inventoryInput(), []], [sourceSetInput(), []], [proofInventoryInput(), ["--projection", "proof-binding-derived"]]]) {
+    const envelope = native(inventory, seed, {flags: [...flags, "--normalized-inventory"]});
+    const input = normalizedComposeInput(envelope), output = native(composer, input, {compare: !envelope.projectionKind});
+    for (const [command, baseline] of [[composer, input], [view, output]]) {
+      const reject = rejectionCheck(command, "input", baseline), rootPath = ["normalizedTestEvidenceInventory"];
+      const records = [[rootPath, ["schemaVersion", "normalizedKind", "normalizedInventoryId", "sourceAuthority", "sourceCount", "sourceColumns", "sources", "entrySources", "inputPaths", "inventory", "nonClaims"]]];
+      if (envelope.entrySources.length) records.push([[...rootPath, "entrySources", 0], ["path", "sourceId", "testId"]]);
+      if (envelope.projectionSummary) {
+        records.push([[...rootPath, "projectionSummary"], ["schemaVersion", "entryCount", "commandRefCount", "routeEntryMappings"]]);
+        records.push([[...rootPath, "projectionSummary", "routeEntryMappings", 0], ["bindingRecordId", "requirementId", "resolutionOrderIndex", "role", "scenarioId", "selector", "surfaceId", "testId", "witnessRouteId"]]);
+      }
+      for (const [path, keys] of records) {
+        reject(value => {at(value, path).foreign = true;}, `normalized/${path} extra field`);
+        for (const key of keys) {
+          reject(value => {delete at(value, path)[key];}, `normalized/${path}/${key} missing`);
+          for (const invalid of [null, false]) reject(value => {at(value, path)[key] = invalid;}, `normalized/${path}/${key} invalid`);
+        }
+      }
+      for (const key of ["sources", "entrySources", "inputPaths", "nonClaims"]) reject(value => {value.normalizedTestEvidenceInventory[key] = [null];}, `normalized/${key} item`);
+      reject(value => {value.normalizedTestEvidenceInventory.nonClaims = [];}, "normalized/nonClaims minimum");
+      for (const [key, invalid] of [["schemaVersion", 2], ["normalizedKind", "foreign"], ["sourceAuthority", "foreign"], ["sourceCount", -1], ["sourceCount", 0.5]]) {
+        reject(value => {value.normalizedTestEvidenceInventory[key] = invalid;}, `normalized/${key} domain`);
+      }
+      for (let index = 0; index < 5; index++) reject(value => {value.normalizedTestEvidenceInventory.sourceColumns[index] = "foreign";}, `normalized/header/${index}`);
+      for (const extra of [false, true]) reject(value => {
+        const columns = value.normalizedTestEvidenceInventory.sourceColumns;
+        if (extra) columns.push("foreign"); else columns.pop();
+      }, "normalized/header width");
+      if (envelope.sources.length) {
+        for (let index = 0; index < 5; index++) reject(value => {value.normalizedTestEvidenceInventory.sources[0][index] = false;}, `normalized/source/${index}`);
+        for (const extra of [false, true]) reject(value => {
+          const row = value.normalizedTestEvidenceInventory.sources[0];
+          if (extra) row.push("foreign"); else row.pop();
+        }, "normalized/source width");
+        reject(value => {value.normalizedTestEvidenceInventory.sources[0][3] = "foreign";}, "normalized/source role");
+        reject(value => {value.normalizedTestEvidenceInventory.sources[0][4] = [];}, "normalized/source nonClaims minimum");
+      }
+      if (envelope.projectionSummary) {
+        for (const key of ["entryCount", "commandRefCount"]) for (const invalid of [-1, 0.5]) reject(value => {value.normalizedTestEvidenceInventory.projectionSummary[key] = invalid;}, `normalized/summary/${key} count`);
+        reject(value => {value.normalizedTestEvidenceInventory.projectionSummary.routeEntryMappings = [null];}, "normalized/mapping item");
+      }
+    }
+  }
+});
+
+test("inventory report discriminators and discovery collection minima are structural", () => {
+  for (const [seed, flags] of [[annotatedInventoryInput(), []], [discoveryInput(), ["--projection", "discovery-draft"]]]) {
+    const output = native(inventory, seed, {flags}), reject = rejectionCheck(inventory, "output", output);
+    for (const [key, value] of [["schemaVersion", 2], ["reportKind", "foreign"], ["state", "foreign"]]) reject(record => {record[key] = value;}, `report/${key} domain`);
+    for (let index = 0; index < output.diagnostics.length; index++) reject(record => {record.diagnostics[index].key = "foreign";}, "diagnostic key identity");
+    for (let index = 0; index < output.ruleResults.length; index++) {
+      for (const key of ["ruleId", "status"]) reject(record => {record.ruleResults[index][key] = "foreign";}, `rule/${key} identity`);
+      reject(record => {record.ruleResults[index].diagnostics = ["foreign"];}, "rule diagnostic cardinality");
+    }
+    const diagnostic = (record, key) => record.diagnostics.find(row => row.key === key).value;
+    if (flags.length) {
+      for (const key of ["agentActionPlan", "warnings"]) reject(record => {record.diagnostics.find(row => row.key === key).value = [];}, `discovery/${key} minimum`);
+      for (const key of ["entries", "nonClaims"]) reject(record => {diagnostic(record, "candidateInventory")[key] = [];}, `discovery/candidate/${key} minimum`);
+      for (const key of ["authority", "candidateKind"]) reject(record => {diagnostic(record, "candidateInventory")[key] = "foreign";}, `discovery/candidate/${key} identity`);
+      reject(record => {record.summary.runnerKind = "foreign";}, "discovery runner enum");
+      reject(record => {diagnostic(record, "agentActionPlan")[0].severity = "foreign";}, "discovery severity");
+    } else {
+      for (const key of ["classificationId", "decisionOwner", "nonClaim", "severity"]) reject(record => {diagnostic(record, "agentActionPlan")[0][key] = "foreign";}, `report/action/${key} domain`);
+      for (const evidenceRefs of [[], ["one", "two"]]) reject(record => {diagnostic(record, "agentActionPlan")[0].evidenceRefs = evidenceRefs;}, "report/action evidence cardinality");
+    }
+  }
+});
+
 test("inventory modes use real CLI branches and preserve stdin pointer and compact carriers", () => {
   for (const [input, flags] of [[inventoryInput(), []], [sourceSetInput(), []], [wrappedInventory(), []], [wrappedInventory(sourceSetInput()), []],
     [discoveryInput(), ["--projection", "discovery-draft"]], [proofInventoryInput(), ["--projection", "proof-binding-derived"]]]) {
