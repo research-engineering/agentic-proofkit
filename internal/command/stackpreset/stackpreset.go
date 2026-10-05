@@ -11,6 +11,15 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
+const reportKind = "proofkit.stack-preset"
+const acceptedRuleID = "proofkit.stack-preset.accepted"
+const acceptedRuleMessage = "stack preset is deterministic and non-authoritative"
+
+var pathPolicyNonClaims = []string{
+	"Stack presets do not override consuming repository documentation policy.",
+	"Stack presets do not prove that suggested paths are complete for a consuming repository.",
+}
+
 var presetNonClaims = []string{
 	"Stack presets do not read repository state.",
 	"Stack presets do not execute native witnesses.",
@@ -125,8 +134,8 @@ func BuildWithRenderer(presetID string, renderer cliexec.Renderer) (report.Recor
 	}
 	return report.Record{
 		SchemaVersion: 1,
-		ReportKind:    "proofkit.stack-preset",
-		ReportID:      "proofkit.stack-preset." + presetID,
+		ReportKind:    reportKind,
+		ReportID:      reportKind + "." + presetID,
 		State:         "passed",
 		Summary: map[string]any{
 			"expectedFileCount":            len(preset.ExpectedFiles),
@@ -141,11 +150,8 @@ func BuildWithRenderer(presetID string, renderer cliexec.Renderer) (report.Recor
 				Value: map[string]any{
 					"consumerOverrideRequired":   true,
 					"defaultFilesAreSuggestions": true,
-					"nonClaims": admit.StringSliceToAny([]string{
-						"Stack presets do not override consuming repository documentation policy.",
-						"Stack presets do not prove that suggested paths are complete for a consuming repository.",
-					}),
-					"policyClass": "starter_suggestion",
+					"nonClaims":                  admit.StringSliceToAny(pathPolicyNonClaims),
+					"policyClass":                "starter_suggestion",
 				},
 			},
 			{
@@ -160,9 +166,9 @@ func BuildWithRenderer(presetID string, renderer cliexec.Renderer) (report.Recor
 		},
 		RuleResults: []report.RuleResult{
 			{
-				RuleID:      "proofkit.stack-preset.accepted",
+				RuleID:      acceptedRuleID,
 				Status:      "passed",
-				Message:     "stack preset is deterministic and non-authoritative",
+				Message:     acceptedRuleMessage,
 				Diagnostics: []report.Diagnostic{},
 			},
 		},
