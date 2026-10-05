@@ -138,11 +138,26 @@ function replace(value, path, replacement) {
   const copy = structuredClone(value); at(copy, path.slice(0, -1))[path.at(-1)] = replacement; return copy;
 }
 const validInput = command => JSON.parse(baseline.observations.find(x => x.command === command && x.name === "valid").input);
+const rawIDFields = new Set(["guardId", "policyChangeId", "policyId", "producerId", "producerClass", "proofClass", "receiptKind", "environmentClass", "changeId", "receiptId", "usedForPolicyChangeId", "paritySetId", "ownerId", "targetId", "evidenceId", "sourceOwnerId", "reportId"]);
+const rawIDArrays = new Set(["nonClaimRefs", "receiptRefs"]);
 test("authority guard nested predicates have populated positive and negative specimens", () => {
   for (const command of [producer, migration]) {
     const rows = baseline.observations.filter(x => x.command === command && x.report);
     const outputs = rows.map(row => JSON.parse(invoke(command, row.input, row.argv).stdout));
     const inputs = rows.map(row => row.name === "pointer" ? JSON.parse(row.input).payload : JSON.parse(row.input));
+    const populated = validInput(command);
+    if (command === producer) {
+      populated.nonClaimRefs = ["claim.policy"];
+      populated.admissionChanges[0].nonClaimRefs = ["claim.change"];
+      populated.mergeObligationReceiptRefs[0].nonClaimRefs = ["claim.receipt"];
+      populated.mergeObligationReceiptRefs[0].producerId = populated.admissionChanges[0].producerId;
+    } else populated.parityRecords[0].receiptRefs = ["receipt.claim"];
+    assert.equal(validators[command].input(populated), true, `${command}/populated-reference-input`);
+    const populatedResult = invoke(command, JSON.stringify(populated));
+    assert.equal(populatedResult.status, command === producer ? 1 : 0); assert.equal(populatedResult.stderr, "");
+    const populatedOutput = JSON.parse(populatedResult.stdout);
+    assert.equal(validators[command].output(populatedOutput), true, `${command}/populated-reference-output`);
+    semantics(command, populated, populatedOutput); inputs.push(populated); outputs.push(populatedOutput);
     // Include empty collections, nullable input and populated failure records, not just happy-path output.
     for (const [direction, specimens] of [["input", inputs], ["output", outputs]]) for (const specimen of specimens) {
       const valid = validators[command][direction]; assert.equal(valid(specimen), true);
@@ -161,11 +176,20 @@ test("authority guard nested predicates have populated positive and negative spe
         const wrongType = typeof value === "string" ? 0 : "wrong-type";
         assert.equal(valid(replace(specimen, path, wrongType)), false, `${command}/${direction}/${path}/type`);
         if (typeof value === "string") assert.equal(valid(replace(specimen, path, "")), false, `${command}/${direction}/${path}/blank`);
+        if (typeof value === "string" && (rawIDFields.has(path.at(-1)) || rawIDArrays.has(path.at(-2)))) {
+          for (const invalid of ["foreign/id", "a".repeat(257)]) assert.equal(valid(replace(specimen, path, invalid)), false, `${command}/${direction}/${path}/raw-id-domain`);
+        }
         if (typeof value === "number") for (const wrong of [-1, 1.5]) assert.equal(valid(replace(specimen, path, wrong)), false, `${command}/${direction}/${path}/integer`);
       }
     }
     const output = outputs[0];
     for (const wrong of [output.diagnostics.slice(1), [...output.diagnostics, output.diagnostics[0]], [...output.diagnostics].reverse()]) assert.equal(validators[command].output({...output, diagnostics: wrong}), false);
+    assert.equal(validators[command].output({...output, ruleResults: []}), false, `${command}/ruleResults/empty`);
+    if (command === producer) {
+      assert.equal(validators[command].output({...output, ruleResults: output.ruleResults.slice(0, 1)}), false, "producer/ruleResults/short");
+      assert.equal(validators[command].output({...output, ruleResults: [...output.ruleResults, output.ruleResults[0]]}), false, "producer/ruleResults/extra");
+      assert.equal(validators[command].output({...output, ruleResults: [...output.ruleResults].reverse()}), false, "producer/ruleResults/order");
+    }
     assert.equal(validators[command].output({...output, nonClaims: output.nonClaims.filter(x => x !== builtin[command][0])}), false);
     const overlap = outputs[rows.findIndex(x => x.name === "builtin-overlap")];
     assert.equal(overlap.nonClaims.filter(x => x === builtin[command][1]).length, 2);
