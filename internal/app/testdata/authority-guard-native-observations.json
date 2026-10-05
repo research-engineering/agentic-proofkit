@@ -1,0 +1,1070 @@
+{
+  "schemaVersion": 1,
+  "head": "ebdd943e0740998e5051e98a87be0288f271f69a",
+  "tree": "1f62667dcb9de501fbb66672be1f91d27b502e0a",
+  "binarySHA256": "0f9045ceb4b9731d0b3e4f324863bdcc2d7bdab252850dee2979bc5bc0f25a9f",
+  "observations": [
+    {
+      "command": "producer-policy-self-proof",
+      "name": "valid",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "fd9450a158f3ce2edff8c67ebf82b11bd19794268d64fd3b8331fbaaf3004c73",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "empty-records",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[],\"mergeObligationReceiptRefs\":[]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "ae54a5d821007d4f1af6e0a2c629b366624776cd9ea63dfcb37d5e84130d07a3",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "self-proof",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "8fb1b4b5164407570ad8f159a7bbe514a8aef5560033f270906a83cbf8511d1e",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "unchanged-policy",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "62bee3d2477e5d82d4cc00fa03b8643721aca3e954b161f779151b05572ae9ff",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "change-add_producer",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"add_producer\",\"fromAdmissionLevel\":null,\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "fd9450a158f3ce2edff8c67ebf82b11bd19794268d64fd3b8331fbaaf3004c73",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "change-expand_environment_class",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"expand_environment_class\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "fd9450a158f3ce2edff8c67ebf82b11bd19794268d64fd3b8331fbaaf3004c73",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "change-expand_receipt_kind",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"expand_receipt_kind\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "fd9450a158f3ce2edff8c67ebf82b11bd19794268d64fd3b8331fbaaf3004c73",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "change-promote_to_merge_satisfying",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "fd9450a158f3ce2edff8c67ebf82b11bd19794268d64fd3b8331fbaaf3004c73",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "add-with-from",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"add_producer\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "9b4ee0606cdac893b06b0fd57737bb2de134a67cc209550bdd3fc69e2a33280f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "same-level",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"merge_satisfying\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "cc0da03bc308e9e1b7addfbb98e1a60eff4ee21f49349a8eede5a3707422b890",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "promotion-advisory",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"advisory\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "eae3e84e9cee970761b5b9461a3f4b82a4ccdad9dc58345ba6e1c229a9cf17ba",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "status-blocked",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"blocked\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "0784c44f7cb70d833c4ecae8b70f0f24e58319e0a5df6305837225a1b25006a4",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "status-failed",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"failed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "0784c44f7cb70d833c4ecae8b70f0f24e58319e0a5df6305837225a1b25006a4",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "status-not_run",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"not_run\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "0784c44f7cb70d833c4ecae8b70f0f24e58319e0a5df6305837225a1b25006a4",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "status-passed",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "fd9450a158f3ce2edff8c67ebf82b11bd19794268d64fd3b8331fbaaf3004c73",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "receipt-advisory",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"advisory\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "702f748dea59966668c1ccd90aa3fe77a786843ec27ff4d94316aecd7e60b428",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "nonmerge-receipt",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":false,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "2be8981ce1833dbbb638d1d43cf7d597966c8925b59bd9e7d86251f638c612c2",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "wrong-policy-reference",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.other\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "4c7a780b0311748d7ee8e09baa065eef29f7c7f032ff4700767b432fe96ba060"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "missing-nullable-field",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "fb89d3571e50d9993bb74e1bede6fa4ee839f08a89577de1c6500f28c775aa04"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "duplicate-change",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"},{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "627ae55cf53a8c3eba0dcd4143f55504a89d677beaee9f2610821504fba45172"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "duplicate-receipt",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"},{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "e6fc82c6b3fd5dd277327a5340be486b743d0fc234d68b9d30c8e1b7381abba1"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "unsorted-text",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[\"Zulu\",\"Alpha\"],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "860f06dd73bd8450c44cf8bfe0cb8b16c8064edbb83dc2fc32cc15906cf5bddc"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "duplicate-trimmed-text",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[\" Alpha \",\"Alpha\"],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "860f06dd73bd8450c44cf8bfe0cb8b16c8064edbb83dc2fc32cc15906cf5bddc"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "builtin-overlap",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[\"Producer policy self-proof guard does not authenticate producers.\"],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "c9cf7ae3764ce384a8c9fd71a614ac106241226d59fbcc05c7a512c2af19ae6a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "record-order",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"},{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.alpha\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "2d37358eb45461049aa2a41095af7c9496c507b2b61e990cfc8f9f5a93a1c9f5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "valid",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "caller_declared_match-false",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "56ff340a557ec96b9a15fcf710c99f070d1e7b35775f52f97754776fd7376b1b",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "caller_declared_match-true",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "caller_declared_mismatch-false",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_mismatch\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "6f735768dc2c9deed5de4e11db788bbd2be52befd2233dfd2aad358b74fd946c",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "caller_declared_mismatch-true",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_mismatch\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "faeac1f19ad3256eb79060bc9dfe441642db9813a38024a26e41ce1b58863a78",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "caller_declared_not_comparable-false",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_not_comparable\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "3f2a60eb288392a0051c3882e1dac5e17209131b78b91b0508e5c8f6a8e8207a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "caller_declared_not_comparable-true",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_not_comparable\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "400cb3c2921039b199f0e364ff37b8bfb71b51beae66878424d851747066ee20",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "caller_declared_not_run-false",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_not_run\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "78afb6467c5aa71a8b45568b90fc185568bd88144fd93beee5a18a8955082493",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "caller_declared_not_run-true",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_not_run\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "85c63f94f2b06ffff559aff4602ae38fddd344344319ccdcafacd2e4f4d518c0",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "equivalence-agent_envelope_projection",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"agent_envelope_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "d6235e3d3e2559dd58d34411f952dbde33095a3d8f5abccf86283fc98c2eeb39",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "equivalence-command_ref_projection",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"command_ref_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "4e96c91fe2badba70b1d1e7d83c760ddaddbfbda53e9e24ddc14c1dec3aad50e",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "equivalence-generated_view_projection",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"generated_view_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "89652c52c96ef7e2f09b2e034efaedcc756950e1350351508678493fe9608ddb",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "equivalence-receipt_shape_projection",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "equivalence-report_summary_projection",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"report_summary_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "2dbae347807fda5fa57987a03a96791ee2f5c660b11e956b38aaacd914d95e94",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "equivalence-requirement_binding_projection",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"requirement_binding_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "6737d86eb24fa66d33c9aef6b935d57f7cf123ab169752882fadd42bdf83d5e5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "owner-local_doc",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_doc\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "owner-local_manifest",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_manifest\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "owner-local_script",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "owner-local_test",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_test\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "owner-other",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"other\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "target-proofkit_input",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "target-proofkit_profile",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_profile\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "target-proofkit_report",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_report\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "target-proofkit_view",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_view\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "unknown-owner",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.unknown\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "c170fe08085d8e2ef85ef80f387f9e6716b7135da5123861a658f2b7be774df7",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "unknown-target",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.unknown\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "71ef47f44c6e349dcb62979a45972215012d57e0b0705292273933e132ff5239",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "normalize-text",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[\" Zulu \",\"Alpha\"],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\" artifacts/z.json \",\"artifacts/a.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "4d909fd2a01ca3935a5548c2d8aa738c6de11c0da1424e1abd8683cd5bc0fde2",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "duplicate-normalized-text",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[\" Zulu \",\"Zulu\"],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "87590406dbe9d0035028e1c9b207e5635b7a754c8102548f30abfe51177045a1"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "long-evidence-id",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "2fbbc62f759fc3ecaf4ebdd2d557de1bb5538e3213bae3410a0e89c3e53bebba",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "builtin-overlap",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[\"Migration parity admission does not authenticate parity evidence.\"],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "be379eb0bf96f21d8ecc65fbecd81cdb67ec7da059e2086b2f29db59334b8209",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "empty-sourceProofOwners",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "e26f967a7817c7d31401c164f3f7347ed4e598a4797a4b80798db6f0df94d06c"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "duplicate-sourceProofOwners",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"},{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "72785f93c3d94bc601bbb6faa03b8dfe405754a2465a613567bb46bd6413d44b"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "empty-targetProofkitRefs",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "d6758994dc424b6e8899bde36e86ba6364e07ce17ea5aacf8496f742b703e118"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "duplicate-targetProofkitRefs",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"},{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "1864adb4d19d9400a65cd9d9bbbabdb95b4cadde86fee0b1df2bf976c96854e2"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "empty-parityRecords",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "528670d45db1bf0af491d6726640cf43ae67aec5e947553a2ed6bb1afc62f374"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "duplicate-parityRecords",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"},{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "1d27e86ac4e05c4752cab53c7b5b7eb8e2be4d33ac7f59d2f42bc6d9afc8e871"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "unknown-root",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}],\"foreign\":0}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "06cfa1115fcaa9272a90eecae5424273c9d9b9c7151884fd791793061c92f9ca"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "schema-other",
+      "input": "{\"schemaVersion\":2,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "4ba2980ba4ad1ee4d60f98751401fb70ef0c65f31e564ad6a62acda72ba1acc8"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "compact",
+      "input": "{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "c841756c855ad9e50a387cce8348ff5702ba295bb6f22355655a383c66a5cb60",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "pointer",
+      "input": "{\"payload\":{\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-",
+        "--input-pointer",
+        "/payload"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "fd9450a158f3ce2edff8c67ebf82b11bd19794268d64fd3b8331fbaaf3004c73",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "duplicate-json-key",
+      "input": "{\"schemaVersion\":1,\"schemaVersion\":1,\"guardId\":\"guard.example\",\"policyId\":\"policy.example\",\"policyOwner\":\"caller\",\"policySurfaceRefs\":[\"proofkit/policy.json\"],\"baselinePolicyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proposedPolicyDigest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"policyChangeDigest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"policyChangeId\":\"policy.change\",\"nonClaimRefs\":[],\"nonClaims\":[],\"admissionChanges\":[{\"producerId\":\"producer.new\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"changeId\":\"change.example\",\"changeKind\":\"promote_to_merge_satisfying\",\"fromAdmissionLevel\":\"advisory\",\"toAdmissionLevel\":\"merge_satisfying\",\"evidenceRefs\":[\"docs/evidence.json\"],\"nonClaim\":\"Synthetic declared policy change.\"}],\"mergeObligationReceiptRefs\":[{\"producerId\":\"producer.existing\",\"producerClass\":\"github-actions\",\"proofClass\":\"ci\",\"receiptKind\":\"proof\",\"environmentClass\":\"github-actions\",\"nonClaimRefs\":[],\"artifactRetentionRuleRef\":\"docs/retention.md\",\"provenanceRuleRef\":\"docs/provenance.md\",\"producerAdmissionClass\":\"merge_satisfying\",\"receiptId\":\"receipt.example\",\"receiptStatus\":\"passed\",\"satisfiesMergeObligation\":true,\"proofReceiptRef\":\"artifacts/receipt.json\",\"proofReceiptDigest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"evidenceRef\":\"artifacts/receipt.json\",\"usedForPolicyChangeId\":\"policy.change\",\"nonClaim\":\"Synthetic declared receipt.\"}]}",
+      "argv": [
+        "producer-policy-self-proof",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "da127fc0c94cbd9dc508e02496bddf4c59297db82ab76a67fe4f3d8403bccacc"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "help--help",
+      "input": "",
+      "argv": [
+        "producer-policy-self-proof",
+        "--help"
+      ],
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "b4ba08c3f4d4e3ff365d86d01292b7d4a9a64c4b89e6df6d82bb2d133c44465c",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "predecessorHelp": "Usage:\n  agentic-proofkit producer-policy-self-proof --input <path|-> [--input-pointer <pointer>]\n\nInstalled invocation:\n  agentic-proofkit producer-policy-self-proof --input <path|-> [--input-pointer <pointer>]\n\nCommand ID:\n  producer-policy-self-proof\n\nRoute:\n  producer-policy-self-proof\n\nInput:\n  Requires explicit caller-owned JSON input through --input <path|->; stdin is only read when --input - is selected.\n\nOutput modes:\n  json\n\nScope class:\n  explicit_caller_input\n\nAllowed flags:\n  --input\n  --input-pointer\n\nInput schema summary:\n  schemaVersion=1\n  root-shape-only definition proofkit.producer-policy-self-proof.input.v1.root-shape; nested fields, types, and cardinalities are non-claims\n\nPublic contract:\n  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.\n  Nested field semantics remain owned by native command admission.\n"
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "name": "help-h",
+      "input": "",
+      "argv": [
+        "producer-policy-self-proof",
+        "-h"
+      ],
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "b4ba08c3f4d4e3ff365d86d01292b7d4a9a64c4b89e6df6d82bb2d133c44465c",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "predecessorHelp": "Usage:\n  agentic-proofkit producer-policy-self-proof --input <path|-> [--input-pointer <pointer>]\n\nInstalled invocation:\n  agentic-proofkit producer-policy-self-proof --input <path|-> [--input-pointer <pointer>]\n\nCommand ID:\n  producer-policy-self-proof\n\nRoute:\n  producer-policy-self-proof\n\nInput:\n  Requires explicit caller-owned JSON input through --input <path|->; stdin is only read when --input - is selected.\n\nOutput modes:\n  json\n\nScope class:\n  explicit_caller_input\n\nAllowed flags:\n  --input\n  --input-pointer\n\nInput schema summary:\n  schemaVersion=1\n  root-shape-only definition proofkit.producer-policy-self-proof.input.v1.root-shape; nested fields, types, and cardinalities are non-claims\n\nPublic contract:\n  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.\n  Nested field semantics remain owned by native command admission.\n"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "unknown-root",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}],\"foreign\":0}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "fcaaf6e5557e4bfd0078b306218be74a1a769629842ff0728a899eb2663e0501"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "schema-other",
+      "input": "{\"schemaVersion\":2,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "a3e8835f6ec9e0a81d4e30d2601003bc1fdb3816514d69ad478dda6f350e268b"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "compact",
+      "input": "{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "8c1c2a58a050446d18b5d0df427e155cf079662a26439199bb22a18c79b77a95",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "pointer",
+      "input": "{\"payload\":{\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-",
+        "--input-pointer",
+        "/payload"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0ffd380794f33125add1d48acee5e7401787b0082f0d6c6dca536ccf2c46bc54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "duplicate-json-key",
+      "input": "{\"schemaVersion\":1,\"schemaVersion\":1,\"paritySetId\":\"parity.example\",\"nonClaims\":[],\"sourceProofOwners\":[{\"ownerId\":\"owner.example\",\"ownerKind\":\"local_script\",\"path\":\"scripts/check.mjs\"}],\"targetProofkitRefs\":[{\"targetId\":\"target.example\",\"targetKind\":\"proofkit_input\",\"path\":\"proofkit/input.json\"}],\"parityRecords\":[{\"equivalenceKind\":\"receipt_shape_projection\",\"evidenceId\":\"evidence.example\",\"evidenceRefs\":[\"artifacts/parity.json\"],\"legacyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacySubjectRef\":\"legacy receipt\",\"nonClaims\":[\"Synthetic parity facts.\"],\"proofkitDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"proofkitSubjectRef\":\"candidate receipt\",\"reason\":\"Caller-declared comparison.\",\"receiptRefs\":[],\"sourceOwnerId\":\"owner.example\",\"status\":\"caller_declared_match\",\"targetId\":\"target.example\"}]}",
+      "argv": [
+        "migration-parity-admission",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "da127fc0c94cbd9dc508e02496bddf4c59297db82ab76a67fe4f3d8403bccacc"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "help--help",
+      "input": "",
+      "argv": [
+        "migration-parity-admission",
+        "--help"
+      ],
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "d5b61cc5592a3693ef7969d013fbc653e9b310019467f69c30941898d8018404",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "predecessorHelp": "Usage:\n  agentic-proofkit migration-parity-admission --input <path|-> [--input-pointer <pointer>]\n\nInstalled invocation:\n  agentic-proofkit migration-parity-admission --input <path|-> [--input-pointer <pointer>]\n\nCommand ID:\n  migration-parity-admission\n\nRoute:\n  migration-parity-admission\n\nInput:\n  Requires explicit caller-owned JSON input through --input <path|->; stdin is only read when --input - is selected.\n\nOutput modes:\n  json\n\nScope class:\n  explicit_caller_input\n\nAllowed flags:\n  --input\n  --input-pointer\n\nInput schema summary:\n  schemaVersion=1\n  paritySetId\n  sourceProofOwners[]\n  targetProofkitRefs[]\n  parityRecords[]\n  nonClaims[]\n  root-shape-only definition proofkit.migration-parity-admission.input.v1.root-shape; nested fields, types, and cardinalities are non-claims\n\nPublic contract:\n  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.\n  Nested field semantics remain owned by native command admission.\n"
+    },
+    {
+      "command": "migration-parity-admission",
+      "name": "help-h",
+      "input": "",
+      "argv": [
+        "migration-parity-admission",
+        "-h"
+      ],
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "d5b61cc5592a3693ef7969d013fbc653e9b310019467f69c30941898d8018404",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "predecessorHelp": "Usage:\n  agentic-proofkit migration-parity-admission --input <path|-> [--input-pointer <pointer>]\n\nInstalled invocation:\n  agentic-proofkit migration-parity-admission --input <path|-> [--input-pointer <pointer>]\n\nCommand ID:\n  migration-parity-admission\n\nRoute:\n  migration-parity-admission\n\nInput:\n  Requires explicit caller-owned JSON input through --input <path|->; stdin is only read when --input - is selected.\n\nOutput modes:\n  json\n\nScope class:\n  explicit_caller_input\n\nAllowed flags:\n  --input\n  --input-pointer\n\nInput schema summary:\n  schemaVersion=1\n  paritySetId\n  sourceProofOwners[]\n  targetProofkitRefs[]\n  parityRecords[]\n  nonClaims[]\n  root-shape-only definition proofkit.migration-parity-admission.input.v1.root-shape; nested fields, types, and cardinalities are non-claims\n\nPublic contract:\n  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.\n  Nested field semantics remain owned by native command admission.\n"
+    }
+  ]
+}
