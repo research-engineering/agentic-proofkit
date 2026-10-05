@@ -70,7 +70,7 @@
     "receipt-contract:check": "node --test scripts/receipt-structure.test.mjs scripts/receipt-admission-structure.test.mjs",
     "spec-tree-contract:check": "node --test scripts/spec-tree-structure.test.mjs",
     "graph-contract:check": "node --test scripts/graph-structure.test.mjs",
-    "boundary-contract:check": "node --test scripts/boundary-structure.test.mjs scripts/report-admission-structure.test.mjs scripts/workspace-structure.test.mjs scripts/public-api-structure.test.mjs scripts/proof-routing-structure.test.mjs scripts/selective-proof-structure.test.mjs scripts/impact-structure.test.mjs scripts/inventory-coverage-structure.test.mjs scripts/explicit-input-structure.test.mjs"
+    "boundary-contract:check": "node --test scripts/boundary-structure.test.mjs scripts/report-admission-structure.test.mjs scripts/workspace-structure.test.mjs scripts/public-api-structure.test.mjs scripts/proof-routing-structure.test.mjs scripts/selective-proof-structure.test.mjs scripts/impact-structure.test.mjs scripts/inventory-coverage-structure.test.mjs scripts/explicit-input-structure.test.mjs scripts/bootstrap-structure.test.mjs"
   },
   "os": [
     "darwin",

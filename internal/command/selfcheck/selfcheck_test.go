@@ -1,6 +1,7 @@
-package report
+package selfcheck
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 )
 
 func TestBuildSelfCheckReportStableShape(t *testing.T) {
-	report := BuildSelfCheckReport(map[string]any{"input": "value"}).JSONValue()
+	report := Build(map[string]any{"input": "value"}).JSONValue()
 	serialized, err := stablejson.Marshal(report)
 	if err != nil {
 		t.Fatalf("stable marshal report: %v", err)
@@ -57,10 +58,12 @@ func TestBuildSelfCheckReportClassifiesInputKinds(t *testing.T) {
 		{name: "string", input: "value", want: `"inputKind": "string"`},
 		{name: "array", input: []any{}, want: `"inputKind": "array"`},
 		{name: "object", input: map[string]any{}, want: `"inputKind": "object"`},
+		{name: "number", input: json.Number("1.25"), want: `"inputKind": "number"`},
+		{name: "large-number", input: json.Number("1e999"), want: `"inputKind": "number"`},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
-			serialized, err := stablejson.Marshal(BuildSelfCheckReport(item.input).JSONValue())
+			serialized, err := stablejson.Marshal(Build(item.input).JSONValue())
 			if err != nil {
 				t.Fatalf("stable marshal report: %v", err)
 			}

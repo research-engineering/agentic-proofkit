@@ -1,0 +1,234 @@
+{
+  "head": "a669af21ac94eb9de3d68b4f76906bf193dd855b",
+  "tree": "2280e14fe0d070c502711deac0b3069f28354538",
+  "binarySHA256": "7f7349764153342397ee081780ae3e36da9ac911ae128fa9e638a3335bf196db",
+  "driverSHA256": "783118da838cb24c5790de7adac449e651f1e99e6fa54dacda81857f0b9a42dd",
+  "observations": [
+    {
+      "name": "object",
+      "inputJSON": "{}",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"object\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"object\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "585ab4663dc27d15698b3ba5eefad519b59e2ec1b762d60426158c56d0ec0730",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "arbitrary-version",
+      "inputJSON": "{\"schemaVersion\":2,\"arbitrary\":{\"nested\":[]}}",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"object\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"object\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "585ab4663dc27d15698b3ba5eefad519b59e2ec1b762d60426158c56d0ec0730",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "array",
+      "inputJSON": "[]",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"array\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"array\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "f0e6d248b34817eea6587c6edd713f873d955b6de94c800d45b7dc6cd78351bd",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "nested-array",
+      "inputJSON": "[null,true,{\"x\":[1]}]",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"array\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"array\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "f0e6d248b34817eea6587c6edd713f873d955b6de94c800d45b7dc6cd78351bd",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "null",
+      "inputJSON": "null",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"null\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"null\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "b06b3a4665f561928a2f1945011c0fe3e4398d9c1f00aee698017be176670669",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "true",
+      "inputJSON": "true",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"boolean\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"boolean\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "fb9d791ac4230d9400f654828baa38c7e8d26f7b09d2ca235ac97484fbd4b920",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "false",
+      "inputJSON": "false",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"boolean\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"boolean\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "fb9d791ac4230d9400f654828baa38c7e8d26f7b09d2ca235ac97484fbd4b920",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "string",
+      "inputJSON": "\"hello\"",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"string\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"string\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "812675800b178dc7b5c08b8833605cfe0779285697a549810f473ad22ee75b52",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "empty-string",
+      "inputJSON": "\"\"",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"string\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"string\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "812675800b178dc7b5c08b8833605cfe0779285697a549810f473ad22ee75b52",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "integer",
+      "inputJSON": "42",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"number\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"number\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "a2489aee7d0391be166c836142ac02a31697933c44c4fed9abeb8350219c93b0",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "negative",
+      "inputJSON": "-1",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"number\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"number\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "a2489aee7d0391be166c836142ac02a31697933c44c4fed9abeb8350219c93b0",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "fraction",
+      "inputJSON": "0.25",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"number\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"number\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "a2489aee7d0391be166c836142ac02a31697933c44c4fed9abeb8350219c93b0",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "exponent",
+      "inputJSON": "1e2",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"number\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"number\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "a2489aee7d0391be166c836142ac02a31697933c44c4fed9abeb8350219c93b0",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "large-integer",
+      "inputJSON": "9007199254740993",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"number\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"number\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "a2489aee7d0391be166c836142ac02a31697933c44c4fed9abeb8350219c93b0",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "large-exponent",
+      "inputJSON": "1e999",
+      "args": [],
+      "exitCode": 0,
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"key\": \"inputKind\",\n      \"value\": \"number\"\n    }\n  ],\n  \"nonClaims\": [\n    \"Go self-check does not replace the full package gate.\",\n    \"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.\"\n  ],\n  \"reportId\": \"proofkit.go-runtime.self-check\",\n  \"reportKind\": \"proofkit.go-runtime.self-check\",\n  \"ruleResults\": [\n    {\n      \"diagnostics\": [],\n      \"message\": \"Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.\",\n      \"ruleId\": \"proofkit.go-runtime.self-check.explicit-input\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"schemaVersion\": 1,\n  \"state\": \"passed\",\n  \"summary\": {\n    \"inputKind\": \"number\"\n  }\n}\n",
+      "stderr": "",
+      "stdoutSHA256": "a2489aee7d0391be166c836142ac02a31697933c44c4fed9abeb8350219c93b0",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "pointer",
+      "inputJSON": "{\"selected\":[1]}",
+      "args": [
+        "--input-pointer",
+        "/selected"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "self-check does not support --input-pointer\n",
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6b326ba2d5d6a94bfbfcb44fbbc469a5cc8f51ef073d06ecc9af286c5f148a88"
+    },
+    {
+      "name": "duplicate-key",
+      "inputJSON": "{\"x\":1,\"x\":2}",
+      "args": [],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "invalid JSON input: duplicate object key\n",
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "da127fc0c94cbd9dc508e02496bddf4c59297db82ab76a67fe4f3d8403bccacc"
+    },
+    {
+      "name": "nested-duplicate",
+      "inputJSON": "{\"x\":{\"a\":1,\"a\":2}}",
+      "args": [],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "invalid JSON input: duplicate object key\n",
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "da127fc0c94cbd9dc508e02496bddf4c59297db82ab76a67fe4f3d8403bccacc"
+    },
+    {
+      "name": "trailing-value",
+      "inputJSON": "{} {}",
+      "args": [],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "invalid JSON input: multiple JSON values\n",
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "38f94c212687f59a4477feb4edf5419c071e3c4a8301d0c7f41b4ce3541543ef"
+    },
+    {
+      "name": "malformed",
+      "inputJSON": "{",
+      "args": [],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "invalid JSON input: unterminated object\n",
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "871d1e1ea058b964bdc8c1b8ecef7df7e19f0b067a5aeef2459764cb0c076335"
+    },
+    {
+      "name": "empty-input",
+      "inputJSON": "",
+      "args": [],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "invalid JSON input: unexpected end\n",
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "4ea9e649ae177eb804a268cf87707f1cd39e5ba9dffa77f58a88059a6cab0eb6"
+    },
+    {
+      "name": "unsupported-envelope",
+      "inputJSON": "{}",
+      "args": [
+        "--agent-envelope"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "unsupported argument for self-check: --agent-envelope\n",
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6ccab6fce12137b5a1f94193c4ba4c69854c0431ddccb1ded1253bc0f7a25f49"
+    }
+  ],
+  "nonClaim": "Observed predecessor streams, not schema correctness or complete input-domain proof."
+}

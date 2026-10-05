@@ -2009,6 +2009,7 @@
         "package.json",
         "proofkit/cli-contract.v2.json",
         "proofkit/witness-plan.json",
+        "scripts/bootstrap-structure.test.mjs",
         "scripts/boundary-structure.test.mjs",
         "scripts/explicit-input-structure.test.mjs",
         "scripts/impact-fixtures.mjs",

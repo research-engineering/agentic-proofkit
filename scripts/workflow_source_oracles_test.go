@@ -349,7 +349,7 @@ func TestGraphSchemaGateWiring(t *testing.T) {
 }
 
 func TestBoundarySchemaGateWiring(t *testing.T) {
-	assertSchemaGateWiring(t, "boundary-contract:check", "Verify boundary contract structures", "scripts/boundary-structure.test.mjs", "scripts/report-admission-structure.test.mjs", "scripts/workspace-structure.test.mjs", "scripts/public-api-structure.test.mjs", "scripts/proof-routing-structure.test.mjs", "scripts/selective-proof-structure.test.mjs", "scripts/impact-structure.test.mjs", "scripts/inventory-coverage-structure.test.mjs", "scripts/explicit-input-structure.test.mjs")
+	assertSchemaGateWiring(t, "boundary-contract:check", "Verify boundary contract structures", "scripts/boundary-structure.test.mjs", "scripts/report-admission-structure.test.mjs", "scripts/workspace-structure.test.mjs", "scripts/public-api-structure.test.mjs", "scripts/proof-routing-structure.test.mjs", "scripts/selective-proof-structure.test.mjs", "scripts/impact-structure.test.mjs", "scripts/inventory-coverage-structure.test.mjs", "scripts/explicit-input-structure.test.mjs", "scripts/bootstrap-structure.test.mjs")
 }
 
 func assertSchemaGateWiring(t *testing.T, gate, step string, witnesses ...string) {
