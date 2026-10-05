@@ -106,7 +106,12 @@ function replace(value, path, replacement) {
 }
 test("overview nested structures reject required null type cardinality tuple and domain drift", () => {
   const input = JSON.parse(baseline.observations[0].input), output = JSON.parse(invoke(JSON.stringify(input)).stdout);
-  for (const [direction, value] of [["input", input], ["output", output]]) {
+  const failedOutputs = ["both-paths-wrong", "unknown-citation"].map(name => {
+    const row = baseline.observations.find(x => x.name === name), result = invoke(row.input);
+    assert.equal(result.status, 1); const value = JSON.parse(result.stdout);
+    assert.equal(validators.output(value), true); reportSemantics(JSON.parse(row.input), value); return value;
+  });
+  for (const [direction, value] of [["input", input], ["output", output], ...failedOutputs.map(value => ["output", value])]) {
     const valid = validators[direction]; assert.equal(valid(value), true);
     for (const {path, value: original} of paths(value)) {
       if (original && !Array.isArray(original) && typeof original === "object") {
