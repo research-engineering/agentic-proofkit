@@ -106,7 +106,7 @@ test("discovery input records and finite vocabularies have independent clause wi
       if (absent) delete at(value, path).nonClaims; else at(value, path).nonClaims = null;
       validates(inventory, "input", value); native(inventory, value, {flags});
     }
-    reject(value => {at(value, path).nonClaims = [false];}, `${path} nonClaims item`);
+    for (const invalid of [false, [false]]) reject(value => {at(value, path).nonClaims = invalid;}, `${path} nonClaims container/item`);
   }
   for (const [path, values, array] of [
     [["runner", "runnerKind"], ["generic", "go_test", "node_test", "playwright", "pytest", "vitest"], false],
@@ -122,6 +122,7 @@ test("discovery input records and finite vocabularies have independent clause wi
   }
   reject(value => {value.discoveredTests = [];}, "discovery tests minimum");
   reject(value => {value.discoveredTests = [null];}, "discovery test item");
+  for (const key of ["candidateRequirementRefs", "ownerInvariantRefs"]) reject(value => {value.discoveredTests[0][key] = [false];}, `discovery/${key} item`);
   reject(value => {value.schemaVersion = 2;}, "discovery version");
   reject(value => {value.authority = "foreign";}, "discovery authority");
 });
@@ -197,7 +198,10 @@ test("coverage parent records preserve required fields nullable modes and univer
       }
       reject(value => {value.foreign = true;}, "parent root extra field");
       reject(value => {value.schemaVersion = 2;}, "parent root version");
-      if (command === composer && direction === "input") reject(value => {value.selectedOwnerIds = [];}, "selected owner minimum");
+      if (command === composer && direction === "input") {
+        reject(value => {value.selectedOwnerIds = [];}, "selected owner minimum");
+        reject(value => {value.selectedOwnerIds = [false];}, "selected owner item");
+      }
       for (const key of ["options", "ownerInvariantRegistry", ...(!compact ? ["localEnvironmentPolicy"] : [])]) {
         const positive = structuredClone(baseline); positive[key] = null;
         validates(command, direction, positive);
@@ -331,6 +335,9 @@ test("normalized receiving records preserve independent parent field constraints
         reject(value => {normalized(value).projectionSummary.schemaVersion = 1;}, "normalized/summary version");
         reject(value => {normalized(value).projectionSummary.routeEntryMappings[0].role = "foreign";}, "normalized/mapping role");
       }
+      for (const id of ["", "has space.normalized", "\u00e9.normalized", "a".repeat(257) + ".normalized", ...(command === inventory ? ["ordinary.id"] : [])]) {
+        reject(value => {normalized(value).normalizedInventoryId = id;}, "normalized/identifier grammar and maximum");
+      }
     }
   }
 });
@@ -343,6 +350,7 @@ test("inventory report discriminators and discovery collection minima are struct
     for (let index = 0; index < output.ruleResults.length; index++) {
       for (const key of ["ruleId", "status"]) reject(record => {record.ruleResults[index][key] = "foreign";}, `rule/${key} identity`);
       reject(record => {record.ruleResults[index].diagnostics = ["foreign"];}, "rule diagnostic cardinality");
+      if (!flags.length) reject(record => {record.ruleResults[index].message = "foreign";}, "rule/message literal");
     }
     const diagnostic = (record, key) => record.diagnostics.find(row => row.key === key).value;
     if (flags.length) {
@@ -440,6 +448,8 @@ test("populated invariant registry preserves required structure across composer 
     }
     check(registry => {registry.invariants = [null];}, "null invariant row");
     check(registry => {registry.nonClaims = [];}, "empty registry nonClaims");
+    check(registry => {registry.nonClaims = [false];}, "registry nonClaims item");
+    check(registry => {registry.invariants[0].nonClaims = [false];}, "invariant nonClaims item");
     check(registry => {registry.schemaVersion = 2;}, "wrong registry version");
   }
 });
@@ -481,6 +491,7 @@ test("proof-derived normalized mappings preserve their whole CLI chain and numer
 
 test("raw SHA whitespace normalizes but emitted source metadata remains canonical", () => {
   const expected = native(inventory, sourceSetInput(), {flags: ["--normalized-inventory"]});
+  const canonicalOutput = native(composer, normalizedComposeInput(expected));
   for (const padding of [" ", "\u0085\u2000"]) {
     const source = sourceSetInput(); source.sources[0][2] = padding + source.sources[0][2] + padding;
     for (const input of [source, wrappedInventory(source)]) {
@@ -497,10 +508,14 @@ test("raw SHA whitespace normalizes but emitted source metadata remains canonica
     validates(view, "input", paddedOutput);
     assert.deepEqual(native(view, paddedOutput, {exit: null}), native(view, output, {exit: null}));
   }
-  for (const digest of ["", " ", "a".repeat(63), "A".repeat(64), ` ${"a".repeat(63)}z `]) {
+  for (const digest of ["", " ", "a".repeat(63), "a".repeat(65), "A".repeat(64), "g".repeat(64), ` ${"a".repeat(63)}z `]) {
     const input = sourceSetInput(); input.sources[0][2] = digest;
     validates(inventory, "input", input, false); native(inventory, input, {exit: 1, report: false});
     const envelope = structuredClone(expected); envelope.sources[0][2] = digest;
+    validates(inventory, "output", envelope, false, "canonical digest grammar");
+    const output = structuredClone(canonicalOutput); output.normalizedTestEvidenceInventory = envelope;
+    validates(composer, "output", output, false, "canonical digest grammar");
+    validates(view, "input", output, false, "receiving digest grammar");
     const compose = normalizedComposeInput(envelope);
     validates(composer, "input", compose, false); native(composer, compose, {exit: 1, report: false});
   }
@@ -558,10 +573,9 @@ test("unsafe derived identity is refused at the public normalized CLI boundary",
 });
 
 function at(value, path) { return path.reduce((record, key) => record[key], value); }
-function objectPaths(value, path = []) {
+function containerEntries(value, path = []) {
   if (value === null || typeof value !== "object") return [];
-  return [...(Array.isArray(value) ? [] : [path]),
-    ...Object.entries(value).flatMap(([key, child]) => objectPaths(child, [...path, key]))];
+  return [[path, value], ...Object.entries(value).flatMap(([key, child]) => containerEntries(child, [...path, key]))];
 }
 
 test("new inventory output records have independent required key null type and count controls", () => {
@@ -569,6 +583,7 @@ test("new inventory output records have independent required key null type and c
   const draftInput = discoveryInput(); draftInput.discoveredTests[0].oracleSignals = [];
   const fixtures = [
     native(inventory, inventoryInput()),
+    native(inventory, annotatedInventoryInput()),
     native(inventory, failedInput, {exit: 1}),
     native(inventory, draftInput, {flags: ["--projection", "discovery-draft"]}),
     native(inventory, sourceSetInput(), {flags: ["--normalized-inventory"]}),
@@ -576,10 +591,29 @@ test("new inventory output records have independent required key null type and c
     native(inventory, proofInventoryInput(), {flags: ["--projection", "proof-binding-derived", "--normalized-inventory"]}),
   ];
   for (const baseline of fixtures) {
-    for (const path of objectPaths(baseline)) {
-      const original = at(baseline, path);
+    for (const [path, original] of containerEntries(baseline)) {
+      if (Array.isArray(original)) {
+        const changed = structuredClone(baseline), array = at(changed, path);
+        if (array.length) array[0] = false; else array.push(false);
+        validates(inventory, "output", changed, false, `${path}/array item`);
+        continue;
+      }
       const unknown = structuredClone(baseline); at(unknown, path).undeclared = true;
       validates(inventory, "output", unknown, false, `${path}/unknown`);
+      for (const key of ["authority", "normalizedKind", "projectionKind", "candidateKind", "evidenceClass", "classificationId", "class", "ownerReviewState"]) {
+        if (Object.hasOwn(original, key)) {
+          const changed = structuredClone(baseline); at(changed, path)[key] = "foreign";
+          validates(inventory, "output", changed, false, `${path}/${key}/domain`);
+        }
+      }
+      if (Object.hasOwn(original, "classificationId") || Object.hasOwn(original, "ownerReviewState")) {
+        const changed = structuredClone(baseline); at(changed, path).severity = "foreign";
+        validates(inventory, "output", changed, false, `${path}/severity/domain`);
+      }
+      if (Object.hasOwn(original, "schemaVersion")) {
+        const changed = structuredClone(baseline); at(changed, path).schemaVersion++;
+        validates(inventory, "output", changed, false, `${path}/schemaVersion/domain`);
+      }
       for (const [key, value] of Object.entries(original)) {
         // Only inventory-level identity annotations and declaration refs are optional.
         const optional = (original.authority === "caller_owned_inventory" && ["ownerId", "sourceId"].includes(key)) || key === "supersessionDeclarationRef";
