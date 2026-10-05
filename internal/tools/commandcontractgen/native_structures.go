@@ -43,6 +43,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateevidence"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selfcheck"
+	"github.com/research-engineering/agentic-proofkit/internal/command/specoverviewclaims"
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
@@ -514,6 +515,14 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.json-report-cli-adapter-source.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.json-report-cli-adapter-source.output.v1.root-shape"}, commands: []string{"json-report-cli-adapter-source"},
 		schema: func() (map[string]any, error) { return jsonreportcliadaptersource.OutputStructure(), nil },
+	}, {
+		id: "proofkit.spec-overview-claims.input.v2.json-schema", direction: "input", semanticVersion: 2,
+		predecessors: []string{"proofkit.spec-overview-claims.input.v1.root-shape"}, commands: []string{"spec-overview-claims"},
+		schema: func() (map[string]any, error) { return specoverviewclaims.InputStructure(), nil },
+	}, {
+		id: "proofkit.spec-overview-claims.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.spec-overview-claims.output.v1.root-shape"}, commands: []string{"spec-overview-claims"},
+		schema: func() (map[string]any, error) { return specoverviewclaims.OutputStructure(), nil },
 	}}
 }
 

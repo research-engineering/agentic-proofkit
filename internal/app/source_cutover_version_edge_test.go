@@ -46,7 +46,8 @@ var sourceCutoverDirectionDeltas = []string{
 	"requirement-spec-tree/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-traceability-graph/input:compatibilitySummary,contractId,nativeAdmissionWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-traceability-graph/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"spec-overview-claims/input:compatibilitySummary,contractId,pathRelations",
+	"spec-overview-claims/input:compatibilitySummary,contractId,pathRelations,rootDefinitionDigest,rootDefinitionRef",
+	"spec-overview-claims/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"test-evidence-inventory/input:childDefinitionBindings,compatibilitySummary,contractId,projectionVariants,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"view/output:compatibilitySummary,contractId,handoffClauses",
 }
@@ -183,7 +184,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 98 || len(added) != 94+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 100 || len(added) != 96+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {
