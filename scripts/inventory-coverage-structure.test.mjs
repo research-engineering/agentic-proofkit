@@ -513,6 +513,65 @@ test("presence-based composer and non-null coverage modes remain distinct", () =
   }
 });
 
+test("source-set records and wrappers have independent structural clause witnesses", () => {
+  for (const wrapped of [false, true]) {
+    const original = wrapped ? wrappedInventory(sourceSetInput()) : sourceSetInput();
+    const source = value => wrapped ? value.inventory : value;
+    const reject = rejectionCheck(inventory, "input", original);
+    const label = wrapped ? "wrapped source-set" : "bare source-set";
+    validates(inventory, "input", original); native(inventory, original);
+    for (const key of ["schemaVersion", "authority", "inventoryId", "nonClaims", "sourceColumns", "sources", "sourceTexts"]) {
+      reject(value => {delete source(value)[key];}, `${label}/${key} missing`);
+      for (const invalid of [null, false]) reject(value => {source(value)[key] = invalid;}, `${label}/${key} invalid`);
+    }
+    reject(value => {source(value).foreign = true;}, `${label} extra field`);
+    reject(value => {source(value).schemaVersion = 2;}, `${label} version`);
+    reject(value => {source(value).authority = "foreign";}, `${label} authority`);
+    for (const key of ["nonClaims", "sources", "sourceTexts"]) {
+      reject(value => {source(value)[key] = [];}, `${label}/${key} minimum`);
+      reject(value => {source(value)[key] = [null];}, `${label}/${key} item`);
+    }
+    for (const key of ["sourceColumns", "sources"]) for (const extra of [false, true]) {
+      reject(value => {
+        const tuple = key === "sources" ? source(value).sources[0] : source(value).sourceColumns;
+        if (extra) tuple.push("foreign"); else tuple.pop();
+      }, `${label}/${key} tuple width`);
+    }
+    for (let index = 0; index < 5; index++) {
+      for (const invalid of [null, false, "foreign"]) {
+        reject(value => {source(value).sourceColumns[index] = invalid;}, `${label}/header/${index}`);
+      }
+      for (const invalid of [null, false]) {
+        reject(value => {source(value).sources[0][index] = invalid;}, `${label}/row/${index}`);
+      }
+    }
+    for (const digest of ["a".repeat(63), "a".repeat(65), "A".repeat(64), "g".repeat(64)]) {
+      reject(value => {source(value).sources[0][2] = digest;}, `${label} digest grammar`);
+    }
+    reject(value => {source(value).sources[0][3] = "foreign";}, `${label} role enum`);
+    reject(value => {source(value).sources[0][4] = [];}, `${label} row nonClaims minimum`);
+    reject(value => {source(value).sources[0][4] = [false];}, `${label} row nonClaims item`);
+    for (const key of ["path", "text"]) {
+      reject(value => {delete source(value).sourceTexts[0][key];}, `${label}/text/${key} missing`);
+      for (const invalid of [null, false]) reject(value => {source(value).sourceTexts[0][key] = invalid;}, `${label}/text/${key} invalid`);
+    }
+    reject(value => {source(value).sourceTexts[0].foreign = true;}, `${label} source text extra field`);
+    const spaced = structuredClone(original);
+    source(spaced).sourceColumns = source(spaced).sourceColumns.map(value => `\u0085 ${value}\u2000`);
+    source(spaced).sources[0][2] = `\u0085 ${source(spaced).sources[0][2]}\u2000`;
+    validates(inventory, "input", spaced); native(inventory, spaced);
+    if (wrapped) {
+      for (const key of ["schema", "inventory"]) {
+        reject(value => {delete value[key];}, `wrapper/${key} missing`);
+        for (const invalid of [null, false]) reject(value => {value[key] = invalid;}, `wrapper/${key} invalid`);
+      }
+      reject(value => {value.schema = "foreign";}, "wrapper identity");
+      reject(value => {value.foreign = true;}, "wrapper extra field");
+      reject(value => {value.inventory = wrappedInventory(value.inventory);}, "nested wrapper");
+    }
+  }
+});
+
 test("source header whitespace and nested field boundaries match native admission", () => {
   const spaced = sourceSetInput(); spaced.sourceColumns[0] = "\u0085 source_id\u2000";
   validates(inventory, "input", spaced); native(inventory, spaced);
