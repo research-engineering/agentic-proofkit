@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "4172df7049f95ef1e7b3418ec40f6aacf47f5553082a2f80cc3007db1b01d940"
+	cliContractPublicABISHA256               = "94894f8d2f02c6eda9e0ba6777af4b128c435ab8354fa8f710e688545f642567"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -541,6 +541,8 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.secret-scan.output.v1.json-schema":                              {},
 			"proofkit.self-check.input.v1.json-schema":                                {},
 			"proofkit.self-check.output.v1.json-schema":                               {},
+			"proofkit.stack-preset.output.v1.json-schema":                             {},
+			"proofkit.json-report-cli-adapter-source.output.v1.json-schema":           {},
 			"proofkit.selective-gate-plan.input.v1.json-schema":                       {},
 			"proofkit.selective-gate-plan.output.v1.json-schema":                      {},
 			"proofkit.selective-gate-evidence.input.v1.json-schema":                   {},

@@ -13,6 +13,9 @@ import (
 const LanguageTypeScript = "typescript"
 const FormatJSON = "json"
 const TypeScriptGeneratorID = "proofkit.json-report-cli-adapter-source.typescript.v2"
+const artifactKind = "proofkit.json-report-cli-adapter-source"
+const sourceFileName = "proofkit-json-report-cli-adapter.ts"
+const publicContract = "CLI/JSON plus generated source; no package-root SDK contract"
 
 var exportedSymbols = []string{
 	"ProofkitCommandRunOptions",
@@ -69,18 +72,18 @@ func (bundle Bundle) JSONValue() map[string]any {
 	source := TypeScriptSource()
 	return map[string]any{
 		"schemaVersion":   1,
-		"artifactKind":    "proofkit.json-report-cli-adapter-source",
+		"artifactKind":    artifactKind,
 		"generatorId":     TypeScriptGeneratorID,
 		"language":        bundle.Language,
 		"format":          bundle.Format,
-		"sourceFileName":  "proofkit-json-report-cli-adapter.ts",
+		"sourceFileName":  sourceFileName,
 		"source":          source,
 		"sourceSha256":    digest.SHA256TextRef(source),
 		"exportedSymbols": stringsToAny(exportedSymbols),
 		"summary": map[string]any{
 			"exportedSymbolCount": len(exportedSymbols),
 			"lineCount":           sourceLineCount(source),
-			"publicContract":      "CLI/JSON plus generated source; no package-root SDK contract",
+			"publicContract":      publicContract,
 		},
 		"nonClaims": stringsToAny(nonClaims),
 	}

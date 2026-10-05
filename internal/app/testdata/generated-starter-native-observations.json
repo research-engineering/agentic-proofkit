@@ -1,0 +1,646 @@
+{
+  "schemaVersion": 1,
+  "head": "95b2c5ecb09a86210af20c4e38e6311f9ab5cbaa",
+  "tree": "dfaa0a6a7b1a800849144dc3cf05ec96cac86f90",
+  "binarySHA256": "922cbd93f81ee0564c2719114b7162a66b00bb1aa62937d7b9d360cf40daad12",
+  "observations": [
+    {
+      "name": "preset-agentic_runtime_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "agentic_runtime_repo"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "4ea9e94bcb283d39b9aee5e3df0ab5ffbaca6fad4d9c283738e327008bdf839c",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-agentic_runtime_repo-compact",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "stack-preset",
+        "--preset",
+        "agentic_runtime_repo"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "169f57d5e78cecfbe896db4a234da9d0a17eec3745bd683d9dff9ef1fbe9940b",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-generated_docs_contract_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "generated_docs_contract_repo"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "a7238a0b9ee0e64a18117d1ae8833869f7b7953415726a318b36644f4353d0bd",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-generated_docs_contract_repo-compact",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "stack-preset",
+        "--preset",
+        "generated_docs_contract_repo"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "30c2ef14456a380598663f33bf9ae84a1c860491383f4065b76e5b5dff78c251",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-python_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_service"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "df8fb0baf28fb16524b51a03754b9dca5640347e17879f9f28cffccd7504e468",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-python_service-compact",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "stack-preset",
+        "--preset",
+        "python_service"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "99b95dfbeb30da7d413f9c4576ece2442e2d7c4abb9d0968a2c8e1790c1b691f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-python_typescript_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_typescript_service"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "81e976293819a0b58bab709967207fbdeed11a3dd39f009a64413b3618dede01",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-python_typescript_service-compact",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "stack-preset",
+        "--preset",
+        "python_typescript_service"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "a367ad95d6f3d890aaa39eab62772964dfb53fa5bb0a8165987210913d413dbe",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-typescript_monorepo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_monorepo"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "06228bb575f9ea37bee9652ba0d0e65e0a81446fa03e9effc63f18467604cd8a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-typescript_monorepo-compact",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "stack-preset",
+        "--preset",
+        "typescript_monorepo"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "edf66c4b9a56206f3af37e1cb7efd5e0bfacdab15e5ce8d43dc92a354dbad2a3",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-typescript_workspace",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_workspace"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "8e35987fbd3cf2c5713cb91906c3a0c14d9d9638621660e0fd772a10d13a2f6a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-typescript_workspace-compact",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "stack-preset",
+        "--preset",
+        "typescript_workspace"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "ce8b8fb0f8c09f126252184b3134d4616ce73b2c33850bc2c244ee5696584114",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "adapter-default",
+      "argv": [
+        "json-report-cli-adapter-source",
+        "--language",
+        "typescript"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "0eb91ebb93d5aea1f8ffd1f27d18b488c6d47e8c8e7dd30e985dbe54a12bb6c5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "adapter-explicit-json",
+      "argv": [
+        "json-report-cli-adapter-source",
+        "--language",
+        "typescript",
+        "--format",
+        "json"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "0eb91ebb93d5aea1f8ffd1f27d18b488c6d47e8c8e7dd30e985dbe54a12bb6c5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "adapter-compact",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "json-report-cli-adapter-source",
+        "--language",
+        "typescript"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "ba7f3121a0b750281a069dc279dbb43ccf9a73ccd3ed61946832a9ae8f6fb01d",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preset-missing",
+      "argv": [
+        "stack-preset"
+      ],
+      "exitCode": 1,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "0d7b39e7821c6491b4caee25eaceb5c6248809b0150bd8369814a9a12c1c0578"
+    },
+    {
+      "name": "preset-unknown",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "unknown"
+      ],
+      "exitCode": 1,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "91bdc77b3916b68b10104a77c38f9b2259f51e4bdf222030c9f8eca6db7f2499"
+    },
+    {
+      "name": "preset-input",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_service",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "5a9ffdb70aa4aa141cae03d9fddf5b4a16e80f7ca99fad6f993236df4f9277bb"
+    },
+    {
+      "name": "preset-duplicate",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_service",
+        "--preset",
+        "python_service"
+      ],
+      "exitCode": 1,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "f4b025655ac6f0383674e29f67abd2de723940a5d48cd8e0d1820c647b34afa2"
+    },
+    {
+      "name": "adapter-missing",
+      "argv": [
+        "json-report-cli-adapter-source"
+      ],
+      "exitCode": 1,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "c138d83b65991e3b56b589d5a8f068c803ff729b65a0768114a14e1adfd17c8d"
+    },
+    {
+      "name": "adapter-language",
+      "argv": [
+        "json-report-cli-adapter-source",
+        "--language",
+        "python"
+      ],
+      "exitCode": 1,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "df00ffc3c09d49fe51e111c710f63e64642a6cb4a7b56f7e6870ae2731f037f7"
+    },
+    {
+      "name": "adapter-format",
+      "argv": [
+        "json-report-cli-adapter-source",
+        "--language",
+        "typescript",
+        "--format",
+        "text"
+      ],
+      "exitCode": 1,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "7a1450fc2499b97fcdc85f9c1d744a7b2751bce7e7d76ddcba7fc0bb62805d0e"
+    },
+    {
+      "name": "adapter-input",
+      "argv": [
+        "json-report-cli-adapter-source",
+        "--language",
+        "typescript",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "510e911ff24cf8ac9d42baf14ea1949dd66b5a2785f783c344c28e1899e8a12b"
+    },
+    {
+      "name": "adapter-pointer",
+      "argv": [
+        "json-report-cli-adapter-source",
+        "--language",
+        "typescript",
+        "--input-pointer",
+        "/source"
+      ],
+      "exitCode": 1,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "d5b9dfb0763050ce629eaab78689ca0b7ece5e75504d227903c967506794f5a2"
+    },
+    {
+      "name": "stack-preset--help",
+      "argv": [
+        "stack-preset",
+        "--help"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "711a06c2ef55e73d93b85eb5d1041e5dabba3f6982423c76caf6fd997feb778f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "stack-preset-h",
+      "argv": [
+        "stack-preset",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "711a06c2ef55e73d93b85eb5d1041e5dabba3f6982423c76caf6fd997feb778f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "json-report-cli-adapter-source--help",
+      "argv": [
+        "json-report-cli-adapter-source",
+        "--help"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "75d89936fc8f3899188e8f85a603158ce597a19e6b3e521d279f790420ce6773",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "json-report-cli-adapter-source-h",
+      "argv": [
+        "json-report-cli-adapter-source",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdoutSHA256": "75d89936fc8f3899188e8f85a603158ce597a19e6b3e521d279f790420ce6773",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "path-preset-agentic_runtime_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "agentic_runtime_repo"
+      ],
+      "launcherProfile": "path",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "4ea9e94bcb283d39b9aee5e3df0ab5ffbaca6fad4d9c283738e327008bdf839c",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "path-preset-generated_docs_contract_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "generated_docs_contract_repo"
+      ],
+      "launcherProfile": "path",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "a7238a0b9ee0e64a18117d1ae8833869f7b7953415726a318b36644f4353d0bd",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "path-preset-python_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_service"
+      ],
+      "launcherProfile": "path",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "df8fb0baf28fb16524b51a03754b9dca5640347e17879f9f28cffccd7504e468",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "path-preset-python_typescript_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_typescript_service"
+      ],
+      "launcherProfile": "path",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "81e976293819a0b58bab709967207fbdeed11a3dd39f009a64413b3618dede01",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "path-preset-typescript_monorepo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_monorepo"
+      ],
+      "launcherProfile": "path",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "06228bb575f9ea37bee9652ba0d0e65e0a81446fa03e9effc63f18467604cd8a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "path-preset-typescript_workspace",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_workspace"
+      ],
+      "launcherProfile": "path",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "8e35987fbd3cf2c5713cb91906c3a0c14d9d9638621660e0fd772a10d13a2f6a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "npm-preset-agentic_runtime_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "agentic_runtime_repo"
+      ],
+      "launcherProfile": "npm_offline",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "ff9c5cd9176712f91b7bf6e8240690581b37df136ee44a9fb55a1468861d8176",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "npm-preset-generated_docs_contract_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "generated_docs_contract_repo"
+      ],
+      "launcherProfile": "npm_offline",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "c092c99992d9bfb3838241c697509440c54bbc9f61de4a8bf7104d575835dc5f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "npm-preset-python_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_service"
+      ],
+      "launcherProfile": "npm_offline",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "2bae471c8666b1b189613952551a6213fbaa89b945c1693fc1d4eb45a94cc137",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "npm-preset-python_typescript_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_typescript_service"
+      ],
+      "launcherProfile": "npm_offline",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "6c4f4984eaeb8a601ebfa010a6b7e043422df1c42f6f061e826d8c9ede37d238",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "npm-preset-typescript_monorepo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_monorepo"
+      ],
+      "launcherProfile": "npm_offline",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "40bf53c331360146928257892aa4cb48351ade008f752ff9d24c0759abdae72d",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "npm-preset-typescript_workspace",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_workspace"
+      ],
+      "launcherProfile": "npm_offline",
+      "pythonExecutable": "",
+      "exitCode": 0,
+      "stdoutSHA256": "d39e4a157accdc758153ad8e7fe62de781774f2260dab3e52da5c4aa495da991",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-preset-agentic_runtime_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "agentic_runtime_repo"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/python/bin/python",
+      "exitCode": 0,
+      "stdoutSHA256": "a7f98faeb53498752cac80dcccf47039b406309110723f7ba994594bdb993cdc",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-preset-generated_docs_contract_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "generated_docs_contract_repo"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/python/bin/python",
+      "exitCode": 0,
+      "stdoutSHA256": "4c559d26782c96ad277a4ec617411715cb03bd52e3517dd36f9f4a3b30627c7a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-preset-python_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_service"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/python/bin/python",
+      "exitCode": 0,
+      "stdoutSHA256": "a6788cc538ed78717d0b2ff8e9c81d874a99e73d63aa6ed94a2f3f95fee55167",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-preset-python_typescript_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_typescript_service"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/python/bin/python",
+      "exitCode": 0,
+      "stdoutSHA256": "a146a9baf61ea044f28bc95ca394ba1b93a7383d450fc209302bb8c88a7052f9",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-preset-typescript_monorepo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_monorepo"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/python/bin/python",
+      "exitCode": 0,
+      "stdoutSHA256": "ce160055db332499755c0d089314bed1ef9f3f02c5f8465741288d3bebff25e5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-preset-typescript_workspace",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_workspace"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/python/bin/python",
+      "exitCode": 0,
+      "stdoutSHA256": "92ff79e5cbc02898d6c8c36b1a2ef80855a58dd023b0582f53ddab796c2d5ea8",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-quoted-preset-agentic_runtime_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "agentic_runtime_repo"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/Proof Kit's/python",
+      "exitCode": 0,
+      "stdoutSHA256": "a48278cff4271a1338ba9d0d5ce0f5f204c4e56a0ae96958ccb0edb9543d863c",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-quoted-preset-generated_docs_contract_repo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "generated_docs_contract_repo"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/Proof Kit's/python",
+      "exitCode": 0,
+      "stdoutSHA256": "7eaeca03e2a866d8b8e0838de7bd73d1eddd16cf529f774076429733e189344a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-quoted-preset-python_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_service"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/Proof Kit's/python",
+      "exitCode": 0,
+      "stdoutSHA256": "4ae9dd9bab564d2e2bd786cc717810655eac083f0ada78f8f01a6979ad3d72d6",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-quoted-preset-python_typescript_service",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "python_typescript_service"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/Proof Kit's/python",
+      "exitCode": 0,
+      "stdoutSHA256": "19b99ef9d6c97f1cf0de4575ec27cc77d6e09888bf36f5007cd1e83cf92f92ee",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-quoted-preset-typescript_monorepo",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_monorepo"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/Proof Kit's/python",
+      "exitCode": 0,
+      "stdoutSHA256": "4da755ec9a6bfa8b3c635c1da0e489a4422deb0963a8b2ca5cc50d4442c67b80",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "python-quoted-preset-typescript_workspace",
+      "argv": [
+        "stack-preset",
+        "--preset",
+        "typescript_workspace"
+      ],
+      "launcherProfile": "python_module",
+      "pythonExecutable": "/opt/Proof Kit's/python",
+      "exitCode": 0,
+      "stdoutSHA256": "5b9decfeff7a9af329eeb2495ef0f6b33031dc19c69c0283d5395842147b5f83",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

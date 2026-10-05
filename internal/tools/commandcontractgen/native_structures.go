@@ -16,6 +16,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
+	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofbindingtestinventory"
@@ -42,6 +43,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateevidence"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selfcheck"
+	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
@@ -504,6 +506,14 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.self-check.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.self-check.output.v1.root-shape"}, commands: []string{"self-check"},
 		schema: func() (map[string]any, error) { return selfcheck.OutputStructure(), nil },
+	}, {
+		id: "proofkit.stack-preset.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.stack-preset.output.v1.root-shape"}, commands: []string{"stack-preset"},
+		schema: func() (map[string]any, error) { return stackpreset.OutputStructure(), nil },
+	}, {
+		id: "proofkit.json-report-cli-adapter-source.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.json-report-cli-adapter-source.output.v1.root-shape"}, commands: []string{"json-report-cli-adapter-source"},
+		schema: func() (map[string]any, error) { return jsonreportcliadaptersource.OutputStructure(), nil },
 	}}
 }
 
