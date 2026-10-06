@@ -17,8 +17,10 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
+	"github.com/research-engineering/agentic-proofkit/internal/command/migrationparityadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
+	"github.com/research-engineering/agentic-proofkit/internal/command/producerpolicyselfproof"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofbindingtestinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
@@ -523,6 +525,22 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.spec-overview-claims.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.spec-overview-claims.output.v1.root-shape"}, commands: []string{"spec-overview-claims"},
 		schema: func() (map[string]any, error) { return specoverviewclaims.OutputStructure(), nil },
+	}, {
+		id: "proofkit.producer-policy-self-proof.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.producer-policy-self-proof.input.v1.root-shape"}, commands: []string{"producer-policy-self-proof"},
+		schema: func() (map[string]any, error) { return producerpolicyselfproof.InputStructure(), nil },
+	}, {
+		id: "proofkit.producer-policy-self-proof.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.producer-policy-self-proof.output.v1.root-shape"}, commands: []string{"producer-policy-self-proof"},
+		schema: func() (map[string]any, error) { return producerpolicyselfproof.OutputStructure(), nil },
+	}, {
+		id: "proofkit.migration-parity-admission.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.migration-parity-admission.input.v1.root-shape"}, commands: []string{"migration-parity-admission"},
+		schema: func() (map[string]any, error) { return migrationparityadmission.InputStructure(), nil },
+	}, {
+		id: "proofkit.migration-parity-admission.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.migration-parity-admission.output.v1.root-shape"}, commands: []string{"migration-parity-admission"},
+		schema: func() (map[string]any, error) { return migrationparityadmission.OutputStructure(), nil },
 	}}
 }
 
