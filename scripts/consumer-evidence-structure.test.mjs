@@ -211,3 +211,34 @@ test('fixed output literals tuples and failure sequences have discriminating sam
   const arbitrary = seed(external); arbitrary.input.witnessPlan.commands = [{foreign: ['arbitrary child']}];
   assert.equal(validators[external].input(arbitrary), true); assert.equal(output(external, arbitrary).record.state, 'failed');
 });
+
+test('raw input literals and bounded identifiers retain independent same-type domain oracles', () => {
+  const literals = {
+    [external]: [[['schemaVersion'], 1], [['input', 'schemaVersion'], 1], [['evidence', 'schemaVersion'], 1],
+      [['input', 'pilotMode'], 'non_blocking'], [['input', 'rollback', 'dependencyRemoval'], 'temp_consumer_package_and_lockfile'],
+      [['input', 'rollback', 'localWorkspaceFallbackPreserved'], true]],
+    [registry]: [[['schemaVersion'], 1], [['input', 'schemaVersion'], 1]],
+    [composer]: [[['schemaVersion'], 1]],
+  };
+  for (const command of commands) {
+    const valid = validators[command].input, input = seed(command);
+    assert.equal(valid(input), true);
+    for (const [path, expected] of literals[command]) {
+      assert.equal(at(input, path), expected);
+      const wrong = typeof expected === 'string' ? expected + '.foreign' : typeof expected === 'boolean' ? !expected : expected + 1;
+      assert.equal(valid(replace(input, path, wrong)), false, `${command}/${path}/same-type-literal`);
+    }
+  }
+  const bounds = {
+    [external]: [['input', 'pilotId'], ['input', 'binarySmokeProbeRuleId']],
+    [composer]: [['compositionId'], ['consumerId'], ['preconditions', 0, 'preconditionId']],
+  };
+  for (const [command, paths] of Object.entries(bounds)) for (const path of paths) {
+    const input = seed(command), valid = validators[command].input;
+    assert.equal(valid(replace(input, path, 'a'.repeat(256))), true, `${command}/${path}/accepted256`);
+    assert.equal(valid(replace(input, path, 'a'.repeat(257))), false, `${command}/${path}/rejected257`);
+  }
+  const input = seed(composer), state = ['preconditions', 0, 'state'];
+  for (const value of ['available', 'unavailable']) assert.equal(validators[composer].input(replace(input, state, value)), true);
+  for (const value of ['blocked', ' available ']) assert.equal(validators[composer].input(replace(input, state, value)), false);
+});
