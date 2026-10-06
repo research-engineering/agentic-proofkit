@@ -100,6 +100,23 @@ test('composer whole CLI chain materializes only native accepted input and prior
   }
 });
 
+test('composer distinguishes precondition-only failure from downstream-only rejection', () => {
+  const input = seed(composer), missing = structuredClone(input); missing.preconditions = [missing.preconditions[0]];
+  const absent = output(composer, missing); assert.equal(absent.status, 1); assert.equal(absent.record.state, 'failed');
+  assert.equal(absent.record.registryConsumerInput, null); assert.equal(absent.record.summary.failureCount, 6);
+  assert.equal(absent.record.summary.blockedPreconditionCount, 0);
+  assert.deepEqual(absent.record.ruleResults.map(x => [x.ruleId, x.status]), [[`proofkit.${composer}.preconditions`, 'failed'], [`proofkit.${composer}.accepted`, 'passed']]);
+  const invalidChild = structuredClone(input); invalidChild.releaseAuthorityInput.package.artifactPath = 'artifacts/package/other-1.2.3.tgz';
+  const release = invoke('release-authority', invalidChild.releaseAuthorityInput);
+  assert.equal(release.status, 0); assert.equal(release.stderr, ''); assert.equal(JSON.parse(release.stdout).state, 'passed');
+  assert.ok(release.stdout.endsWith('\n')); invalidChild.releaseAuthorityReport.outputSha256 = hash(release.stdout);
+  const rejected = output(composer, invalidChild); assert.equal(rejected.status, 1); assert.equal(rejected.record.state, 'failed');
+  assert.equal(rejected.record.registryConsumerInput, null); assert.equal(rejected.record.summary.failureCount, 1);
+  assert.equal(rejected.record.summary.blockedPreconditionCount, 0);
+  assert.deepEqual(rejected.record.ruleResults.map(x => [x.ruleId, x.status]), [[`proofkit.${composer}.preconditions`, 'passed'], [`proofkit.${composer}.failure.001`, 'failed']]);
+  assert.equal(rejected.record.ruleResults[1].message, 'composed registry-consumer input must be accepted by registry-consumer');
+});
+
 const at = (value, path) => path.reduce((current, key) => current[key], value);
 function arbitrary(command, direction, path) {
   return direction === 'input' && (path.includes('releaseAuthorityInput') || command === external && path.includes('witnessPlan') && (path.includes('vocabulary') || path.includes('commands') && path.some(x => typeof x === 'number')))
