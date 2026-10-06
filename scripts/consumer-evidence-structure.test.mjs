@@ -158,6 +158,9 @@ test('populated consumer records close nested key type optional null and cardina
         assert.equal(valid(replace(specimen, path, null)), nullable(row.command, direction, path), `${row.command}/${direction}/${path}/null`);
         const wrong = typeof value === 'string' || value === null ? 0 : 'wrong-type';
         assert.equal(valid(replace(specimen, path, wrong)), false, `${row.command}/${direction}/${path}/type`); checked++;
+        if (typeof value === 'string') for (const blank of ['', ' \t\r\n']) {
+          assert.equal(valid(replace(specimen, path, blank)), false, `${row.command}/${direction}/${path}/blank`);
+        }
       }
     }
   }
@@ -237,8 +240,32 @@ test('raw input literals and bounded identifiers retain independent same-type do
     const input = seed(command), valid = validators[command].input;
     assert.equal(valid(replace(input, path, 'a'.repeat(256))), true, `${command}/${path}/accepted256`);
     assert.equal(valid(replace(input, path, 'a'.repeat(257))), false, `${command}/${path}/rejected257`);
+    for (const value of ['A', 'a0', 'A_b.c:D-e']) assert.equal(valid(replace(input, path, value)), true, `${command}/${path}/grammar-positive`);
+    for (const value of ['1bad', '.bad', 'bad.', 'bad..id', 'bad id', 'bad/id', 'bad\nid', '\u00e9']) {
+      const bad = replace(input, path, value);
+      assert.equal(valid(bad), false, `${command}/${path}/grammar-negative`);
+      const result = invoke(command, bad);
+      assert.equal(result.status, 1); assert.equal(result.stdout, ''); assert.match(result.stderr, /stable rule identifier text/);
+    }
   }
   const input = seed(composer), state = ['preconditions', 0, 'state'];
   for (const value of ['available', 'unavailable']) assert.equal(validators[composer].input(replace(input, state, value)), true);
   for (const value of ['blocked', ' available ']) assert.equal(validators[composer].input(replace(input, state, value)), false);
+});
+
+test('output identifiers retain raw grammar and registry identity remains ordinary text', () => {
+  for (const [command, path] of [[external, ['reportId']], [composer, ['compositionId']]]) {
+    const record = output(command, seed(command)).record, valid = validators[command].output;
+    for (const value of ['A', 'a0', 'A_b.c:D-e', 'a'.repeat(256)]) {
+      assert.equal(valid(replace(record, path, value)), true, `${command}/${path}/grammar-positive`);
+    }
+    for (const value of ['1bad', '.bad', 'bad.', 'bad..id', 'bad id', 'bad/id', 'bad\nid', '\u00e9', 'a'.repeat(257)]) {
+      assert.equal(valid(replace(record, path, value)), false, `${command}/${path}/grammar-negative`);
+    }
+  }
+  for (const value of ['1bad', 'bad id', 'bad/id', '\u00e9']) {
+    const input = seed(registry); input.input.consumerId = value;
+    const result = output(registry, input);
+    assert.equal(result.status, 0); assert.equal(result.record.reportId, value);
+  }
 });
