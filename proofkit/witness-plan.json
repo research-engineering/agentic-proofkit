@@ -2022,6 +2022,7 @@
         "scripts/proof-routing-fixtures.mjs",
         "scripts/proof-routing-structure.test.mjs",
         "scripts/public-api-structure.test.mjs",
+        "scripts/release-classification-structure.test.mjs",
         "scripts/report-admission-structure.test.mjs",
         "scripts/selective-proof-fixtures.mjs",
         "scripts/selective-proof-structure.test.mjs",

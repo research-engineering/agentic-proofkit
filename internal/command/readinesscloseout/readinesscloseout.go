@@ -22,8 +22,11 @@ var readinessCloseoutNonClaims = []string{
 	"Readiness closeout reports cannot convert blocked, open, missing, or failed owner rows into passed readiness evidence.",
 }
 
-var statusPattern = regexp.MustCompile(`^[A-Z]+(?:-[A-Z]+)?$`)
-var rowIDPattern = regexp.MustCompile(`^[A-Z]+(?:-[A-Z]+)*-\d+[A-Z]?$`)
+const statusPatternBody = `[A-Z]+(?:-[A-Z]+)?`
+const rowIDPatternBody = `[A-Z]+(?:-[A-Z]+)*-\d+[A-Z]?`
+
+var statusPattern = regexp.MustCompile("^" + statusPatternBody + "$")
+var rowIDPattern = regexp.MustCompile("^" + rowIDPatternBody + "$")
 var markdownStructuralSegmentPattern = regexp.MustCompile(`[\n|]+`)
 var phraseSegmentPattern = regexp.MustCompile(`[.;]+`)
 var strictCharacterReferencePattern = regexp.MustCompile(`&(?:#[xX][0-9a-fA-F]+|#[0-9]+|[A-Za-z][A-Za-z0-9]+);`)
@@ -174,7 +177,10 @@ func Build(raw any) (report.Record, int, error) {
 }
 
 func buildReport(input closeoutInput) (report.Record, int, error) {
-	parsed := parseRows(input.MarkdownText)
+	parsed, err := parseRows(input.MarkdownText)
+	if err != nil {
+		return report.Record{}, 1, err
+	}
 	rowsByID := map[string]backlogRow{}
 	for _, row := range parsed.Rows {
 		rowsByID[row.RowID] = row
@@ -323,7 +329,7 @@ func buildReport(input closeoutInput) (report.Record, int, error) {
 	return record, exitCode, nil
 }
 
-func parseRows(markdownText string) parsedRows {
+func parseRows(markdownText string) (parsedRows, error) {
 	rowsByID := map[string]backlogRow{}
 	order := []string{}
 	duplicates := []string{}
@@ -345,26 +351,35 @@ func parseRows(markdownText string) parsedRows {
 			continue
 		}
 		status := cells[1]
-		rowID := cells[2]
+		rawID := cells[2]
 		ownerScope := cells[3]
 		completionCondition := cells[4]
-		if !statusPattern.MatchString(status) || !rowIDPattern.MatchString(rowID) {
+		if !statusPattern.MatchString(status) || !rowIDPattern.MatchString(rawID) {
 			continue
 		}
 		lineNumber := index + 1
-		if existing, ok := rowsByID[rowID]; ok {
-			duplicates = append(duplicates, fmt.Sprintf("%s appears more than once in backlog tables at lines %d and %d", rowID, existing.LineNumber, lineNumber))
+		context := fmt.Sprintf("readiness closeout markdown line %d", lineNumber)
+		id, err := rowID(rawID, context+".rowId")
+		if err != nil {
+			return parsedRows{}, err
+		}
+		status, err = statusText(status, context+".status")
+		if err != nil {
+			return parsedRows{}, err
+		}
+		if existing, ok := rowsByID[id]; ok {
+			duplicates = append(duplicates, fmt.Sprintf("%s appears more than once in backlog tables at lines %d and %d", id, existing.LineNumber, lineNumber))
 			continue
 		}
-		rowsByID[rowID] = backlogRow{
+		rowsByID[id] = backlogRow{
 			CompletionCondition: completionCondition,
 			LineNumber:          lineNumber,
 			OwnerScope:          ownerScope,
-			RowID:               rowID,
+			RowID:               id,
 			Section:             currentSection,
 			Status:              status,
 		}
-		order = append(order, rowID)
+		order = append(order, id)
 	}
 	rows := make([]backlogRow, 0, len(order))
 	for _, rowID := range order {
@@ -374,7 +389,7 @@ func parseRows(markdownText string) parsedRows {
 		return rows[left].RowID < rows[right].RowID
 	})
 	sort.Strings(duplicates)
-	return parsedRows{DuplicateFailures: duplicates, Rows: rows}
+	return parsedRows{DuplicateFailures: duplicates, Rows: rows}, nil
 }
 
 func frontierChecks(input closeoutInput, rows []backlogRow, rowsByID map[string]backlogRow) []string {
@@ -478,7 +493,7 @@ func admitInput(raw any) (closeoutInput, error) {
 	if !ok {
 		return closeoutInput{}, fmt.Errorf("readiness closeout input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"environmentPreconditions", "exactCommand", "frontier", "inputDefinitions", "markdownText", "negatedNonClaimPhrases", "nonClaims", "phraseRules", "readinessRowPrefixes", "readinessSections", "reportId", "runIdentity", "schemaVersion"}, "readiness closeout input"); err != nil {
+	if err := admit.KnownKeys(record, inputFields, "readiness closeout input"); err != nil {
 		return closeoutInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -590,7 +605,7 @@ func admitInputDefinition(raw any, context string) (inputDefinition, error) {
 	if !ok {
 		return inputDefinition{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"classification", "evidenceClass", "expectedStatus", "forbiddenText", "reason", "requiredText", "rowId"}, context); err != nil {
+	if err := admit.KnownKeys(record, definitionFields, context); err != nil {
 		return inputDefinition{}, err
 	}
 	rowID, err := rowID(record["rowId"], context+".rowId")
@@ -641,7 +656,7 @@ func admitFrontier(raw any) (frontierPolicy, error) {
 	if !ok {
 		return frontierPolicy{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"closedRequiredText", "closedRowRequiredText", "closedStatus", "openRequiredText", "openStatus", "rowId"}, context); err != nil {
+	if err := admit.KnownKeys(record, frontierFields, context); err != nil {
 		return frontierPolicy{}, err
 	}
 	rowID, err := rowID(record["rowId"], context+".rowId")
@@ -702,7 +717,7 @@ func admitPhraseRule(raw any, context string) (phraseRule, error) {
 	if !ok {
 		return phraseRule{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"directClaimPhrases", "evidencePhrases", "failureMessage", "predicatePhrases", "ruleId", "subjectPhrases"}, context); err != nil {
+	if err := admit.KnownKeys(record, phraseRuleFields, context); err != nil {
 		return phraseRule{}, err
 	}
 	ruleID, err := admit.RuleID(record["ruleId"], context+".ruleId")

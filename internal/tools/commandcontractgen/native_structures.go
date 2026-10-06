@@ -25,9 +25,11 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/publicapi"
+	"github.com/research-engineering/agentic-proofkit/internal/command/readinesscloseout"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receipttrustclass"
+	"github.com/research-engineering/agentic-proofkit/internal/command/releaseauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/command/renderedartifactfreshness"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
@@ -525,6 +527,26 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.spec-overview-claims.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.spec-overview-claims.output.v1.root-shape"}, commands: []string{"spec-overview-claims"},
 		schema: func() (map[string]any, error) { return specoverviewclaims.OutputStructure(), nil },
+	}, {
+		id: "proofkit.release-authority.input.v1.json-schema", direction: "input", aggregateVersion: "1",
+		predecessors: []string{"proofkit.release-authority.input.v1.root-shape"}, commands: []string{"release-authority"},
+		variants: []nativeStructureVariant{
+			{id: "01-legacy-registry", when: "schemaVersion1", schema: func() (map[string]any, error) { return releaseauthority.InputStructure(1) }},
+			{id: "02-source-registry", when: "schemaVersion2", schema: func() (map[string]any, error) { return releaseauthority.InputStructure(2) }},
+			{id: "03-dry-run-registry", when: "schemaVersion3", schema: func() (map[string]any, error) { return releaseauthority.InputStructure(3) }},
+		},
+	}, {
+		id: "proofkit.release-authority.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.release-authority.output.v1.root-shape"}, commands: []string{"release-authority"},
+		schema: func() (map[string]any, error) { return releaseauthority.OutputStructure(), nil },
+	}, {
+		id: "proofkit.readiness-closeout.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.readiness-closeout.input.v1.root-shape"}, commands: []string{"readiness-closeout"},
+		schema: func() (map[string]any, error) { return readinesscloseout.InputStructure(), nil },
+	}, {
+		id: "proofkit.readiness-closeout.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.readiness-closeout.output.v1.root-shape"}, commands: []string{"readiness-closeout"},
+		schema: func() (map[string]any, error) { return readinesscloseout.OutputStructure(), nil },
 	}, {
 		id: "proofkit.producer-policy-self-proof.input.v1.json-schema", direction: "input",
 		predecessors: []string{"proofkit.producer-policy-self-proof.input.v1.root-shape"}, commands: []string{"producer-policy-self-proof"},
