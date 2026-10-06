@@ -57,6 +57,10 @@ var nativeBoundaryDirectionDeltas = []string{
 	"migration-parity-admission/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"producer-policy-self-proof/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"producer-policy-self-proof/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"readiness-closeout/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"readiness-closeout/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"release-authority/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"release-authority/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"test-evidence-inventory/output:classificationIds,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"evidence-graph/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"proof-slice/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
@@ -188,7 +192,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 104 || len(added) != 100+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 108 || len(added) != 104+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {

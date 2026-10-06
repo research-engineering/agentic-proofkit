@@ -1,0 +1,1056 @@
+{
+  "schemaVersion": 1,
+  "head": "264f256daa4516e41ddf9b6dfcd89dee6580431d",
+  "tree": "2329c6e31810f9a8b2ec7741bb2ddd5378f1deeb",
+  "binarySHA256": "cce7d179b3bbe725497ba05774c55b1b6cb13db0896f20fbab6f62c26bfe788b",
+  "observations": [
+    {
+      "command": "release-authority",
+      "name": "version-1",
+      "input": "{\"schemaVersion\":1,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"provenanceMode\":\"trusted_publishing\"},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "19a55ace5cff14f5a5cddf5e53c14a8869a7d881503560573dbfce9dd56c55e9",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "version-2",
+      "input": "{\"schemaVersion\":2,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "cb41abf55cc23f17cba1bae90d0f7df74f8fc93e540b03f48c025d57898662a5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "version-3",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "cb41abf55cc23f17cba1bae90d0f7df74f8fc93e540b03f48c025d57898662a5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "valid",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "cb41abf55cc23f17cba1bae90d0f7df74f8fc93e540b03f48c025d57898662a5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "tarball",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"tarball_pilot\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":true,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":null,\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"file_tarball\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":null,\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"file:agentic-proofkit-1.2.3.tgz\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "97d4419c441bb3c394464a1601293e462f2db774537199d969167da1d35f98af",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "tarball-omitted-registry-config",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"tarball_pilot\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":true,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"file_tarball\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":null,\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"file:agentic-proofkit-1.2.3.tgz\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "97d4419c441bb3c394464a1601293e462f2db774537199d969167da1d35f98af",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "optional-proof-absent",
+      "input": "{\"schemaVersion\":2,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "88dd4627600a46b047cfb5eee78092419b877dcb20a1e7d36145278cdef79722",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "optional-proof-null",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":null},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "8764d8dab527386143b822aafcff7ae26267847634e52a6ac8c28425be2ec4e6"
+    },
+    {
+      "command": "release-authority",
+      "name": "v3-proof-required-semantic",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "30009c5e5a13d9e80f92a89c8d10b65d0c74c589c0119d4f257e8a405c95f92d",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "registry-null",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":null,\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "7cc0e85bfa006b5b48f8c9f618f1dda60ff619d974dca97cfaef51c299afae2e",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "registry-omitted",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "f3e9fd9f54c274d0a5bb4841bbb649fb154fbf9bcf0404fd07661f9b6096cbdc"
+    },
+    {
+      "command": "release-authority",
+      "name": "source-null",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":null},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "63fdbf73fdc8177c01e025826c5c1fff254cfa4b3496828dd9c8c289aacd06a3"
+    },
+    {
+      "command": "release-authority",
+      "name": "source-normalized",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\" Agentic-ProofKit \",\"owner\":\" Research-Engineering \",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "cb41abf55cc23f17cba1bae90d0f7df74f8fc93e540b03f48c025d57898662a5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "source-url-mismatch",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/other\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "af6d7bb5d7d29c37a72245dfc58706333bf9ebb1a4c7a3575420675671abd9e3"
+    },
+    {
+      "command": "release-authority",
+      "name": "public-provenance",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_provenance\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"public\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0778361e8765afec33632651c4d42e32a037b69ea211c76e88db3a4e8a9fa881",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "private-provenance",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_provenance\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "1e31dd623a81988899b8835c508bcbc99d7daa5e651a0607013b2ddd5f7c598f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "github-packages",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"@research-engineering/agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://npm.pkg.github.com\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"@research-engineering\",\"publishAuthorityMode\":\"github_actions_github_token\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"github_packages\",\"registryUrl\":\"https://npm.pkg.github.com\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "59091e1ea0186d1188ab9e6435234e65ca5b177e4cb168362c773be6313d21ee",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "consumer-binarySmokeOnly",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":false,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "40a7fa9a8670f917230b62821569e67f8398aa50ca2025623a68d24467b54b7b",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "consumer-lockfileRequired",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":false,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "c2735774451fe5807030e07ad83cde2c3b64c3b301e6c014eaf279cbeb05e981",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "consumer-siblingSourceCheckoutAllowed",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":true},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "e6f98d2c30efa8ed03a614dca0bbc15ca009931c72aa440a8228e8f1d5f77ab7",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "rollout-claim",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":true,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "01c5dc0b23decb5f13ee1fb1f38b8f428164395a2cc4cb9a2fa4d38ad4e7ccfb",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "multiple-failures",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":true,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":true,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":false,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_provenance\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "806800367f0614539edb0089a6c88df0937ea01f8bea335d398808618c216b55",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "registry-url-mismatch",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.example.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "cefac14ff4b1ffb240e0a2d7b214826f88d03839a17293770db5d14b2b29cf54",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "schema-unsupported",
+      "input": "{\"schemaVersion\":4,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "48dee8fbb59f211e9b2e837addbc92d8319052a97c9cd9f57a151dbe1fc7f03a"
+    },
+    {
+      "command": "release-authority",
+      "name": "bad-semver",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"v1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "2f6e2e4d65495b06bc128c5946b1e8f5977e2354f8cbbb89c93790e28ecb26f6"
+    },
+    {
+      "command": "release-authority",
+      "name": "empty-nonClaims",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "e95cd1c3b78b974880b2f526e59116525055a722b679fc34411f3db0189983d4"
+    },
+    {
+      "command": "release-authority",
+      "name": "duplicate-trimmed-text",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\" Zulu \",\"Zulu\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "345845fc4be9a81023c7019982a336409f4a852449a72bb1092a11629ddc54b5"
+    },
+    {
+      "command": "release-authority",
+      "name": "normalized-text-order",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\" Zulu \",\"Alpha\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "21d0454bd38759d6a0e047b9ee94e681a52d3721449de415eb20d4bfaa69ee84",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "builtin-overlap",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Release authority validates caller-owned release-channel declarations only.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "2c2c4fca9fbcbbafb9b73b2cf8fe8e40f337961aaf2bfff48ba2b8b3ae7620ef",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "long-id",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0692abc33b91123881406311a7282bf06be2078ec097247033ee72872666aa0e",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "id-over-bound",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "c95dd38c31343faa9d3a8659cc4f982484a28dfd85f0e085ca57d3492c434344"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "valid",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1d846a5eef9d0ac6a76ed180bc7f8fc2c6eb0f33a4669030ad2b7448f277329f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "mixed-classifications-false",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Synthetic | Independently classified |\\n| BLOCKED | PROD-02 | Synthetic | Independently classified |\\n| OUT | PROD-03 | Synthetic | Independently classified |\\n| FAILED | PROD-04 | Synthetic | Independently classified |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic mixed input.\",\"requiredText\":[]},{\"rowId\":\"PROD-02\",\"expectedStatus\":\"BLOCKED\",\"classification\":\"blocked\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic mixed input.\",\"requiredText\":[]},{\"rowId\":\"PROD-03\",\"expectedStatus\":\"OUT\",\"classification\":\"out_of_scope\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic mixed input.\",\"requiredText\":[]},{\"rowId\":\"PROD-04\",\"expectedStatus\":\"FAILED\",\"classification\":\"failed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic mixed input.\",\"requiredText\":[]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "ed032aaa765bee25b37527d2a5b396400121d1f9738f6348abd565be7e6de31e",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "mixed-classifications-true",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Synthetic | Independently classified |\\n| BLOCKED | PROD-02 | Synthetic | Independently classified |\\n| OUT | PROD-03 | Synthetic | Independently classified |\\n| FAILED | PROD-04 | Synthetic | Independently classified |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic mixed input.\",\"requiredText\":[]},{\"rowId\":\"PROD-02\",\"expectedStatus\":\"BLOCKED\",\"classification\":\"blocked\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic mixed input.\",\"requiredText\":[]},{\"rowId\":\"PROD-03\",\"expectedStatus\":\"OUT\",\"classification\":\"out_of_scope\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic mixed input.\",\"requiredText\":[]},{\"rowId\":\"PROD-04\",\"expectedStatus\":\"DONE\",\"classification\":\"failed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic mixed input.\",\"requiredText\":[]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "628556c64bc5a7712d3766cdba5abc22851215fa5fc63e204532d631f067384b",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "empty-definitions",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "3a6281bbe3a39b21cefa22ccb5d8ecb2c45281cda870c505d9e796e1cf8a4bf2",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "missing-row",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | OTHER-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "0be118209435a864688b6b27d8a7d3c5263b7b6518b9ee8259f7e06c87084b25",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "empty-markdown",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "001fb0207462acc0d6b4366b25ed6e9bd1477b5c6544db6ddffa617f813b823c",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "duplicate-row",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\\n| DONE | PROD-01 | Another | Alpha phrase |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "0a5ce76772299dfb2d403673b1464feb79feef32aa8388c972962af5d301e8ea",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "duplicate-definitions",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]},{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "a900441b847cb1820db90e15ffff5e1300dc07903b07a9bbcad2c44907d6c050"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "optional-forbidden",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"],\"forbiddenText\":[\"not present\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1d846a5eef9d0ac6a76ed180bc7f8fc2c6eb0f33a4669030ad2b7448f277329f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "forbidden-present",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"],\"forbiddenText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "24a3c1393961900ab682a16004aef36df02e0bcbcae51c3b5aae7f1762a49e4f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "optional-forbidden-null",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"],\"forbiddenText\":null}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "01659d3356591b490ec412f21689bc20f615b6930359670584bfa3d10c46efca"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "empty-required-phrases",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1d846a5eef9d0ac6a76ed180bc7f8fc2c6eb0f33a4669030ad2b7448f277329f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "blocked",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| BLOCKED | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"BLOCKED\",\"classification\":\"blocked\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "06f65512c78f5d7a12218d2ce37b0ad8a35079fe7e6949fcafb5e762ae988e68",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "false-passed",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| BLOCKED | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"BLOCKED\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "465976ab81208ba0653a14a18ea70316bad348ae4ba1a85e1444c16b5fdb8872",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "out-of-scope",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\\n| NEXT | OTHER-02 | Other | Unrelated obligation |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "85e35f0f63bc1c1310aeb0cc8a2c1a219eb82a3a040749df89e9bcd72b15b2d1",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "open-frontier",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| NEXT | PROD-09 | Closeout | Frontier closed Closure gates: |\\nFrontier open\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1d846a5eef9d0ac6a76ed180bc7f8fc2c6eb0f33a4669030ad2b7448f277329f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "phrase-rule",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[{\"ruleId\":\"claim.example\",\"failureMessage\":\"Synthetic overclaim.\",\"subjectPhrases\":[\"future rows\"],\"evidencePhrases\":[\"merge authority\"],\"predicatePhrases\":[\"established\"]}],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1d846a5eef9d0ac6a76ed180bc7f8fc2c6eb0f33a4669030ad2b7448f277329f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "phrase-rule-failure",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\\nFuture rows merge authority established\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[{\"ruleId\":\"claim.example\",\"failureMessage\":\"Synthetic overclaim.\",\"subjectPhrases\":[\"future rows\"],\"evidencePhrases\":[\"merge authority\"],\"predicatePhrases\":[\"established\"],\"directClaimPhrases\":[]}],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "063f677c29fc3048dbed9550c3b57af8b35553f39902548be6eec24f12294a9e",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "phrase-direct-null",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[{\"ruleId\":\"claim.example\",\"failureMessage\":\"Synthetic overclaim.\",\"subjectPhrases\":[],\"evidencePhrases\":[],\"predicatePhrases\":[],\"directClaimPhrases\":null}],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "bed67aa69d0ceb09e2ac004f8855f58c43f03cb9b373b31c84dd8fbcc6aaf4cd"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "nonclaim-suppressor",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[\"Does not prove deployment readiness\"],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1d846a5eef9d0ac6a76ed180bc7f8fc2c6eb0f33a4669030ad2b7448f277329f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "broad-nonclaim",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[\"not\"],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "e78e36f7eff04a36c2b4c8e9d1a02080220c85af9c3fa93fca383d03b677f1ad"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "duplicate-allowed-phrases",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\",\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1d846a5eef9d0ac6a76ed180bc7f8fc2c6eb0f33a4669030ad2b7448f277329f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "duplicate-environment",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\",\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "855fae8248aa93bd8eddad3cb62fade0e56eb01edd5973b5f622983af5cba3f7"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "empty-environment",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "03f3ef4cfc1112f9e44f198036af19243de58c212069bdfebfc7c1e19d046b20",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "empty-sections",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "7473d68de5a836a5986bbf03ab071ddc0f474253844bc562df8c5bdece22be98"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "duplicate-nonClaims",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Alpha\",\"Alpha\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1174b707c7381c96136073aebb3858bce37a9d84f435cfcf675674aa263b751a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "long-row-id",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "5094b927ee7668cb5c90c29a119f62213643869679976cc85784393e2e684129",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "report-id-bound",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "ee0c72bc0b37625bf1044f576f61135b19578b6c049365e467ff809b0d3f29b8",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "unknown-report-kind",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"],\"reportKind\":\"foreign.report\"}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "549beba6848003733801c7fc7209014d38eee8a2a2ed91636efbf349f215c64d"
+    },
+    {
+      "command": "release-authority",
+      "name": "unknown-root",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"],\"foreign\":0}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "fde051d28b2da0e72e0fda38d79ece4dbececbf5ff2347cdaa5f210fbb1e1683"
+    },
+    {
+      "command": "release-authority",
+      "name": "Unicode-text",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Alpha\",\"﻿Bravo\",\"\",\"𐀀\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "8096f335963857b0f12988fb5a71fae58df0ffd97476964bdf763d054929bbad",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "compact",
+      "input": "{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "7ac2500634b9e599ddf3229d411aa84dbd53f5e87210ae2e1c64973e257550a7",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "pointer",
+      "input": "{\"payload\":{\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-",
+        "--input-pointer",
+        "/payload"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "cb41abf55cc23f17cba1bae90d0f7df74f8fc93e540b03f48c025d57898662a5",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "release-authority",
+      "name": "duplicate-key",
+      "input": "{\"schemaVersion\":1,\"schemaVersion\":3,\"releaseId\":\"release.example\",\"channel\":\"registry_release\",\"rolloutClaim\":false,\"package\":{\"artifactPath\":\"artifacts/package/agentic-proofkit-1.2.3.tgz\",\"manifestPrivate\":false,\"name\":\"agentic-proofkit\",\"packageManagerLockfile\":\"package-lock.json\",\"packManifestPath\":\"artifacts/package/npm-pack.json\",\"publishConfigRegistry\":\"https://registry.npmjs.org\",\"version\":\"1.2.3\"},\"artifactProof\":{\"binarySmokeProofId\":\"proof.binary\",\"cliSmokeProofId\":\"proof.cli\",\"deepImportRejectionProofId\":\"proof.deep-import\",\"outsideConsumerInstallProofId\":\"proof.consumer\",\"packageArtifactCommandId\":\"proof.package\",\"packDryRunCommandId\":\"proof.pack\",\"registryPublishDryRunProofId\":\"proof.publish\"},\"consumerContract\":{\"binarySmokeOnly\":true,\"dependencyPinType\":\"registry_version\",\"lockfileRequired\":true,\"siblingSourceCheckoutAllowed\":false},\"registryAuthority\":{\"consumerMigrationPath\":\"Consumers pin an admitted version.\",\"packageScope\":\"\",\"publishAuthorityMode\":\"npm_trusted_publishing\",\"publishWorkflowPath\":\".github/workflows/release.yml\",\"registryKind\":\"npm_registry\",\"registryUrl\":\"https://registry.npmjs.org\",\"releaseTagPattern\":\"v1.2.3\",\"rollbackPolicy\":\"Restore the previous admitted pin.\",\"visibility\":\"public\",\"sourceRepository\":{\"name\":\"agentic-proofkit\",\"owner\":\"research-engineering\",\"url\":\"https://github.com/research-engineering/agentic-proofkit\",\"visibility\":\"private\"}},\"rollback\":{\"owner\":\"release.owner\",\"procedure\":\"Restore the previous admitted version.\",\"versionPin\":\"1.2.2\"},\"nonClaims\":[\"Synthetic release declarations are not registry proof.\"]}",
+      "argv": [
+        "release-authority",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "da127fc0c94cbd9dc508e02496bddf4c59297db82ab76a67fe4f3d8403bccacc"
+    },
+    {
+      "command": "release-authority",
+      "name": "help---help",
+      "input": "",
+      "argv": [
+        "release-authority",
+        "--help"
+      ],
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "7972a7806a060d2fd052dae657df3484b77676ca7707db1b3160d38ca4803799",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "predecessorHelp": "Usage:\n  agentic-proofkit release-authority --input <path|-> [--input-pointer <pointer>]\n\nInstalled invocation:\n  agentic-proofkit release-authority --input <path|-> [--input-pointer <pointer>]\n\nCommand ID:\n  release-authority\n\nRoute:\n  release-authority\n\nInput:\n  Requires explicit caller-owned JSON input through --input <path|->; stdin is only read when --input - is selected.\n\nOutput modes:\n  json\n\nScope class:\n  explicit_caller_input\n\nAllowed flags:\n  --input\n  --input-pointer\n\nInput schema summary:\n  schemaVersion=1\n  root-shape-only definition proofkit.release-authority.input.v1.root-shape; nested fields, types, and cardinalities are non-claims\n\nPublic contract:\n  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.\n  Nested field semantics remain owned by native command admission.\n"
+    },
+    {
+      "command": "release-authority",
+      "name": "help--h",
+      "input": "",
+      "argv": [
+        "release-authority",
+        "-h"
+      ],
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "7972a7806a060d2fd052dae657df3484b77676ca7707db1b3160d38ca4803799",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "predecessorHelp": "Usage:\n  agentic-proofkit release-authority --input <path|-> [--input-pointer <pointer>]\n\nInstalled invocation:\n  agentic-proofkit release-authority --input <path|-> [--input-pointer <pointer>]\n\nCommand ID:\n  release-authority\n\nRoute:\n  release-authority\n\nInput:\n  Requires explicit caller-owned JSON input through --input <path|->; stdin is only read when --input - is selected.\n\nOutput modes:\n  json\n\nScope class:\n  explicit_caller_input\n\nAllowed flags:\n  --input\n  --input-pointer\n\nInput schema summary:\n  schemaVersion=1\n  root-shape-only definition proofkit.release-authority.input.v1.root-shape; nested fields, types, and cardinalities are non-claims\n\nPublic contract:\n  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.\n  Nested field semantics remain owned by native command admission.\n"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "unknown-root",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"],\"foreign\":0}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "549beba6848003733801c7fc7209014d38eee8a2a2ed91636efbf349f215c64d"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "Unicode-text",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Alpha\",\"﻿Bravo\",\"\",\"𐀀\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "2b91b1d34643773b6fa86f6f7d8b289ad149c6b34d092b471ea25a9d180061e7",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "compact",
+      "input": "{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1d30824dfe0dcc2a8e9f96921fe3183b6d7ca116b254e32fee0d6bc3e1db92d4",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "pointer",
+      "input": "{\"payload\":{\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-",
+        "--input-pointer",
+        "/payload"
+      ],
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "1d846a5eef9d0ac6a76ed180bc7f8fc2c6eb0f33a4669030ad2b7448f277329f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "duplicate-key",
+      "input": "{\"schemaVersion\":1,\"schemaVersion\":1,\"markdownText\":\"### Readiness\\n| Status | ID | Owner scope | Completion condition |\\n|---|---|---|---|\\n| DONE | PROD-01 | Alpha | Alpha phrase |\\n| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |\",\"reportId\":\"readiness.example\",\"exactCommand\":\"proofkit readiness closeout\",\"runIdentity\":\"run.example\",\"environmentPreconditions\":[\"local\"],\"readinessSections\":[\"Readiness\"],\"readinessRowPrefixes\":[\"PROD-\"],\"inputDefinitions\":[{\"rowId\":\"PROD-01\",\"expectedStatus\":\"DONE\",\"classification\":\"passed\",\"evidenceClass\":\"local_contract_gate\",\"reason\":\"Synthetic input.\",\"requiredText\":[\"Alpha phrase\"]}],\"frontier\":{\"rowId\":\"PROD-09\",\"openStatus\":\"NEXT\",\"closedStatus\":\"DONE\",\"openRequiredText\":[\"Frontier open\"],\"closedRequiredText\":[\"Frontier closed\"],\"closedRowRequiredText\":[\"Closure gates:\"]},\"phraseRules\":[],\"negatedNonClaimPhrases\":[],\"nonClaims\":[\"Synthetic classification only.\"]}",
+      "argv": [
+        "readiness-closeout",
+        "--input",
+        "-"
+      ],
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "da127fc0c94cbd9dc508e02496bddf4c59297db82ab76a67fe4f3d8403bccacc"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "help---help",
+      "input": "",
+      "argv": [
+        "readiness-closeout",
+        "--help"
+      ],
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "8eefc6cfa423c5713a713c5cd5cdc9455554389dedb6b74e3dcd126b86e035a8",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "predecessorHelp": "Usage:\n  agentic-proofkit readiness-closeout --input <path|-> [--input-pointer <pointer>]\n\nInstalled invocation:\n  agentic-proofkit readiness-closeout --input <path|-> [--input-pointer <pointer>]\n\nCommand ID:\n  readiness-closeout\n\nRoute:\n  readiness-closeout\n\nInput:\n  Requires explicit caller-owned JSON input through --input <path|->; stdin is only read when --input - is selected.\n\nOutput modes:\n  json\n\nScope class:\n  explicit_caller_input\n\nAllowed flags:\n  --input\n  --input-pointer\n\nInput schema summary:\n  schemaVersion=1\n  root-shape-only definition proofkit.readiness-closeout.input.v1.root-shape; nested fields, types, and cardinalities are non-claims\n\nPublic contract:\n  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.\n  Nested field semantics remain owned by native command admission.\n"
+    },
+    {
+      "command": "readiness-closeout",
+      "name": "help--h",
+      "input": "",
+      "argv": [
+        "readiness-closeout",
+        "-h"
+      ],
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "8eefc6cfa423c5713a713c5cd5cdc9455554389dedb6b74e3dcd126b86e035a8",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "predecessorHelp": "Usage:\n  agentic-proofkit readiness-closeout --input <path|-> [--input-pointer <pointer>]\n\nInstalled invocation:\n  agentic-proofkit readiness-closeout --input <path|-> [--input-pointer <pointer>]\n\nCommand ID:\n  readiness-closeout\n\nRoute:\n  readiness-closeout\n\nInput:\n  Requires explicit caller-owned JSON input through --input <path|->; stdin is only read when --input - is selected.\n\nOutput modes:\n  json\n\nScope class:\n  explicit_caller_input\n\nAllowed flags:\n  --input\n  --input-pointer\n\nInput schema summary:\n  schemaVersion=1\n  root-shape-only definition proofkit.readiness-closeout.input.v1.root-shape; nested fields, types, and cardinalities are non-claims\n\nPublic contract:\n  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.\n  Nested field semantics remain owned by native command admission.\n"
+    }
+  ]
+}

@@ -22,8 +22,11 @@ var readinessCloseoutNonClaims = []string{
 	"Readiness closeout reports cannot convert blocked, open, missing, or failed owner rows into passed readiness evidence.",
 }
 
-var statusPattern = regexp.MustCompile(`^[A-Z]+(?:-[A-Z]+)?$`)
-var rowIDPattern = regexp.MustCompile(`^[A-Z]+(?:-[A-Z]+)*-\d+[A-Z]?$`)
+const statusPatternBody = `[A-Z]+(?:-[A-Z]+)?`
+const rowIDPatternBody = `[A-Z]+(?:-[A-Z]+)*-\d+[A-Z]?`
+
+var statusPattern = regexp.MustCompile("^" + statusPatternBody + "$")
+var rowIDPattern = regexp.MustCompile("^" + rowIDPatternBody + "$")
 var markdownStructuralSegmentPattern = regexp.MustCompile(`[\n|]+`)
 var phraseSegmentPattern = regexp.MustCompile(`[.;]+`)
 var strictCharacterReferencePattern = regexp.MustCompile(`&(?:#[xX][0-9a-fA-F]+|#[0-9]+|[A-Za-z][A-Za-z0-9]+);`)
@@ -478,7 +481,7 @@ func admitInput(raw any) (closeoutInput, error) {
 	if !ok {
 		return closeoutInput{}, fmt.Errorf("readiness closeout input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"environmentPreconditions", "exactCommand", "frontier", "inputDefinitions", "markdownText", "negatedNonClaimPhrases", "nonClaims", "phraseRules", "readinessRowPrefixes", "readinessSections", "reportId", "runIdentity", "schemaVersion"}, "readiness closeout input"); err != nil {
+	if err := admit.KnownKeys(record, inputFields, "readiness closeout input"); err != nil {
 		return closeoutInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -590,7 +593,7 @@ func admitInputDefinition(raw any, context string) (inputDefinition, error) {
 	if !ok {
 		return inputDefinition{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"classification", "evidenceClass", "expectedStatus", "forbiddenText", "reason", "requiredText", "rowId"}, context); err != nil {
+	if err := admit.KnownKeys(record, definitionFields, context); err != nil {
 		return inputDefinition{}, err
 	}
 	rowID, err := rowID(record["rowId"], context+".rowId")
@@ -641,7 +644,7 @@ func admitFrontier(raw any) (frontierPolicy, error) {
 	if !ok {
 		return frontierPolicy{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"closedRequiredText", "closedRowRequiredText", "closedStatus", "openRequiredText", "openStatus", "rowId"}, context); err != nil {
+	if err := admit.KnownKeys(record, frontierFields, context); err != nil {
 		return frontierPolicy{}, err
 	}
 	rowID, err := rowID(record["rowId"], context+".rowId")
@@ -702,7 +705,7 @@ func admitPhraseRule(raw any, context string) (phraseRule, error) {
 	if !ok {
 		return phraseRule{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"directClaimPhrases", "evidencePhrases", "failureMessage", "predicatePhrases", "ruleId", "subjectPhrases"}, context); err != nil {
+	if err := admit.KnownKeys(record, phraseRuleFields, context); err != nil {
 		return phraseRule{}, err
 	}
 	ruleID, err := admit.RuleID(record["ruleId"], context+".ruleId")
