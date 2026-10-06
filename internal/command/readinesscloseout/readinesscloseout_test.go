@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
@@ -103,6 +104,58 @@ func TestBuildRejectsCallerControlledReportKind(t *testing.T) {
 	_, status, err := Build(input)
 	if status != 1 || err == nil || !strings.Contains(err.Error(), "unsupported field") {
 		t.Fatalf("Build() status=%d error=%v, want structural rejection", status, err)
+	}
+}
+
+func TestBuildAdmitsMarkdownDerivedReportTextBeforeProjection(t *testing.T) {
+	id := "GL" + "PAT" + "-EXAMPLE-01"
+	statusText := "GL" + "PAT" + "-EXAMPLE"
+	if !rowIDPattern.MatchString(id) || !statusPattern.MatchString(statusText) ||
+		!admit.ContainsSecretLikeValue(id) || !admit.ContainsSecretLikeValue(statusText) {
+		t.Fatal("synthetic values must satisfy row/status grammar and shared sensitive-data predicate")
+	}
+	base := closedFrontierMarkdown()
+	if record, code, err := Build(minimalCloseoutInput(base)); err != nil || code != 0 || record.State != "passed" {
+		t.Fatal("legitimate prerequisite must pass before the isolated derived-text corruptions")
+	}
+	for name, markdown := range map[string]string{
+		"out-of-scope":      base + "\n| DONE | " + id + " | Note | Synthetic text |",
+		"duplicate":         base + strings.Repeat("\n| DONE | "+id+" | Note | Synthetic text |", 2),
+		"definition-status": strings.Replace(base, "| DONE | PROD-01", "| "+statusText+" | PROD-01", 1),
+		"frontier-status":   strings.Replace(base, "| DONE | PROD-09", "| "+statusText+" | PROD-09", 1),
+		"unrelated-section": base + "\n### Unrelated\n| DONE | " + id + " | Note | Synthetic text |",
+	} {
+		t.Run(name, func(t *testing.T) {
+			record, code, err := Build(minimalCloseoutInput(markdown))
+			if code != 1 || err == nil || !strings.Contains(err.Error(), "secret-like values") || record.ReportKind != "" {
+				t.Fatalf("derived text did not fail admission before report construction: code=%d", code)
+			}
+			if strings.Contains(err.Error(), id) || strings.Contains(err.Error(), statusText) {
+				t.Fatal("rejected derived value reached the error")
+			}
+		})
+	}
+}
+
+func TestBuildPreservesSensitiveAnalysisOnlyMarkdown(t *testing.T) {
+	synthetic := "GL" + "PAT" + "-EXAMPLE-01"
+	for name, markdown := range map[string]string{
+		"body":         closedFrontierMarkdown() + "\nSynthetic analysis: " + synthetic,
+		"owner-text":   strings.Replace(closedFrontierMarkdown(), "Alpha input", "Alpha input "+synthetic, 1),
+		"completion":   strings.Replace(closedFrontierMarkdown(), "Alpha phrase", "Alpha phrase "+synthetic, 1),
+		"ignored-row":  closedFrontierMarkdown("| mixed-case | " + synthetic + " | Note | Synthetic text |"),
+		"ordinary-row": closedFrontierMarkdown("| DONE | NOTE-01 | Note | Synthetic text |"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			record, code, err := Build(minimalCloseoutInput(markdown))
+			if err != nil || code != 0 || record.State != "passed" {
+				t.Fatalf("analysis-only content changed: code=%d error=%v", code, err)
+			}
+			wire, err := json.Marshal(record.JSONValue())
+			if err != nil || strings.Contains(string(wire), synthetic) {
+				t.Fatal("analysis-only content reached the report")
+			}
+		})
 	}
 }
 

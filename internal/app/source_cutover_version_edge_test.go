@@ -57,7 +57,7 @@ var nativeBoundaryDirectionDeltas = []string{
 	"migration-parity-admission/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"producer-policy-self-proof/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"producer-policy-self-proof/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"readiness-closeout/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"readiness-closeout/input:compatibilitySummary,nativeAdmissionWitnessSelector,rootDefinitionDigest,rootDefinitionRef",
 	"readiness-closeout/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"release-authority/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"release-authority/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",

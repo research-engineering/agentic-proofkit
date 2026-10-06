@@ -195,3 +195,31 @@ test("accepted identifier limits and native normalization close the real CLI cha
     assert.equal(validators[readiness].input(replace(input, path, "foreign/id")), false, `readiness/${path}/normalized-domain`);
   }
 });
+
+test("Markdown-derived row and status admission prevents report egress without rejecting analysis", () => {
+  const row = baseline.observations.find(x => x.command === readiness && x.name === "valid");
+  const base = JSON.parse(row.input), id = "GL" + "PAT" + "-EXAMPLE-01", status = "GL" + "PAT" + "-EXAMPLE";
+  const baseResult = invoke(row); assert.equal(baseResult.status, 0); assert.equal(baseResult.stderr, "");
+  const cases = [
+    ["unclassified-id", base.markdownText + `\n| DONE | ${id} | Note | Synthetic text |`],
+    ["duplicate-id", base.markdownText + `\n| DONE | ${id} | Note | Synthetic text |`.repeat(2)],
+    ["definition-status", base.markdownText.replace("| DONE | PROD-01", `| ${status} | PROD-01`)],
+    ["frontier-status", base.markdownText.replace("| DONE | PROD-09", `| ${status} | PROD-09`)],
+    ["unrelated-id", base.markdownText + `\n### Unrelated\n| DONE | ${id} | Note | Synthetic text |`],
+  ];
+  for (const [name, markdownText] of cases) {
+    const result = invoke({...row, input: JSON.stringify({...base, markdownText})});
+    assert.equal(result.status, 1, `derived/${name}/exit`);
+    assert.equal(result.stdout, "", `derived/${name}/stdout`);
+    assert.match(result.stderr, /secret-like values/, `derived/${name}/admission`);
+    assert.equal(result.stderr.includes(id) || result.stderr.includes(status), false, `derived/${name}/nondisclosure`);
+  }
+  for (const markdownText of [base.markdownText + `\nSynthetic analysis: ${id}`,
+    base.markdownText.replace("Alpha phrase", `Alpha phrase ${id}`),
+    base.markdownText + `\n| mixed-case | ${id} | Note | Synthetic text |`]) {
+    const result = invoke({...row, input: JSON.stringify({...base, markdownText})});
+    assert.equal(result.status, 0); assert.equal(result.stderr, "");
+    assert.equal(result.stdout.includes(id), false);
+    assert.equal(validators[readiness].output(JSON.parse(result.stdout)), true);
+  }
+});

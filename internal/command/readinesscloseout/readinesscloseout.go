@@ -177,7 +177,10 @@ func Build(raw any) (report.Record, int, error) {
 }
 
 func buildReport(input closeoutInput) (report.Record, int, error) {
-	parsed := parseRows(input.MarkdownText)
+	parsed, err := parseRows(input.MarkdownText)
+	if err != nil {
+		return report.Record{}, 1, err
+	}
 	rowsByID := map[string]backlogRow{}
 	for _, row := range parsed.Rows {
 		rowsByID[row.RowID] = row
@@ -326,7 +329,7 @@ func buildReport(input closeoutInput) (report.Record, int, error) {
 	return record, exitCode, nil
 }
 
-func parseRows(markdownText string) parsedRows {
+func parseRows(markdownText string) (parsedRows, error) {
 	rowsByID := map[string]backlogRow{}
 	order := []string{}
 	duplicates := []string{}
@@ -348,26 +351,35 @@ func parseRows(markdownText string) parsedRows {
 			continue
 		}
 		status := cells[1]
-		rowID := cells[2]
+		rawID := cells[2]
 		ownerScope := cells[3]
 		completionCondition := cells[4]
-		if !statusPattern.MatchString(status) || !rowIDPattern.MatchString(rowID) {
+		if !statusPattern.MatchString(status) || !rowIDPattern.MatchString(rawID) {
 			continue
 		}
 		lineNumber := index + 1
-		if existing, ok := rowsByID[rowID]; ok {
-			duplicates = append(duplicates, fmt.Sprintf("%s appears more than once in backlog tables at lines %d and %d", rowID, existing.LineNumber, lineNumber))
+		context := fmt.Sprintf("readiness closeout markdown line %d", lineNumber)
+		id, err := rowID(rawID, context+".rowId")
+		if err != nil {
+			return parsedRows{}, err
+		}
+		status, err = statusText(status, context+".status")
+		if err != nil {
+			return parsedRows{}, err
+		}
+		if existing, ok := rowsByID[id]; ok {
+			duplicates = append(duplicates, fmt.Sprintf("%s appears more than once in backlog tables at lines %d and %d", id, existing.LineNumber, lineNumber))
 			continue
 		}
-		rowsByID[rowID] = backlogRow{
+		rowsByID[id] = backlogRow{
 			CompletionCondition: completionCondition,
 			LineNumber:          lineNumber,
 			OwnerScope:          ownerScope,
-			RowID:               rowID,
+			RowID:               id,
 			Section:             currentSection,
 			Status:              status,
 		}
-		order = append(order, rowID)
+		order = append(order, id)
 	}
 	rows := make([]backlogRow, 0, len(order))
 	for _, rowID := range order {
@@ -377,7 +389,7 @@ func parseRows(markdownText string) parsedRows {
 		return rows[left].RowID < rows[right].RowID
 	})
 	sort.Strings(duplicates)
-	return parsedRows{DuplicateFailures: duplicates, Rows: rows}
+	return parsedRows{DuplicateFailures: duplicates, Rows: rows}, nil
 }
 
 func frontierChecks(input closeoutInput, rows []backlogRow, rowsByID map[string]backlogRow) []string {
