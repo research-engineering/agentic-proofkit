@@ -255,7 +255,7 @@ func enrichedCompatibilitySummary(owner nativeStructure, version json.Number, ra
 		if !ok {
 			return nil, fmt.Errorf("native structure compatibility note must be text")
 		}
-		if index == 0 || strings.HasPrefix(note, "structural JSON Schema definition "+owner.id+";") {
+		if index == 0 && generatedVersionHeader(owner, note) || strings.HasPrefix(note, "structural JSON Schema definition "+owner.id+";") {
 			continue
 		}
 		obsolete := false
@@ -267,6 +267,18 @@ func enrichedCompatibilitySummary(owner nativeStructure, version json.Number, ra
 		}
 	}
 	return result, nil
+}
+
+func generatedVersionHeader(owner nativeStructure, note string) bool {
+	key, tail, ok := strings.Cut(note, "=")
+	if !ok || key != owner.schemaVersionField() && key != "contractSchemaVersion" {
+		return false
+	}
+	version, _, _ := strings.Cut(tail, " ")
+	if validateNativeVersion(json.Number(version)) != nil {
+		return false
+	}
+	return note == owner.schemaVersionField()+"="+version || note == owner.summary(json.Number(version))[0]
 }
 
 func encodeContractSource(value any) ([]byte, error) {

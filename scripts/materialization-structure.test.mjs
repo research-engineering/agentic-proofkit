@@ -75,6 +75,9 @@ function closedObjectsAndDigests(command, direction, record) {
     }
     if (path.length && !reusedCandidate) {
       const dotted = path.join('.'), nested = path[0] === 'sourcePlan' ? path.slice(1).join('.') : dotted;
+      if (nested === 'summary.codeBaselineDeclared') {
+        validates(command, direction, replaced(record, path, !value), false, path + '/opposite-boolean');
+      }
       const nullable = value === null || ['stackHint', 'summary.selectedStackPreset', 'failureClass', 'transactionResult'].includes(nested)
         || /^transactionResult\.(appliedCount|failureClass|recoveredBy|transactionId)$/.test(dotted);
       validates(command, direction, replaced(record, path, null), nullable, path + '/null');

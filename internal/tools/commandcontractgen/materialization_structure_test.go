@@ -136,4 +136,43 @@ func TestStructureEnrichmentPreservesIndependentCompatibilityNotes(t *testing.T)
 	if err != nil || !bytes.Equal(updated, second) {
 		t.Fatalf("summary enrichment is not idempotent: %v", err)
 	}
+	// The first slot is not itself evidence that its text is a generated header.
+	beforeInput := commandAt(before, owner.commands[0])["inputContract"].(map[string]any)
+	beforeInput["compatibilitySummary"].([]any)[0] = "Independent first policy."
+	updated, err = refreshStructureSource(source, before)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err = admission.DecodeJSON(bytes.NewReader(updated), maxContractBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input = commandAt(after.(map[string]any), owner.commands[0])["inputContract"].(map[string]any)
+	want = append(owner.summary(json.Number("1")), "Independent first policy.", "closed native admission contract", "Independent policy remains unchanged.", "Retained version note remains last.")
+	if !reflect.DeepEqual(input["compatibilitySummary"], want) {
+		t.Fatalf("independent first compatibility note was lost: %v", input["compatibilitySummary"])
+	}
+	second, err = refreshStructureSource(updated, after.(map[string]any))
+	if err != nil || !bytes.Equal(updated, second) {
+		t.Fatalf("first-note enrichment is not idempotent: %v", err)
+	}
+}
+
+func TestStructureEnrichmentClassifiesVersionHeaderByMeaning(t *testing.T) {
+	owner := nativeStructures()[0]
+	for _, first := range []string{"Independent first policy.", "schemaVersion=owner-specific text", "schemaVersionNote=1"} {
+		got, err := enrichedCompatibilitySummary(owner, json.Number("1"), []any{first, "Independent last policy."})
+		want := append(owner.summary(json.Number("1")), first, "Independent last policy.")
+		if err != nil || !reflect.DeepEqual(got, want) {
+			t.Fatalf("first-note classification changed meaningful text: %v", err)
+		}
+	}
+	for _, headerOwner := range []nativeStructure{owner, {versionField: "schema_version"}, {outOfBandVersion: "1"}, {aggregateVersion: "2"}, {outOfBandVersion: "1", jsonValueInput: true}} {
+		header := headerOwner.summary(json.Number("1"))[0]
+		got, err := enrichedCompatibilitySummary(headerOwner, json.Number("2"), []any{header, "Independent last policy."})
+		want := append(headerOwner.summary(json.Number("2")), "Independent last policy.")
+		if err != nil || !reflect.DeepEqual(got, want) {
+			t.Fatalf("generated version header was not replaced: %v", err)
+		}
+	}
 }

@@ -138,11 +138,13 @@ func TestMaterializationReceiptStructurePreservesEveryNativeState(t *testing.T) 
 			case ReceiptStateBlocked:
 				result = nil
 			case ReceiptStateFailed:
-				if operation == OperationRecover {
-					continue // Recovery has no native failed outcome.
-				}
 				result.State = repositorytransaction.StateRolledBack
 				result.AppliedCountKnown = true
+				if operation == OperationRecover {
+					failure = ""
+					result.State, result.FailureClass = repositorytransaction.StateAlreadySatisfied, ""
+					result.RecoveredBy = ""
+				}
 			case ReceiptStatePassed:
 				failure = ""
 				result.State, result.FailureClass = repositorytransaction.StateApplied, ""
