@@ -48,9 +48,15 @@ type family struct {
 }
 
 func main() {
-	check := flag.Bool("check", false, "verify that the generated projection is current")
-	flag.Parse()
-	if flag.NArg() != 0 {
+	flags := flag.NewFlagSet("commandfamilygen", flag.ContinueOnError)
+	check := flags.Bool("check", false, "verify that the generated projection is current")
+	if err := diagnostic.ParseFlags(flags, os.Args[1:], os.Stderr); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return
+		}
+		os.Exit(2)
+	}
+	if flags.NArg() != 0 {
 		fmt.Fprintln(os.Stderr, "commandfamilygen accepts only --check")
 		os.Exit(1)
 	}

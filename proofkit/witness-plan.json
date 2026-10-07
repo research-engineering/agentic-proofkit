@@ -38,9 +38,15 @@
       },
       {
         "environmentClass": "local-go-legacy-positive",
-        "networkPolicies": ["none"],
-        "credentialClasses": ["none"],
-        "cachePolicies": ["disabled"]
+        "networkPolicies": [
+          "none"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "cachePolicies": [
+          "disabled"
+        ]
       },
       {
         "environmentClass": "local-go-node",
@@ -108,9 +114,11 @@
       }
     ],
     "parallelGroups": [
+      "boundary-contract",
       "browser-runtime",
       "compact-contract",
       "coverage-metrics",
+      "graph-contract",
       "local-go-static",
       "package-artifact",
       "performance-benchmark",
@@ -122,6 +130,7 @@
       "release-sbom",
       "self-hosting-package-gate",
       "self-hosting-receipt",
+      "spec-tree-contract",
       "workflow-static"
     ],
     "nonCacheableCredentialClasses": [],
@@ -327,11 +336,35 @@
       "schemaVersion": 1,
       "id": "proofkit.transaction-legacy-positive",
       "cwd": ".",
-      "argv": ["go", "test", "./internal/kernel/repositorytransaction", "-run", "^TestCanonicalDialectWholeLegacyRecovery$", "-count=1", "-timeout=90s", "-v", "-args", "-proofkit-require-legacy-unicode-positive"],
+      "argv": [
+        "go",
+        "test",
+        "./internal/kernel/repositorytransaction",
+        "-run",
+        "^TestCanonicalDialectWholeLegacyRecovery$",
+        "-count=1",
+        "-timeout=90s",
+        "-v",
+        "-args",
+        "-proofkit-require-legacy-unicode-positive"
+      ],
       "environment": {
         "inherit": "allowlist",
-        "allowlist": ["GOCACHE", "GOFLAGS", "GOMAXPROCS", "GOMODCACHE", "GOPATH", "GOROOT", "GOTOOLCHAIN", "HOME", "PATH", "TMPDIR"],
-        "classes": ["local-go-legacy-positive"]
+        "allowlist": [
+          "GOCACHE",
+          "GOFLAGS",
+          "GOMAXPROCS",
+          "GOMODCACHE",
+          "GOPATH",
+          "GOROOT",
+          "GOTOOLCHAIN",
+          "HOME",
+          "PATH",
+          "TMPDIR"
+        ],
+        "classes": [
+          "local-go-legacy-positive"
+        ]
       },
       "timeoutMs": 120000,
       "networkPolicy": "none",
@@ -339,7 +372,12 @@
       "cachePolicy": "disabled",
       "expectedArtifacts": [],
       "parallelGroup": "local-go-static",
-      "exitCodePolicy": {"kind": "zero", "successCodes": [0]}
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
     },
     {
       "schemaVersion": 1,
@@ -867,6 +905,93 @@
           0
         ]
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.spec-tree-contract-check",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "spec-tree-contract:check"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "local-go-node"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [],
+      "parallelGroup": "spec-tree-contract",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "graph-contract:check"
+      ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
+      "environment": {
+        "allowlist": [],
+        "classes": [
+          "local-go-node"
+        ],
+        "inherit": "none"
+      },
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.graph-contract-check",
+      "networkPolicy": "none",
+      "parallelGroup": "graph-contract",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.boundary-contract-check",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "boundary-contract:check"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "local-go-node"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [],
+      "parallelGroup": "boundary-contract",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
     }
   ],
   "policies": [
@@ -1322,17 +1447,40 @@
     },
     {
       "commandId": "proofkit.transaction-legacy-positive",
-      "inputSelectors": [".github/workflows/ci.yml", "go.mod", "go.sum", "internal/kernel/pathidentity", "internal/kernel/repositorytransaction", "proofkit/requirement-bindings.json", "proofkit/witness-plan.json", "scripts/workflow_legacy_unicode_test.go"],
+      "inputSelectors": [
+        ".github/workflows/ci.yml",
+        "go.mod",
+        "go.sum",
+        "internal/kernel/pathidentity",
+        "internal/kernel/repositorytransaction",
+        "proofkit/requirement-bindings.json",
+        "proofkit/witness-plan.json",
+        "scripts/workflow_legacy_unicode_test.go"
+      ],
       "outputSelectors": [],
-      "resourceReads": ["resource.proofkit.source"],
-      "resourceWrites": ["resource.proofkit.go-build-cache", "resource.proofkit.temporary-workdir"],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.temporary-workdir"
+      ],
       "exclusiveLocks": [],
       "sideEffectClass": "local_write",
       "deterministicOutput": false,
       "cacheAdmissionRefs": [],
-      "retryPolicy": {"kind": "none", "maxAttempts": 1},
-      "cancellationPolicy": {"kind": "cooperative", "graceMs": 5000},
-      "timeoutPolicy": {"kind": "bounded", "timeoutMs": 120000},
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 120000
+      },
       "nonClaims": [
         "Ordinary local-go runs may prove native refusal only and cannot satisfy this command's positive obligation.",
         "Owned transaction fixture preparation qualifies exact identities, spelling, bytes and modes, not a filesystem-wide Unicode equivalence relation.",
@@ -1738,6 +1886,7 @@
         "package-lock.json",
         "package.json",
         "proofkit/cli-contract.v2.json",
+        "scripts/receipt-admission-structure.test.mjs",
         "scripts/receipt-structure.test.mjs"
       ],
       "outputSelectors": [],
@@ -1767,6 +1916,148 @@
       "nonClaims": [
         "Receipt schema witnesses do not authenticate receipts, prove producer truth or approve merge.",
         "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ]
+    },
+    {
+      "commandId": "proofkit.spec-tree-contract-check",
+      "inputSelectors": [
+        "cmd",
+        "go.mod",
+        "go.sum",
+        "internal",
+        "package-lock.json",
+        "package.json",
+        "proofkit/cli-contract.v2.json",
+        "scripts/spec-tree-structure.test.mjs"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.temporary-workdir"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Receipt schema witnesses do not authenticate receipts, prove producer truth or approve merge.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ]
+    },
+    {
+      "commandId": "proofkit.graph-contract-check",
+      "inputSelectors": [
+        "internal/app/testdata/graph-native-observations.json",
+        "package-lock.json",
+        "package.json",
+        "proofkit/cli-contract.v2.json",
+        "scripts/graph-structure.test.mjs"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.node-dependencies",
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.npm-cache"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Graph schema witnesses validate structure, not native graph semantics, freshness, witness execution or merge approval.",
+        "Npm may write local cache or diagnostic files; disabled cachePolicy denies proof-result reuse, not those writes.",
+        "Planned environment and resource metadata does not attest ambient filtering or filesystem isolation."
+      ]
+    },
+    {
+      "commandId": "proofkit.boundary-contract-check",
+      "inputSelectors": [
+        "cmd",
+        "go.mod",
+        "go.sum",
+        "internal",
+        "package-lock.json",
+        "package.json",
+        "proofkit/cli-contract.v2.json",
+        "proofkit/witness-plan.json",
+        "scripts/authority-guard-structure.test.mjs",
+        "scripts/bootstrap-structure.test.mjs",
+        "scripts/boundary-structure.test.mjs",
+        "scripts/explicit-input-structure.test.mjs",
+        "scripts/generated-starter-structure.test.mjs",
+        "scripts/impact-fixtures.mjs",
+        "scripts/impact-structure.test.mjs",
+        "scripts/inventory-coverage-fixtures.mjs",
+        "scripts/inventory-coverage-structure.test.mjs",
+        "scripts/overview-claims-structure.test.mjs",
+        "scripts/proof-routing-fixtures.mjs",
+        "scripts/proof-routing-structure.test.mjs",
+        "scripts/public-api-structure.test.mjs",
+        "scripts/release-classification-structure.test.mjs",
+        "scripts/report-admission-structure.test.mjs",
+        "scripts/selective-proof-fixtures.mjs",
+        "scripts/selective-proof-structure.test.mjs",
+        "scripts/workspace-structure.test.mjs"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.node-dependencies",
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.npm-cache",
+        "resource.proofkit.temporary-workdir"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Boundary schema witnesses validate declared carriers and preserved CLI behavior, not native evidence truth or merge approval.",
+        "Npm may write local cache or diagnostic files; disabled cachePolicy denies proof-result reuse, not those writes.",
+        "Planned environment and resource metadata does not attest ambient filtering or filesystem isolation."
       ]
     }
   ],

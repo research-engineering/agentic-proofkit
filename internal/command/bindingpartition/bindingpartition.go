@@ -183,7 +183,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("binding partition input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"bindingSurfaces", "delegations", "nonClaims", "partitionId", "proofRouteRefs", "routeOwners", "routeReferences", "schemaVersion", "surfaceThresholds"}, "binding partition input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "binding partition input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -258,7 +258,7 @@ func surfaceArray(raw any) ([]surfaceInput, error) {
 		if !ok {
 			return nil, fmt.Errorf("binding partition surface must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"ownerId", "selectorRefs", "surfaceId"}, "binding partition surface"); err != nil {
+		if err := admit.KnownKeys(record, surfaceKeys, "binding partition surface"); err != nil {
 			return nil, err
 		}
 		surfaceID, err := admit.RuleID(record["surfaceId"], "binding partition surfaceId")
@@ -290,7 +290,7 @@ func routeOwnerArray(raw any) ([]routeOwnerInput, error) {
 		if !ok {
 			return nil, fmt.Errorf("binding partition route owner must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"cohesionGroupId", "ownerId", "proofRouteRef", "selectorRefs", "surfaceId"}, "binding partition route owner"); err != nil {
+		if err := admit.KnownKeys(record, routeOwnerKeys, "binding partition route owner"); err != nil {
 			return nil, err
 		}
 		owner, err := routeOwner(record)
@@ -338,7 +338,7 @@ func routeReferenceArray(raw any) ([]routeReferenceInput, error) {
 		if !ok {
 			return nil, fmt.Errorf("binding partition route reference must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"delegationRefs", "proofRouteRef", "referenceId", "referrerOwnerId", "referrerSurfaceId"}, "binding partition route reference"); err != nil {
+		if err := admit.KnownKeys(record, routeReferenceKeys, "binding partition route reference"); err != nil {
 			return nil, err
 		}
 		reference, err := routeReference(record)
@@ -386,7 +386,7 @@ func delegationArray(raw any) ([]delegationInput, error) {
 		if !ok {
 			return nil, fmt.Errorf("binding partition delegation must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"delegationRef", "evidenceRefs", "fromOwnerId", "fromSurfaceId", "nonClaims", "proofRouteRefs", "reviewConditionRef", "toOwnerId", "toSurfaceId"}, "binding partition delegation"); err != nil {
+		if err := admit.KnownKeys(record, delegationKeys, "binding partition delegation"); err != nil {
 			return nil, err
 		}
 		delegation, err := delegation(record)
@@ -450,7 +450,7 @@ func thresholdArray(raw any) ([]thresholdInput, error) {
 		if !ok {
 			return nil, fmt.Errorf("binding partition threshold must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"maxCohesionGroupCount", "maxOwnedProofRouteCount", "maxOwnedSelectorCount", "surfaceId"}, "binding partition threshold"); err != nil {
+		if err := admit.KnownKeys(record, thresholdKeys, "binding partition threshold"); err != nil {
 			return nil, err
 		}
 		threshold, err := threshold(record)

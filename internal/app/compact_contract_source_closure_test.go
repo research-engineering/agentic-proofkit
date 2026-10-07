@@ -88,7 +88,7 @@ var compactReviewedWrappers = map[string]map[string]struct{}{
 var compactSemanticSinks = []compactSemanticSink{{
 	Sink: compactSymbolID{
 		PackagePath: "github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory",
-		Symbol:      "sortedWitnessRefs",
+		Symbol:      "AdmitWitnessRefs",
 	},
 	RequiredCaller: compactSymbolID{
 		PackagePath: "github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory",

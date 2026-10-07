@@ -24,6 +24,97 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			commandIDs:  []string{"proofkit.go-test", "proofkit.release-sbom"}, environmentClasses: []string{"local-go"},
 			selectors: []string{"TestBinaryBuildInfoRejectsSilentMetadataLoss", "TestBinaryBuildInfoReleaseTargetMatrix"},
 		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.impact-schema-independent-runtime"}: {
+			witnessPath: "scripts/impact-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.selective-proof-schema-independent-runtime"}: {
+			witnessPath: "scripts/selective-proof-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.proof-routing-schema-independent-runtime"}: {
+			witnessPath: "scripts/proof-routing-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.proof-routing-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/proof_routing_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestOptionalInputVersionPreservesRequiredFieldPartition", "TestProofRoutingStructuresBindOwnersAndRejectRehashedDrift"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.public-api-schema-independent-runtime"}: {
+			witnessPath: "scripts/public-api-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.public-api-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/public_api_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestOutOfBandConsumerIdentityRejectsMetadataDrift", "TestOutOfBandContractVersionDoesNotInventWireFields", "TestPublicAPIStructuresRejectRehashedDrift"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.workspace-schema-independent-runtime"}: {
+			witnessPath: "scripts/workspace-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.workspace-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/workspace_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestWorkspaceStructuresBindExactOwnersAndRejectRehashedDrift"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.report-admission-schema-independent-runtime"}: {
+			witnessPath: "scripts/report-admission-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.boundary-cli-contract"}: {
+			witnessPath: "internal/app/boundary_contract_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestBoundaryCLIHistoricalWireAndTransports"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.boundary-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/boundary_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestBoundaryNativeStructuresAreDetached", "TestBoundaryNativeStructuresRejectRehashedNestedDrift"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.boundary-schema-independent-runtime"}: {
+			witnessPath: "scripts/boundary-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.graph-native-vocabulary"}: {
+			witnessPath: "internal/command/requirementgraph/output_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestGraphKindVocabularyPreservesNativeAdmission", "TestGraphOutputStructureIsDetached"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.graph-cli-contract"}: {
+			witnessPath: "internal/app/graph_output_contract_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestGraphCLIHistoricalCarriersAndExactIntegerTransports", "TestGraphOutputContractMatchesNativeOwner", "TestGraphSchemaWitnessPlanClosure"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.graph-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/graph_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestGraphOutputStructureRejectsRehashedNestedDrift"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.graph-schema-independent-runtime"}: {
+			witnessPath: "scripts/graph-structure.test.mjs",
+			commandIDs:  []string{"proofkit.graph-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.spec-tree-cli-contract"}: {
+			witnessPath: "internal/app/spec_tree_contract_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestSpecTreeCLIExactDisplayOrderTokens", "TestSpecTreeCLIHistoricalWireAndTransports", "TestSpecTreeOutputContractsMatchNativeOwners"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.spec-tree-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/spec_tree_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestSpecTreeOutputStructuresRejectRehashedNestedDrift"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.spec-tree-schema-isolation"}: {
+			witnessPath: "internal/command/requirementspectree/output_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestSpecTreeOutputStructuresAreDetached"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.spec-tree-schema-independent-runtime"}: {
+			witnessPath: "scripts/spec-tree-structure.test.mjs",
+			commandIDs:  []string{"proofkit.spec-tree-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.compact-schema-package-references"}: {
 			witnessPath: "internal/tools/packageverify/reference_inventory_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
@@ -53,10 +144,29 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
 			selectors: []string{"TestReceiptCLIHistoricalWireAndTransports", "TestReceiptTrustCLIExactIntegerTokens"},
 		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.proof-receipt-schema-isolation"}: {
+			witnessPath: "internal/command/proofreceiptadmission/admission_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestReceiptAdmissionStructuresAreDetachedFromNativePolicy"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.producer-receipt-schema-isolation"}: {
+			witnessPath: "internal/command/receiptproduceradmission/admission_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestReceiptAdmissionStructuresAreDetachedFromNativePolicy"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-admission-schema-independent-runtime"}: {
+			witnessPath: "scripts/receipt-admission-structure.test.mjs",
+			commandIDs:  []string{"proofkit.receipt-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-admission-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/receipt_admission_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestReceiptNativeStructuresRejectRehashedNestedDrift"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-schema-owner"}: {
 			witnessPath: "internal/tools/commandcontractgen/receipt_structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
-			selectors: []string{"TestReceiptChildBindingsPreservePartialParent", "TestReceiptStructuresRejectRehashedNestedDrift"},
+			selectors: []string{"TestReceiptChildBindingsPreserveOwnersInStructuredParent", "TestReceiptStructuresRejectRehashedNestedDrift"},
 		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-shared-structures"}: {
 			witnessPath: "internal/kernel/jsonshape/inventory_projection_test.go",
@@ -235,6 +345,19 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 		{"REQ-PROOFKIT-QUALITY-027", "proofkit.supply-chain-quality.unsupported-key-diagnostic-cli"}: {
 			witnessPath: "internal/app/unsupported_key_diagnostics_cli_test.go",
 			selectors:   []string{"TestKnownKeysNativeCLIDiagnostics"},
+		},
+		{"REQ-PROOFKIT-QUALITY-027", "proofkit.supply-chain-quality.generator-flag-diagnostics"}: {
+			witnessPath: "scripts/generator_flags_test.go",
+			selectors:   []string{"TestGeneratorFlagDiagnosticsPreserveProcessContract"},
+		},
+		{"REQ-PROOFKIT-QUALITY-027", "proofkit.supply-chain-quality.flag-diagnostic-adapter"}: {
+			witnessPath: "internal/kernel/diagnostic/flags_test.go",
+			selectors: []string{
+				"TestParseFlagsCapturesSplitUsageAndBoundsOutput",
+				"TestParseFlagsPreservesStandardParserObservations",
+				"TestParseFlagsRedactsWholeDiagnostics",
+				"TestParseFlagsRejectsNonReturningHandlersBeforeParsing",
+			},
 		},
 		{"REQ-PROOFKIT-SPEC-039", "proofkit.spec-proof-core.graph-reference-window"}: {
 			witnessPath: "internal/command/requirementbrowser/workspace_graph_test.go",

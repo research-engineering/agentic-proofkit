@@ -1,6 +1,38 @@
 package pathidentity
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func TestASCIIKeysPreserveAdmissionAndExactFolding(t *testing.T) {
+	for value := byte(0); value < 128; value++ {
+		input := "Root/x" + string(value) + "y/FILE"
+		if value == '\\' {
+			if _, err := Key(input); err == nil {
+				t.Fatal("ASCII shortcut bypassed path admission")
+			}
+			continue
+		}
+		expected := []byte(input)
+		for index, character := range expected {
+			if character >= 'A' && character <= 'Z' {
+				expected[index] += 'a' - 'A'
+			}
+		}
+		for _, dialect := range []Dialect{CanonicalCaseless, Legacy} {
+			actual, err := dialect.Key(input)
+			if err != nil || actual != string(expected) {
+				t.Fatalf("ASCII %02x dialect %d: %q, %v", value, dialect, actual, err)
+			}
+		}
+	}
+	for _, input := range []string{strings.Repeat("A", 1024), strings.Repeat("A/", 63) + "B"} {
+		if _, err := Key(input); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
 
 func TestPortableEquivalenceAndContainment(t *testing.T) {
 	tests := []struct {

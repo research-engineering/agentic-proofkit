@@ -56,10 +56,16 @@ type generatedMetadata struct {
 }
 
 func main() {
-	check := flag.Bool("check", false, "verify both generated command-contract projections")
-	refresh := flag.Bool("refresh-structures", false, "refresh native structural definitions and both generated projections")
-	flag.Parse()
-	if flag.NArg() != 0 || (*check && *refresh) {
+	flags := flag.NewFlagSet("commandcontractgen", flag.ContinueOnError)
+	check := flags.Bool("check", false, "verify both generated command-contract projections")
+	refresh := flags.Bool("refresh-structures", false, "refresh native structural definitions and both generated projections")
+	if err := diagnostic.ParseFlags(flags, os.Args[1:], os.Stderr); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return
+		}
+		os.Exit(2)
+	}
+	if flags.NArg() != 0 || (*check && *refresh) {
 		fmt.Fprintln(os.Stderr, "commandcontractgen accepts either --check or --refresh-structures")
 		os.Exit(1)
 	}
@@ -676,6 +682,13 @@ func admitCommandContract(root string, command string, direction string, contrac
 	encoded, err := canonicalJSON(resolvedRecord)
 	if err != nil {
 		return "", nil, err
+	}
+	if direction == "input" {
+		fields, err := nativeInputRootSummary(definitionID, definition.Content)
+		if err != nil {
+			return "", nil, fmt.Errorf("%s help fields: %w", context, err)
+		}
+		summary = append(summary, fields...)
 	}
 	return sha256Digest(encoded), summary, nil
 }

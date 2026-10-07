@@ -17,7 +17,7 @@ func dependencyNodeInputs(raw any) ([]dependencyNode, error) {
 		if !ok {
 			return nil, fmt.Errorf("workspace package %d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"name", "workspaceDependencies"}, fmt.Sprintf("workspace package %d", index+1)); err != nil {
+		if err := admit.KnownKeys(record, dependencyNodeKeys, fmt.Sprintf("workspace package %d", index+1)); err != nil {
 			return nil, err
 		}
 		node, err := dependencyNodeInput(record, fmt.Sprintf("workspace package %d", index+1))

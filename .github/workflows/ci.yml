@@ -93,6 +93,15 @@ jobs:
       - name: Verify receipt contract structure
         run: npm run receipt-contract:check
 
+      - name: Verify spec tree contract structure
+        run: npm run spec-tree-contract:check
+
+      - name: Verify graph contract structure
+        run: npm run graph-contract:check
+
+      - name: Verify boundary contract structures
+        run: npm run boundary-contract:check
+
       - name: Verify generated command family catalog
         run: npm run command-family:check
 
@@ -214,6 +223,9 @@ jobs:
 
       - name: Install locked browser tooling
         run: npm ci --ignore-scripts
+
+      - name: Select official Ubuntu package mirrors
+        uses: ./.github/actions/setup-ubuntu-mirrors
 
       - name: Install pinned browser engines
         run: npx playwright install --with-deps chromium firefox webkit

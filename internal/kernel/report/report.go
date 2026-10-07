@@ -1,31 +1,5 @@
 package report
 
-func BuildSelfCheckReport(input any) Record {
-	return Record{
-		SchemaVersion: 1,
-		ReportKind:    "proofkit.go-runtime.self-check",
-		ReportID:      "proofkit.go-runtime.self-check",
-		State:         "passed",
-		Summary: map[string]any{
-			"inputKind": jsonKind(input),
-		},
-		Diagnostics: []Diagnostic{
-			{Key: "inputKind", Value: jsonKind(input)},
-		},
-		RuleResults: []RuleResult{
-			{
-				RuleID:  "proofkit.go-runtime.self-check.explicit-input",
-				Status:  "passed",
-				Message: "Go bootstrap runtime parsed explicit JSON input and emitted a deterministic report.",
-			},
-		},
-		NonClaims: []any{
-			"Go self-check does not replace the full package gate.",
-			"Go self-check does not execute native witnesses, read repository state, approve merge, or publish artifacts.",
-		},
-	}
-}
-
 type Record struct {
 	SchemaVersion int
 	ReportKind    string
@@ -82,22 +56,5 @@ func (record Record) JSONValue() map[string]any {
 		"schemaVersion": record.SchemaVersion,
 		"state":         record.State,
 		"summary":       record.Summary,
-	}
-}
-
-func jsonKind(value any) string {
-	switch value.(type) {
-	case nil:
-		return "null"
-	case bool:
-		return "boolean"
-	case string:
-		return "string"
-	case []any:
-		return "array"
-	case map[string]any:
-		return "object"
-	default:
-		return "number"
 	}
 }

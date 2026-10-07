@@ -18,6 +18,15 @@ var fileStates = map[string]struct{}{
 	"present": {},
 }
 
+var inputKeys = []string{"files", "nonClaims", "reportId", "schemaVersion", "suppressions"}
+var fileKeys = []string{"contentBase64", "path", "state"}
+var suppressionKeys = []string{"findingClass", "line", "path", "reason", "suppressionId"}
+var findingClasses = map[string]struct{}{"secret_like_value": {}}
+var boundaryNonClaims = []string{
+	"Secret scan checks caller-provided file inventory only.",
+	"Secret scan does not discover git state, traverse repository files, validate credential liveness, replace provider secret scanning, approve merge, release, rollout, or production readiness.",
+}
+
 type input struct {
 	Files        []fileRecord
 	NonClaims    []string
@@ -82,10 +91,7 @@ func Build(raw any) (report.Record, int, error) {
 		state = "failed"
 		exitCode = 1
 	}
-	nonClaims := append([]string{
-		"Secret scan checks caller-provided file inventory only.",
-		"Secret scan does not discover git state, traverse repository files, validate credential liveness, replace provider secret scanning, approve merge, release, rollout, or production readiness.",
-	}, input.NonClaims...)
+	nonClaims := append(append([]string{}, boundaryNonClaims...), input.NonClaims...)
 	sort.Strings(nonClaims)
 	record := report.Record{
 		SchemaVersion: 1,
@@ -130,7 +136,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("secret scan input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"files", "nonClaims", "reportId", "schemaVersion", "suppressions"}, "secret scan input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "secret scan input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -167,7 +173,7 @@ func admitFiles(raw any) ([]fileRecord, error) {
 		if !ok {
 			return nil, fmt.Errorf("secret scan files[%d] must be an object", index)
 		}
-		if err := admit.KnownKeys(record, []string{"contentBase64", "path", "state"}, fmt.Sprintf("secret scan files[%d]", index)); err != nil {
+		if err := admit.KnownKeys(record, fileKeys, fmt.Sprintf("secret scan files[%d]", index)); err != nil {
 			return nil, err
 		}
 		pathValue, ok := record["path"].(string)
@@ -218,7 +224,7 @@ func admitSuppressions(raw any) ([]suppressionRecord, error) {
 		if !ok {
 			return nil, fmt.Errorf("secret scan suppressions[%d] must be an object", index)
 		}
-		if err := admit.KnownKeys(record, []string{"findingClass", "line", "path", "reason", "suppressionId"}, fmt.Sprintf("secret scan suppressions[%d]", index)); err != nil {
+		if err := admit.KnownKeys(record, suppressionKeys, fmt.Sprintf("secret scan suppressions[%d]", index)); err != nil {
 			return nil, err
 		}
 		suppressionID, err := admit.RuleID(record["suppressionId"], fmt.Sprintf("secret scan suppressions[%d].suppressionId", index))
@@ -237,7 +243,7 @@ func admitSuppressions(raw any) ([]suppressionRecord, error) {
 		if err != nil {
 			return nil, err
 		}
-		findingClass, err := admit.Enum(record["findingClass"], map[string]struct{}{"secret_like_value": {}}, fmt.Sprintf("secret scan suppressions[%d].findingClass", index))
+		findingClass, err := admit.Enum(record["findingClass"], findingClasses, fmt.Sprintf("secret scan suppressions[%d].findingClass", index))
 		if err != nil {
 			return nil, err
 		}

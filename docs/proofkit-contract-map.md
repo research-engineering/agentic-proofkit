@@ -31,7 +31,7 @@ and non-null in the admitted variant; they do not make an optional child require
 Native admission still owns canonical numeric tokens, privacy, normalization,
 identity parsing and cross-record references. Parent commands retain their own
 root-shape-only limits. The installed machine-contract resource is bounded to
-2 MiB; this does not raise other package entry limits.
+4 MiB; this does not raise other package entry limits.
 
 `receipt-currentness-scope` and `receipt-trust-class` publish nested input and
 output structures, including required nullable fields and typed report
@@ -51,6 +51,14 @@ and Unicode 17 canonical caseless path matching; retained transaction versions
 receipt version 2 is independent.
 The exact compatibility clauses and native-owner bindings are shipped in the
 CLI contract, not inferred from the enclosing root-shape definition.
+
+`workspace-shard-partition` input/output contract v2 retains wire
+`schemaVersion: 1`. Native admission limits the shard count before nested node
+admission and the aggregate expanded work and normalized UTF-8 text before
+building any shard report. The installed input schema describes the exact
+quotas and charges repeated occurrences; it does not implement the aggregate
+calculation or claim exact memory, serialized-output size, or latency bounds.
+Inputs beyond these operational quotas are rejected without a partial report.
 
 Formal rule:
 

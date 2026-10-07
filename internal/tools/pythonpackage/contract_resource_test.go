@@ -14,7 +14,7 @@ func TestWheelContractResourceLimitDoesNotRaiseOtherEntryLimits(t *testing.T) {
 		path  string
 		limit int
 	}{
-		{embeddedCLIContractPath, 2 << 20},
+		{embeddedCLIContractPath, 4 << 20},
 		{"agentic_proofkit/cli.py", 1 << 20},
 		{"agentic_proofkit/proofkit/other.json", 1 << 20},
 		{"agentic_proofkit/proofkit/cli-contract.v2.json.extra", 1 << 20},
@@ -49,7 +49,7 @@ func TestWheelContractResourceLimitDoesNotRaiseOtherEntryLimits(t *testing.T) {
 			})
 		}
 	}
-	if maximumWheelEntryBytes("agentic_proofkit/bin/agentic-proofkit") != 64<<20 || installedclicontract.MaximumContractBytes != 2<<20 {
+	if maximumWheelEntryBytes("agentic_proofkit/bin/agentic-proofkit") != 64<<20 || installedclicontract.MaximumContractBytes != 4<<20 {
 		t.Fatal("binary or contract bound differs from its explicit resource policy")
 	}
 }

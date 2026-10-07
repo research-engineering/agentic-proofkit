@@ -182,7 +182,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("receipt producer admission input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"environmentClasses", "nonClaims", "policyId", "producers", "receiptKinds", "receipts", "schemaVersion"}, "receipt producer admission input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "receipt producer admission input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -248,7 +248,7 @@ func producers(raw any, receiptKinds []string, environmentClasses []string) ([]p
 }
 
 func admitProducer(record map[string]any, receiptKinds []string, environmentClasses []string) (producer, error) {
-	if err := admit.KnownKeys(record, []string{"admissionLevel", "environmentClasses", "evidenceRefs", "nonClaim", "owner", "producerId", "receiptKinds"}, "receipt producer admission producer"); err != nil {
+	if err := admit.KnownKeys(record, producerKeys, "receipt producer admission producer"); err != nil {
 		return producer{}, err
 	}
 	producerID, err := admit.RuleID(record["producerId"], "receipt producer admission producer.producerId")
@@ -316,7 +316,7 @@ func receipts(raw any, receiptKinds []string, environmentClasses []string) ([]re
 }
 
 func admitReceipt(record map[string]any, receiptKinds []string, environmentClasses []string) (receipt, error) {
-	if err := admit.KnownKeys(record, []string{"artifactRefs", "environmentClass", "evidenceRef", "nonClaim", "producerId", "provenanceRef", "receiptId", "receiptKind", "satisfiesMergeObligation", "status", "subjectRef"}, "receipt producer admission receipt"); err != nil {
+	if err := admit.KnownKeys(record, receiptKeys, "receipt producer admission receipt"); err != nil {
 		return receipt{}, err
 	}
 	merge, err := admit.Bool(record["satisfiesMergeObligation"], "receipt producer admission receipt.satisfiesMergeObligation")

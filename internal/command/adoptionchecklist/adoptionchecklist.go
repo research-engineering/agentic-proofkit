@@ -146,7 +146,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("adoption checklist input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"checklistId", "items", "nextCommandRefs", "nonClaims", "requiredItemIds", "scenario", "schemaVersion"}, "adoption checklist input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "adoption checklist input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -202,7 +202,7 @@ func admitItems(raw any) ([]itemInput, error) {
 		if !ok {
 			return nil, fmt.Errorf("adoption checklist item %d must be an object", index)
 		}
-		if err := admit.KnownKeys(record, []string{"blocker", "commandRefs", "evidenceRefs", "itemId", "label", "nonClaims", "owner", "status"}, "adoption checklist item"); err != nil {
+		if err := admit.KnownKeys(record, itemKeys, "adoption checklist item"); err != nil {
 			return nil, err
 		}
 		status, err := admit.Enum(record["status"], itemStatuses, "adoption checklist item status")

@@ -111,7 +111,7 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 			command, input = cloneRecord(command), cloneRecord(input)
 			input["rootDefinitionRef"] = owner.id
 			input["rootDefinitionDigest"] = definition["canonicalDigest"]
-			input["contractId"] = "proofkit." + name + "." + owner.direction + ".v" + version.String()
+			input["contractId"] = owner.contractID(name, version)
 			input["schemaVersion"] = version
 			input["compatibilitySummary"] = owner.summary(version)
 			command[key] = input
@@ -200,6 +200,10 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 					"schemaVersion=1",
 					"root-shape-only definition " + contract["rootDefinitionRef"].(string) + "; nested fields, types, and cardinalities are non-claims",
 					"requirementsPath equals specPackagePath plus the requirement-source filename suffix",
+				}
+				if owner, structural := nativeStructureOwner(contract["rootDefinitionRef"].(string)); structural {
+					contract["compatibilitySummary"] = append(owner.summary(contract["schemaVersion"].(json.Number)),
+						"requirementsPath equals specPackagePath plus the requirement-source filename suffix")
 				}
 			}
 			if len(clauses) != 0 {

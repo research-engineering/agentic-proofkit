@@ -35,7 +35,7 @@
   ],
   "scripts": {
     "build": "go run ./internal/tools/packagebuild",
-    "check": "npm run npm:version && npm run source-hygiene && npm run command-contract:check && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run compact-contract:check && npm run receipt-contract:check && npm run browser:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout",
+    "check": "npm run npm:version && npm run source-hygiene && npm run command-contract:check && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run compact-contract:check && npm run receipt-contract:check && npm run spec-tree-contract:check && npm run graph-contract:check && npm run boundary-contract:check && npm run browser:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout",
     "browser:check": "npm run browser:static-check && npm run browser:test",
     "browser:static-check": "tsc -p tsconfig.browser.json && node --test scripts/browser-evidence-models.test.mjs scripts/browser-proof-execution.test.mjs scripts/browser-proof-inputs.test.mjs scripts/browser-selection-authority.test.mjs scripts/browser-workspace-requests.test.mjs scripts/diagnostic-entrypoints.test.mjs scripts/stable-json.test.mjs",
     "browser:test": "go run ./internal/tools/browserproofverify --run",
@@ -67,7 +67,10 @@
     "go:vulncheck": "go tool govulncheck ./...",
     "command-contract:check": "go run ./internal/tools/commandcontractgen --check",
     "compact-contract:check": "node --test scripts/compact-proof-structure.test.mjs",
-    "receipt-contract:check": "node --test scripts/receipt-structure.test.mjs"
+    "receipt-contract:check": "node --test scripts/receipt-structure.test.mjs scripts/receipt-admission-structure.test.mjs",
+    "spec-tree-contract:check": "node --test scripts/spec-tree-structure.test.mjs",
+    "graph-contract:check": "node --test scripts/graph-structure.test.mjs",
+    "boundary-contract:check": "node --test scripts/boundary-structure.test.mjs scripts/report-admission-structure.test.mjs scripts/workspace-structure.test.mjs scripts/public-api-structure.test.mjs scripts/proof-routing-structure.test.mjs scripts/selective-proof-structure.test.mjs scripts/impact-structure.test.mjs scripts/inventory-coverage-structure.test.mjs scripts/explicit-input-structure.test.mjs scripts/bootstrap-structure.test.mjs scripts/generated-starter-structure.test.mjs scripts/overview-claims-structure.test.mjs scripts/authority-guard-structure.test.mjs scripts/release-classification-structure.test.mjs"
   },
   "os": [
     "darwin",

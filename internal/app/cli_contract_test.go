@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "fec6778e73169959a92fa9b892ecf1ba1eb008ae8de47507bd24dfb7d72ac461"
+	cliContractPublicABISHA256               = "150872de240192c8747c7703d813f99129f2556dc29d02da05a0644076aaccbe"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -201,12 +201,12 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 			required:     []string{"canonicalEnvelope", "schemaVersion", "sourceSet", "sources"},
 		},
 		{
-			definitionID: "proofkit.secret-scan.input.v1.root-shape",
+			definitionID: "proofkit.secret-scan.input.v1.json-schema",
 			allowed:      []string{"files", "nonClaims", "reportId", "schemaVersion", "suppressions"},
 			required:     []string{"files", "nonClaims", "reportId", "schemaVersion"},
 		},
 		{
-			definitionID: "proofkit.selective-gate-obligation-decision-input.input.v1.root-shape",
+			definitionID: "proofkit.selective-gate-obligation-decision-input.input.v1.json-schema",
 			allowed:      []string{"commandRoutes", "decisionId", "evidence", "nonClaims", "receiptCurrentnessScopeAdmission", "receiptTrustClassAdmission", "schemaVersion"},
 			required:     []string{"commandRoutes", "decisionId", "evidence", "nonClaims", "schemaVersion"},
 		},
@@ -535,26 +535,102 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 	}
 	if structural {
 		if _, admitted := map[string]struct{}{
-			bindingStructureDefinition: {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
+			"proofkit.changed-path-set.input.v1.json-schema":                          {},
+			"proofkit.changed-path-set.output.v1.json-schema":                         {},
+			"proofkit.secret-scan.input.v1.json-schema":                               {},
+			"proofkit.secret-scan.output.v1.json-schema":                              {},
+			"proofkit.self-check.input.v1.json-schema":                                {},
+			"proofkit.self-check.output.v1.json-schema":                               {},
+			"proofkit.stack-preset.output.v1.json-schema":                             {},
+			"proofkit.spec-overview-claims.input.v2.json-schema":                      {},
+			"proofkit.spec-overview-claims.output.v1.json-schema":                     {},
+			"proofkit.producer-policy-self-proof.input.v1.json-schema":                {},
+			"proofkit.producer-policy-self-proof.output.v1.json-schema":               {},
+			"proofkit.migration-parity-admission.input.v1.json-schema":                {},
+			"proofkit.migration-parity-admission.output.v1.json-schema":               {},
+			"proofkit.json-report-cli-adapter-source.output.v1.json-schema":           {},
+			"proofkit.selective-gate-plan.input.v1.json-schema":                       {},
+			"proofkit.selective-gate-plan.output.v1.json-schema":                      {},
+			"proofkit.selective-gate-evidence.input.v1.json-schema":                   {},
+			"proofkit.selective-gate-evidence.output.v1.json-schema":                  {},
+			"proofkit.selective-gate-obligation-decision-input.input.v1.json-schema":  {},
+			"proofkit.selective-gate-obligation-decision-input.output.v1.json-schema": {},
+			"proofkit.obligation-decision.input.v1.json-schema":                       {},
+			"proofkit.obligation-decision.output.v1.json-schema":                      {},
+			"proofkit.impact.input.v2.json-schema":                                    {},
+			"proofkit.impact.output.v2.json-schema":                                   {},
+			"proofkit.requirement-impact-input-compose.input.v3.json-schema":          {},
+			"proofkit.requirement-impact-input-compose.output.v2.json-schema":         {},
+			"proofkit.requirement-coverage-input-compose.input.v3.json-schema":        {},
+			"proofkit.requirement-coverage-input-compose.output.v3.json-schema":       {},
+			"proofkit.readiness-closeout.input.v1.json-schema":                        {},
+			"proofkit.readiness-closeout.output.v1.json-schema":                       {},
+			"proofkit.release-authority.input.v1.json-schema":                         {},
+			"proofkit.release-authority.output.v1.json-schema":                        {},
+			"proofkit.requirement-coverage-view.input.v3.json-schema":                 {},
+			"proofkit.test-evidence-inventory.input.v3.json-schema":                   {},
+			"proofkit.test-evidence-inventory.output.v2.json-schema":                  {},
+			"proofkit.requirement-bindings.output.v1.json-schema":                     {},
+			"proofkit.evidence-graph.output.v1.json-schema":                           {},
+			"proofkit.proof-slice.output.v1.json-schema":                              {},
+			"proofkit.requirement-proof-resolver.output.v2.json-schema":               {},
+			"proofkit.witness-plan.input.v1.json-schema":                              {},
+			"proofkit.witness-plan.output.v1.json-schema":                             {},
+			"proofkit.witness-scheduler-plan.input.v1.json-schema":                    {},
+			"proofkit.witness-scheduler-plan.output.v1.json-schema":                   {},
+			bindingStructureDefinition:                                                {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
 			sourceViewOutputStructureDefinition: {}, transitionInputStructureDefinition: {}, transitionOutputStructureDefinition: {},
 			authoringInputStructureDefinition: {}, authoringOutputStructureDefinition: {}, contextCatalogStructureDefinition: {},
-			specTreeStructureDefinition:                                     {},
-			"proofkit.requirement-coverage-view.output.v4.json-schema":      {},
-			"proofkit.requirement-context-compose.output.v4.json-schema":    {},
-			"proofkit.requirement-context-slice.input.v2.json-schema":       {},
-			"proofkit.requirement-context-slice.output.v2.json-schema":      {},
-			"proofkit.requirement-semantic-diff.input.v3.json-schema":       {},
-			"proofkit.requirement-semantic-diff.output.v3.json-schema":      {},
-			"proofkit.requirement-traceability-graph.input.v3.json-schema":  {},
-			"proofkit.transaction-inspect-residue.output.v1.json-schema":    {},
-			"proofkit.transaction-quarantine-residue.output.v1.json-schema": {},
-			"proofkit.branch-authority.input.v1.json-schema":                {},
-			"proofkit.branch-authority.output.v1.json-schema":               {},
-			"proofkit.compact-proof-contract.input.v2.json-schema":          {},
-			"proofkit.receipt-currentness-scope.input.v1.json-schema":       {},
-			"proofkit.receipt-currentness-scope.output.v1.json-schema":      {},
-			"proofkit.receipt-trust-class.input.v1.json-schema":             {},
-			"proofkit.receipt-trust-class.output.v1.json-schema":            {},
+			specTreeStructureDefinition:                                           {},
+			"proofkit.requirement-spec-tree.output.v1.json-schema":                {},
+			"proofkit.requirement-spec-tree-view.output.v2.json-schema":           {},
+			"proofkit.requirement-coverage-view.output.v4.json-schema":            {},
+			"proofkit.requirement-context-compose.output.v4.json-schema":          {},
+			"proofkit.requirement-context-slice.input.v2.json-schema":             {},
+			"proofkit.requirement-context-slice.output.v2.json-schema":            {},
+			"proofkit.requirement-semantic-diff.input.v3.json-schema":             {},
+			"proofkit.requirement-semantic-diff.output.v3.json-schema":            {},
+			"proofkit.requirement-traceability-graph.input.v3.json-schema":        {},
+			"proofkit.requirement-traceability-graph.output.v1.json-schema":       {},
+			"proofkit.transaction-inspect-residue.output.v1.json-schema":          {},
+			"proofkit.transaction-quarantine-residue.output.v1.json-schema":       {},
+			"proofkit.branch-authority.input.v1.json-schema":                      {},
+			"proofkit.branch-authority.output.v1.json-schema":                     {},
+			"proofkit.compact-proof-contract.input.v2.json-schema":                {},
+			"proofkit.receipt-currentness-scope.input.v1.json-schema":             {},
+			"proofkit.receipt-currentness-scope.output.v1.json-schema":            {},
+			"proofkit.receipt-trust-class.input.v1.json-schema":                   {},
+			"proofkit.receipt-trust-class.output.v1.json-schema":                  {},
+			"proofkit.proof-receipt-admission.input.v1.json-schema":               {},
+			"proofkit.proof-receipt-admission.output.v1.json-schema":              {},
+			"proofkit.receipt-producer-admission.input.v1.json-schema":            {},
+			"proofkit.receipt-producer-admission.output.v1.json-schema":           {},
+			"proofkit.custom-rule-boundary.input.v1.json-schema":                  {},
+			"proofkit.custom-rule-boundary.output.v1.json-schema":                 {},
+			"proofkit.document-lifecycle-boundary.input.v1.json-schema":           {},
+			"proofkit.document-lifecycle-boundary.output.v1.json-schema":          {},
+			"proofkit.rendered-artifact-freshness.input.v1.json-schema":           {},
+			"proofkit.rendered-artifact-freshness.output.v1.json-schema":          {},
+			"proofkit.adoption-checklist.input.v1.json-schema":                    {},
+			"proofkit.adoption-checklist.output.v1.json-schema":                   {},
+			"proofkit.binding-partition.input.v1.json-schema":                     {},
+			"proofkit.binding-partition.output.v1.json-schema":                    {},
+			"proofkit.completion-criteria.input.v1.json-schema":                   {},
+			"proofkit.completion-criteria.output.v1.json-schema":                  {},
+			"proofkit.package-runtime-dependency-admission.input.v1.json-schema":  {},
+			"proofkit.package-runtime-dependency-admission.output.v1.json-schema": {},
+			"proofkit.proof-obligation-algebra.input.v1.json-schema":              {},
+			"proofkit.proof-obligation-algebra.output.v1.json-schema":             {},
+			"proofkit.text-policy.input.v1.json-schema":                           {},
+			"proofkit.text-policy.output.v1.json-schema":                          {},
+			"proofkit.workspace-manifest-facts.input.v1.json-schema":              {},
+			"proofkit.workspace-manifest-facts.output.v1.json-schema":             {},
+			"proofkit.workspace-changed-package-plan.input.v1.json-schema":        {},
+			"proofkit.workspace-changed-package-plan.output.v1.json-schema":       {},
+			"proofkit.workspace-shard-partition.input.v2.json-schema":             {},
+			"proofkit.workspace-shard-partition.output.v2.json-schema":            {},
+			"proofkit.typescript-public-api-surfaces.input.v1.json-schema":        {},
+			"proofkit.typescript-public-api-surfaces.output.v1.json-schema":       {},
 		}[id]; !admitted {
 			t.Fatalf("%s has no admitted structural projection owner", id)
 		}
@@ -1447,7 +1523,7 @@ func TestCoverageComposerRequiredFieldSummaryMatchesRootDefinition(t *testing.T)
 	if len(variants) != 1 {
 		t.Fatalf("coverage composer root variants = %d, want one", len(variants))
 	}
-	want := []any{"composerInputId", "coverageUniverse", "localEnvironmentPolicy", "options", "ownerInvariantRegistry", "requirementSource", "schemaVersion", "selectedOwnerIds", "viewInputId"}
+	want := []any{"composerInputId", "coverageUniverse", "requirementSource", "schemaVersion", "selectedOwnerIds", "viewInputId"}
 	if !reflect.DeepEqual(variants[0].(map[string]any)["requiredFields"], want) {
 		t.Fatal("coverage composer root definition changed required fields")
 	}
@@ -1523,7 +1599,12 @@ func TestHelpCommandContractForms(t *testing.T) {
 	}{
 		{command: "migration-parity-admission", needles: []string{"Input schema summary:", "parityRecords[]", "targetProofkitRefs[]"}},
 		{command: "migration-plan", needles: []string{"Input schema summary:", "retirementCandidates[]", "followUpCommands[]"}},
+		{command: "adoption-checklist", needles: []string{"Input schema summary:", "checklistId", "items[]", "requiredItemIds[]"}},
+		{command: "binding-partition", needles: []string{"Input schema summary:", "bindingSurfaces[]", "delegations[]", "routeOwners[]"}},
+		{command: "completion-criteria", needles: []string{"Input schema summary:", "completionId", "criteria[]"}},
 		{command: "package-runtime-dependency-admission", needles: []string{"Input schema summary:", "expectedLockfileIntegrity", "packageResolution{}"}},
+		{command: "proof-obligation-algebra", needles: []string{"Input schema summary:", "algebraId", "obligations[]"}},
+		{command: "text-policy", needles: []string{"Input schema summary:", "files[]", "policy{}"}},
 	} {
 		t.Run("schema summary "+item.command, func(t *testing.T) {
 			stdout.Reset()
@@ -2119,9 +2200,9 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		t.Fatalf("TypeScript public API export condition rule=%v", rule)
 	}
 	budgets := inputContract["resourceBudgets"].(map[string]any)
-	if budgets["maxSourceFileBytes"] != float64(maxSourceFileBytesForContractTest) ||
-		budgets["maxPackageManifestBytes"] != float64(maxPackageManifestBytesForContractTest) ||
-		budgets["maxAggregateFileReadBytes"] != float64(maxAggregateFileReadBytesForContractTest) {
+	if budgets["maxSourceFileBytes"] != json.Number(fmt.Sprint(maxSourceFileBytesForContractTest)) ||
+		budgets["maxPackageManifestBytes"] != json.Number(fmt.Sprint(maxPackageManifestBytesForContractTest)) ||
+		budgets["maxAggregateFileReadBytes"] != json.Number(fmt.Sprint(maxAggregateFileReadBytesForContractTest)) {
 		t.Fatalf("TypeScript public API resource budgets drifted: %#v", budgets)
 	}
 	grammar := inputContract["sourceGrammar"].(map[string]any)
@@ -2129,7 +2210,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		t.Fatalf("TypeScript public API source grammar overstates its authority: %#v", grammar)
 	}
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
-	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "angle-bracket syntax"} {
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "angle-bracket syntax", "direct exported generator function declarations"} {
 		if !strings.Contains(rejected, required) {
 			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
 		}
@@ -2205,12 +2286,12 @@ func TestRequirementCoverageViewBreakingRootUsesVersionedOutputContract(t *testi
 			continue
 		}
 		output := canonicalJSONValue(t, command.OutputContract).(map[string]any)
-		if output["contractId"] != "proofkit.requirement-coverage-view.output.v4" || output["schemaVersion"] != float64(4) {
+		if output["contractId"] != "proofkit.requirement-coverage-view.output.v4" || output["schemaVersion"] != json.Number("4") {
 			t.Fatalf("requirement coverage output identity=%#v, want versioned v4 contract", output)
 		}
 		definitionID := output["rootDefinitionRef"].(string)
 		definition := definitions[definitionID]
-		if definitionID != "proofkit.requirement-coverage-view.output.v4.json-schema" || definition["schemaVersion"] != float64(1) {
+		if definitionID != "proofkit.requirement-coverage-view.output.v4.json-schema" || definition["schemaVersion"] != json.Number("1") {
 			t.Fatal("requirement coverage output lacks its structural v4 definition")
 		}
 		foundEnvelope, foundReport := false, false
@@ -2279,10 +2360,11 @@ func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing
 		"flaky_time",
 		"implementation_mirror",
 		"import_cost_leak",
+		"incomplete_declared_oracle_metadata",
 		"invalid_falsifier_supersession",
+		"missing_declared_route_anchor",
 		"missing_edge",
 		"missing_executable_command_ref",
-		"missing_declared_route_anchor",
 		"mock_tests_mock",
 		"over_broad_integration",
 		"proof_route_candidate",
@@ -2291,7 +2373,7 @@ func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing
 		"snapshot_without_oracle",
 		"tautology",
 		"unasserted_diagnostic",
-		"incomplete_declared_oracle_metadata",
+		"unclassified_test_inventory_gap",
 		"wrong_boundary",
 		"wrong_evidence_boundary",
 	}, "test evidence inventory classification ids")
@@ -2320,6 +2402,7 @@ func TestRequirementCoverageInputComposeContractDescribesDirectViewInput(t *test
 	normalized := modes["normalized"].(map[string]any)
 	assertStringSet(t, stringsFromAny(normalized["requires"].([]any)), []string{
 		"compactProofContract",
+		"localEnvironmentPolicy",
 		"normalizedTestEvidenceInventory",
 	}, "requirement coverage input compose normalized required fields")
 	assertStringSet(t, stringsFromAny(normalized["forbids"].([]any)), []string{
@@ -2392,7 +2475,7 @@ func TestWitnessPlanContractDescribesBindingProjectionInput(t *testing.T) {
 	assertStringSet(t, stringsFromAny(bindingProjection["admissionRules"].([]any)), []string{
 		"requirementProofBinding must pass requirement-bindings admission",
 		"vocabulary must pass witness command vocabulary admission",
-		"binding-derived projection requires exactly one admitted parallelGroup; multi-group vocabularies require an explicit witness command catalog",
+		"each binding-derived command requires exactly one admitted parallelGroup; an empty command catalog permits zero or multiple groups",
 		"display command text must be display-only command text without shell control tokens, quoting, escaping, or secret-like tokens",
 		"each referenced environment class must admit networkPolicy none, credentialClass none, and cachePolicy disabled",
 	}, "witness-plan requirement-bindings admission rules")
@@ -2533,14 +2616,14 @@ func TestAgentRouteOutputContractPreservesReportSemantics(t *testing.T) {
 		t.Fatal("agent-route output contract is missing")
 	}
 	report, ok := output["reportContract"].(map[string]any)
-	if !ok || report["contractId"] != "proofkit.agent-route.report.v3" || report["schemaVersion"] != float64(3) {
+	if !ok || report["contractId"] != "proofkit.agent-route.report.v3" || report["schemaVersion"] != json.Number("3") {
 		t.Fatalf("agent-route report contract identity is invalid: %#v", report)
 	}
 	assertStringSet(t, stringsFromAny(report["requiredFields"].([]any)), []string{
 		"guidanceSlice", "reportId", "reportKind", "schemaVersion", "selectedRouteFamily", "state", "summary",
 	}, "agent-route report contract required fields")
 	fields := report["fields"].(map[string]any)
-	if fields["schemaVersion"].(map[string]any)["value"] != float64(3) {
+	if fields["schemaVersion"].(map[string]any)["value"] != json.Number("3") {
 		t.Fatalf("agent-route report schema value drifted: %#v", fields["schemaVersion"])
 	}
 	family := fields["selectedRouteFamily"].(map[string]any)
@@ -2583,9 +2666,9 @@ func canonicalJSONValue(t *testing.T, value any) any {
 	if err != nil {
 		t.Fatalf("marshal value: %v", err)
 	}
-	var decoded any
-	if err := json.Unmarshal(content, &decoded); err != nil {
-		t.Fatalf("unmarshal value: %v", err)
+	decoded, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		t.Fatalf("decode value: %v", err)
 	}
 	return decoded
 }

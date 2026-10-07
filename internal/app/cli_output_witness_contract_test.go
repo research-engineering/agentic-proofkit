@@ -437,7 +437,7 @@ func rootDistinctOutputContractExpectations() []rootDistinctOutputContractExpect
 		{
 			Command:           "self-check",
 			NativeSourceForm:  "nativeSource",
-			NativeSourcePaths: []string{"internal/app"},
+			NativeSourcePaths: []string{"internal/command/selfcheck"},
 			SelectorPath:      "internal/app/cli_abi_test.go",
 			SelectorTest:      "TestSelfCheckOutputUsesExactRootShape",
 			ExecutableCommand: "go test ./internal/app -run '^TestSelfCheckOutputUsesExactRootShape$'",

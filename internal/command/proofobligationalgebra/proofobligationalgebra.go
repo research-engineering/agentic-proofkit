@@ -25,15 +25,6 @@ var obligationKinds = map[string]struct{}{
 	"waived_until": {},
 }
 
-var orderedObligationKinds = []string{
-	"atomic",
-	"all_of",
-	"any_of",
-	"conditional",
-	"deferred",
-	"waived_until",
-}
-
 var routeBearingKinds = map[string]struct{}{
 	"all_of":      {},
 	"any_of":      {},
@@ -161,7 +152,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("proof obligation algebra input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"algebraId", "nonClaims", "obligations", "schemaVersion"}, "proof obligation algebra input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "proof obligation algebra input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -231,7 +222,7 @@ func admitObligation(raw any) (obligationInput, error) {
 	if !ok {
 		return obligationInput{}, fmt.Errorf("proof obligation must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"childObligationIds", "conditionRefs", "delegationRefs", "evidenceRefs", "expiryRef", "nonClaims", "obligationId", "obligationKind", "owner", "proofRouteRefs", "rationale", "requirementId", "reviewConditionRef"}, "proof obligation"); err != nil {
+	if err := admit.KnownKeys(record, obligationKeys, "proof obligation"); err != nil {
 		return obligationInput{}, err
 	}
 	obligationID, err := admit.RuleID(record["obligationId"], "proof obligation obligationId")
@@ -486,13 +477,10 @@ func ruleResults(obligations []obligation) []report.RuleResult {
 func kindCounts(obligations []obligation) map[string]any {
 	counts := map[string]any{}
 	typedCounts := map[string]int{}
-	for _, kind := range orderedObligationKinds {
-		typedCounts[kind] = 0
-	}
 	for _, item := range obligations {
 		typedCounts[item.ObligationKind]++
 	}
-	for _, kind := range orderedObligationKinds {
+	for kind := range obligationKinds {
 		counts[kind] = typedCounts[kind]
 	}
 	return counts

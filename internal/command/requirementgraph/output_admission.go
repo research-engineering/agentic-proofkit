@@ -117,7 +117,7 @@ func admitGraphNode(node map[string]any) error {
 		keys = append(keys, "requirementId", "scenarioId", "witnessId", "witnessKind", "witnessPath")
 	}
 	if plane == "specification_coverage" {
-		if _, err := admit.Enum(node["kind"], map[string]struct{}{"capability_spec": {}, "meta_spec": {}, "module_spec": {}, "requirement": {}, "submodule_spec": {}}, "requirement traceability graph specification node kind"); err != nil {
+		if _, err := admit.Enum(node["kind"], specificationNodeKinds, "requirement traceability graph specification node kind"); err != nil {
 			return err
 		}
 	}

@@ -225,6 +225,38 @@ func cloneLegacyWitnessRecord(t *testing.T, value map[string]any) map[string]any
 	return raw.(map[string]any)
 }
 
+func TestWitnessPlanRejectsUnsortedBoundaryInputs(t *testing.T) {
+	plan, err := readJSONObject(filepath.Join("..", "proofkit", "witness-plan.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bindings, err := readJSONObject(filepath.Join("..", "proofkit", "requirement-bindings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateLegacyWitnessPlan(plan, bindings); err != nil {
+		t.Fatalf("current witness plan must pass before the isolated reversal: %v", err)
+	}
+	policy, err := legacyNamedRecord(plan["policies"], "commandId", "proofkit.boundary-contract-check")
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputs := policy["inputSelectors"].([]any)
+	index := -1
+	for i, input := range inputs {
+		if input == "scripts/overview-claims-structure.test.mjs" {
+			index = i
+		}
+	}
+	if index <= 0 {
+		t.Fatal("new boundary witness is missing or cannot be order-reversed")
+	}
+	inputs[index-1], inputs[index] = inputs[index], inputs[index-1]
+	if err := validateLegacyWitnessPlan(plan, bindings); err == nil || !strings.Contains(err.Error(), "inputSelectors must be sorted and unique") {
+		t.Fatalf("isolated boundary selector disorder escaped native admission: %v", err)
+	}
+}
+
 func TestLegacyUnicodeWitnessPlanClosure(t *testing.T) {
 	plan, err := readJSONObject(filepath.Join("..", "proofkit", "witness-plan.json"))
 	if err != nil {

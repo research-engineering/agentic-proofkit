@@ -13,6 +13,7 @@ var currentnessStates = map[string]struct{}{"current": {}, "stale": {}, "unverif
 var traceAuthorities = map[string]struct{}{"caller_reported": {}, "owner_admitted": {}}
 var executionAuthorities = map[string]struct{}{"caller_reported": {}, "receipt_admitted": {}}
 var executionStates = map[string]struct{}{"failed": {}, "passed": {}, "skipped": {}, "unavailable": {}}
+var specificationNodeKinds = map[string]struct{}{"capability_spec": {}, "meta_spec": {}, "module_spec": {}, "requirement": {}, "submodule_spec": {}}
 
 var graphInputShape = makeGraphInputShape()
 

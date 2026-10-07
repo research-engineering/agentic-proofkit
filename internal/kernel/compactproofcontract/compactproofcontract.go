@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	AuthorityState       = "caller_owned_declaration"
-	ContractKind         = "requirement_proof_route_declaration"
-	NormalizationProfile = "proofkit.compact.declaration.v2"
-	maxJSONSafeInteger   = int64(1<<53 - 1)
+	AuthorityState          = "caller_owned_declaration"
+	ContractKind            = "requirement_proof_route_declaration"
+	NormalizationProfile    = "proofkit.compact.declaration.v2"
+	maxJSONSafeInteger      = int64(1<<53 - 1)
+	MaxResolutionOrderIndex = min(maxJSONSafeInteger, int64(^uint(0)>>1))
 )
 
 var surfaceColumns = [...]string{
@@ -986,7 +987,7 @@ func orderedStringArray(raw any, context string) ([]string, error) {
 
 func AdmitResolutionOrderIndex(raw any, context string) (int, error) {
 	number, err := admit.CanonicalInteger(raw, context)
-	if err != nil || number < 0 || number > maxJSONSafeInteger || int64(int(number)) != number {
+	if err != nil || number < 0 || number > MaxResolutionOrderIndex {
 		return 0, fmt.Errorf("%s must be a JSON-safe non-negative integer", context)
 	}
 	return int(number), nil

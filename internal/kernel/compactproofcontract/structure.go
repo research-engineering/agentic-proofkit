@@ -25,12 +25,8 @@ func InputStructure() map[string]any {
 	texts := func(item map[string]any) map[string]any {
 		return map[string]any{"type": "array", "items": item, "uniqueItems": true}
 	}
-	maximumOrder := maxJSONSafeInteger
-	if strconv.IntSize == 32 {
-		maximumOrder = 1<<31 - 1
-	}
 	order := map[string]any{"type": "integer", "minimum": json.Number("0"),
-		"maximum": json.Number(strconv.FormatInt(maximumOrder, 10))}
+		"maximum": json.Number(strconv.FormatInt(MaxResolutionOrderIndex, 10))}
 	definitions := map[string]any{
 		"text": text, "identifier": identifier, "normalizedIdentifier": normalizedIdentifier,
 		"texts": texts(schemaReference("text")), "identifiers": texts(schemaReference("normalizedIdentifier")),
@@ -91,21 +87,30 @@ func InputStructure() map[string]any {
 	}
 	conditions := columnConditions("surface_columns", "surfaces", surfaceColumns[:], surfaceCells)
 	conditions = append(conditions, columnConditions("binding_columns", "bindings", bindingColumns[:], bindingCells)...)
-	// Two independently permutable headers determine each nested witness cell.
+	for bindingPosition := range bindingColumns {
+		definitions["binding-witness-"+strconv.Itoa(bindingPosition)] = map[string]any{"properties": map[string]any{
+			"binding_columns": positionStructure(bindingPosition, schemaReference("witnessColumn")),
+		}}
+	}
+	// (B AND W) => T is W => (B => T). Group the repeated W predicates;
+	// every predicate and consequent still evaluates the same root instance.
 	for witnessPosition := range witnessColumns {
 		for _, name := range witnessColumns {
+			bindings := make([]any, 0, len(bindingColumns))
 			for bindingPosition := range bindingColumns {
-				condition := map[string]any{"properties": map[string]any{
-					"witness_columns": positionStructure(witnessPosition, schemaReference("column-"+name)),
-					"binding_columns": positionStructure(bindingPosition, schemaReference("witnessColumn")),
-				}}
-				conditions = append(conditions, map[string]any{
-					"if": condition,
+				bindings = append(bindings, map[string]any{
+					"if": schemaReference("binding-witness-" + strconv.Itoa(bindingPosition)),
 					"then": map[string]any{"properties": map[string]any{"bindings": map[string]any{
 						"items": positionStructure(bindingPosition, positionStructure(witnessPosition, schemaReference(witnessCells[name]))),
 					}}},
 				})
 			}
+			conditions = append(conditions, map[string]any{
+				"if": map[string]any{"properties": map[string]any{
+					"witness_columns": positionStructure(witnessPosition, schemaReference("column-"+name)),
+				}},
+				"then": map[string]any{"allOf": bindings},
+			})
 		}
 	}
 	return map[string]any{

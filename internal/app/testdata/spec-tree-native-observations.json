@@ -1,0 +1,1619 @@
+[
+  {
+    "case": "valid",
+    "kind": "report",
+    "input": {
+      "callerAnnotations": [
+        "Caller tree fixture is display-only."
+      ],
+      "edges": [
+        {
+          "childNodeId": "module",
+          "parentNodeId": "meta"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "module"
+        }
+      ],
+      "nodes": [
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements"
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "callerAnnotations": [
+            "Caller overlay fixture is display-only."
+          ],
+          "label": "Source overlay",
+          "overlayId": "overlay.source.module",
+          "overlayKind": "source",
+          "refId": "source.module",
+          "refKind": "source_ref",
+          "targetNodeId": "module"
+        },
+        {
+          "callerAnnotations": [
+            "Caller rendered overlay fixture is presentation only."
+          ],
+          "digestAlgorithm": "sha256",
+          "label": "Module rendered view",
+          "overlayId": "overlay.rendered.module",
+          "overlayKind": "rendered_view",
+          "refDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "refId": "artifact.module.view",
+          "refKind": "rendered_artifact",
+          "refPath": "artifacts/module-view.html",
+          "targetNodeId": "module"
+        }
+      ],
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "treeId": "proofkit.spec_tree.fixture"
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "boundaryNonClaims",
+          "value": [
+            "Requirement spec tree caller annotations are untrusted display text and are not non-claim authority.",
+            "Requirement spec tree reports do not approve merge, release, rollout, or production readiness.",
+            "Requirement spec tree reports do not compute source digest freshness from repository files.",
+            "Requirement spec tree reports do not execute native witnesses.",
+            "Requirement spec tree reports do not infer hierarchy from repository layout.",
+            "Requirement spec tree reports do not make rendered output authoritative.",
+            "Requirement spec tree reports do not read requirement source files.",
+            "Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness."
+          ]
+        },
+        {
+          "key": "callerAnnotations",
+          "value": {
+            "nodes": [
+              {
+                "annotations": [
+                  "Caller node fixture is display-only."
+                ],
+                "nodeId": "meta"
+              },
+              {
+                "annotations": [
+                  "Caller node fixture is display-only."
+                ],
+                "nodeId": "module"
+              },
+              {
+                "annotations": [
+                  "Caller node fixture is display-only."
+                ],
+                "nodeId": "submodule"
+              }
+            ],
+            "overlays": [
+              {
+                "annotations": [
+                  "Caller rendered overlay fixture is presentation only."
+                ],
+                "overlayId": "overlay.rendered.module"
+              },
+              {
+                "annotations": [
+                  "Caller overlay fixture is display-only."
+                ],
+                "overlayId": "overlay.source.module"
+              }
+            ],
+            "root": [
+              "Caller tree fixture is display-only."
+            ]
+          }
+        },
+        {
+          "key": "edges",
+          "value": [
+            {
+              "childNodeId": "module",
+              "parentNodeId": "meta"
+            },
+            {
+              "childNodeId": "submodule",
+              "parentNodeId": "module"
+            }
+          ]
+        },
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "nodes",
+          "value": [
+            {
+              "callerAnnotations": [
+                "Caller node fixture is display-only."
+              ],
+              "displayOrder": 1,
+              "label": "Meta specification",
+              "nodeId": "meta",
+              "nodeKind": "meta_spec",
+              "sourceRefIds": [
+                "source.meta"
+              ]
+            },
+            {
+              "callerAnnotations": [
+                "Caller node fixture is display-only."
+              ],
+              "displayOrder": 1,
+              "label": "Module specification",
+              "nodeId": "module",
+              "nodeKind": "module_spec",
+              "sourceRefIds": [
+                "source.module"
+              ]
+            },
+            {
+              "callerAnnotations": [
+                "Caller node fixture is display-only."
+              ],
+              "displayOrder": 1,
+              "label": "Submodule specification",
+              "nodeId": "submodule",
+              "nodeKind": "submodule_spec",
+              "sourceRefIds": [
+                "source.submodule"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "overlays",
+          "value": [
+            {
+              "callerAnnotations": [
+                "Caller rendered overlay fixture is presentation only."
+              ],
+              "digestAlgorithm": "sha256",
+              "label": "Module rendered view",
+              "overlayId": "overlay.rendered.module",
+              "overlayKind": "rendered_view",
+              "refDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "refId": "artifact.module.view",
+              "refKind": "rendered_artifact",
+              "refPath": "artifacts/module-view.html",
+              "targetNodeId": "module"
+            },
+            {
+              "callerAnnotations": [
+                "Caller overlay fixture is display-only."
+              ],
+              "label": "Source overlay",
+              "overlayId": "overlay.source.module",
+              "overlayKind": "source",
+              "refId": "source.module",
+              "refKind": "source_ref",
+              "targetNodeId": "module"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Requirement spec tree caller annotations are untrusted display text and are not non-claim authority.",
+        "Requirement spec tree reports do not approve merge, release, rollout, or production readiness.",
+        "Requirement spec tree reports do not compute source digest freshness from repository files.",
+        "Requirement spec tree reports do not execute native witnesses.",
+        "Requirement spec tree reports do not infer hierarchy from repository layout.",
+        "Requirement spec tree reports do not make rendered output authoritative.",
+        "Requirement spec tree reports do not read requirement source files.",
+        "Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness."
+      ],
+      "reportId": "proofkit.spec_tree.fixture",
+      "reportKind": "proofkit.requirement-spec-tree",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "failures",
+              "value": []
+            }
+          ],
+          "message": "Spec tree topology admits exactly one reachable parent-owned tree rooted at rootNodeId.",
+          "ruleId": "proofkit.requirement-spec-tree.topology",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failures",
+              "value": []
+            }
+          ],
+          "message": "Spec tree source refs admit one source-reference authority and caller-provided digest facts.",
+          "ruleId": "proofkit.requirement-spec-tree.source_refs",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failures",
+              "value": []
+            }
+          ],
+          "message": "Spec tree overlays are opaque routing refs to admitted nodes and source refs.",
+          "ruleId": "proofkit.requirement-spec-tree.overlays",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "Caller annotations (untrusted) were admitted as display-only text and kept separate from Proofkit boundary non-claims.",
+          "ruleId": "proofkit.requirement-spec-tree.non_claims",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "callerAnnotationCount": 6,
+        "edgeCount": 2,
+        "failureCount": 0,
+        "maxDepth": 3,
+        "nodeCount": 3,
+        "overlayCount": 2,
+        "sourceRefCount": 3,
+        "staleSourceRefCount": 0,
+        "visitedNodeCount": 3
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "valid",
+    "kind": "view",
+    "input": {
+      "callerAnnotations": [
+        "Caller tree fixture is display-only."
+      ],
+      "edges": [
+        {
+          "childNodeId": "module",
+          "parentNodeId": "meta"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "module"
+        }
+      ],
+      "nodes": [
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements"
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "callerAnnotations": [
+            "Caller overlay fixture is display-only."
+          ],
+          "label": "Source overlay",
+          "overlayId": "overlay.source.module",
+          "overlayKind": "source",
+          "refId": "source.module",
+          "refKind": "source_ref",
+          "targetNodeId": "module"
+        },
+        {
+          "callerAnnotations": [
+            "Caller rendered overlay fixture is presentation only."
+          ],
+          "digestAlgorithm": "sha256",
+          "label": "Module rendered view",
+          "overlayId": "overlay.rendered.module",
+          "overlayKind": "rendered_view",
+          "refDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "refId": "artifact.module.view",
+          "refKind": "rendered_artifact",
+          "refPath": "artifacts/module-view.html",
+          "targetNodeId": "module"
+        }
+      ],
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "treeId": "proofkit.spec_tree.fixture"
+    },
+    "output": {
+      "authority": "presentation_only",
+      "callerAnnotationAuthority": "untrusted_caller_text",
+      "callerAnnotationCount": 4,
+      "callerAnnotations": [
+        "Caller node fixture is display-only.",
+        "Caller overlay fixture is display-only.",
+        "Caller rendered overlay fixture is presentation only.",
+        "Caller tree fixture is display-only."
+      ],
+      "edgeCount": 2,
+      "maxDepth": 3,
+      "nodeCount": 3,
+      "nodes": [
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "childNodeIds": [
+            "module"
+          ],
+          "depth": 1,
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "overlays": [],
+          "parentNodeId": "",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "childNodeIds": [
+            "submodule"
+          ],
+          "depth": 2,
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "overlays": [
+            {
+              "callerAnnotations": [
+                "Caller rendered overlay fixture is presentation only."
+              ],
+              "digestAlgorithm": "sha256",
+              "label": "Module rendered view",
+              "overlayId": "overlay.rendered.module",
+              "overlayKind": "rendered_view",
+              "refDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "refId": "artifact.module.view",
+              "refKind": "rendered_artifact",
+              "refPath": "artifacts/module-view.html",
+              "targetNodeId": "module"
+            },
+            {
+              "callerAnnotations": [
+                "Caller overlay fixture is display-only."
+              ],
+              "label": "Source overlay",
+              "overlayId": "overlay.source.module",
+              "overlayKind": "source",
+              "refId": "source.module",
+              "refKind": "source_ref",
+              "targetNodeId": "module"
+            }
+          ],
+          "parentNodeId": "meta",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "childNodeIds": [],
+          "depth": 3,
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "overlays": [],
+          "parentNodeId": "module",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements",
+              "staleDigest": false
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Requirement spec tree caller annotations are untrusted display text and are not non-claim authority.",
+        "Requirement spec tree reports do not approve merge, release, rollout, or production readiness.",
+        "Requirement spec tree reports do not compute source digest freshness from repository files.",
+        "Requirement spec tree reports do not execute native witnesses.",
+        "Requirement spec tree reports do not infer hierarchy from repository layout.",
+        "Requirement spec tree reports do not make rendered output authoritative.",
+        "Requirement spec tree reports do not read requirement source files.",
+        "Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness.",
+        "Requirement spec tree views are presentation-only derived products.",
+        "Requirement spec tree views do not compute source digest freshness from repository files.",
+        "Requirement spec tree views do not execute native witnesses.",
+        "Requirement spec tree views do not make rendered output authoritative.",
+        "Requirement spec tree views do not prove coverage completeness, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "overlayCount": 2,
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "sourceRefCount": 3,
+      "staleSourceRefCount": 0,
+      "state": "passed",
+      "treeId": "proofkit.spec_tree.fixture",
+      "viewKind": "proofkit.requirement-spec-tree-view"
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "failed",
+    "kind": "report",
+    "input": {
+      "callerAnnotations": [
+        "Caller tree fixture is display-only."
+      ],
+      "edges": [
+        {
+          "childNodeId": "module",
+          "parentNodeId": "meta"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "module"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "meta"
+        }
+      ],
+      "nodes": [
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements"
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "callerAnnotations": [
+            "Caller overlay fixture is display-only."
+          ],
+          "label": "Source overlay",
+          "overlayId": "overlay.source.module",
+          "overlayKind": "source",
+          "refId": "source.missing",
+          "refKind": "source_ref",
+          "targetNodeId": "module"
+        },
+        {
+          "callerAnnotations": [
+            "Caller rendered overlay fixture is presentation only."
+          ],
+          "digestAlgorithm": "sha256",
+          "label": "Module rendered view",
+          "overlayId": "overlay.rendered.module",
+          "overlayKind": "rendered_view",
+          "refDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "refId": "artifact.module.view",
+          "refKind": "rendered_artifact",
+          "refPath": "artifacts/module-view.html",
+          "targetNodeId": "module"
+        }
+      ],
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "treeId": "proofkit.spec_tree.fixture"
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "boundaryNonClaims",
+          "value": [
+            "Requirement spec tree caller annotations are untrusted display text and are not non-claim authority.",
+            "Requirement spec tree reports do not approve merge, release, rollout, or production readiness.",
+            "Requirement spec tree reports do not compute source digest freshness from repository files.",
+            "Requirement spec tree reports do not execute native witnesses.",
+            "Requirement spec tree reports do not infer hierarchy from repository layout.",
+            "Requirement spec tree reports do not make rendered output authoritative.",
+            "Requirement spec tree reports do not read requirement source files.",
+            "Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness."
+          ]
+        },
+        {
+          "key": "callerAnnotations",
+          "value": {
+            "nodes": [
+              {
+                "annotations": [
+                  "Caller node fixture is display-only."
+                ],
+                "nodeId": "meta"
+              },
+              {
+                "annotations": [
+                  "Caller node fixture is display-only."
+                ],
+                "nodeId": "module"
+              },
+              {
+                "annotations": [
+                  "Caller node fixture is display-only."
+                ],
+                "nodeId": "submodule"
+              }
+            ],
+            "overlays": [
+              {
+                "annotations": [
+                  "Caller rendered overlay fixture is presentation only."
+                ],
+                "overlayId": "overlay.rendered.module"
+              },
+              {
+                "annotations": [
+                  "Caller overlay fixture is display-only."
+                ],
+                "overlayId": "overlay.source.module"
+              }
+            ],
+            "root": [
+              "Caller tree fixture is display-only."
+            ]
+          }
+        },
+        {
+          "key": "edges",
+          "value": [
+            {
+              "childNodeId": "module",
+              "parentNodeId": "meta"
+            },
+            {
+              "childNodeId": "submodule",
+              "parentNodeId": "meta"
+            },
+            {
+              "childNodeId": "submodule",
+              "parentNodeId": "module"
+            }
+          ]
+        },
+        {
+          "key": "failures",
+          "value": [
+            "overlay.unknown_source_ref:overlay.source.module:source.missing",
+            "source_ref.stale_digest:source.submodule",
+            "topology.multi_parent:submodule",
+            "topology.sibling_display_order_collision:meta:module:submodule"
+          ]
+        },
+        {
+          "key": "nodes",
+          "value": [
+            {
+              "callerAnnotations": [
+                "Caller node fixture is display-only."
+              ],
+              "displayOrder": 1,
+              "label": "Meta specification",
+              "nodeId": "meta",
+              "nodeKind": "meta_spec",
+              "sourceRefIds": [
+                "source.meta"
+              ]
+            },
+            {
+              "callerAnnotations": [
+                "Caller node fixture is display-only."
+              ],
+              "displayOrder": 1,
+              "label": "Module specification",
+              "nodeId": "module",
+              "nodeKind": "module_spec",
+              "sourceRefIds": [
+                "source.module"
+              ]
+            },
+            {
+              "callerAnnotations": [
+                "Caller node fixture is display-only."
+              ],
+              "displayOrder": 1,
+              "label": "Submodule specification",
+              "nodeId": "submodule",
+              "nodeKind": "submodule_spec",
+              "sourceRefIds": [
+                "source.submodule"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "overlays",
+          "value": [
+            {
+              "callerAnnotations": [
+                "Caller rendered overlay fixture is presentation only."
+              ],
+              "digestAlgorithm": "sha256",
+              "label": "Module rendered view",
+              "overlayId": "overlay.rendered.module",
+              "overlayKind": "rendered_view",
+              "refDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "refId": "artifact.module.view",
+              "refKind": "rendered_artifact",
+              "refPath": "artifacts/module-view.html",
+              "targetNodeId": "module"
+            },
+            {
+              "callerAnnotations": [
+                "Caller overlay fixture is display-only."
+              ],
+              "label": "Source overlay",
+              "overlayId": "overlay.source.module",
+              "overlayKind": "source",
+              "refId": "source.missing",
+              "refKind": "source_ref",
+              "targetNodeId": "module"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Requirement spec tree caller annotations are untrusted display text and are not non-claim authority.",
+        "Requirement spec tree reports do not approve merge, release, rollout, or production readiness.",
+        "Requirement spec tree reports do not compute source digest freshness from repository files.",
+        "Requirement spec tree reports do not execute native witnesses.",
+        "Requirement spec tree reports do not infer hierarchy from repository layout.",
+        "Requirement spec tree reports do not make rendered output authoritative.",
+        "Requirement spec tree reports do not read requirement source files.",
+        "Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness."
+      ],
+      "reportId": "proofkit.spec_tree.fixture",
+      "reportKind": "proofkit.requirement-spec-tree",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "failures",
+              "value": [
+                "topology.multi_parent:submodule",
+                "topology.sibling_display_order_collision:meta:module:submodule"
+              ]
+            }
+          ],
+          "message": "topology validation failed",
+          "ruleId": "proofkit.requirement-spec-tree.topology",
+          "status": "failed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failures",
+              "value": [
+                "source_ref.stale_digest:source.submodule"
+              ]
+            }
+          ],
+          "message": "source_refs validation failed",
+          "ruleId": "proofkit.requirement-spec-tree.source_refs",
+          "status": "failed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failures",
+              "value": [
+                "overlay.unknown_source_ref:overlay.source.module:source.missing"
+              ]
+            }
+          ],
+          "message": "overlays validation failed",
+          "ruleId": "proofkit.requirement-spec-tree.overlays",
+          "status": "failed"
+        },
+        {
+          "diagnostics": [],
+          "message": "Caller annotations (untrusted) were admitted as display-only text and kept separate from Proofkit boundary non-claims.",
+          "ruleId": "proofkit.requirement-spec-tree.non_claims",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "callerAnnotationCount": 6,
+        "edgeCount": 3,
+        "failureCount": 4,
+        "maxDepth": 3,
+        "nodeCount": 3,
+        "overlayCount": 2,
+        "sourceRefCount": 3,
+        "staleSourceRefCount": 1,
+        "visitedNodeCount": 3
+      }
+    },
+    "exitCode": 1
+  },
+  {
+    "case": "failed",
+    "kind": "view",
+    "input": {
+      "callerAnnotations": [
+        "Caller tree fixture is display-only."
+      ],
+      "edges": [
+        {
+          "childNodeId": "module",
+          "parentNodeId": "meta"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "module"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "meta"
+        }
+      ],
+      "nodes": [
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements"
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "callerAnnotations": [
+            "Caller overlay fixture is display-only."
+          ],
+          "label": "Source overlay",
+          "overlayId": "overlay.source.module",
+          "overlayKind": "source",
+          "refId": "source.missing",
+          "refKind": "source_ref",
+          "targetNodeId": "module"
+        },
+        {
+          "callerAnnotations": [
+            "Caller rendered overlay fixture is presentation only."
+          ],
+          "digestAlgorithm": "sha256",
+          "label": "Module rendered view",
+          "overlayId": "overlay.rendered.module",
+          "overlayKind": "rendered_view",
+          "refDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "refId": "artifact.module.view",
+          "refKind": "rendered_artifact",
+          "refPath": "artifacts/module-view.html",
+          "targetNodeId": "module"
+        }
+      ],
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "treeId": "proofkit.spec_tree.fixture"
+    },
+    "exitCode": 1,
+    "error": "cannot build requirement spec tree view from failed requirement spec tree: overlay.unknown_source_ref:overlay.source.module:source.missing, source_ref.stale_digest:source.submodule, topology.multi_parent:submodule, topology.sibling_display_order_collision:meta:module:submodule"
+  },
+  {
+    "case": "empty-annotations",
+    "kind": "report",
+    "input": {
+      "callerAnnotations": [],
+      "edges": [
+        {
+          "childNodeId": "module",
+          "parentNodeId": "meta"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "module"
+        }
+      ],
+      "nodes": [
+        {
+          "callerAnnotations": [],
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [],
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [],
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements"
+            }
+          ]
+        }
+      ],
+      "overlays": [],
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "treeId": "proofkit.spec_tree.fixture"
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "boundaryNonClaims",
+          "value": [
+            "Requirement spec tree caller annotations are untrusted display text and are not non-claim authority.",
+            "Requirement spec tree reports do not approve merge, release, rollout, or production readiness.",
+            "Requirement spec tree reports do not compute source digest freshness from repository files.",
+            "Requirement spec tree reports do not execute native witnesses.",
+            "Requirement spec tree reports do not infer hierarchy from repository layout.",
+            "Requirement spec tree reports do not make rendered output authoritative.",
+            "Requirement spec tree reports do not read requirement source files.",
+            "Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness."
+          ]
+        },
+        {
+          "key": "callerAnnotations",
+          "value": {
+            "nodes": [],
+            "overlays": [],
+            "root": []
+          }
+        },
+        {
+          "key": "edges",
+          "value": [
+            {
+              "childNodeId": "module",
+              "parentNodeId": "meta"
+            },
+            {
+              "childNodeId": "submodule",
+              "parentNodeId": "module"
+            }
+          ]
+        },
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "nodes",
+          "value": [
+            {
+              "callerAnnotations": [],
+              "displayOrder": 1,
+              "label": "Meta specification",
+              "nodeId": "meta",
+              "nodeKind": "meta_spec",
+              "sourceRefIds": [
+                "source.meta"
+              ]
+            },
+            {
+              "callerAnnotations": [],
+              "displayOrder": 1,
+              "label": "Module specification",
+              "nodeId": "module",
+              "nodeKind": "module_spec",
+              "sourceRefIds": [
+                "source.module"
+              ]
+            },
+            {
+              "callerAnnotations": [],
+              "displayOrder": 1,
+              "label": "Submodule specification",
+              "nodeId": "submodule",
+              "nodeKind": "submodule_spec",
+              "sourceRefIds": [
+                "source.submodule"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "overlays",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Requirement spec tree caller annotations are untrusted display text and are not non-claim authority.",
+        "Requirement spec tree reports do not approve merge, release, rollout, or production readiness.",
+        "Requirement spec tree reports do not compute source digest freshness from repository files.",
+        "Requirement spec tree reports do not execute native witnesses.",
+        "Requirement spec tree reports do not infer hierarchy from repository layout.",
+        "Requirement spec tree reports do not make rendered output authoritative.",
+        "Requirement spec tree reports do not read requirement source files.",
+        "Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness."
+      ],
+      "reportId": "proofkit.spec_tree.fixture",
+      "reportKind": "proofkit.requirement-spec-tree",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "failures",
+              "value": []
+            }
+          ],
+          "message": "Spec tree topology admits exactly one reachable parent-owned tree rooted at rootNodeId.",
+          "ruleId": "proofkit.requirement-spec-tree.topology",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failures",
+              "value": []
+            }
+          ],
+          "message": "Spec tree source refs admit one source-reference authority and caller-provided digest facts.",
+          "ruleId": "proofkit.requirement-spec-tree.source_refs",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failures",
+              "value": []
+            }
+          ],
+          "message": "Spec tree overlays are opaque routing refs to admitted nodes and source refs.",
+          "ruleId": "proofkit.requirement-spec-tree.overlays",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "Caller annotations (untrusted) were admitted as display-only text and kept separate from Proofkit boundary non-claims.",
+          "ruleId": "proofkit.requirement-spec-tree.non_claims",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "callerAnnotationCount": 0,
+        "edgeCount": 2,
+        "failureCount": 0,
+        "maxDepth": 3,
+        "nodeCount": 3,
+        "overlayCount": 0,
+        "sourceRefCount": 3,
+        "staleSourceRefCount": 0,
+        "visitedNodeCount": 3
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "empty-annotations",
+    "kind": "view",
+    "input": {
+      "callerAnnotations": [],
+      "edges": [
+        {
+          "childNodeId": "module",
+          "parentNodeId": "meta"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "module"
+        }
+      ],
+      "nodes": [
+        {
+          "callerAnnotations": [],
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [],
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [],
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements"
+            }
+          ]
+        }
+      ],
+      "overlays": [],
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "treeId": "proofkit.spec_tree.fixture"
+    },
+    "output": {
+      "authority": "presentation_only",
+      "callerAnnotationAuthority": "untrusted_caller_text",
+      "callerAnnotationCount": 0,
+      "callerAnnotations": [],
+      "edgeCount": 2,
+      "maxDepth": 3,
+      "nodeCount": 3,
+      "nodes": [
+        {
+          "callerAnnotations": [],
+          "childNodeIds": [
+            "module"
+          ],
+          "depth": 1,
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "overlays": [],
+          "parentNodeId": "",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [],
+          "childNodeIds": [
+            "submodule"
+          ],
+          "depth": 2,
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "overlays": [],
+          "parentNodeId": "meta",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [],
+          "childNodeIds": [],
+          "depth": 3,
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "overlays": [],
+          "parentNodeId": "module",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements",
+              "staleDigest": false
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Requirement spec tree caller annotations are untrusted display text and are not non-claim authority.",
+        "Requirement spec tree reports do not approve merge, release, rollout, or production readiness.",
+        "Requirement spec tree reports do not compute source digest freshness from repository files.",
+        "Requirement spec tree reports do not execute native witnesses.",
+        "Requirement spec tree reports do not infer hierarchy from repository layout.",
+        "Requirement spec tree reports do not make rendered output authoritative.",
+        "Requirement spec tree reports do not read requirement source files.",
+        "Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness.",
+        "Requirement spec tree views are presentation-only derived products.",
+        "Requirement spec tree views do not compute source digest freshness from repository files.",
+        "Requirement spec tree views do not execute native witnesses.",
+        "Requirement spec tree views do not make rendered output authoritative.",
+        "Requirement spec tree views do not prove coverage completeness, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "overlayCount": 0,
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "sourceRefCount": 3,
+      "staleSourceRefCount": 0,
+      "state": "passed",
+      "treeId": "proofkit.spec_tree.fixture",
+      "viewKind": "proofkit.requirement-spec-tree-view"
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "admission-error",
+    "kind": "report",
+    "input": {
+      "callerAnnotations": [
+        "Caller tree fixture is display-only."
+      ],
+      "edges": [
+        {
+          "childNodeId": "module",
+          "parentNodeId": "meta"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "module"
+        }
+      ],
+      "nodes": [
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements"
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "callerAnnotations": [
+            "Caller overlay fixture is display-only."
+          ],
+          "label": "Source overlay",
+          "overlayId": "overlay.source.module",
+          "overlayKind": "source",
+          "refId": "source.module",
+          "refKind": "source_ref",
+          "targetNodeId": "module"
+        },
+        {
+          "callerAnnotations": [
+            "Caller rendered overlay fixture is presentation only."
+          ],
+          "digestAlgorithm": "sha256",
+          "label": "Module rendered view",
+          "overlayId": "overlay.rendered.module",
+          "overlayKind": "rendered_view",
+          "refDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "refId": "artifact.module.view",
+          "refKind": "rendered_artifact",
+          "refPath": "artifacts/module-view.html",
+          "targetNodeId": "module"
+        }
+      ],
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "treeId": "proofkit.spec_tree.fixture",
+      "unknown": true
+    },
+    "exitCode": 1,
+    "error": "requirement spec tree input contains an unsupported field"
+  },
+  {
+    "case": "admission-error",
+    "kind": "view",
+    "input": {
+      "callerAnnotations": [
+        "Caller tree fixture is display-only."
+      ],
+      "edges": [
+        {
+          "childNodeId": "module",
+          "parentNodeId": "meta"
+        },
+        {
+          "childNodeId": "submodule",
+          "parentNodeId": "module"
+        }
+      ],
+      "nodes": [
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Meta specification",
+          "nodeId": "meta",
+          "nodeKind": "meta_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.meta",
+              "sourceRefId": "source.meta",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Module specification",
+          "nodeId": "module",
+          "nodeKind": "module_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "spec.module",
+              "sourceRefId": "source.module",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        },
+        {
+          "callerAnnotations": [
+            "Caller node fixture is display-only."
+          ],
+          "displayOrder": 1,
+          "label": "Submodule specification",
+          "nodeId": "submodule",
+          "nodeKind": "submodule_spec",
+          "sourceRefs": [
+            {
+              "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "digestAlgorithm": "sha256",
+              "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourcePath": "docs/specs/submodule/requirements.v1.json",
+              "sourceRefId": "source.submodule",
+              "sourceRefKind": "path_digest",
+              "sourceRole": "requirements"
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "callerAnnotations": [
+            "Caller overlay fixture is display-only."
+          ],
+          "label": "Source overlay",
+          "overlayId": "overlay.source.module",
+          "overlayKind": "source",
+          "refId": "source.module",
+          "refKind": "source_ref",
+          "targetNodeId": "module"
+        },
+        {
+          "callerAnnotations": [
+            "Caller rendered overlay fixture is presentation only."
+          ],
+          "digestAlgorithm": "sha256",
+          "label": "Module rendered view",
+          "overlayId": "overlay.rendered.module",
+          "overlayKind": "rendered_view",
+          "refDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "refId": "artifact.module.view",
+          "refKind": "rendered_artifact",
+          "refPath": "artifacts/module-view.html",
+          "targetNodeId": "module"
+        }
+      ],
+      "rootNodeId": "meta",
+      "schemaVersion": 2,
+      "treeId": "proofkit.spec_tree.fixture",
+      "unknown": true
+    },
+    "exitCode": 1,
+    "error": "requirement spec tree input contains an unsupported field"
+  }
+]

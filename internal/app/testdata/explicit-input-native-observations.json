@@ -1,0 +1,781 @@
+{
+  "head": "56192c94afaa1538cf6408f9624935df6b536cbd",
+  "tree": "0a42dd2f90ab73b48e84be6ef56f3083145d68bc",
+  "binaryDigest": "3b2329153b6135594bfb1f3bcdbd9eab7bba6c9c4f09a333345ae47932fb1073",
+  "captureDigest": "e0486ca51fca259ec4380bb9b64ed26f69c2635dac3f3bc92f40796235c5f8f6",
+  "observations": [
+    {
+      "command": "changed-path-set",
+      "name": "plain",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts"
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "01066b077f26a7000fce360de65b3b88ef50257034edc231bb4b945564057a79",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "empty-sources",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "464354bbadb2703f79247fde304ec33606aed529111220f1c53eb357b247e349",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "empty-paths",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": []
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "14f40dfbd9044c795b1f0ccbdedac3c07c0d4f6dc50264ace81ee6e61290decd",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "duplicate-paths",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts",
+              "src/a.ts"
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "2ca84ad1566f32a4a4891da67cb8e2d07aaf9636fe3c004237baf3d307fc6b53",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "normalized-duplicate-paths",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts",
+              " src/a.ts "
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "f5d6ef3ebae185a6eb8e5d49f18b2b9a42bad6516ac687b7712667677bb42940",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "cross-source-duplicates",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts"
+            ]
+          },
+          {
+            "sourceId": "source.b",
+            "paths": [
+              "src/a.ts"
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "8fc818ab2735920fd060863feb7c3e84273f203376663fe39aba23a7aa9a9944",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "invalid-path",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts",
+              "../outside"
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "failed",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e41e102103d23e1123ff2bdb7cda39f8d93a106067ff6441b222466fd9b4e127",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "empty-path",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts",
+              ""
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "failed",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "c2988245ade6c53a5ee48008118abd1e85660a2055c86dfc13fa8927c122b810",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "preexisting",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts"
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": [
+          "Prior caller failure."
+        ]
+      },
+      "expected": "failed",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "b9f5ff28a4900d1a341f2c69fb456343097e9e087e2d7220ffba10559111c6fb",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "duplicate-text",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts"
+            ]
+          }
+        ],
+        "nonClaims": [
+          " Caller context. ",
+          "Caller context."
+        ],
+        "preexistingFailures": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "050e14dbfc28468b8c52fa36b11cb63436154c5f1104e739fc7dcc9d0e1b65d3",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "duplicate-source-id",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts"
+            ]
+          },
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts"
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "13ddd53a78bafa530efe61afc3f1367191679ff2859bee30634083b72e14618d"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "null-nonclaims",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts"
+            ]
+          }
+        ],
+        "nonClaims": null,
+        "preexistingFailures": []
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "766bc9695d21d849dccae1a4ed486ec52008592e51931eacd003e217152de5e6"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "plain-envelope",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts"
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "envelope",
+      "args": [
+        "--agent-envelope"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "7facc149f11fb272ce7611e97c530bcc43f4ece4304b06354bf36abcc8e9a4c2",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "changed-path-set",
+      "name": "failed-envelope",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.changed.test",
+        "sources": [
+          {
+            "sourceId": "source.a",
+            "paths": [
+              "src/a.ts",
+              "../outside"
+            ]
+          }
+        ],
+        "nonClaims": [],
+        "preexistingFailures": []
+      },
+      "expected": "failed-envelope",
+      "args": [
+        "--agent-envelope"
+      ],
+      "exitCode": 1,
+      "stdoutSha256": "0c023da3eb002668972b66077053b3ecae0e99e910a1725b525e03f8dc4e24c6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "plain",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "50bb297ce48ae7cbcee4aee4fe3b6c3942ef2692643383215ac5637db033077f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "empty-files",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [],
+        "nonClaims": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "55feaba2532cff9389514762fafb65550e007216ec321af6c48488ec7d0156f6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "missing-file",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "missing"
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "df45c1cb2285a71f66fad98194167667d0b1c7f5c675c225b163db1537805759",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "empty-content",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": ""
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "50bb297ce48ae7cbcee4aee4fe3b6c3942ef2692643383215ac5637db033077f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "null-suppressions",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": [],
+        "suppressions": null
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "50bb297ce48ae7cbcee4aee4fe3b6c3942ef2692643383215ac5637db033077f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "empty-suppressions",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": [],
+        "suppressions": []
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "50bb297ce48ae7cbcee4aee4fe3b6c3942ef2692643383215ac5637db033077f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "missing-has-content",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "missing",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "fba4e5146844c24a843739585124826b523b095bc2718023f5124f8a39574f7b"
+    },
+    {
+      "command": "secret-scan",
+      "name": "present-without-content",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present"
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "cdd938c7e87d0ab4e96886a2bc95e2b70c22dd712040a97ba1ae7c426b813fec"
+    },
+    {
+      "command": "secret-scan",
+      "name": "null-content",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": null
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "135de12ee84af4c553adebd9ed34a3825b133ac9ce0aec2fd4a1004a57db2fae"
+    },
+    {
+      "command": "secret-scan",
+      "name": "malformed-content",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "*"
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "723e87650d2d33b3e5b56371324773492f0a33f55a62142a586939c0a775c4ef"
+    },
+    {
+      "command": "secret-scan",
+      "name": "finding",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "cGVybWlzc2lvbnM6CiAgaWQtdG9rZW46IHdyaXRlCg=="
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "failed",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "4028811f219f59f9ec18a3067e57a91fe47d89119f84862718e4ef78b8acffc0",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "suppressed-finding",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "cGVybWlzc2lvbnM6CiAgaWQtdG9rZW46IHdyaXRlCg=="
+          }
+        ],
+        "nonClaims": [],
+        "suppressions": [
+          {
+            "suppressionId": "suppression.a",
+            "path": "src/a.txt",
+            "line": 2,
+            "findingClass": "secret_like_value",
+            "reason": "Expected caller-owned permission fixture."
+          }
+        ]
+      },
+      "expected": "passed",
+      "args": [],
+      "exitCode": 0,
+      "stdoutSha256": "5a72d023d63a709e4afeef7c579f19e098fd93b5e87f858946a9b84ecb098103",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "unused-suppression",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": [],
+        "suppressions": [
+          {
+            "suppressionId": "suppression.a",
+            "path": "src/a.txt",
+            "line": 2,
+            "findingClass": "secret_like_value",
+            "reason": "Expected caller-owned permission fixture."
+          }
+        ]
+      },
+      "expected": "failed",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "683ec8deb39d2803aeef35f322a93c50eb5e3e928fbb1d3e6aa9f2c35b5e9c7e",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "secret-scan",
+      "name": "zero-line",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": [],
+        "suppressions": [
+          {
+            "suppressionId": "suppression.a",
+            "path": "src/a.txt",
+            "line": 0,
+            "findingClass": "secret_like_value",
+            "reason": "Expected caller-owned permission fixture."
+          }
+        ]
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "12c8f7f3b6905d22acaa729791b5c4dad38ab8553133ba59c4d4db0fd919cebb"
+    },
+    {
+      "command": "secret-scan",
+      "name": "fractional-line",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": [],
+        "suppressions": [
+          {
+            "suppressionId": "suppression.a",
+            "path": "src/a.txt",
+            "line": 1.5,
+            "findingClass": "secret_like_value",
+            "reason": "Expected caller-owned permission fixture."
+          }
+        ]
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "12c8f7f3b6905d22acaa729791b5c4dad38ab8553133ba59c4d4db0fd919cebb"
+    },
+    {
+      "command": "secret-scan",
+      "name": "duplicate-suppression",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": [],
+        "suppressions": [
+          {
+            "suppressionId": "suppression.a",
+            "path": "src/a.txt",
+            "line": 2,
+            "findingClass": "secret_like_value",
+            "reason": "Expected caller-owned permission fixture."
+          },
+          {
+            "suppressionId": "suppression.a",
+            "path": "src/a.txt",
+            "line": 2,
+            "findingClass": "secret_like_value",
+            "reason": "Expected caller-owned permission fixture."
+          }
+        ]
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "816fdf56ace7cec6c2dfbe542845303f96d6469f298a0ce52acf35f672fe4f82"
+    },
+    {
+      "command": "secret-scan",
+      "name": "duplicate-file",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          },
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "c2cbb81a8e35cbcf794668941462bf5abc5eef67d98fc99c61eaaca643aac3df"
+    },
+    {
+      "command": "secret-scan",
+      "name": "unsorted-file",
+      "input": {
+        "schemaVersion": 1,
+        "reportId": "proofkit.secret.test",
+        "files": [
+          {
+            "path": "src/a.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          },
+          {
+            "path": "src/0.txt",
+            "state": "present",
+            "contentBase64": "c2FmZSB0ZXh0Cg=="
+          }
+        ],
+        "nonClaims": []
+      },
+      "expected": "rejected",
+      "args": [],
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "c2cbb81a8e35cbcf794668941462bf5abc5eef67d98fc99c61eaaca643aac3df"
+    }
+  ]
+}

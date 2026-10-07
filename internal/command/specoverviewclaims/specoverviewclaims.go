@@ -10,7 +10,17 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-const reportKind = "proofkit.spec-overview-claims"
+const (
+	reportKind          = "proofkit.spec-overview-claims"
+	requirementIDPrefix = "REQ-"
+	boundaryRuleID      = "proofkit.spec-overview-claims.boundary"
+	citationRuleID      = "proofkit.spec-overview-claims.citations"
+	boundaryRuleMessage = "spec overview claim boundaries are validated from caller-provided extraction facts"
+	citationRuleMessage = "durable overview claims must cite known requirement ids and non-durable claims must remain non-normative"
+)
+
+var boundaryKeys = []string{"boundaryId", "claims", "extractionRefs", "nonClaims", "overviewPath", "requirementIds", "requirementsPath", "schemaVersion", "sourceId", "specPackagePath"}
+var claimKeys = []string{"citedRequirementIds", "claimId", "claimKind", "detectedMarkers", "dispositionRationale", "lineDigest", "lineNumber", "nonClaims"}
 
 var claimKinds = []string{"durable_claim", "example_or_rationale", "quoted_or_code", "section_heading"}
 var claimKindSet = toSet(claimKinds)
@@ -117,7 +127,7 @@ func admitBoundary(raw any) (boundary, error) {
 	if !ok {
 		return boundary{}, fmt.Errorf("spec overview claim boundary input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"boundaryId", "claims", "extractionRefs", "nonClaims", "overviewPath", "requirementIds", "requirementsPath", "schemaVersion", "sourceId", "specPackagePath"}, "spec overview claim boundary input"); err != nil {
+	if err := admit.KnownKeys(record, boundaryKeys, "spec overview claim boundary input"); err != nil {
 		return boundary{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -199,7 +209,7 @@ func claimArray(raw any) ([]claim, error) {
 }
 
 func admitClaim(record map[string]any) (claim, error) {
-	if err := admit.KnownKeys(record, []string{"citedRequirementIds", "claimId", "claimKind", "detectedMarkers", "dispositionRationale", "lineDigest", "lineNumber", "nonClaims"}, "spec overview claim record"); err != nil {
+	if err := admit.KnownKeys(record, claimKeys, "spec overview claim record"); err != nil {
 		return claim{}, err
 	}
 	claimID, err := admit.RuleID(record["claimId"], "spec overview claim claimId")
@@ -276,15 +286,15 @@ func claimFailures(item claim, requirementIDs map[string]struct{}) []string {
 func ruleResults(pathFailures []string, citationFailures []string) []report.RuleResult {
 	return []report.RuleResult{
 		{
-			RuleID:      "proofkit.spec-overview-claims.boundary",
+			RuleID:      boundaryRuleID,
 			Status:      statusFailedIf(len(pathFailures) > 0),
-			Message:     "spec overview claim boundaries are validated from caller-provided extraction facts",
+			Message:     boundaryRuleMessage,
 			Diagnostics: failureDiagnostics(pathFailures),
 		},
 		{
-			RuleID:      "proofkit.spec-overview-claims.citations",
+			RuleID:      citationRuleID,
 			Status:      statusFailedIf(len(citationFailures) > 0),
-			Message:     "durable overview claims must cite known requirement ids and non-durable claims must remain non-normative",
+			Message:     citationRuleMessage,
 			Diagnostics: failureDiagnostics(citationFailures),
 		},
 	}
@@ -351,7 +361,7 @@ func admitRequirementID(raw any, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(value) < 4 || value[:4] != "REQ-" {
+	if len(value) < len(requirementIDPrefix) || value[:len(requirementIDPrefix)] != requirementIDPrefix {
 		return "", fmt.Errorf("%s must start with REQ-", context)
 	}
 	return value, nil

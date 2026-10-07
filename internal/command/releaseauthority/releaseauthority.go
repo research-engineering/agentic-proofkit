@@ -404,7 +404,7 @@ func admitInput(raw any, failures *[]string) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("release authority input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"artifactProof", "channel", "consumerContract", "nonClaims", "package", "registryAuthority", "releaseId", "rollback", "rolloutClaim", "schemaVersion"}, "release authority input"); err != nil {
+	if err := admit.KnownKeys(record, inputFields, "release authority input"); err != nil {
 		return admittedInput{}, err
 	}
 	schemaVersion, err := schemaVersion(record["schemaVersion"])
@@ -481,7 +481,7 @@ func admitPackage(raw any) (releasePackage, error) {
 	if !ok {
 		return releasePackage{}, fmt.Errorf("release authority package must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"artifactPath", "manifestPrivate", "name", "packageManagerLockfile", "packManifestPath", "publishConfigRegistry", "version"}, "release authority package"); err != nil {
+	if err := admit.KnownKeys(record, packageFields, "release authority package"); err != nil {
 		return releasePackage{}, err
 	}
 	name, err := text(record["name"], "package name")
@@ -534,7 +534,7 @@ func admitArtifactProof(raw any) (artifactProof, error) {
 	if !ok {
 		return artifactProof{}, fmt.Errorf("release authority artifactProof must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"cliSmokeProofId", "deepImportRejectionProofId", "outsideConsumerInstallProofId", "packageArtifactCommandId", "packDryRunCommandId", "registryPublishDryRunProofId", "binarySmokeProofId"}, "release authority artifactProof"); err != nil {
+	if err := admit.KnownKeys(record, artifactProofFields, "release authority artifactProof"); err != nil {
 		return artifactProof{}, err
 	}
 	packDryRunCommandID, err := admit.RuleID(record["packDryRunCommandId"], "artifactProof packDryRunCommandId")
@@ -585,7 +585,7 @@ func admitConsumerContract(raw any, failures *[]string) (consumerContract, error
 	if !ok {
 		return consumerContract{}, fmt.Errorf("release authority consumerContract must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"dependencyPinType", "lockfileRequired", "binarySmokeOnly", "siblingSourceCheckoutAllowed"}, "release authority consumerContract"); err != nil {
+	if err := admit.KnownKeys(record, consumerFields, "release authority consumerContract"); err != nil {
 		return consumerContract{}, err
 	}
 	dependencyPinType, err := admit.Enum(record["dependencyPinType"], dependencyPinTypes, "consumerContract dependencyPinType")
@@ -639,7 +639,7 @@ func admitLegacyRegistryAuthority(raw any) (*registryAuthority, error) {
 	if !ok {
 		return nil, fmt.Errorf("release authority registryAuthority must be an object or null")
 	}
-	if err := admit.KnownKeys(record, []string{"consumerMigrationPath", "packageScope", "provenanceMode", "publishWorkflowPath", "registryKind", "registryUrl", "releaseTagPattern", "rollbackPolicy", "visibility"}, "release authority registryAuthority"); err != nil {
+	if err := admit.KnownKeys(record, legacyRegistryFields, "release authority registryAuthority"); err != nil {
 		return nil, err
 	}
 	registryKind, err := admit.Enum(record["registryKind"], registryKinds, "registryAuthority registryKind")
@@ -701,7 +701,7 @@ func admitRegistryAuthorityV2(raw any) (*registryAuthority, error) {
 	if !ok {
 		return nil, fmt.Errorf("release authority registryAuthority must be an object or null")
 	}
-	if err := admit.KnownKeys(record, []string{"consumerMigrationPath", "packageScope", "publishAuthorityMode", "publishWorkflowPath", "registryKind", "registryUrl", "releaseTagPattern", "rollbackPolicy", "sourceRepository", "visibility"}, "release authority registryAuthority"); err != nil {
+	if err := admit.KnownKeys(record, registryFields, "release authority registryAuthority"); err != nil {
 		return nil, err
 	}
 	registryKind, err := admit.Enum(record["registryKind"], registryKinds, "registryAuthority registryKind")
@@ -763,7 +763,7 @@ func admitSourceRepository(raw any) (sourceRepository, error) {
 	if !ok {
 		return sourceRepository{}, fmt.Errorf("release authority sourceRepository must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"name", "owner", "url", "visibility"}, "release authority sourceRepository"); err != nil {
+	if err := admit.KnownKeys(record, sourceRepositoryFields, "release authority sourceRepository"); err != nil {
 		return sourceRepository{}, err
 	}
 	owner, err := text(record["owner"], "sourceRepository owner")
@@ -807,7 +807,7 @@ func admitRollback(raw any) (rollback, error) {
 	if !ok {
 		return rollback{}, fmt.Errorf("release authority rollback must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"owner", "procedure", "versionPin"}, "release authority rollback"); err != nil {
+	if err := admit.KnownKeys(record, rollbackFields, "release authority rollback"); err != nil {
 		return rollback{}, err
 	}
 	owner, err := text(record["owner"], "rollback owner")
@@ -1066,9 +1066,9 @@ func ruleResults(failures []string) []report.RuleResult {
 	if len(failures) == 0 {
 		return []report.RuleResult{
 			{
-				RuleID:      "proofkit.release-authority.accepted",
+				RuleID:      acceptedRuleID,
 				Status:      "passed",
-				Message:     "release authority is explicit and bounded to the selected channel",
+				Message:     acceptedMessage,
 				Diagnostics: []report.Diagnostic{},
 			},
 		}
@@ -1076,7 +1076,7 @@ func ruleResults(failures []string) []report.RuleResult {
 	results := make([]report.RuleResult, 0, len(failures))
 	for index, failure := range failures {
 		results = append(results, report.RuleResult{
-			RuleID:      fmt.Sprintf("proofkit.release-authority.failure.%03d", index+1),
+			RuleID:      fmt.Sprintf("%s%03d", failureRulePrefix, index+1),
 			Status:      "failed",
 			Message:     failure,
 			Diagnostics: []report.Diagnostic{},

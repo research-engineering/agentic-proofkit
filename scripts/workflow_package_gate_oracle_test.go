@@ -20,9 +20,9 @@ const mergeSatisfyingProducerEnv = "PROOFKIT_MERGE_SATISFYING_PRODUCER"
 
 const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild current && ./dist/agentic-proofkit --help >/dev/null && go run ./internal/tools/pythonpackage build-current && go run ./internal/tools/pythonpackage verify-current"
 const setupVerifiedNPMActionSHA256 = "73e760391a9f93b95034aec8edd12af081051ce6859d3114e3561c4d255d061f"
-const ciSourceQualityStepInventorySHA256 = "edcee4b08087944b6b8316c38ae45ca0d5e729f98c38cb7adda7c2ed9e2d6527"
-const ciBrowserRuntimeStepInventorySHA256 = "75774851de2c5d6a020d2ee9aa4d1c877d4d9d879b4272e715bdaaf7f7da9cec"
-const releaseCandidateStepInventorySHA256 = "38acd75118e3d782feb9ab7606f1788c86e6cb45dd33cc372326e145a49219c7"
+const ciSourceQualityStepInventorySHA256 = "0b652521b1081811e1ab23365ddc1cbe63dae60f8c4663cbe32a34fc1cda2be6"
+const ciBrowserRuntimeStepInventorySHA256 = "2dffdabe3b99a1a8fa55a2a67142327950e24ddf1c912f0f590bd2cebd5bd816"
+const releaseCandidateStepInventorySHA256 = "1986a71842c1e23a1a64ed169bd20072c6019ab4082320d17570c8b18f9a32db"
 
 type packageGateWorkflowExpectation struct {
 	label                              string

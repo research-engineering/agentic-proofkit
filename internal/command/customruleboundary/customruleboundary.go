@@ -161,7 +161,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("custom-rule boundary input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"boundaryId", "nonClaims", "profileRef", "rules", "schemaVersion"}, "custom-rule boundary input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "custom-rule boundary input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -224,7 +224,7 @@ func ruleArray(raw any) ([]ruleInput, error) {
 }
 
 func admitRule(record map[string]any) (ruleInput, error) {
-	if err := admit.KnownKeys(record, []string{"affectedPathGlobs", "boundaryRole", "credentialPolicy", "deterministicOutput", "genericDecisionEffect", "genericFindingEffect", "inputArtifactKinds", "inputArtifactRefs", "namespace", "networkPolicy", "nonClaims", "outputSchemaRef", "owner", "remediation", "removal", "ruleId", "severity", "useLimit"}, "custom-rule boundary rule"); err != nil {
+	if err := admit.KnownKeys(record, ruleKeys, "custom-rule boundary rule"); err != nil {
 		return ruleInput{}, err
 	}
 	ruleID, err := admit.RuleID(record["ruleId"], "custom-rule boundary ruleId")
@@ -330,7 +330,7 @@ func admitDeterministicOutput(raw any, ruleID string) (deterministicOutput, erro
 	if !ok {
 		return deterministicOutput{}, fmt.Errorf("custom-rule %s deterministicOutput must be an object", ruleID)
 	}
-	if err := admit.KnownKeys(record, []string{"secretRedaction", "stableFindingIds", "stableOrdering"}, fmt.Sprintf("custom-rule %s deterministicOutput", ruleID)); err != nil {
+	if err := admit.KnownKeys(record, deterministicKeys, fmt.Sprintf("custom-rule %s deterministicOutput", ruleID)); err != nil {
 		return deterministicOutput{}, err
 	}
 	stableFindingIDs, err := admit.Bool(record["stableFindingIds"], fmt.Sprintf("custom-rule %s deterministicOutput.stableFindingIds", ruleID))
@@ -357,7 +357,7 @@ func admitRemediation(raw any, ruleID string) (remediation, error) {
 	if !ok {
 		return remediation{}, fmt.Errorf("custom-rule %s remediation must be an object", ruleID)
 	}
-	if err := admit.KnownKeys(record, []string{"commandRefs", "kind", "summary"}, fmt.Sprintf("custom-rule %s remediation", ruleID)); err != nil {
+	if err := admit.KnownKeys(record, remediationKeys, fmt.Sprintf("custom-rule %s remediation", ruleID)); err != nil {
 		return remediation{}, err
 	}
 	kind, err := admit.Enum(record["kind"], remediationKinds, fmt.Sprintf("custom-rule %s remediation.kind", ruleID))
@@ -380,7 +380,7 @@ func admitUseLimit(raw any, ruleID string) (useLimit, error) {
 	if !ok {
 		return useLimit{}, fmt.Errorf("custom-rule %s useLimit must be an object", ruleID)
 	}
-	if err := admit.KnownKeys(record, []string{"maxAffectedPathGlobs", "rationale", "scope"}, fmt.Sprintf("custom-rule %s useLimit", ruleID)); err != nil {
+	if err := admit.KnownKeys(record, useLimitKeys, fmt.Sprintf("custom-rule %s useLimit", ruleID)); err != nil {
 		return useLimit{}, err
 	}
 	scope, err := admit.Enum(record["scope"], scopes, fmt.Sprintf("custom-rule %s useLimit.scope", ruleID))
@@ -403,7 +403,7 @@ func admitRemoval(raw any, ruleID string) (removal, error) {
 	if !ok {
 		return removal{}, fmt.Errorf("custom-rule %s removal must be an object", ruleID)
 	}
-	if err := admit.KnownKeys(record, []string{"condition", "owner", "reviewRef"}, fmt.Sprintf("custom-rule %s removal", ruleID)); err != nil {
+	if err := admit.KnownKeys(record, removalKeys, fmt.Sprintf("custom-rule %s removal", ruleID)); err != nil {
 		return removal{}, err
 	}
 	condition, err := admit.NonEmptyText(record["condition"], fmt.Sprintf("custom-rule %s removal.condition", ruleID))

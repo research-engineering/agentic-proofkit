@@ -68,7 +68,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("workspace manifest facts input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"dependencyFields", "nonClaims", "packages", "projectionId", "root", "schemaVersion"}, "workspace manifest facts input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "workspace manifest facts input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -146,7 +146,7 @@ func admitManifestRecord(raw any, dependencyFields []string, context string, req
 	if !ok {
 		return manifestRecord{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"dirName", "manifest", "manifestPath", "packageDir"}, context); err != nil {
+	if err := admit.KnownKeys(record, recordKeys, context); err != nil {
 		return manifestRecord{}, err
 	}
 	manifestPathText, err := admit.NonEmptyText(record["manifestPath"], context+" manifestPath")

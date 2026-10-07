@@ -642,9 +642,18 @@ func writeFixture(t *testing.T) string {
 		t.Fatal(err)
 	}
 	sourceDigest := digestFiles(t, root, []string{"internal/command/sample/sample.go"})
+	presetOwner, ok := nativeStructureOwner("proofkit.stack-preset.output.v1.json-schema")
+	if !ok {
+		t.Fatal("missing preset output structure owner")
+	}
+	presetDefinition, err := presetOwner.definition()
+	if err != nil {
+		t.Fatal(err)
+	}
 	definitions := []any{
 		structuralFixtureDefinition("proofkit.input.v1"),
 		structuralFixtureDefinition("proofkit.output.v1"),
+		presetDefinition,
 	}
 	contract := map[string]any{
 		"schemaVersion": 2,
@@ -695,10 +704,11 @@ func writeFixture(t *testing.T) string {
 				"outputContract": func() map[string]any {
 					value := contractFixture(
 						"proofkit.stack-preset.output.v1",
-						"proofkit.output.v1",
+						presetOwner.id,
 						sourceDigest,
 						"nativeOutputWitnessSelector",
 					)
+					value["compatibilitySummary"] = presetOwner.summary(json.Number("1"))
 					value["flagChoices"] = map[string]any{"--preset": []any{"alpha", "beta"}}
 					return value
 				}(),

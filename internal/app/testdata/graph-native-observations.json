@@ -1,0 +1,3053 @@
+[
+  {
+    "case": "spec-proof",
+    "input": {
+      "context": {
+        "catalogId": "consumer.context",
+        "contextKind": "proofkit.requirement-context",
+        "expectedDigestCoverage": "none",
+        "nonClaims": [
+          "Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+          "Requirement context does not execute native witnesses or prove source freshness after composition.",
+          "Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness."
+        ],
+        "projections": {
+          "proofBinding": {
+            "bindingId": "consumer.proof-bindings",
+            "bindings": [
+              {
+                "commandIds": [
+                  "consumer.test"
+                ],
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "requirementId": "REQ-CONSUMER-001",
+                "scenarioId": "consumer.scenario",
+                "witnessId": "consumer.witness",
+                "witnessKind": "contract",
+                "witnessPath": "internal/consumer_test.go"
+              }
+            ],
+            "nonClaims": [
+              "Fixture proof bindings do not execute witnesses."
+            ],
+            "requirements": [
+              {
+                "claimLevel": "blocking",
+                "nonClaims": [
+                  "Fixture proof requirement does not approve merge."
+                ],
+                "ownerId": "consumer.owner",
+                "proofState": "witness_backed",
+                "requirementId": "REQ-CONSUMER-001",
+                "specPath": "docs/specs/consumer/requirements.v2.json"
+              }
+            ],
+            "schemaVersion": 1,
+            "selection": {
+              "changedPaths": [],
+              "ownerIds": [],
+              "requirementIds": []
+            },
+            "witnessCommands": [
+              {
+                "command": "go test ./internal",
+                "commandId": "consumer.test",
+                "environmentClasses": [
+                  "local-go"
+                ]
+              }
+            ]
+          },
+          "requirementSources": [
+            {
+              "groups": [
+                {
+                  "groupId": "RGRP-CONSUMER",
+                  "members": [
+                    {
+                      "fields": {
+                        "claimLevel": "blocking",
+                        "deferral": null,
+                        "externalNonClaimRefs": [
+                          "NC-CONSUMER-001"
+                        ],
+                        "lifecycle": {
+                          "state": "active"
+                        },
+                        "nonClaimRefs": [],
+                        "nonClaims": [
+                          "This requirement does not approve merge."
+                        ],
+                        "ownerId": "consumer.owner",
+                        "proofBindingRefs": [
+                          "proofkit/requirement-bindings.json"
+                        ],
+                        "riskClass": "high",
+                        "updatePolicy": {
+                          "requiresImpactDeclaration": true,
+                          "requiresProofBindingReview": true,
+                          "reviewOwnerId": "consumer.owner"
+                        }
+                      },
+                      "requirementId": "REQ-CONSUMER-001",
+                      "statementCompletion": "The system preserves semantic identity."
+                    }
+                  ],
+                  "profileId": "",
+                  "sharedPremises": [],
+                  "statementStem": ""
+                }
+              ],
+              "kind": "proofkit.requirement-source",
+              "schemaVersion": 2,
+              "sourceId": "consumer.requirements",
+              "sourceNonClaims": [
+                "Consumer source does not approve merge."
+              ],
+              "specPackagePath": "docs/specs/consumer"
+            }
+          ],
+          "specTree": {
+            "callerAnnotations": [],
+            "edges": [],
+            "nodes": [
+              {
+                "callerAnnotations": [],
+                "displayOrder": 1,
+                "label": "Root",
+                "nodeId": "spec.root",
+                "nodeKind": "meta_spec",
+                "sourceRefs": [
+                  {
+                    "sourceId": "consumer.requirements",
+                    "sourceRefId": "spec.root.requirements",
+                    "sourceRefKind": "source_id",
+                    "sourceRole": "requirements"
+                  }
+                ]
+              }
+            ],
+            "overlays": [],
+            "rootNodeId": "spec.root",
+            "schemaVersion": 2,
+            "treeId": "consumer.spec-tree"
+          }
+        },
+        "schemaVersion": 4,
+        "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4",
+        "sources": [
+          {
+            "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "requirement_source",
+            "nodeId": "spec.root",
+            "path": "docs/specs/consumer/requirements.v2.json",
+            "sourceRef": "consumer.requirements",
+            "sourceRole": "requirements"
+          },
+          {
+            "currentDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "kind": "proof_binding",
+            "path": "proofkit/requirement-bindings.json",
+            "sourceRef": "proof_binding:consumer.proof-bindings"
+          },
+          {
+            "currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "kind": "spec_tree",
+            "path": "proofkit/spec-tree.json",
+            "sourceRef": "spec_tree:consumer.spec-tree"
+          }
+        ]
+      },
+      "graphId": "fixture.graph",
+      "schemaVersion": 3
+    },
+    "output": {
+      "edgeCount": 2,
+      "edges": [
+        {
+          "edgeId": "declaration-edge:bcc16ba928d9f18cc8680abc35a4e49ab1d3575435027e254904475882a82c1d",
+          "edgeKind": "declares",
+          "evidencePlane": "specification_coverage",
+          "fromNodeId": "spec:spec.root",
+          "toNodeId": "requirement:REQ-CONSUMER-001"
+        },
+        {
+          "edgeId": "proof-edge:9509e4abb92694c630e25688aa1d3ca91b340a6319c9111d4b3fd3dfcb7ff93b",
+          "edgeKind": "proved_by_candidate",
+          "evidencePlane": "proof_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1"
+        }
+      ],
+      "graphId": "fixture.graph",
+      "graphKind": "proofkit.requirement-traceability-graph",
+      "nodeCount": 3,
+      "nodes": [
+        {
+          "evidencePlane": "proof_coverage",
+          "kind": "scenario",
+          "label": "consumer.scenario",
+          "nodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1",
+          "requirementId": "REQ-CONSUMER-001",
+          "scenarioId": "consumer.scenario",
+          "sourceId": "consumer.witness",
+          "witnessId": "consumer.witness",
+          "witnessKind": "contract",
+          "witnessPath": "internal/consumer_test.go"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "requirement",
+          "label": "REQ-CONSUMER-001",
+          "nodeId": "requirement:REQ-CONSUMER-001",
+          "sourceId": "REQ-CONSUMER-001"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "meta_spec",
+          "label": "Root",
+          "nodeId": "spec:spec.root",
+          "sourceId": "spec.root"
+        }
+      ],
+      "nonClaims": [
+        "Traceability graph is a derived projection and does not infer code topology, native execution coverage, proof freshness, merge, release, or rollout readiness.",
+        "Specification, proof, code traceability, and native execution remain distinct evidence planes."
+      ],
+      "schemaVersion": 1,
+      "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4"
+    }
+  },
+  {
+    "case": "empty-topology",
+    "input": {
+      "codeTopology": {
+        "edges": [],
+        "nativeCoverage": [],
+        "nodes": []
+      },
+      "context": {
+        "catalogId": "consumer.context",
+        "contextKind": "proofkit.requirement-context",
+        "expectedDigestCoverage": "none",
+        "nonClaims": [
+          "Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+          "Requirement context does not execute native witnesses or prove source freshness after composition.",
+          "Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness."
+        ],
+        "projections": {
+          "proofBinding": {
+            "bindingId": "consumer.proof-bindings",
+            "bindings": [
+              {
+                "commandIds": [
+                  "consumer.test"
+                ],
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "requirementId": "REQ-CONSUMER-001",
+                "scenarioId": "consumer.scenario",
+                "witnessId": "consumer.witness",
+                "witnessKind": "contract",
+                "witnessPath": "internal/consumer_test.go"
+              }
+            ],
+            "nonClaims": [
+              "Fixture proof bindings do not execute witnesses."
+            ],
+            "requirements": [
+              {
+                "claimLevel": "blocking",
+                "nonClaims": [
+                  "Fixture proof requirement does not approve merge."
+                ],
+                "ownerId": "consumer.owner",
+                "proofState": "witness_backed",
+                "requirementId": "REQ-CONSUMER-001",
+                "specPath": "docs/specs/consumer/requirements.v2.json"
+              }
+            ],
+            "schemaVersion": 1,
+            "selection": {
+              "changedPaths": [],
+              "ownerIds": [],
+              "requirementIds": []
+            },
+            "witnessCommands": [
+              {
+                "command": "go test ./internal",
+                "commandId": "consumer.test",
+                "environmentClasses": [
+                  "local-go"
+                ]
+              }
+            ]
+          },
+          "requirementSources": [
+            {
+              "groups": [
+                {
+                  "groupId": "RGRP-CONSUMER",
+                  "members": [
+                    {
+                      "fields": {
+                        "claimLevel": "blocking",
+                        "deferral": null,
+                        "externalNonClaimRefs": [
+                          "NC-CONSUMER-001"
+                        ],
+                        "lifecycle": {
+                          "state": "active"
+                        },
+                        "nonClaimRefs": [],
+                        "nonClaims": [
+                          "This requirement does not approve merge."
+                        ],
+                        "ownerId": "consumer.owner",
+                        "proofBindingRefs": [
+                          "proofkit/requirement-bindings.json"
+                        ],
+                        "riskClass": "high",
+                        "updatePolicy": {
+                          "requiresImpactDeclaration": true,
+                          "requiresProofBindingReview": true,
+                          "reviewOwnerId": "consumer.owner"
+                        }
+                      },
+                      "requirementId": "REQ-CONSUMER-001",
+                      "statementCompletion": "The system preserves semantic identity."
+                    }
+                  ],
+                  "profileId": "",
+                  "sharedPremises": [],
+                  "statementStem": ""
+                }
+              ],
+              "kind": "proofkit.requirement-source",
+              "schemaVersion": 2,
+              "sourceId": "consumer.requirements",
+              "sourceNonClaims": [
+                "Consumer source does not approve merge."
+              ],
+              "specPackagePath": "docs/specs/consumer"
+            }
+          ],
+          "specTree": {
+            "callerAnnotations": [],
+            "edges": [],
+            "nodes": [
+              {
+                "callerAnnotations": [],
+                "displayOrder": 1,
+                "label": "Root",
+                "nodeId": "spec.root",
+                "nodeKind": "meta_spec",
+                "sourceRefs": [
+                  {
+                    "sourceId": "consumer.requirements",
+                    "sourceRefId": "spec.root.requirements",
+                    "sourceRefKind": "source_id",
+                    "sourceRole": "requirements"
+                  }
+                ]
+              }
+            ],
+            "overlays": [],
+            "rootNodeId": "spec.root",
+            "schemaVersion": 2,
+            "treeId": "consumer.spec-tree"
+          }
+        },
+        "schemaVersion": 4,
+        "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4",
+        "sources": [
+          {
+            "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "requirement_source",
+            "nodeId": "spec.root",
+            "path": "docs/specs/consumer/requirements.v2.json",
+            "sourceRef": "consumer.requirements",
+            "sourceRole": "requirements"
+          },
+          {
+            "currentDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "kind": "proof_binding",
+            "path": "proofkit/requirement-bindings.json",
+            "sourceRef": "proof_binding:consumer.proof-bindings"
+          },
+          {
+            "currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "kind": "spec_tree",
+            "path": "proofkit/spec-tree.json",
+            "sourceRef": "spec_tree:consumer.spec-tree"
+          }
+        ]
+      },
+      "graphId": "fixture.graph",
+      "schemaVersion": 3
+    },
+    "output": {
+      "edgeCount": 2,
+      "edges": [
+        {
+          "edgeId": "declaration-edge:bcc16ba928d9f18cc8680abc35a4e49ab1d3575435027e254904475882a82c1d",
+          "edgeKind": "declares",
+          "evidencePlane": "specification_coverage",
+          "fromNodeId": "spec:spec.root",
+          "toNodeId": "requirement:REQ-CONSUMER-001"
+        },
+        {
+          "edgeId": "proof-edge:9509e4abb92694c630e25688aa1d3ca91b340a6319c9111d4b3fd3dfcb7ff93b",
+          "edgeKind": "proved_by_candidate",
+          "evidencePlane": "proof_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1"
+        }
+      ],
+      "graphId": "fixture.graph",
+      "graphKind": "proofkit.requirement-traceability-graph",
+      "nodeCount": 3,
+      "nodes": [
+        {
+          "evidencePlane": "proof_coverage",
+          "kind": "scenario",
+          "label": "consumer.scenario",
+          "nodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1",
+          "requirementId": "REQ-CONSUMER-001",
+          "scenarioId": "consumer.scenario",
+          "sourceId": "consumer.witness",
+          "witnessId": "consumer.witness",
+          "witnessKind": "contract",
+          "witnessPath": "internal/consumer_test.go"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "requirement",
+          "label": "REQ-CONSUMER-001",
+          "nodeId": "requirement:REQ-CONSUMER-001",
+          "sourceId": "REQ-CONSUMER-001"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "meta_spec",
+          "label": "Root",
+          "nodeId": "spec:spec.root",
+          "sourceId": "spec.root"
+        }
+      ],
+      "nonClaims": [
+        "Traceability graph is a derived projection and does not infer code topology, native execution coverage, proof freshness, merge, release, or rollout readiness.",
+        "Specification, proof, code traceability, and native execution remain distinct evidence planes."
+      ],
+      "schemaVersion": 1,
+      "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4"
+    }
+  },
+  {
+    "case": "all-levels-verified",
+    "input": {
+      "codeSources": [
+        {
+          "content": "abcdefghijklmnopqrstuvwxyz",
+          "path": "src/example.go"
+        }
+      ],
+      "codeTopology": {
+        "edges": [
+          {
+            "authorityClass": "owner_admitted",
+            "codeNodeId": "fixture.source_range",
+            "currentnessState": "unverified",
+            "evidenceRefs": [
+              "fixture.trace"
+            ],
+            "requirementId": "REQ-CONSUMER-001"
+          }
+        ],
+        "nativeCoverage": [
+          {
+            "authorityClass": "receipt_admitted",
+            "codeNodeId": "fixture.symbol",
+            "currentnessState": "unverified",
+            "evidenceRef": "fixture.execution",
+            "producerId": "fixture.producer",
+            "requirementId": "REQ-CONSUMER-001",
+            "state": "passed"
+          }
+        ],
+        "nodes": [
+          {
+            "abstractionLevel": "repository",
+            "currentnessState": "current",
+            "label": "Code repository",
+            "nodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "package",
+            "currentnessState": "current",
+            "label": "Code package",
+            "nodeId": "fixture.package",
+            "parentNodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "module",
+            "currentnessState": "current",
+            "label": "Code module",
+            "nodeId": "fixture.module",
+            "parentNodeId": "fixture.package",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "file",
+            "currentnessState": "current",
+            "label": "Code file",
+            "nodeId": "fixture.file",
+            "parentNodeId": "fixture.module",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "symbol",
+            "currentnessState": "current",
+            "label": "Code symbol",
+            "nodeId": "fixture.symbol",
+            "parentNodeId": "fixture.file",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go",
+            "symbolId": "symbol.example"
+          },
+          {
+            "abstractionLevel": "source_range",
+            "byteEnd": 10,
+            "byteStart": 1,
+            "currentnessState": "current",
+            "label": "Code source_range",
+            "nodeId": "fixture.source_range",
+            "parentNodeId": "fixture.symbol",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          }
+        ]
+      },
+      "context": {
+        "catalogId": "consumer.context",
+        "contextKind": "proofkit.requirement-context",
+        "expectedDigestCoverage": "none",
+        "nonClaims": [
+          "Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+          "Requirement context does not execute native witnesses or prove source freshness after composition.",
+          "Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness."
+        ],
+        "projections": {
+          "proofBinding": {
+            "bindingId": "consumer.proof-bindings",
+            "bindings": [
+              {
+                "commandIds": [
+                  "consumer.test"
+                ],
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "requirementId": "REQ-CONSUMER-001",
+                "scenarioId": "consumer.scenario",
+                "witnessId": "consumer.witness",
+                "witnessKind": "contract",
+                "witnessPath": "internal/consumer_test.go"
+              }
+            ],
+            "nonClaims": [
+              "Fixture proof bindings do not execute witnesses."
+            ],
+            "requirements": [
+              {
+                "claimLevel": "blocking",
+                "nonClaims": [
+                  "Fixture proof requirement does not approve merge."
+                ],
+                "ownerId": "consumer.owner",
+                "proofState": "witness_backed",
+                "requirementId": "REQ-CONSUMER-001",
+                "specPath": "docs/specs/consumer/requirements.v2.json"
+              }
+            ],
+            "schemaVersion": 1,
+            "selection": {
+              "changedPaths": [],
+              "ownerIds": [],
+              "requirementIds": []
+            },
+            "witnessCommands": [
+              {
+                "command": "go test ./internal",
+                "commandId": "consumer.test",
+                "environmentClasses": [
+                  "local-go"
+                ]
+              }
+            ]
+          },
+          "requirementSources": [
+            {
+              "groups": [
+                {
+                  "groupId": "RGRP-CONSUMER",
+                  "members": [
+                    {
+                      "fields": {
+                        "claimLevel": "blocking",
+                        "deferral": null,
+                        "externalNonClaimRefs": [
+                          "NC-CONSUMER-001"
+                        ],
+                        "lifecycle": {
+                          "state": "active"
+                        },
+                        "nonClaimRefs": [],
+                        "nonClaims": [
+                          "This requirement does not approve merge."
+                        ],
+                        "ownerId": "consumer.owner",
+                        "proofBindingRefs": [
+                          "proofkit/requirement-bindings.json"
+                        ],
+                        "riskClass": "high",
+                        "updatePolicy": {
+                          "requiresImpactDeclaration": true,
+                          "requiresProofBindingReview": true,
+                          "reviewOwnerId": "consumer.owner"
+                        }
+                      },
+                      "requirementId": "REQ-CONSUMER-001",
+                      "statementCompletion": "The system preserves semantic identity."
+                    }
+                  ],
+                  "profileId": "",
+                  "sharedPremises": [],
+                  "statementStem": ""
+                }
+              ],
+              "kind": "proofkit.requirement-source",
+              "schemaVersion": 2,
+              "sourceId": "consumer.requirements",
+              "sourceNonClaims": [
+                "Consumer source does not approve merge."
+              ],
+              "specPackagePath": "docs/specs/consumer"
+            }
+          ],
+          "specTree": {
+            "callerAnnotations": [],
+            "edges": [],
+            "nodes": [
+              {
+                "callerAnnotations": [],
+                "displayOrder": 1,
+                "label": "Root",
+                "nodeId": "spec.root",
+                "nodeKind": "meta_spec",
+                "sourceRefs": [
+                  {
+                    "sourceId": "consumer.requirements",
+                    "sourceRefId": "spec.root.requirements",
+                    "sourceRefKind": "source_id",
+                    "sourceRole": "requirements"
+                  }
+                ]
+              }
+            ],
+            "overlays": [],
+            "rootNodeId": "spec.root",
+            "schemaVersion": 2,
+            "treeId": "consumer.spec-tree"
+          }
+        },
+        "schemaVersion": 4,
+        "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4",
+        "sources": [
+          {
+            "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "requirement_source",
+            "nodeId": "spec.root",
+            "path": "docs/specs/consumer/requirements.v2.json",
+            "sourceRef": "consumer.requirements",
+            "sourceRole": "requirements"
+          },
+          {
+            "currentDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "kind": "proof_binding",
+            "path": "proofkit/requirement-bindings.json",
+            "sourceRef": "proof_binding:consumer.proof-bindings"
+          },
+          {
+            "currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "kind": "spec_tree",
+            "path": "proofkit/spec-tree.json",
+            "sourceRef": "spec_tree:consumer.spec-tree"
+          }
+        ]
+      },
+      "graphId": "fixture.graph",
+      "schemaVersion": 3
+    },
+    "output": {
+      "edgeCount": 9,
+      "edges": [
+        {
+          "authorityClass": "owner_admitted",
+          "currentnessState": "unverified",
+          "edgeId": "code-edge:813d88c7c072ee301dbc92e4b4a293dd21e1cae8095d4e0fe261c051812b3e09",
+          "edgeKind": "traced_to",
+          "evidencePlane": "code_traceability",
+          "evidenceRefs": [
+            "fixture.trace"
+          ],
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:31282d738d45343315728326ede3f22f6fbf8b123de8aa060a9de8306c8dd16f",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.package",
+          "toNodeId": "code:fixture.module"
+        },
+        {
+          "edgeId": "code-parent-edge:3c9f580e9470485e077a380528a9bfcd7ed2007a0fabf2a8c9f4327f76f58547",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.repository",
+          "toNodeId": "code:fixture.package"
+        },
+        {
+          "edgeId": "code-parent-edge:5c045582225f1043fe64b6fe3e47b99c8a95954b58bde5d4c6fe351e68059e4c",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.file",
+          "toNodeId": "code:fixture.symbol"
+        },
+        {
+          "edgeId": "code-parent-edge:da84d6e20ead26b5f1ffc3159a2ef20a69ec86cf0cd323ac0240c886c4c5aa98",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.symbol",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:ebfb43296df7752677e284bfd9dbac8c38faece1110bce7ffcb8fd39a2d7f010",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.module",
+          "toNodeId": "code:fixture.file"
+        },
+        {
+          "edgeId": "declaration-edge:bcc16ba928d9f18cc8680abc35a4e49ab1d3575435027e254904475882a82c1d",
+          "edgeKind": "declares",
+          "evidencePlane": "specification_coverage",
+          "fromNodeId": "spec:spec.root",
+          "toNodeId": "requirement:REQ-CONSUMER-001"
+        },
+        {
+          "codeNodeId": "code:fixture.symbol",
+          "edgeId": "execution-edge:1d8919618e9976d2a998f166f754fe832c3d439e77e0044b198ea4fbc8269e37",
+          "edgeKind": "observed_by",
+          "evidencePlane": "native_execution_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "execution:fixture.execution"
+        },
+        {
+          "edgeId": "proof-edge:9509e4abb92694c630e25688aa1d3ca91b340a6319c9111d4b3fd3dfcb7ff93b",
+          "edgeKind": "proved_by_candidate",
+          "evidencePlane": "proof_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1"
+        }
+      ],
+      "graphId": "fixture.graph",
+      "graphKind": "proofkit.requirement-traceability-graph",
+      "nodeCount": 10,
+      "nodes": [
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "file",
+          "label": "Code file",
+          "nodeId": "code:fixture.file",
+          "parentNodeId": "code:fixture.module",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "module",
+          "label": "Code module",
+          "nodeId": "code:fixture.module",
+          "parentNodeId": "code:fixture.package",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "package",
+          "label": "Code package",
+          "nodeId": "code:fixture.package",
+          "parentNodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "repository",
+          "label": "Code repository",
+          "nodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "byteEnd": 10,
+          "byteStart": 1,
+          "coordinateUnit": "utf8_byte",
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "source_range",
+          "label": "Code source_range",
+          "nodeId": "code:fixture.source_range",
+          "parentNodeId": "code:fixture.symbol",
+          "rangeVerification": "verified",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "symbol",
+          "label": "Code symbol",
+          "nodeId": "code:fixture.symbol",
+          "parentNodeId": "code:fixture.file",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go",
+          "symbolId": "symbol.example"
+        },
+        {
+          "authorityClass": "receipt_admitted",
+          "currentnessState": "unverified",
+          "evidencePlane": "native_execution_coverage",
+          "kind": "execution_evidence",
+          "label": "fixture.execution",
+          "nodeId": "execution:fixture.execution",
+          "producerId": "fixture.producer",
+          "sourceId": "fixture.execution",
+          "state": "passed"
+        },
+        {
+          "evidencePlane": "proof_coverage",
+          "kind": "scenario",
+          "label": "consumer.scenario",
+          "nodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1",
+          "requirementId": "REQ-CONSUMER-001",
+          "scenarioId": "consumer.scenario",
+          "sourceId": "consumer.witness",
+          "witnessId": "consumer.witness",
+          "witnessKind": "contract",
+          "witnessPath": "internal/consumer_test.go"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "requirement",
+          "label": "REQ-CONSUMER-001",
+          "nodeId": "requirement:REQ-CONSUMER-001",
+          "sourceId": "REQ-CONSUMER-001"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "meta_spec",
+          "label": "Root",
+          "nodeId": "spec:spec.root",
+          "sourceId": "spec.root"
+        }
+      ],
+      "nonClaims": [
+        "Traceability graph is a derived projection and does not infer code topology, native execution coverage, proof freshness, merge, release, or rollout readiness.",
+        "Specification, proof, code traceability, and native execution remain distinct evidence planes."
+      ],
+      "schemaVersion": 1,
+      "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4"
+    }
+  },
+  {
+    "case": "all-levels-unverified",
+    "input": {
+      "codeTopology": {
+        "edges": [
+          {
+            "authorityClass": "owner_admitted",
+            "codeNodeId": "fixture.source_range",
+            "currentnessState": "unverified",
+            "evidenceRefs": [
+              "fixture.trace"
+            ],
+            "requirementId": "REQ-CONSUMER-001"
+          }
+        ],
+        "nativeCoverage": [
+          {
+            "authorityClass": "receipt_admitted",
+            "codeNodeId": "fixture.symbol",
+            "currentnessState": "unverified",
+            "evidenceRef": "fixture.execution",
+            "producerId": "fixture.producer",
+            "requirementId": "REQ-CONSUMER-001",
+            "state": "passed"
+          }
+        ],
+        "nodes": [
+          {
+            "abstractionLevel": "repository",
+            "currentnessState": "current",
+            "label": "Code repository",
+            "nodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "package",
+            "currentnessState": "current",
+            "label": "Code package",
+            "nodeId": "fixture.package",
+            "parentNodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "module",
+            "currentnessState": "current",
+            "label": "Code module",
+            "nodeId": "fixture.module",
+            "parentNodeId": "fixture.package",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "file",
+            "currentnessState": "current",
+            "label": "Code file",
+            "nodeId": "fixture.file",
+            "parentNodeId": "fixture.module",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "symbol",
+            "currentnessState": "current",
+            "label": "Code symbol",
+            "nodeId": "fixture.symbol",
+            "parentNodeId": "fixture.file",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go",
+            "symbolId": "symbol.example"
+          },
+          {
+            "abstractionLevel": "source_range",
+            "byteEnd": 10,
+            "byteStart": 1,
+            "currentnessState": "current",
+            "label": "Code source_range",
+            "nodeId": "fixture.source_range",
+            "parentNodeId": "fixture.symbol",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          }
+        ]
+      },
+      "context": {
+        "catalogId": "consumer.context",
+        "contextKind": "proofkit.requirement-context",
+        "expectedDigestCoverage": "none",
+        "nonClaims": [
+          "Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+          "Requirement context does not execute native witnesses or prove source freshness after composition.",
+          "Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness."
+        ],
+        "projections": {
+          "proofBinding": {
+            "bindingId": "consumer.proof-bindings",
+            "bindings": [
+              {
+                "commandIds": [
+                  "consumer.test"
+                ],
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "requirementId": "REQ-CONSUMER-001",
+                "scenarioId": "consumer.scenario",
+                "witnessId": "consumer.witness",
+                "witnessKind": "contract",
+                "witnessPath": "internal/consumer_test.go"
+              }
+            ],
+            "nonClaims": [
+              "Fixture proof bindings do not execute witnesses."
+            ],
+            "requirements": [
+              {
+                "claimLevel": "blocking",
+                "nonClaims": [
+                  "Fixture proof requirement does not approve merge."
+                ],
+                "ownerId": "consumer.owner",
+                "proofState": "witness_backed",
+                "requirementId": "REQ-CONSUMER-001",
+                "specPath": "docs/specs/consumer/requirements.v2.json"
+              }
+            ],
+            "schemaVersion": 1,
+            "selection": {
+              "changedPaths": [],
+              "ownerIds": [],
+              "requirementIds": []
+            },
+            "witnessCommands": [
+              {
+                "command": "go test ./internal",
+                "commandId": "consumer.test",
+                "environmentClasses": [
+                  "local-go"
+                ]
+              }
+            ]
+          },
+          "requirementSources": [
+            {
+              "groups": [
+                {
+                  "groupId": "RGRP-CONSUMER",
+                  "members": [
+                    {
+                      "fields": {
+                        "claimLevel": "blocking",
+                        "deferral": null,
+                        "externalNonClaimRefs": [
+                          "NC-CONSUMER-001"
+                        ],
+                        "lifecycle": {
+                          "state": "active"
+                        },
+                        "nonClaimRefs": [],
+                        "nonClaims": [
+                          "This requirement does not approve merge."
+                        ],
+                        "ownerId": "consumer.owner",
+                        "proofBindingRefs": [
+                          "proofkit/requirement-bindings.json"
+                        ],
+                        "riskClass": "high",
+                        "updatePolicy": {
+                          "requiresImpactDeclaration": true,
+                          "requiresProofBindingReview": true,
+                          "reviewOwnerId": "consumer.owner"
+                        }
+                      },
+                      "requirementId": "REQ-CONSUMER-001",
+                      "statementCompletion": "The system preserves semantic identity."
+                    }
+                  ],
+                  "profileId": "",
+                  "sharedPremises": [],
+                  "statementStem": ""
+                }
+              ],
+              "kind": "proofkit.requirement-source",
+              "schemaVersion": 2,
+              "sourceId": "consumer.requirements",
+              "sourceNonClaims": [
+                "Consumer source does not approve merge."
+              ],
+              "specPackagePath": "docs/specs/consumer"
+            }
+          ],
+          "specTree": {
+            "callerAnnotations": [],
+            "edges": [],
+            "nodes": [
+              {
+                "callerAnnotations": [],
+                "displayOrder": 1,
+                "label": "Root",
+                "nodeId": "spec.root",
+                "nodeKind": "meta_spec",
+                "sourceRefs": [
+                  {
+                    "sourceId": "consumer.requirements",
+                    "sourceRefId": "spec.root.requirements",
+                    "sourceRefKind": "source_id",
+                    "sourceRole": "requirements"
+                  }
+                ]
+              }
+            ],
+            "overlays": [],
+            "rootNodeId": "spec.root",
+            "schemaVersion": 2,
+            "treeId": "consumer.spec-tree"
+          }
+        },
+        "schemaVersion": 4,
+        "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4",
+        "sources": [
+          {
+            "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "requirement_source",
+            "nodeId": "spec.root",
+            "path": "docs/specs/consumer/requirements.v2.json",
+            "sourceRef": "consumer.requirements",
+            "sourceRole": "requirements"
+          },
+          {
+            "currentDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "kind": "proof_binding",
+            "path": "proofkit/requirement-bindings.json",
+            "sourceRef": "proof_binding:consumer.proof-bindings"
+          },
+          {
+            "currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "kind": "spec_tree",
+            "path": "proofkit/spec-tree.json",
+            "sourceRef": "spec_tree:consumer.spec-tree"
+          }
+        ]
+      },
+      "graphId": "fixture.graph",
+      "schemaVersion": 3
+    },
+    "output": {
+      "edgeCount": 9,
+      "edges": [
+        {
+          "authorityClass": "owner_admitted",
+          "currentnessState": "unverified",
+          "edgeId": "code-edge:813d88c7c072ee301dbc92e4b4a293dd21e1cae8095d4e0fe261c051812b3e09",
+          "edgeKind": "traced_to",
+          "evidencePlane": "code_traceability",
+          "evidenceRefs": [
+            "fixture.trace"
+          ],
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:31282d738d45343315728326ede3f22f6fbf8b123de8aa060a9de8306c8dd16f",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.package",
+          "toNodeId": "code:fixture.module"
+        },
+        {
+          "edgeId": "code-parent-edge:3c9f580e9470485e077a380528a9bfcd7ed2007a0fabf2a8c9f4327f76f58547",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.repository",
+          "toNodeId": "code:fixture.package"
+        },
+        {
+          "edgeId": "code-parent-edge:5c045582225f1043fe64b6fe3e47b99c8a95954b58bde5d4c6fe351e68059e4c",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.file",
+          "toNodeId": "code:fixture.symbol"
+        },
+        {
+          "edgeId": "code-parent-edge:da84d6e20ead26b5f1ffc3159a2ef20a69ec86cf0cd323ac0240c886c4c5aa98",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.symbol",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:ebfb43296df7752677e284bfd9dbac8c38faece1110bce7ffcb8fd39a2d7f010",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.module",
+          "toNodeId": "code:fixture.file"
+        },
+        {
+          "edgeId": "declaration-edge:bcc16ba928d9f18cc8680abc35a4e49ab1d3575435027e254904475882a82c1d",
+          "edgeKind": "declares",
+          "evidencePlane": "specification_coverage",
+          "fromNodeId": "spec:spec.root",
+          "toNodeId": "requirement:REQ-CONSUMER-001"
+        },
+        {
+          "codeNodeId": "code:fixture.symbol",
+          "edgeId": "execution-edge:1d8919618e9976d2a998f166f754fe832c3d439e77e0044b198ea4fbc8269e37",
+          "edgeKind": "observed_by",
+          "evidencePlane": "native_execution_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "execution:fixture.execution"
+        },
+        {
+          "edgeId": "proof-edge:9509e4abb92694c630e25688aa1d3ca91b340a6319c9111d4b3fd3dfcb7ff93b",
+          "edgeKind": "proved_by_candidate",
+          "evidencePlane": "proof_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1"
+        }
+      ],
+      "graphId": "fixture.graph",
+      "graphKind": "proofkit.requirement-traceability-graph",
+      "nodeCount": 10,
+      "nodes": [
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "file",
+          "label": "Code file",
+          "nodeId": "code:fixture.file",
+          "parentNodeId": "code:fixture.module",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "module",
+          "label": "Code module",
+          "nodeId": "code:fixture.module",
+          "parentNodeId": "code:fixture.package",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "package",
+          "label": "Code package",
+          "nodeId": "code:fixture.package",
+          "parentNodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "repository",
+          "label": "Code repository",
+          "nodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "byteEnd": 10,
+          "byteStart": 1,
+          "coordinateUnit": "utf8_byte",
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "source_range",
+          "label": "Code source_range",
+          "nodeId": "code:fixture.source_range",
+          "parentNodeId": "code:fixture.symbol",
+          "rangeVerification": "unverified",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "symbol",
+          "label": "Code symbol",
+          "nodeId": "code:fixture.symbol",
+          "parentNodeId": "code:fixture.file",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go",
+          "symbolId": "symbol.example"
+        },
+        {
+          "authorityClass": "receipt_admitted",
+          "currentnessState": "unverified",
+          "evidencePlane": "native_execution_coverage",
+          "kind": "execution_evidence",
+          "label": "fixture.execution",
+          "nodeId": "execution:fixture.execution",
+          "producerId": "fixture.producer",
+          "sourceId": "fixture.execution",
+          "state": "passed"
+        },
+        {
+          "evidencePlane": "proof_coverage",
+          "kind": "scenario",
+          "label": "consumer.scenario",
+          "nodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1",
+          "requirementId": "REQ-CONSUMER-001",
+          "scenarioId": "consumer.scenario",
+          "sourceId": "consumer.witness",
+          "witnessId": "consumer.witness",
+          "witnessKind": "contract",
+          "witnessPath": "internal/consumer_test.go"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "requirement",
+          "label": "REQ-CONSUMER-001",
+          "nodeId": "requirement:REQ-CONSUMER-001",
+          "sourceId": "REQ-CONSUMER-001"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "meta_spec",
+          "label": "Root",
+          "nodeId": "spec:spec.root",
+          "sourceId": "spec.root"
+        }
+      ],
+      "nonClaims": [
+        "Traceability graph is a derived projection and does not infer code topology, native execution coverage, proof freshness, merge, release, or rollout readiness.",
+        "Specification, proof, code traceability, and native execution remain distinct evidence planes."
+      ],
+      "schemaVersion": 1,
+      "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4"
+    }
+  },
+  {
+    "case": "failed-evidence",
+    "input": {
+      "codeTopology": {
+        "edges": [
+          {
+            "authorityClass": "owner_admitted",
+            "codeNodeId": "fixture.source_range",
+            "currentnessState": "unverified",
+            "evidenceRefs": [
+              "fixture.trace"
+            ],
+            "requirementId": "REQ-CONSUMER-001"
+          }
+        ],
+        "nativeCoverage": [
+          {
+            "authorityClass": "receipt_admitted",
+            "codeNodeId": "fixture.symbol",
+            "currentnessState": "unverified",
+            "evidenceRef": "fixture.execution",
+            "producerId": "fixture.producer",
+            "requirementId": "REQ-CONSUMER-001",
+            "state": "failed"
+          }
+        ],
+        "nodes": [
+          {
+            "abstractionLevel": "repository",
+            "currentnessState": "stale",
+            "label": "Code repository",
+            "nodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "package",
+            "currentnessState": "stale",
+            "label": "Code package",
+            "nodeId": "fixture.package",
+            "parentNodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "module",
+            "currentnessState": "stale",
+            "label": "Code module",
+            "nodeId": "fixture.module",
+            "parentNodeId": "fixture.package",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "file",
+            "currentnessState": "stale",
+            "label": "Code file",
+            "nodeId": "fixture.file",
+            "parentNodeId": "fixture.module",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "symbol",
+            "currentnessState": "stale",
+            "label": "Code symbol",
+            "nodeId": "fixture.symbol",
+            "parentNodeId": "fixture.file",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go",
+            "symbolId": "symbol.example"
+          },
+          {
+            "abstractionLevel": "source_range",
+            "byteEnd": 10,
+            "byteStart": 1,
+            "currentnessState": "stale",
+            "label": "Code source_range",
+            "nodeId": "fixture.source_range",
+            "parentNodeId": "fixture.symbol",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          }
+        ]
+      },
+      "context": {
+        "catalogId": "consumer.context",
+        "contextKind": "proofkit.requirement-context",
+        "expectedDigestCoverage": "none",
+        "nonClaims": [
+          "Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+          "Requirement context does not execute native witnesses or prove source freshness after composition.",
+          "Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness."
+        ],
+        "projections": {
+          "proofBinding": {
+            "bindingId": "consumer.proof-bindings",
+            "bindings": [
+              {
+                "commandIds": [
+                  "consumer.test"
+                ],
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "requirementId": "REQ-CONSUMER-001",
+                "scenarioId": "consumer.scenario",
+                "witnessId": "consumer.witness",
+                "witnessKind": "contract",
+                "witnessPath": "internal/consumer_test.go"
+              }
+            ],
+            "nonClaims": [
+              "Fixture proof bindings do not execute witnesses."
+            ],
+            "requirements": [
+              {
+                "claimLevel": "blocking",
+                "nonClaims": [
+                  "Fixture proof requirement does not approve merge."
+                ],
+                "ownerId": "consumer.owner",
+                "proofState": "witness_backed",
+                "requirementId": "REQ-CONSUMER-001",
+                "specPath": "docs/specs/consumer/requirements.v2.json"
+              }
+            ],
+            "schemaVersion": 1,
+            "selection": {
+              "changedPaths": [],
+              "ownerIds": [],
+              "requirementIds": []
+            },
+            "witnessCommands": [
+              {
+                "command": "go test ./internal",
+                "commandId": "consumer.test",
+                "environmentClasses": [
+                  "local-go"
+                ]
+              }
+            ]
+          },
+          "requirementSources": [
+            {
+              "groups": [
+                {
+                  "groupId": "RGRP-CONSUMER",
+                  "members": [
+                    {
+                      "fields": {
+                        "claimLevel": "blocking",
+                        "deferral": null,
+                        "externalNonClaimRefs": [
+                          "NC-CONSUMER-001"
+                        ],
+                        "lifecycle": {
+                          "state": "active"
+                        },
+                        "nonClaimRefs": [],
+                        "nonClaims": [
+                          "This requirement does not approve merge."
+                        ],
+                        "ownerId": "consumer.owner",
+                        "proofBindingRefs": [
+                          "proofkit/requirement-bindings.json"
+                        ],
+                        "riskClass": "high",
+                        "updatePolicy": {
+                          "requiresImpactDeclaration": true,
+                          "requiresProofBindingReview": true,
+                          "reviewOwnerId": "consumer.owner"
+                        }
+                      },
+                      "requirementId": "REQ-CONSUMER-001",
+                      "statementCompletion": "The system preserves semantic identity."
+                    }
+                  ],
+                  "profileId": "",
+                  "sharedPremises": [],
+                  "statementStem": ""
+                }
+              ],
+              "kind": "proofkit.requirement-source",
+              "schemaVersion": 2,
+              "sourceId": "consumer.requirements",
+              "sourceNonClaims": [
+                "Consumer source does not approve merge."
+              ],
+              "specPackagePath": "docs/specs/consumer"
+            }
+          ],
+          "specTree": {
+            "callerAnnotations": [],
+            "edges": [],
+            "nodes": [
+              {
+                "callerAnnotations": [],
+                "displayOrder": 1,
+                "label": "Root",
+                "nodeId": "spec.root",
+                "nodeKind": "meta_spec",
+                "sourceRefs": [
+                  {
+                    "sourceId": "consumer.requirements",
+                    "sourceRefId": "spec.root.requirements",
+                    "sourceRefKind": "source_id",
+                    "sourceRole": "requirements"
+                  }
+                ]
+              }
+            ],
+            "overlays": [],
+            "rootNodeId": "spec.root",
+            "schemaVersion": 2,
+            "treeId": "consumer.spec-tree"
+          }
+        },
+        "schemaVersion": 4,
+        "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4",
+        "sources": [
+          {
+            "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "requirement_source",
+            "nodeId": "spec.root",
+            "path": "docs/specs/consumer/requirements.v2.json",
+            "sourceRef": "consumer.requirements",
+            "sourceRole": "requirements"
+          },
+          {
+            "currentDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "kind": "proof_binding",
+            "path": "proofkit/requirement-bindings.json",
+            "sourceRef": "proof_binding:consumer.proof-bindings"
+          },
+          {
+            "currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "kind": "spec_tree",
+            "path": "proofkit/spec-tree.json",
+            "sourceRef": "spec_tree:consumer.spec-tree"
+          }
+        ]
+      },
+      "graphId": "fixture.graph",
+      "schemaVersion": 3
+    },
+    "output": {
+      "edgeCount": 9,
+      "edges": [
+        {
+          "authorityClass": "owner_admitted",
+          "currentnessState": "unverified",
+          "edgeId": "code-edge:813d88c7c072ee301dbc92e4b4a293dd21e1cae8095d4e0fe261c051812b3e09",
+          "edgeKind": "traced_to",
+          "evidencePlane": "code_traceability",
+          "evidenceRefs": [
+            "fixture.trace"
+          ],
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:31282d738d45343315728326ede3f22f6fbf8b123de8aa060a9de8306c8dd16f",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.package",
+          "toNodeId": "code:fixture.module"
+        },
+        {
+          "edgeId": "code-parent-edge:3c9f580e9470485e077a380528a9bfcd7ed2007a0fabf2a8c9f4327f76f58547",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.repository",
+          "toNodeId": "code:fixture.package"
+        },
+        {
+          "edgeId": "code-parent-edge:5c045582225f1043fe64b6fe3e47b99c8a95954b58bde5d4c6fe351e68059e4c",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.file",
+          "toNodeId": "code:fixture.symbol"
+        },
+        {
+          "edgeId": "code-parent-edge:da84d6e20ead26b5f1ffc3159a2ef20a69ec86cf0cd323ac0240c886c4c5aa98",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.symbol",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:ebfb43296df7752677e284bfd9dbac8c38faece1110bce7ffcb8fd39a2d7f010",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.module",
+          "toNodeId": "code:fixture.file"
+        },
+        {
+          "edgeId": "declaration-edge:bcc16ba928d9f18cc8680abc35a4e49ab1d3575435027e254904475882a82c1d",
+          "edgeKind": "declares",
+          "evidencePlane": "specification_coverage",
+          "fromNodeId": "spec:spec.root",
+          "toNodeId": "requirement:REQ-CONSUMER-001"
+        },
+        {
+          "codeNodeId": "code:fixture.symbol",
+          "edgeId": "execution-edge:1d8919618e9976d2a998f166f754fe832c3d439e77e0044b198ea4fbc8269e37",
+          "edgeKind": "observed_by",
+          "evidencePlane": "native_execution_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "execution:fixture.execution"
+        },
+        {
+          "edgeId": "proof-edge:9509e4abb92694c630e25688aa1d3ca91b340a6319c9111d4b3fd3dfcb7ff93b",
+          "edgeKind": "proved_by_candidate",
+          "evidencePlane": "proof_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1"
+        }
+      ],
+      "graphId": "fixture.graph",
+      "graphKind": "proofkit.requirement-traceability-graph",
+      "nodeCount": 10,
+      "nodes": [
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "file",
+          "label": "Code file",
+          "nodeId": "code:fixture.file",
+          "parentNodeId": "code:fixture.module",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "module",
+          "label": "Code module",
+          "nodeId": "code:fixture.module",
+          "parentNodeId": "code:fixture.package",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "package",
+          "label": "Code package",
+          "nodeId": "code:fixture.package",
+          "parentNodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "repository",
+          "label": "Code repository",
+          "nodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "byteEnd": 10,
+          "byteStart": 1,
+          "coordinateUnit": "utf8_byte",
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "source_range",
+          "label": "Code source_range",
+          "nodeId": "code:fixture.source_range",
+          "parentNodeId": "code:fixture.symbol",
+          "rangeVerification": "unverified",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "symbol",
+          "label": "Code symbol",
+          "nodeId": "code:fixture.symbol",
+          "parentNodeId": "code:fixture.file",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go",
+          "symbolId": "symbol.example"
+        },
+        {
+          "authorityClass": "receipt_admitted",
+          "currentnessState": "unverified",
+          "evidencePlane": "native_execution_coverage",
+          "kind": "execution_evidence",
+          "label": "fixture.execution",
+          "nodeId": "execution:fixture.execution",
+          "producerId": "fixture.producer",
+          "sourceId": "fixture.execution",
+          "state": "failed"
+        },
+        {
+          "evidencePlane": "proof_coverage",
+          "kind": "scenario",
+          "label": "consumer.scenario",
+          "nodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1",
+          "requirementId": "REQ-CONSUMER-001",
+          "scenarioId": "consumer.scenario",
+          "sourceId": "consumer.witness",
+          "witnessId": "consumer.witness",
+          "witnessKind": "contract",
+          "witnessPath": "internal/consumer_test.go"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "requirement",
+          "label": "REQ-CONSUMER-001",
+          "nodeId": "requirement:REQ-CONSUMER-001",
+          "sourceId": "REQ-CONSUMER-001"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "meta_spec",
+          "label": "Root",
+          "nodeId": "spec:spec.root",
+          "sourceId": "spec.root"
+        }
+      ],
+      "nonClaims": [
+        "Traceability graph is a derived projection and does not infer code topology, native execution coverage, proof freshness, merge, release, or rollout readiness.",
+        "Specification, proof, code traceability, and native execution remain distinct evidence planes."
+      ],
+      "schemaVersion": 1,
+      "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4"
+    }
+  },
+  {
+    "case": "skipped-evidence",
+    "input": {
+      "codeTopology": {
+        "edges": [
+          {
+            "authorityClass": "owner_admitted",
+            "codeNodeId": "fixture.source_range",
+            "currentnessState": "unverified",
+            "evidenceRefs": [
+              "fixture.trace"
+            ],
+            "requirementId": "REQ-CONSUMER-001"
+          }
+        ],
+        "nativeCoverage": [
+          {
+            "authorityClass": "receipt_admitted",
+            "codeNodeId": "fixture.symbol",
+            "currentnessState": "unverified",
+            "evidenceRef": "fixture.execution",
+            "producerId": "fixture.producer",
+            "requirementId": "REQ-CONSUMER-001",
+            "state": "skipped"
+          }
+        ],
+        "nodes": [
+          {
+            "abstractionLevel": "repository",
+            "currentnessState": "stale",
+            "label": "Code repository",
+            "nodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "package",
+            "currentnessState": "stale",
+            "label": "Code package",
+            "nodeId": "fixture.package",
+            "parentNodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "module",
+            "currentnessState": "stale",
+            "label": "Code module",
+            "nodeId": "fixture.module",
+            "parentNodeId": "fixture.package",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "file",
+            "currentnessState": "stale",
+            "label": "Code file",
+            "nodeId": "fixture.file",
+            "parentNodeId": "fixture.module",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "symbol",
+            "currentnessState": "stale",
+            "label": "Code symbol",
+            "nodeId": "fixture.symbol",
+            "parentNodeId": "fixture.file",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go",
+            "symbolId": "symbol.example"
+          },
+          {
+            "abstractionLevel": "source_range",
+            "byteEnd": 10,
+            "byteStart": 1,
+            "currentnessState": "stale",
+            "label": "Code source_range",
+            "nodeId": "fixture.source_range",
+            "parentNodeId": "fixture.symbol",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          }
+        ]
+      },
+      "context": {
+        "catalogId": "consumer.context",
+        "contextKind": "proofkit.requirement-context",
+        "expectedDigestCoverage": "none",
+        "nonClaims": [
+          "Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+          "Requirement context does not execute native witnesses or prove source freshness after composition.",
+          "Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness."
+        ],
+        "projections": {
+          "proofBinding": {
+            "bindingId": "consumer.proof-bindings",
+            "bindings": [
+              {
+                "commandIds": [
+                  "consumer.test"
+                ],
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "requirementId": "REQ-CONSUMER-001",
+                "scenarioId": "consumer.scenario",
+                "witnessId": "consumer.witness",
+                "witnessKind": "contract",
+                "witnessPath": "internal/consumer_test.go"
+              }
+            ],
+            "nonClaims": [
+              "Fixture proof bindings do not execute witnesses."
+            ],
+            "requirements": [
+              {
+                "claimLevel": "blocking",
+                "nonClaims": [
+                  "Fixture proof requirement does not approve merge."
+                ],
+                "ownerId": "consumer.owner",
+                "proofState": "witness_backed",
+                "requirementId": "REQ-CONSUMER-001",
+                "specPath": "docs/specs/consumer/requirements.v2.json"
+              }
+            ],
+            "schemaVersion": 1,
+            "selection": {
+              "changedPaths": [],
+              "ownerIds": [],
+              "requirementIds": []
+            },
+            "witnessCommands": [
+              {
+                "command": "go test ./internal",
+                "commandId": "consumer.test",
+                "environmentClasses": [
+                  "local-go"
+                ]
+              }
+            ]
+          },
+          "requirementSources": [
+            {
+              "groups": [
+                {
+                  "groupId": "RGRP-CONSUMER",
+                  "members": [
+                    {
+                      "fields": {
+                        "claimLevel": "blocking",
+                        "deferral": null,
+                        "externalNonClaimRefs": [
+                          "NC-CONSUMER-001"
+                        ],
+                        "lifecycle": {
+                          "state": "active"
+                        },
+                        "nonClaimRefs": [],
+                        "nonClaims": [
+                          "This requirement does not approve merge."
+                        ],
+                        "ownerId": "consumer.owner",
+                        "proofBindingRefs": [
+                          "proofkit/requirement-bindings.json"
+                        ],
+                        "riskClass": "high",
+                        "updatePolicy": {
+                          "requiresImpactDeclaration": true,
+                          "requiresProofBindingReview": true,
+                          "reviewOwnerId": "consumer.owner"
+                        }
+                      },
+                      "requirementId": "REQ-CONSUMER-001",
+                      "statementCompletion": "The system preserves semantic identity."
+                    }
+                  ],
+                  "profileId": "",
+                  "sharedPremises": [],
+                  "statementStem": ""
+                }
+              ],
+              "kind": "proofkit.requirement-source",
+              "schemaVersion": 2,
+              "sourceId": "consumer.requirements",
+              "sourceNonClaims": [
+                "Consumer source does not approve merge."
+              ],
+              "specPackagePath": "docs/specs/consumer"
+            }
+          ],
+          "specTree": {
+            "callerAnnotations": [],
+            "edges": [],
+            "nodes": [
+              {
+                "callerAnnotations": [],
+                "displayOrder": 1,
+                "label": "Root",
+                "nodeId": "spec.root",
+                "nodeKind": "meta_spec",
+                "sourceRefs": [
+                  {
+                    "sourceId": "consumer.requirements",
+                    "sourceRefId": "spec.root.requirements",
+                    "sourceRefKind": "source_id",
+                    "sourceRole": "requirements"
+                  }
+                ]
+              }
+            ],
+            "overlays": [],
+            "rootNodeId": "spec.root",
+            "schemaVersion": 2,
+            "treeId": "consumer.spec-tree"
+          }
+        },
+        "schemaVersion": 4,
+        "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4",
+        "sources": [
+          {
+            "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "requirement_source",
+            "nodeId": "spec.root",
+            "path": "docs/specs/consumer/requirements.v2.json",
+            "sourceRef": "consumer.requirements",
+            "sourceRole": "requirements"
+          },
+          {
+            "currentDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "kind": "proof_binding",
+            "path": "proofkit/requirement-bindings.json",
+            "sourceRef": "proof_binding:consumer.proof-bindings"
+          },
+          {
+            "currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "kind": "spec_tree",
+            "path": "proofkit/spec-tree.json",
+            "sourceRef": "spec_tree:consumer.spec-tree"
+          }
+        ]
+      },
+      "graphId": "fixture.graph",
+      "schemaVersion": 3
+    },
+    "output": {
+      "edgeCount": 9,
+      "edges": [
+        {
+          "authorityClass": "owner_admitted",
+          "currentnessState": "unverified",
+          "edgeId": "code-edge:813d88c7c072ee301dbc92e4b4a293dd21e1cae8095d4e0fe261c051812b3e09",
+          "edgeKind": "traced_to",
+          "evidencePlane": "code_traceability",
+          "evidenceRefs": [
+            "fixture.trace"
+          ],
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:31282d738d45343315728326ede3f22f6fbf8b123de8aa060a9de8306c8dd16f",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.package",
+          "toNodeId": "code:fixture.module"
+        },
+        {
+          "edgeId": "code-parent-edge:3c9f580e9470485e077a380528a9bfcd7ed2007a0fabf2a8c9f4327f76f58547",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.repository",
+          "toNodeId": "code:fixture.package"
+        },
+        {
+          "edgeId": "code-parent-edge:5c045582225f1043fe64b6fe3e47b99c8a95954b58bde5d4c6fe351e68059e4c",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.file",
+          "toNodeId": "code:fixture.symbol"
+        },
+        {
+          "edgeId": "code-parent-edge:da84d6e20ead26b5f1ffc3159a2ef20a69ec86cf0cd323ac0240c886c4c5aa98",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.symbol",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:ebfb43296df7752677e284bfd9dbac8c38faece1110bce7ffcb8fd39a2d7f010",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.module",
+          "toNodeId": "code:fixture.file"
+        },
+        {
+          "edgeId": "declaration-edge:bcc16ba928d9f18cc8680abc35a4e49ab1d3575435027e254904475882a82c1d",
+          "edgeKind": "declares",
+          "evidencePlane": "specification_coverage",
+          "fromNodeId": "spec:spec.root",
+          "toNodeId": "requirement:REQ-CONSUMER-001"
+        },
+        {
+          "codeNodeId": "code:fixture.symbol",
+          "edgeId": "execution-edge:1d8919618e9976d2a998f166f754fe832c3d439e77e0044b198ea4fbc8269e37",
+          "edgeKind": "observed_by",
+          "evidencePlane": "native_execution_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "execution:fixture.execution"
+        },
+        {
+          "edgeId": "proof-edge:9509e4abb92694c630e25688aa1d3ca91b340a6319c9111d4b3fd3dfcb7ff93b",
+          "edgeKind": "proved_by_candidate",
+          "evidencePlane": "proof_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1"
+        }
+      ],
+      "graphId": "fixture.graph",
+      "graphKind": "proofkit.requirement-traceability-graph",
+      "nodeCount": 10,
+      "nodes": [
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "file",
+          "label": "Code file",
+          "nodeId": "code:fixture.file",
+          "parentNodeId": "code:fixture.module",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "module",
+          "label": "Code module",
+          "nodeId": "code:fixture.module",
+          "parentNodeId": "code:fixture.package",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "package",
+          "label": "Code package",
+          "nodeId": "code:fixture.package",
+          "parentNodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "repository",
+          "label": "Code repository",
+          "nodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "byteEnd": 10,
+          "byteStart": 1,
+          "coordinateUnit": "utf8_byte",
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "source_range",
+          "label": "Code source_range",
+          "nodeId": "code:fixture.source_range",
+          "parentNodeId": "code:fixture.symbol",
+          "rangeVerification": "unverified",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "symbol",
+          "label": "Code symbol",
+          "nodeId": "code:fixture.symbol",
+          "parentNodeId": "code:fixture.file",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go",
+          "symbolId": "symbol.example"
+        },
+        {
+          "authorityClass": "receipt_admitted",
+          "currentnessState": "unverified",
+          "evidencePlane": "native_execution_coverage",
+          "kind": "execution_evidence",
+          "label": "fixture.execution",
+          "nodeId": "execution:fixture.execution",
+          "producerId": "fixture.producer",
+          "sourceId": "fixture.execution",
+          "state": "skipped"
+        },
+        {
+          "evidencePlane": "proof_coverage",
+          "kind": "scenario",
+          "label": "consumer.scenario",
+          "nodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1",
+          "requirementId": "REQ-CONSUMER-001",
+          "scenarioId": "consumer.scenario",
+          "sourceId": "consumer.witness",
+          "witnessId": "consumer.witness",
+          "witnessKind": "contract",
+          "witnessPath": "internal/consumer_test.go"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "requirement",
+          "label": "REQ-CONSUMER-001",
+          "nodeId": "requirement:REQ-CONSUMER-001",
+          "sourceId": "REQ-CONSUMER-001"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "meta_spec",
+          "label": "Root",
+          "nodeId": "spec:spec.root",
+          "sourceId": "spec.root"
+        }
+      ],
+      "nonClaims": [
+        "Traceability graph is a derived projection and does not infer code topology, native execution coverage, proof freshness, merge, release, or rollout readiness.",
+        "Specification, proof, code traceability, and native execution remain distinct evidence planes."
+      ],
+      "schemaVersion": 1,
+      "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4"
+    }
+  },
+  {
+    "case": "unavailable-evidence",
+    "input": {
+      "codeTopology": {
+        "edges": [
+          {
+            "authorityClass": "owner_admitted",
+            "codeNodeId": "fixture.source_range",
+            "currentnessState": "unverified",
+            "evidenceRefs": [
+              "fixture.trace"
+            ],
+            "requirementId": "REQ-CONSUMER-001"
+          }
+        ],
+        "nativeCoverage": [
+          {
+            "authorityClass": "receipt_admitted",
+            "codeNodeId": "fixture.symbol",
+            "currentnessState": "unverified",
+            "evidenceRef": "fixture.execution",
+            "producerId": "fixture.producer",
+            "requirementId": "REQ-CONSUMER-001",
+            "state": "unavailable"
+          }
+        ],
+        "nodes": [
+          {
+            "abstractionLevel": "repository",
+            "currentnessState": "stale",
+            "label": "Code repository",
+            "nodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "package",
+            "currentnessState": "stale",
+            "label": "Code package",
+            "nodeId": "fixture.package",
+            "parentNodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "module",
+            "currentnessState": "stale",
+            "label": "Code module",
+            "nodeId": "fixture.module",
+            "parentNodeId": "fixture.package",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "file",
+            "currentnessState": "stale",
+            "label": "Code file",
+            "nodeId": "fixture.file",
+            "parentNodeId": "fixture.module",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "symbol",
+            "currentnessState": "stale",
+            "label": "Code symbol",
+            "nodeId": "fixture.symbol",
+            "parentNodeId": "fixture.file",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go",
+            "symbolId": "symbol.example"
+          },
+          {
+            "abstractionLevel": "source_range",
+            "byteEnd": 10,
+            "byteStart": 1,
+            "currentnessState": "stale",
+            "label": "Code source_range",
+            "nodeId": "fixture.source_range",
+            "parentNodeId": "fixture.symbol",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          }
+        ]
+      },
+      "context": {
+        "catalogId": "consumer.context",
+        "contextKind": "proofkit.requirement-context",
+        "expectedDigestCoverage": "none",
+        "nonClaims": [
+          "Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+          "Requirement context does not execute native witnesses or prove source freshness after composition.",
+          "Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness."
+        ],
+        "projections": {
+          "proofBinding": {
+            "bindingId": "consumer.proof-bindings",
+            "bindings": [
+              {
+                "commandIds": [
+                  "consumer.test"
+                ],
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "requirementId": "REQ-CONSUMER-001",
+                "scenarioId": "consumer.scenario",
+                "witnessId": "consumer.witness",
+                "witnessKind": "contract",
+                "witnessPath": "internal/consumer_test.go"
+              }
+            ],
+            "nonClaims": [
+              "Fixture proof bindings do not execute witnesses."
+            ],
+            "requirements": [
+              {
+                "claimLevel": "blocking",
+                "nonClaims": [
+                  "Fixture proof requirement does not approve merge."
+                ],
+                "ownerId": "consumer.owner",
+                "proofState": "witness_backed",
+                "requirementId": "REQ-CONSUMER-001",
+                "specPath": "docs/specs/consumer/requirements.v2.json"
+              }
+            ],
+            "schemaVersion": 1,
+            "selection": {
+              "changedPaths": [],
+              "ownerIds": [],
+              "requirementIds": []
+            },
+            "witnessCommands": [
+              {
+                "command": "go test ./internal",
+                "commandId": "consumer.test",
+                "environmentClasses": [
+                  "local-go"
+                ]
+              }
+            ]
+          },
+          "requirementSources": [
+            {
+              "groups": [
+                {
+                  "groupId": "RGRP-CONSUMER",
+                  "members": [
+                    {
+                      "fields": {
+                        "claimLevel": "blocking",
+                        "deferral": null,
+                        "externalNonClaimRefs": [
+                          "NC-CONSUMER-001"
+                        ],
+                        "lifecycle": {
+                          "state": "active"
+                        },
+                        "nonClaimRefs": [],
+                        "nonClaims": [
+                          "This requirement does not approve merge."
+                        ],
+                        "ownerId": "consumer.owner",
+                        "proofBindingRefs": [
+                          "proofkit/requirement-bindings.json"
+                        ],
+                        "riskClass": "high",
+                        "updatePolicy": {
+                          "requiresImpactDeclaration": true,
+                          "requiresProofBindingReview": true,
+                          "reviewOwnerId": "consumer.owner"
+                        }
+                      },
+                      "requirementId": "REQ-CONSUMER-001",
+                      "statementCompletion": "The system preserves semantic identity."
+                    }
+                  ],
+                  "profileId": "",
+                  "sharedPremises": [],
+                  "statementStem": ""
+                }
+              ],
+              "kind": "proofkit.requirement-source",
+              "schemaVersion": 2,
+              "sourceId": "consumer.requirements",
+              "sourceNonClaims": [
+                "Consumer source does not approve merge."
+              ],
+              "specPackagePath": "docs/specs/consumer"
+            }
+          ],
+          "specTree": {
+            "callerAnnotations": [],
+            "edges": [],
+            "nodes": [
+              {
+                "callerAnnotations": [],
+                "displayOrder": 1,
+                "label": "Root",
+                "nodeId": "spec.root",
+                "nodeKind": "meta_spec",
+                "sourceRefs": [
+                  {
+                    "sourceId": "consumer.requirements",
+                    "sourceRefId": "spec.root.requirements",
+                    "sourceRefKind": "source_id",
+                    "sourceRole": "requirements"
+                  }
+                ]
+              }
+            ],
+            "overlays": [],
+            "rootNodeId": "spec.root",
+            "schemaVersion": 2,
+            "treeId": "consumer.spec-tree"
+          }
+        },
+        "schemaVersion": 4,
+        "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4",
+        "sources": [
+          {
+            "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "requirement_source",
+            "nodeId": "spec.root",
+            "path": "docs/specs/consumer/requirements.v2.json",
+            "sourceRef": "consumer.requirements",
+            "sourceRole": "requirements"
+          },
+          {
+            "currentDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "kind": "proof_binding",
+            "path": "proofkit/requirement-bindings.json",
+            "sourceRef": "proof_binding:consumer.proof-bindings"
+          },
+          {
+            "currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "kind": "spec_tree",
+            "path": "proofkit/spec-tree.json",
+            "sourceRef": "spec_tree:consumer.spec-tree"
+          }
+        ]
+      },
+      "graphId": "fixture.graph",
+      "schemaVersion": 3
+    },
+    "output": {
+      "edgeCount": 9,
+      "edges": [
+        {
+          "authorityClass": "owner_admitted",
+          "currentnessState": "unverified",
+          "edgeId": "code-edge:813d88c7c072ee301dbc92e4b4a293dd21e1cae8095d4e0fe261c051812b3e09",
+          "edgeKind": "traced_to",
+          "evidencePlane": "code_traceability",
+          "evidenceRefs": [
+            "fixture.trace"
+          ],
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:31282d738d45343315728326ede3f22f6fbf8b123de8aa060a9de8306c8dd16f",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.package",
+          "toNodeId": "code:fixture.module"
+        },
+        {
+          "edgeId": "code-parent-edge:3c9f580e9470485e077a380528a9bfcd7ed2007a0fabf2a8c9f4327f76f58547",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.repository",
+          "toNodeId": "code:fixture.package"
+        },
+        {
+          "edgeId": "code-parent-edge:5c045582225f1043fe64b6fe3e47b99c8a95954b58bde5d4c6fe351e68059e4c",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.file",
+          "toNodeId": "code:fixture.symbol"
+        },
+        {
+          "edgeId": "code-parent-edge:da84d6e20ead26b5f1ffc3159a2ef20a69ec86cf0cd323ac0240c886c4c5aa98",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.symbol",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:ebfb43296df7752677e284bfd9dbac8c38faece1110bce7ffcb8fd39a2d7f010",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.module",
+          "toNodeId": "code:fixture.file"
+        },
+        {
+          "edgeId": "declaration-edge:bcc16ba928d9f18cc8680abc35a4e49ab1d3575435027e254904475882a82c1d",
+          "edgeKind": "declares",
+          "evidencePlane": "specification_coverage",
+          "fromNodeId": "spec:spec.root",
+          "toNodeId": "requirement:REQ-CONSUMER-001"
+        },
+        {
+          "codeNodeId": "code:fixture.symbol",
+          "edgeId": "execution-edge:1d8919618e9976d2a998f166f754fe832c3d439e77e0044b198ea4fbc8269e37",
+          "edgeKind": "observed_by",
+          "evidencePlane": "native_execution_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "execution:fixture.execution"
+        },
+        {
+          "edgeId": "proof-edge:9509e4abb92694c630e25688aa1d3ca91b340a6319c9111d4b3fd3dfcb7ff93b",
+          "edgeKind": "proved_by_candidate",
+          "evidencePlane": "proof_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1"
+        }
+      ],
+      "graphId": "fixture.graph",
+      "graphKind": "proofkit.requirement-traceability-graph",
+      "nodeCount": 10,
+      "nodes": [
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "file",
+          "label": "Code file",
+          "nodeId": "code:fixture.file",
+          "parentNodeId": "code:fixture.module",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "module",
+          "label": "Code module",
+          "nodeId": "code:fixture.module",
+          "parentNodeId": "code:fixture.package",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "package",
+          "label": "Code package",
+          "nodeId": "code:fixture.package",
+          "parentNodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "repository",
+          "label": "Code repository",
+          "nodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "byteEnd": 10,
+          "byteStart": 1,
+          "coordinateUnit": "utf8_byte",
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "source_range",
+          "label": "Code source_range",
+          "nodeId": "code:fixture.source_range",
+          "parentNodeId": "code:fixture.symbol",
+          "rangeVerification": "unverified",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "stale",
+          "evidencePlane": "code_traceability",
+          "kind": "symbol",
+          "label": "Code symbol",
+          "nodeId": "code:fixture.symbol",
+          "parentNodeId": "code:fixture.file",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go",
+          "symbolId": "symbol.example"
+        },
+        {
+          "authorityClass": "receipt_admitted",
+          "currentnessState": "unverified",
+          "evidencePlane": "native_execution_coverage",
+          "kind": "execution_evidence",
+          "label": "fixture.execution",
+          "nodeId": "execution:fixture.execution",
+          "producerId": "fixture.producer",
+          "sourceId": "fixture.execution",
+          "state": "unavailable"
+        },
+        {
+          "evidencePlane": "proof_coverage",
+          "kind": "scenario",
+          "label": "consumer.scenario",
+          "nodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1",
+          "requirementId": "REQ-CONSUMER-001",
+          "scenarioId": "consumer.scenario",
+          "sourceId": "consumer.witness",
+          "witnessId": "consumer.witness",
+          "witnessKind": "contract",
+          "witnessPath": "internal/consumer_test.go"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "requirement",
+          "label": "REQ-CONSUMER-001",
+          "nodeId": "requirement:REQ-CONSUMER-001",
+          "sourceId": "REQ-CONSUMER-001"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "meta_spec",
+          "label": "Root",
+          "nodeId": "spec:spec.root",
+          "sourceId": "spec.root"
+        }
+      ],
+      "nonClaims": [
+        "Traceability graph is a derived projection and does not infer code topology, native execution coverage, proof freshness, merge, release, or rollout readiness.",
+        "Specification, proof, code traceability, and native execution remain distinct evidence planes."
+      ],
+      "schemaVersion": 1,
+      "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4"
+    }
+  },
+  {
+    "case": "int64-range",
+    "input": {
+      "codeTopology": {
+        "edges": [
+          {
+            "authorityClass": "owner_admitted",
+            "codeNodeId": "fixture.source_range",
+            "currentnessState": "unverified",
+            "evidenceRefs": [
+              "fixture.trace"
+            ],
+            "requirementId": "REQ-CONSUMER-001"
+          }
+        ],
+        "nativeCoverage": [
+          {
+            "authorityClass": "receipt_admitted",
+            "codeNodeId": "fixture.symbol",
+            "currentnessState": "unverified",
+            "evidenceRef": "fixture.execution",
+            "producerId": "fixture.producer",
+            "requirementId": "REQ-CONSUMER-001",
+            "state": "passed"
+          }
+        ],
+        "nodes": [
+          {
+            "abstractionLevel": "repository",
+            "currentnessState": "current",
+            "label": "Code repository",
+            "nodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "package",
+            "currentnessState": "current",
+            "label": "Code package",
+            "nodeId": "fixture.package",
+            "parentNodeId": "fixture.repository",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "module",
+            "currentnessState": "current",
+            "label": "Code module",
+            "nodeId": "fixture.module",
+            "parentNodeId": "fixture.package",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "file",
+            "currentnessState": "current",
+            "label": "Code file",
+            "nodeId": "fixture.file",
+            "parentNodeId": "fixture.module",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          },
+          {
+            "abstractionLevel": "symbol",
+            "currentnessState": "current",
+            "label": "Code symbol",
+            "nodeId": "fixture.symbol",
+            "parentNodeId": "fixture.file",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go",
+            "symbolId": "symbol.example"
+          },
+          {
+            "abstractionLevel": "source_range",
+            "byteEnd": 9007199254740995,
+            "byteStart": 9007199254740993,
+            "currentnessState": "current",
+            "label": "Code source_range",
+            "nodeId": "fixture.source_range",
+            "parentNodeId": "fixture.symbol",
+            "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+            "sourcePath": "src/example.go"
+          }
+        ]
+      },
+      "context": {
+        "catalogId": "consumer.context",
+        "contextKind": "proofkit.requirement-context",
+        "expectedDigestCoverage": "none",
+        "nonClaims": [
+          "Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+          "Requirement context does not execute native witnesses or prove source freshness after composition.",
+          "Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness."
+        ],
+        "projections": {
+          "proofBinding": {
+            "bindingId": "consumer.proof-bindings",
+            "bindings": [
+              {
+                "commandIds": [
+                  "consumer.test"
+                ],
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "requirementId": "REQ-CONSUMER-001",
+                "scenarioId": "consumer.scenario",
+                "witnessId": "consumer.witness",
+                "witnessKind": "contract",
+                "witnessPath": "internal/consumer_test.go"
+              }
+            ],
+            "nonClaims": [
+              "Fixture proof bindings do not execute witnesses."
+            ],
+            "requirements": [
+              {
+                "claimLevel": "blocking",
+                "nonClaims": [
+                  "Fixture proof requirement does not approve merge."
+                ],
+                "ownerId": "consumer.owner",
+                "proofState": "witness_backed",
+                "requirementId": "REQ-CONSUMER-001",
+                "specPath": "docs/specs/consumer/requirements.v2.json"
+              }
+            ],
+            "schemaVersion": 1,
+            "selection": {
+              "changedPaths": [],
+              "ownerIds": [],
+              "requirementIds": []
+            },
+            "witnessCommands": [
+              {
+                "command": "go test ./internal",
+                "commandId": "consumer.test",
+                "environmentClasses": [
+                  "local-go"
+                ]
+              }
+            ]
+          },
+          "requirementSources": [
+            {
+              "groups": [
+                {
+                  "groupId": "RGRP-CONSUMER",
+                  "members": [
+                    {
+                      "fields": {
+                        "claimLevel": "blocking",
+                        "deferral": null,
+                        "externalNonClaimRefs": [
+                          "NC-CONSUMER-001"
+                        ],
+                        "lifecycle": {
+                          "state": "active"
+                        },
+                        "nonClaimRefs": [],
+                        "nonClaims": [
+                          "This requirement does not approve merge."
+                        ],
+                        "ownerId": "consumer.owner",
+                        "proofBindingRefs": [
+                          "proofkit/requirement-bindings.json"
+                        ],
+                        "riskClass": "high",
+                        "updatePolicy": {
+                          "requiresImpactDeclaration": true,
+                          "requiresProofBindingReview": true,
+                          "reviewOwnerId": "consumer.owner"
+                        }
+                      },
+                      "requirementId": "REQ-CONSUMER-001",
+                      "statementCompletion": "The system preserves semantic identity."
+                    }
+                  ],
+                  "profileId": "",
+                  "sharedPremises": [],
+                  "statementStem": ""
+                }
+              ],
+              "kind": "proofkit.requirement-source",
+              "schemaVersion": 2,
+              "sourceId": "consumer.requirements",
+              "sourceNonClaims": [
+                "Consumer source does not approve merge."
+              ],
+              "specPackagePath": "docs/specs/consumer"
+            }
+          ],
+          "specTree": {
+            "callerAnnotations": [],
+            "edges": [],
+            "nodes": [
+              {
+                "callerAnnotations": [],
+                "displayOrder": 1,
+                "label": "Root",
+                "nodeId": "spec.root",
+                "nodeKind": "meta_spec",
+                "sourceRefs": [
+                  {
+                    "sourceId": "consumer.requirements",
+                    "sourceRefId": "spec.root.requirements",
+                    "sourceRefKind": "source_id",
+                    "sourceRole": "requirements"
+                  }
+                ]
+              }
+            ],
+            "overlays": [],
+            "rootNodeId": "spec.root",
+            "schemaVersion": 2,
+            "treeId": "consumer.spec-tree"
+          }
+        },
+        "schemaVersion": 4,
+        "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4",
+        "sources": [
+          {
+            "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "requirement_source",
+            "nodeId": "spec.root",
+            "path": "docs/specs/consumer/requirements.v2.json",
+            "sourceRef": "consumer.requirements",
+            "sourceRole": "requirements"
+          },
+          {
+            "currentDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "kind": "proof_binding",
+            "path": "proofkit/requirement-bindings.json",
+            "sourceRef": "proof_binding:consumer.proof-bindings"
+          },
+          {
+            "currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "kind": "spec_tree",
+            "path": "proofkit/spec-tree.json",
+            "sourceRef": "spec_tree:consumer.spec-tree"
+          }
+        ]
+      },
+      "graphId": "fixture.graph",
+      "schemaVersion": 3
+    },
+    "output": {
+      "edgeCount": 9,
+      "edges": [
+        {
+          "authorityClass": "owner_admitted",
+          "currentnessState": "unverified",
+          "edgeId": "code-edge:813d88c7c072ee301dbc92e4b4a293dd21e1cae8095d4e0fe261c051812b3e09",
+          "edgeKind": "traced_to",
+          "evidencePlane": "code_traceability",
+          "evidenceRefs": [
+            "fixture.trace"
+          ],
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:31282d738d45343315728326ede3f22f6fbf8b123de8aa060a9de8306c8dd16f",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.package",
+          "toNodeId": "code:fixture.module"
+        },
+        {
+          "edgeId": "code-parent-edge:3c9f580e9470485e077a380528a9bfcd7ed2007a0fabf2a8c9f4327f76f58547",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.repository",
+          "toNodeId": "code:fixture.package"
+        },
+        {
+          "edgeId": "code-parent-edge:5c045582225f1043fe64b6fe3e47b99c8a95954b58bde5d4c6fe351e68059e4c",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.file",
+          "toNodeId": "code:fixture.symbol"
+        },
+        {
+          "edgeId": "code-parent-edge:da84d6e20ead26b5f1ffc3159a2ef20a69ec86cf0cd323ac0240c886c4c5aa98",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.symbol",
+          "toNodeId": "code:fixture.source_range"
+        },
+        {
+          "edgeId": "code-parent-edge:ebfb43296df7752677e284bfd9dbac8c38faece1110bce7ffcb8fd39a2d7f010",
+          "edgeKind": "contains",
+          "evidencePlane": "code_traceability",
+          "fromNodeId": "code:fixture.module",
+          "toNodeId": "code:fixture.file"
+        },
+        {
+          "edgeId": "declaration-edge:bcc16ba928d9f18cc8680abc35a4e49ab1d3575435027e254904475882a82c1d",
+          "edgeKind": "declares",
+          "evidencePlane": "specification_coverage",
+          "fromNodeId": "spec:spec.root",
+          "toNodeId": "requirement:REQ-CONSUMER-001"
+        },
+        {
+          "codeNodeId": "code:fixture.symbol",
+          "edgeId": "execution-edge:1d8919618e9976d2a998f166f754fe832c3d439e77e0044b198ea4fbc8269e37",
+          "edgeKind": "observed_by",
+          "evidencePlane": "native_execution_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "execution:fixture.execution"
+        },
+        {
+          "edgeId": "proof-edge:9509e4abb92694c630e25688aa1d3ca91b340a6319c9111d4b3fd3dfcb7ff93b",
+          "edgeKind": "proved_by_candidate",
+          "evidencePlane": "proof_coverage",
+          "fromNodeId": "requirement:REQ-CONSUMER-001",
+          "toNodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1"
+        }
+      ],
+      "graphId": "fixture.graph",
+      "graphKind": "proofkit.requirement-traceability-graph",
+      "nodeCount": 10,
+      "nodes": [
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "file",
+          "label": "Code file",
+          "nodeId": "code:fixture.file",
+          "parentNodeId": "code:fixture.module",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "module",
+          "label": "Code module",
+          "nodeId": "code:fixture.module",
+          "parentNodeId": "code:fixture.package",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "package",
+          "label": "Code package",
+          "nodeId": "code:fixture.package",
+          "parentNodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "repository",
+          "label": "Code repository",
+          "nodeId": "code:fixture.repository",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "byteEnd": 9007199254740995,
+          "byteStart": 9007199254740993,
+          "coordinateUnit": "utf8_byte",
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "source_range",
+          "label": "Code source_range",
+          "nodeId": "code:fixture.source_range",
+          "parentNodeId": "code:fixture.symbol",
+          "rangeVerification": "unverified",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go"
+        },
+        {
+          "currentnessState": "current",
+          "evidencePlane": "code_traceability",
+          "kind": "symbol",
+          "label": "Code symbol",
+          "nodeId": "code:fixture.symbol",
+          "parentNodeId": "code:fixture.file",
+          "sourceDigest": "sha256:71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73",
+          "sourceId": "src/example.go",
+          "symbolId": "symbol.example"
+        },
+        {
+          "authorityClass": "receipt_admitted",
+          "currentnessState": "unverified",
+          "evidencePlane": "native_execution_coverage",
+          "kind": "execution_evidence",
+          "label": "fixture.execution",
+          "nodeId": "execution:fixture.execution",
+          "producerId": "fixture.producer",
+          "sourceId": "fixture.execution",
+          "state": "passed"
+        },
+        {
+          "evidencePlane": "proof_coverage",
+          "kind": "scenario",
+          "label": "consumer.scenario",
+          "nodeId": "proof:aa2d517eed2f949bc1627664c6c08ad9372f5ca369b5179ff780b374450b4bf1",
+          "requirementId": "REQ-CONSUMER-001",
+          "scenarioId": "consumer.scenario",
+          "sourceId": "consumer.witness",
+          "witnessId": "consumer.witness",
+          "witnessKind": "contract",
+          "witnessPath": "internal/consumer_test.go"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "requirement",
+          "label": "REQ-CONSUMER-001",
+          "nodeId": "requirement:REQ-CONSUMER-001",
+          "sourceId": "REQ-CONSUMER-001"
+        },
+        {
+          "evidencePlane": "specification_coverage",
+          "kind": "meta_spec",
+          "label": "Root",
+          "nodeId": "spec:spec.root",
+          "sourceId": "spec.root"
+        }
+      ],
+      "nonClaims": [
+        "Traceability graph is a derived projection and does not infer code topology, native execution coverage, proof freshness, merge, release, or rollout readiness.",
+        "Specification, proof, code traceability, and native execution remain distinct evidence planes."
+      ],
+      "schemaVersion": 1,
+      "snapshotId": "sha256:0a7d780b2e17b1958bb9f7faf2c67155877f73cbd829bf45ae5aa96e23adc0a4"
+    }
+  }
+]

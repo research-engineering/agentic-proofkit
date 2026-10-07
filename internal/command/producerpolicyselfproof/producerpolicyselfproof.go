@@ -12,6 +12,13 @@ import (
 
 const reportKind = "proofkit.producer-policy-self-proof"
 
+const (
+	boundaryRuleID      = "proofkit.producer-policy-self-proof.boundary"
+	boundaryRuleMessage = "proofkit validates caller-provided producer-policy self-proof facts without authenticating producers or approving merge"
+	receiptRuleID       = "proofkit.producer-policy-self-proof.receipts"
+	receiptRuleMessage  = "merge-obligation receipt refs must not use producer tuples newly admitted by the same producer-policy change"
+)
+
 var changeKinds = []string{"add_producer", "expand_environment_class", "expand_receipt_kind", "promote_to_merge_satisfying"}
 var changeKindSet = toSet(changeKinds)
 
@@ -88,7 +95,7 @@ func Build(raw any) (report.Record, int, error) {
 	if err != nil {
 		return report.Record{}, 1, err
 	}
-	newlyMergeSatisfyingTupleKeys := map[string]struct{}{}
+	newlyMergeSatisfyingTupleKeys := map[producerTuple]struct{}{}
 	for _, change := range input.AdmissionChanges {
 		if change.ToAdmissionLevel == "merge_satisfying" {
 			newlyMergeSatisfyingTupleKeys[admissionTupleKey(change)] = struct{}{}
@@ -441,7 +448,7 @@ func admitReceiptRef(record map[string]any, policyChangeID string) (receiptRef, 
 	}, nil
 }
 
-func selfProofFailures(input admittedInput, newlyMergeSatisfyingTupleKeys map[string]struct{}) []string {
+func selfProofFailures(input admittedInput, newlyMergeSatisfyingTupleKeys map[producerTuple]struct{}) []string {
 	failures := []string{}
 	if input.BaselinePolicyDigest == input.ProposedPolicyDigest && len(input.AdmissionChanges) > 0 {
 		failures = append(failures, "unchanged producer policy declares admission changes")
@@ -469,7 +476,7 @@ func selfProofFailures(input admittedInput, newlyMergeSatisfyingTupleKeys map[st
 		}
 		key := receiptTupleKey(receipt)
 		if _, ok := newlyMergeSatisfyingTupleKeys[key]; ok {
-			failures = append(failures, fmt.Sprintf("merge-obligation receipt %s uses newly admitted producer tuple: %s", receipt.ReceiptID, key))
+			failures = append(failures, fmt.Sprintf("merge-obligation receipt %s uses newly admitted producer tuple: %s", receipt.ReceiptID, join(key[:], "|")))
 		}
 	}
 	return failures
@@ -478,15 +485,15 @@ func selfProofFailures(input admittedInput, newlyMergeSatisfyingTupleKeys map[st
 func ruleResults(failures []string) []report.RuleResult {
 	return []report.RuleResult{
 		{
-			RuleID:      "proofkit.producer-policy-self-proof.boundary",
+			RuleID:      boundaryRuleID,
 			Status:      "passed",
-			Message:     "proofkit validates caller-provided producer-policy self-proof facts without authenticating producers or approving merge",
+			Message:     boundaryRuleMessage,
 			Diagnostics: []report.Diagnostic{},
 		},
 		{
-			RuleID:      "proofkit.producer-policy-self-proof.receipts",
+			RuleID:      receiptRuleID,
 			Status:      statusFailedIf(len(failures) > 0),
-			Message:     "merge-obligation receipt refs must not use producer tuples newly admitted by the same producer-policy change",
+			Message:     receiptRuleMessage,
 			Diagnostics: failureDiagnostics(failures),
 		},
 	}
@@ -520,8 +527,10 @@ func failureDiagnostics(failures []string) []report.Diagnostic {
 	return diagnostics
 }
 
-func admissionTupleKey(change admissionChange) string {
-	return join([]string{
+type producerTuple [8]string
+
+func admissionTupleKey(change admissionChange) producerTuple {
+	return producerTuple{
 		change.ProducerID,
 		change.ProducerClass,
 		change.ProofClass,
@@ -530,11 +539,11 @@ func admissionTupleKey(change admissionChange) string {
 		change.ProvenanceRuleRef,
 		change.ArtifactRetentionRuleRef,
 		change.ToAdmissionLevel,
-	}, "|")
+	}
 }
 
-func receiptTupleKey(receipt receiptRef) string {
-	return join([]string{
+func receiptTupleKey(receipt receiptRef) producerTuple {
+	return producerTuple{
 		receipt.ProducerID,
 		receipt.ProducerClass,
 		receipt.ProofClass,
@@ -543,7 +552,7 @@ func receiptTupleKey(receipt receiptRef) string {
 		receipt.ProvenanceRuleRef,
 		receipt.ArtifactRetentionRuleRef,
 		receipt.ProducerAdmissionClass,
-	}, "|")
+	}
 }
 
 func sortedRuleIDs(raw any, context string, allowEmpty bool) ([]string, error) {

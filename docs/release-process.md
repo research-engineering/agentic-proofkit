@@ -90,6 +90,15 @@ publishes them through Trusted Publisher or records an exact existing-byte
 match, the repository-owned PyPI registry capture tool verifies filename, tag,
 URL, and SHA-256 identity against the candidate wheel set, and the release
 manifest binds that registry identity to the retained publication-mode sidecar.
+
+The source-checkout root-package verifier bounds its first archive read and tar
+inventory, not only later member reads: compressed input is at most 128 MiB,
+expanded traversal at most 512 MiB, and the logical entry count at most 4096.
+Existing per-entry path, type, mode and size rules still apply before an entry's
+body is consumed. Extension headers and padding count toward expanded traversal.
+These are local verifier resource limits, not registry/provider guarantees;
+revising them requires a qualified legitimate artifact and new boundary evidence.
+
 When a registry channel records `published_by_workflow` or `mixed`, the release
 manifest must also retain the Trusted Publisher identity tuple: provider,
 registry, project name, repository, exact `refs/tags/v<version>` workflow ref,

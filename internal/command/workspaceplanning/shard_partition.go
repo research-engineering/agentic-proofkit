@@ -6,6 +6,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
+const (
+	maximumShardTotal     = 1024
+	maximumShardWorkItems = 1 << 20
+	maximumShardTextBytes = 16 << 20
+)
+
 func BuildShardPartition(raw any) (map[string]any, int, error) {
 	input, err := admitShardInput(raw)
 	if err != nil {
@@ -103,11 +109,18 @@ func admitShardInput(raw any) (shardInput, error) {
 	if !ok {
 		return shardInput{}, fmt.Errorf("workspace shard partition input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"packages", "roots", "schemaVersion", "shardTotal"}, "workspace shard partition input"); err != nil {
+	if err := admit.KnownKeys(record, shardInputKeys, "workspace shard partition input"); err != nil {
 		return shardInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
 		return shardInput{}, fmt.Errorf("workspace shard partition schemaVersion must be 1")
+	}
+	shardTotal, err := admit.PositiveInteger(require(record, "shardTotal"), "workspace shard total")
+	if err != nil {
+		return shardInput{}, err
+	}
+	if shardTotal > maximumShardTotal {
+		return shardInput{}, fmt.Errorf("workspace shard total exceeds limit %d", maximumShardTotal)
 	}
 	packages, err := dependencyNodeInputs(require(record, "packages"))
 	if err != nil {
@@ -117,11 +130,46 @@ func admitShardInput(raw any) (shardInput, error) {
 	if err != nil {
 		return shardInput{}, err
 	}
-	shardTotal, err := admit.PositiveInteger(require(record, "shardTotal"), "workspace shard total")
-	if err != nil {
+	input := shardInput{Packages: packages, Roots: roots, ShardTotal: shardTotal}
+	if err := admitShardExpansion(input); err != nil {
 		return shardInput{}, err
 	}
-	return shardInput{Packages: packages, Roots: roots, ShardTotal: shardTotal}, nil
+	return input, nil
+}
+
+func admitShardExpansion(input shardInput) error {
+	// Division before subtraction bounds expanded occurrences without host-int
+	// multiplication. The fixed per-shard record is one work item even when empty.
+	work := maximumShardWorkItems/input.ShardTotal - 1
+	text := maximumShardTextBytes / input.ShardTotal
+	chargeText := func(value string) bool {
+		if len(value) > text {
+			return false
+		}
+		text -= len(value)
+		return true
+	}
+	for _, nodes := range [][]dependencyNode{input.Packages, input.Roots} {
+		for _, node := range nodes {
+			if work == 0 {
+				return fmt.Errorf("workspace shard expansion exceeds work-item limit %d", maximumShardWorkItems)
+			}
+			work--
+			if len(node.WorkspaceDependencies) > work {
+				return fmt.Errorf("workspace shard expansion exceeds work-item limit %d", maximumShardWorkItems)
+			}
+			work -= len(node.WorkspaceDependencies)
+			if !chargeText(node.Name) {
+				return fmt.Errorf("workspace shard expansion exceeds text-byte limit %d", maximumShardTextBytes)
+			}
+			for _, dependency := range node.WorkspaceDependencies {
+				if !chargeText(dependency) {
+					return fmt.Errorf("workspace shard expansion exceeds text-byte limit %d", maximumShardTextBytes)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func selectShardRoots(roots []dependencyNode, index int, total int) ([]dependencyNode, error) {

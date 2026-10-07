@@ -11,6 +11,12 @@ import (
 
 const reportKind = "proofkit.migration-parity-admission"
 
+const (
+	recordRulePrefix = "proofkit.migration-parity-admission.record."
+	admittedMessage  = "caller-declared migration parity claim is admitted"
+	rejectedMessage  = "caller-declared migration parity claim is not admitted"
+)
+
 var equivalenceKinds = []string{
 	"agent_envelope_projection",
 	"command_ref_projection",
@@ -454,15 +460,15 @@ func ruleResults(diagnostics []parityDiagnostic) []report.RuleResult {
 	results := make([]report.RuleResult, 0, len(diagnostics))
 	for _, diagnostic := range diagnostics {
 		status := "passed"
-		message := "caller-declared migration parity claim is admitted"
+		message := admittedMessage
 		ruleDiagnostics := []report.Diagnostic{}
 		if len(diagnostic.Findings) > 0 {
 			status = "failed"
-			message = "caller-declared migration parity claim is not admitted"
+			message = rejectedMessage
 			ruleDiagnostics = []report.Diagnostic{{Key: "findings", Value: admit.StringSliceToAny(diagnostic.Findings)}}
 		}
 		results = append(results, report.RuleResult{
-			RuleID:      "proofkit.migration-parity-admission.record." + diagnostic.EvidenceID,
+			RuleID:      recordRulePrefix + diagnostic.EvidenceID,
 			Status:      status,
 			Message:     message,
 			Diagnostics: ruleDiagnostics,

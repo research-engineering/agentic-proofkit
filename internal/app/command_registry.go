@@ -41,6 +41,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/command/scaffoldprofileplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/secretscan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/selfcheck"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specoverviewclaims"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
@@ -138,7 +139,7 @@ func reportOutput(builder func(any) (report.Record, int, error)) genericCommandB
 }
 
 func selfCheckOutput(input any) (any, int, error) {
-	return report.BuildSelfCheckReport(input).JSONValue(), 0, nil
+	return selfcheck.Build(input).JSONValue(), 0, nil
 }
 
 func mustGenericCommandBuilders(builders map[string]genericCommandBuilder) map[string]genericCommandBuilder {

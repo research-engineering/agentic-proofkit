@@ -14,6 +14,9 @@ assert.ok(definition, "compact structural definition is published");
 const schema = definition.fieldTree.variants[0].schema;
 const ajv = new Ajv2020({strict: false, allErrors: false, validateFormats: false});
 const validate = ajv.compile(schema);
+const priorValidate = process.env.PROOFKIT_COMPACT_SCHEMA_BASELINE
+  ? new Ajv2020({strict: false, validateFormats: false}).compile(JSON.parse(readFileSync(process.env.PROOFKIT_COMPACT_SCHEMA_BASELINE, "utf8")))
+  : null;
 // Historical wire bytes are independent of the current schema generator.
 const observations = JSON.parse(readFileSync(new URL("internal/app/testdata/compact-v2-wire-observations.json", root), "utf8"));
 const baseline = observations.observations.find(value => value.surface === "compact-contract" && value.direction === "input").document;
@@ -49,6 +52,7 @@ function native(input, accepted, label) {
 
 function pair(input, accepted, label) {
   assert.equal(validate(input), accepted, `${label}: ${ajv.errorsText(validate.errors)}`);
+  if (priorValidate) assert.equal(priorValidate(input), accepted, `${label}: prior structural domain differs`);
   native(input, accepted, label);
 }
 

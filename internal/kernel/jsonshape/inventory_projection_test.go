@@ -69,6 +69,46 @@ func TestTrimSpacePatternClassMatchesNativeWhitespace(t *testing.T) {
 	}
 }
 
+func TestObjectFromKeysPreservesOptionalInventory(t *testing.T) {
+	names := []string{"value", "id", "nullable"}
+	fields := map[string]Shape{"id": String(), "value": String(), "nullable": Nullable(String())}
+	optional := []string{"value", "nullable"}
+	shape := ObjectFromKeys(names, fields, optional...)
+	names[0], fields["id"], optional[0] = "changed", Boolean(), "id"
+	if !reflect.DeepEqual(shape.JSONSchema()["required"], []any{"id"}) {
+		t.Fatal("optional subset changed the required inventory")
+	}
+	for _, value := range []map[string]any{
+		{"id": "record"},
+		{"id": "record", "value": "", "nullable": nil},
+		{"id": "record", "value": "text", "nullable": "text"},
+	} {
+		admitted, err := shape.Admit(value, "object")
+		if err != nil || !reflect.DeepEqual(admitted, value) {
+			t.Fatalf("valid optional object changed: %v", err)
+		}
+	}
+	for _, value := range []map[string]any{
+		{}, {"value": "text"}, {"id": nil}, {"id": false},
+		{"id": "record", "value": nil}, {"id": "record", "nullable": false},
+		{"id": "record", "extra": nil},
+	} {
+		if _, err := shape.Admit(value, "object"); err == nil {
+			t.Fatal("invalid optional object admitted")
+		}
+	}
+	for _, optional := range [][]string{{"unknown"}, {"value", "value"}, {""}} {
+		t.Run(strings.Join(optional, "/"), func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("invalid optional declaration did not fail closed")
+				}
+			}()
+			ObjectFromKeys([]string{"value"}, map[string]Shape{"value": String()}, optional...)
+		})
+	}
+}
+
 func TestBoundedStringGrammarPreservesCodePointLimits(t *testing.T) {
 	shape := BoundedStringGrammar(`[\s\S]+`, 2)
 	for _, value := range []string{"a", "ab", "\u00e9\U0001f600"} {

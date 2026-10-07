@@ -45,7 +45,13 @@ func (dialect Dialect) Key(value string) (string, error) {
 		// Frozen Fold(NFC) includes the old stream-safe normalization behavior.
 		return cases.Fold().String(norm.NFC.String(value)), nil
 	case CanonicalCaseless:
-		return canonicalNFD(defaultCaseFold(canonicalNFD(value))), nil
+		for index := 0; index < len(value); index++ {
+			if value[index] >= utf8.RuneSelf {
+				return canonicalNFD(defaultCaseFold(canonicalNFD(value))), nil
+			}
+		}
+		// ASCII is already NFD; default case folding changes only A-Z.
+		return strings.ToLower(value), nil
 	default:
 		return "", fmt.Errorf("path identity dialect is invalid")
 	}

@@ -73,6 +73,12 @@ func TestNativeStructureConsumersAreClosed(t *testing.T) {
 				commands = append(commands, map[string]any{"command": name, "inputContract": map[string]any{"rootDefinitionRef": owner.id}})
 			}
 			definitions := map[string]definitionRecord{owner.id: {ID: owner.id}}
+			for _, raw := range commands {
+				command := raw.(map[string]any)
+				id := "proofkit." + command["command"].(string) + ".output.v1.json-schema"
+				command["outputContract"] = map[string]any{"rootDefinitionRef": id}
+				definitions[id] = definitionRecord{ID: id}
+			}
 			switch mutation {
 			case "missing":
 				commands = commands[1:]
@@ -256,6 +262,18 @@ func writeNativeStructureFixture(t *testing.T) string {
 			binding["contractId"] = "proofkit." + name + "." + direction + ".v1"
 			if direction == "input" {
 				binding["rootDefinitionRef"] = owner.predecessors[0]
+			} else {
+				outputOwner, ok := nativeStructureOwner("proofkit." + name + ".output.v1.json-schema")
+				if !ok {
+					t.Fatal("missing binding projection output owner")
+				}
+				definition, err := outputOwner.definition()
+				if err != nil {
+					t.Fatal(err)
+				}
+				contract["contractDefinitions"] = append(contract["contractDefinitions"].([]any), definition)
+				binding["rootDefinitionRef"] = outputOwner.id
+				binding["compatibilitySummary"] = outputOwner.summary(json.Number("1"))
 			}
 			command[direction+"Contract"] = binding
 		}

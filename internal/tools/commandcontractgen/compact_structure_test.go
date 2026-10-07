@@ -67,7 +67,7 @@ func TestCompactChildBindingsHaveExactIndependentConsumers(t *testing.T) {
 		{"requirement-browser-server", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "01-coverage-compact"},
 		{"requirement-coverage-input-compose", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
 		{"requirement-coverage-input-compose", "output", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
-		{"requirement-coverage-view", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "01-coverage-compact"},
+		{"requirement-coverage-view", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
 		{"requirement-impact-input-compose", "input", compactV2DefinitionID, [][]string{{"baseCompactProofContract"}, {"currentCompactProofContract"}}, ""},
 		{"test-evidence-inventory", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "03-proof-binding-derived"},
 		{"requirement-proof-source-set", "output", compactV2DefinitionID, [][]string{{"resolverInput"}}, ""},
@@ -88,8 +88,12 @@ func TestCompactChildBindingsHaveExactIndependentConsumers(t *testing.T) {
 	for _, row := range want {
 		direction := commandAt(contract, row.command)[row.direction+"Contract"].(map[string]any)
 		root := definitions[direction["rootDefinitionRef"].(string)]
-		if root.Content["fieldTree"].(map[string]any)["kind"] != "root_shape_only" {
-			t.Fatalf("%s parent was promoted to full structural closure", row.command)
+		wantKind := "root_shape_only"
+		if slices.Contains([]string{"requirement-impact-input-compose", "requirement-coverage-input-compose", "requirement-coverage-view", "test-evidence-inventory"}, row.command) {
+			wantKind = "structural_json_schema"
+		}
+		if root.Content["fieldTree"].(map[string]any)["kind"] != wantKind {
+			t.Fatalf("%s parent structure changed outside its declared closure", row.command)
 		}
 		bindings := direction["childDefinitionBindings"].([]any)
 		for index, raw := range bindings {
