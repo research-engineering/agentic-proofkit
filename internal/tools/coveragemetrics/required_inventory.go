@@ -14,6 +14,16 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-QUALITY-002", "proofkit.supply-chain-quality.release-sbom-build-info-admission"}: {
+			witnessPath: "internal/tools/releasesbom/main_test.go",
+			commandIDs:  []string{"proofkit.go-test", "proofkit.release-sbom"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestAdmitReleaseFileRejectsUnreadableRequiredBinary", "TestBinaryRuntimeModulesRejectsUnreadableBuildInfo", "TestDependencyFreeGoBinaryBuildInfo", "TestReleaseFileEvidenceAllowsNonbinaryWithoutBuildInfo"},
+		},
+		{"REQ-PROOFKIT-QUALITY-002", "proofkit.supply-chain-quality.release-sbom-build-info-framing"}: {
+			witnessPath: "internal/tools/releasesbom/buildinfo_test.go",
+			commandIDs:  []string{"proofkit.go-test", "proofkit.release-sbom"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestBinaryBuildInfoRejectsSilentMetadataLoss", "TestBinaryBuildInfoReleaseTargetMatrix"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.impact-schema-independent-runtime"}: {
 			witnessPath: "scripts/impact-structure.test.mjs",
 			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},

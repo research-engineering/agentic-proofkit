@@ -1,12 +1,21 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
@@ -76,7 +85,7 @@ func TestArtifactSpecificRuntimeEdgesAndExcludedInventory(t *testing.T) {
 		t.Fatalf("linux runtime edges = %v, want [%s]", got, runtimeRef)
 	}
 	if got := dependencyByRef[artifacts[1].BinaryRef]; len(got) != 0 {
-		t.Fatalf("stripped binary runtime edges = %v, want none", got)
+		t.Fatalf("dependency-free binary runtime edges = %v, want none", got)
 	}
 	for _, forbiddenRef := range []string{
 		"pkg:npm/@research-engineering/agentic-proofkit@1.2.3",
@@ -89,6 +98,149 @@ func TestArtifactSpecificRuntimeEdgesAndExcludedInventory(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestBinaryRuntimeModulesRejectsUnreadableBuildInfo(t *testing.T) {
+	for _, item := range []struct {
+		name   string
+		reader io.ReaderAt
+	}{
+		{name: "empty", reader: bytes.NewReader(nil)},
+		{name: "non-Go", reader: strings.NewReader("opaque artifact content")},
+		{name: "reader failure", reader: failingBuildInfoReader{}},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			modules, err := binaryRuntimeModules(item.reader)
+			assertUnreadableBuildInfo(t, err)
+			if modules != nil {
+				t.Fatalf("binaryRuntimeModules() modules=%v, want no admitted inventory", modules)
+			}
+		})
+	}
+}
+
+func TestAdmitReleaseFileRejectsUnreadableRequiredBinary(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "agentic-proofkit")
+	writeFile(t, path, "opaque artifact content")
+	component, modules, isBinary, err := admitReleaseFile(packageJSON{}, path, map[string]struct{}{path: {}}, nil)
+	assertUnreadableBuildInfo(t, err)
+	if !reflect.DeepEqual(component, cyclonedxComponent{}) || modules != nil || isBinary {
+		t.Fatalf("admitReleaseFile() returned partial evidence: %#v, %v, %v", component, modules, isBinary)
+	}
+}
+
+func TestReleaseFileEvidenceAllowsNonbinaryWithoutBuildInfo(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "package.tgz")
+	content := []byte("opaque artifact content")
+	writeFile(t, path, string(content))
+	components, inventories, err := releaseFileEvidence(packageJSON{}, []string{path}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(components) != 1 || len(inventories) != 0 {
+		t.Fatalf("releaseFileEvidence() components=%v, inventories=%v, want one nonbinary subject", components, inventories)
+	}
+	assertReleaseSubjectDigest(t, components[0], path, content)
+}
+
+func TestDependencyFreeGoBinaryBuildInfo(t *testing.T) {
+	for _, stripped := range []bool{false, true} {
+		name := "nonstripped"
+		if stripped {
+			name = "stripped"
+		}
+		t.Run(name, func(t *testing.T) {
+			path := buildDependencyFreeGoBinary(t, stripped)
+			content, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			modules, err := binaryRuntimeModules(bytes.NewReader(content))
+			if err != nil || len(modules) != 0 {
+				t.Fatalf("binaryRuntimeModules() modules=%v, error=%v, want valid empty inventory", modules, err)
+			}
+			binaryPaths := map[string]struct{}{path: {}}
+			component, modules, isBinary, err := admitReleaseFile(packageJSON{}, path, binaryPaths, nil)
+			if err != nil || !isBinary || len(modules) != 0 {
+				t.Fatalf("admitReleaseFile() modules=%v, isBinary=%v, error=%v, want valid empty inventory", modules, isBinary, err)
+			}
+			assertReleaseSubjectDigest(t, component, path, content)
+
+			t.Run("truncated", func(t *testing.T) {
+				truncated := content[:16]
+				_, err := binaryRuntimeModules(bytes.NewReader(truncated))
+				assertUnreadableBuildInfo(t, err)
+				truncatedPath := filepath.Join(t.TempDir(), "agentic-proofkit")
+				writeFile(t, truncatedPath, string(truncated))
+				_, _, _, err = admitReleaseFile(packageJSON{}, truncatedPath, map[string]struct{}{truncatedPath: {}}, nil)
+				assertUnreadableBuildInfo(t, err)
+			})
+
+			for _, mutation := range []string{"identity swap", "in-place mutation"} {
+				t.Run(mutation, func(t *testing.T) {
+					selectedPath := filepath.Join(t.TempDir(), "agentic-proofkit")
+					writeFile(t, selectedPath, string(content))
+					_, _, _, err := admitReleaseFile(packageJSON{}, selectedPath, map[string]struct{}{selectedPath: {}}, func(selected string) error {
+						if mutation == "identity swap" {
+							replacement := filepath.Join(t.TempDir(), "replacement")
+							writeFile(t, replacement, string(content))
+							return os.Rename(replacement, selected)
+						}
+						changed := bytes.Clone(content)
+						changed[len(changed)-1] ^= 1
+						return os.WriteFile(selected, changed, 0o600)
+					})
+					if err == nil || !strings.Contains(err.Error(), "changed during admission") {
+						t.Fatalf("admitReleaseFile() error=%v, want %s rejection", err, mutation)
+					}
+				})
+			}
+		})
+	}
+}
+
+type failingBuildInfoReader struct{}
+
+func (failingBuildInfoReader) ReadAt([]byte, int64) (int, error) {
+	return 0, errors.New("private reader failure details")
+}
+
+func assertUnreadableBuildInfo(t *testing.T, err error) {
+	t.Helper()
+	if err == nil || err.Error() != "required release binary Go build info is unreadable" || errors.Unwrap(err) != nil {
+		t.Fatalf("error=%v, want sanitized unreadable build info error without a wrapped cause", err)
+	}
+}
+
+func assertReleaseSubjectDigest(t *testing.T, component cyclonedxComponent, path string, content []byte) {
+	t.Helper()
+	digest := sha256.Sum256(content)
+	wantHashes := []cyclonedxHash{{Alg: "SHA-256", Content: hex.EncodeToString(digest[:])}}
+	if component.BOMRef != "file:"+filepath.ToSlash(path) || !slices.Equal(component.Hashes, wantHashes) {
+		t.Fatalf("release subject=%#v, want exact path and byte digest", component)
+	}
+}
+
+func buildDependencyFreeGoBinary(t *testing.T, stripped bool) string {
+	t.Helper()
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "go.mod"), "module example.invalid/sbom-fixture\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(root, "main.go"), "package main\n\nfunc main() {}\n")
+	path := filepath.Join(root, "agentic-proofkit")
+	args := []string{"build", "-buildvcs=false", "-o", path}
+	if stripped {
+		args = append(args, "-ldflags=-s -w")
+	}
+	args = append(args, ".")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	command := exec.CommandContext(ctx, "go", args...)
+	command.Dir = root
+	command.Env = append(os.Environ(), "GOWORK=off", "GOFLAGS=", "GOPROXY=off", "CGO_ENABLED=0")
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("build dependency-free Go binary: %v\n%s", err, output)
+	}
+	return path
 }
 
 func TestReleaseFileEvidenceRejectsDeterministicIdentitySwap(t *testing.T) {

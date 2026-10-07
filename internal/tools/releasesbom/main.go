@@ -215,9 +215,10 @@ type artifactRuntimeInventory struct {
 func binaryRuntimeModules(reader io.ReaderAt) ([]goModuleRecord, error) {
 	info, err := gobuildinfo.Read(reader)
 	if err != nil {
-		// A stripped or otherwise non-introspectable binary has no admitted
-		// runtime-module evidence. The release file remains an SBOM subject.
-		return nil, nil
+		return nil, fmt.Errorf("required release binary Go build info is unreadable")
+	}
+	if !completeBinaryBuildInfo(reader, info) {
+		return nil, fmt.Errorf("required release binary Go build info is unreadable")
 	}
 	modules := make([]goModuleRecord, 0, len(info.Deps))
 	for _, module := range info.Deps {

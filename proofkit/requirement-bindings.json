@@ -4296,6 +4296,52 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-002",
+      "scenarioId": "proofkit.supply-chain-quality.release-sbom-build-info-admission",
+      "witnessId": "proofkit.release-sbom.build-info-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasesbom/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAdmitReleaseFileRejectsUnreadableRequiredBinary",
+          "command": "go test ./internal/tools/releasesbom -run '^TestAdmitReleaseFileRejectsUnreadableRequiredBinary$'"
+        },
+        {
+          "selector": "TestBinaryRuntimeModulesRejectsUnreadableBuildInfo",
+          "command": "go test ./internal/tools/releasesbom -run '^TestBinaryRuntimeModulesRejectsUnreadableBuildInfo$'"
+        },
+        {
+          "selector": "TestDependencyFreeGoBinaryBuildInfo",
+          "command": "go test ./internal/tools/releasesbom -run '^TestDependencyFreeGoBinaryBuildInfo$'"
+        },
+        {
+          "selector": "TestReleaseFileEvidenceAllowsNonbinaryWithoutBuildInfo",
+          "command": "go test ./internal/tools/releasesbom -run '^TestReleaseFileEvidenceAllowsNonbinaryWithoutBuildInfo$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test", "proofkit.release-sbom"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-002",
+      "scenarioId": "proofkit.supply-chain-quality.release-sbom-build-info-framing",
+      "witnessId": "proofkit.release-sbom.build-info-framing",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasesbom/buildinfo_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBinaryBuildInfoRejectsSilentMetadataLoss",
+          "command": "go test ./internal/tools/releasesbom -run '^TestBinaryBuildInfoRejectsSilentMetadataLoss$'"
+        },
+        {
+          "selector": "TestBinaryBuildInfoReleaseTargetMatrix",
+          "command": "go test ./internal/tools/releasesbom -run '^TestBinaryBuildInfoReleaseTargetMatrix$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test", "proofkit.release-sbom"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-002",
       "scenarioId": "proofkit.supply-chain-quality.release-sbom",
       "witnessId": "proofkit.release-sbom.deterministic-inventory",
       "witnessKind": "contract",
