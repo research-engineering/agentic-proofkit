@@ -30,8 +30,10 @@ var sourceCutoverDirectionDeltas = []string{
 	"requirement-coverage-view/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-impact-input-compose/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-proof-resolver/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"requirement-proof-source-set/output:childDefinitionBindings",
-	"requirement-proof-view/input:childDefinitionBindings",
+	"requirement-proof-source-set/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"requirement-proof-source-set/output:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"requirement-proof-view/input:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"requirement-proof-view/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-semantic-diff/input:compatibilitySummary,contractId,nativeAdmissionWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-semantic-diff/output:compatibilitySummary,contractId,nativeOutputWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-source-admission/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
@@ -195,7 +197,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 114 || len(added) != 110+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 118 || len(added) != 114+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {

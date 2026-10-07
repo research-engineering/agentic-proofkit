@@ -42,6 +42,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementdiff"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementimpactinput"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofsourceset"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceview"
@@ -590,6 +592,31 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.migration-parity-admission.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.migration-parity-admission.output.v1.root-shape"}, commands: []string{"migration-parity-admission"},
 		schema: func() (map[string]any, error) { return migrationparityadmission.OutputStructure(), nil },
+	}, {
+		id: "proofkit.requirement-proof-source-set.input.v2.json-schema", direction: "input", wireVersion: "2",
+		predecessors: []string{"proofkit.requirement-proof-source-set.input.v2.root-shape"}, commands: []string{"requirement-proof-source-set"},
+		schema: func() (map[string]any, error) { return requirementproofsourceset.InputStructure(), nil },
+	}, {
+		id: "proofkit.requirement-proof-source-set.output.v2.json-schema", direction: "output", wireVersion: "2",
+		predecessors: []string{"proofkit.requirement-proof-source-set.output.v2.root-shape"}, commands: []string{"requirement-proof-source-set"},
+		variants: []nativeStructureVariant{
+			{id: "01-canonical-contract", when: "projection.kind=canonical_contract", schema: func() (map[string]any, error) { return requirementproofsourceset.CanonicalOutputStructure(), nil }},
+			{id: "02-resolver-input", when: "projection.kind=resolver_input", schema: func() (map[string]any, error) { return requirementproofsourceset.ResolverOutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.requirement-proof-view.input.v2.json-schema", direction: "input", aggregateVersion: "2",
+		predecessors: []string{"proofkit.requirement-proof-view.input.v2.root-shape"}, commands: []string{"requirement-proof-view"},
+		variants: []nativeStructureVariant{
+			{id: "01-compact", when: "compact proof contract root", schema: func() (map[string]any, error) { return requirementproofview.CompactInputStructure(), nil }},
+			{id: "02-structured", when: "structured requirement proof binding root", schema: func() (map[string]any, error) { return requirementproofview.StructuredInputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.requirement-proof-view.output.v2.json-schema", direction: "output", aggregateVersion: "2",
+		predecessors: []string{"proofkit.requirement-proof-view.output.v2.root-shape"}, commands: []string{"requirement-proof-view"},
+		variants: []nativeStructureVariant{
+			{id: "01-compact", when: "compact proof contract root", schema: func() (map[string]any, error) { return requirementproofview.CompactOutputStructure(), nil }},
+			{id: "02-structured", when: "structured requirement proof binding root", schema: func() (map[string]any, error) { return requirementproofview.StructuredOutputStructure(), nil }},
+		},
 	}}
 }
 

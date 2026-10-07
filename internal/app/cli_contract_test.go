@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "926565b4a4ed26d301f8dd319b230c9171d510b60d8ef3e7c445e2cb77b0c6aa"
+	cliContractPublicABISHA256               = "0070455af8dd7ae33ba9818f22fb1aedc7a776d79fc9424124c0208c03c4bfae"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -196,7 +196,7 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 			required:     []string{"bindingId", "bindings", "nonClaims", "requirements", "schemaVersion", "witnessCommands"},
 		},
 		{
-			definitionID: "proofkit.requirement-proof-source-set.input.v2.root-shape",
+			definitionID: "proofkit.requirement-proof-source-set.input.v2.json-schema",
 			allowed:      []string{"canonicalEnvelope", "projection", "schemaVersion", "sourceSet", "sources"},
 			required:     []string{"canonicalEnvelope", "schemaVersion", "sourceSet", "sources"},
 		},
@@ -580,6 +580,10 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.evidence-graph.output.v1.json-schema":                           {},
 			"proofkit.proof-slice.output.v1.json-schema":                              {},
 			"proofkit.requirement-proof-resolver.output.v2.json-schema":               {},
+			"proofkit.requirement-proof-source-set.input.v2.json-schema":              {},
+			"proofkit.requirement-proof-source-set.output.v2.json-schema":             {},
+			"proofkit.requirement-proof-view.input.v2.json-schema":                    {},
+			"proofkit.requirement-proof-view.output.v2.json-schema":                   {},
 			"proofkit.witness-plan.input.v1.json-schema":                              {},
 			"proofkit.witness-plan.output.v1.json-schema":                             {},
 			"proofkit.witness-scheduler-plan.input.v1.json-schema":                    {},
