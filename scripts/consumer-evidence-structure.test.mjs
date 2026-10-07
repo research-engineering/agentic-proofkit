@@ -269,3 +269,65 @@ test('output identifiers retain raw grammar and registry identity remains ordina
     assert.equal(result.status, 0); assert.equal(result.record.reportId, value);
   }
 });
+
+test('output domains distinguish exact states literals counts and empty diagnostic tuples', () => {
+  const acceptedMessages = {
+    [external]: 'external consumer evidence is explicit and bounded to the tarball pilot channel',
+    [registry]: 'registry consumer install proof accepted',
+    [composer]: 'registry-consumer input composition is accepted by registry-consumer',
+  };
+  for (const command of commands) {
+    const record = output(command, seed(command)).record, valid = validators[command].output;
+    const states = command === composer ? ['passed', 'failed', 'blocked'] : ['passed', 'failed'];
+    for (const value of states) assert.equal(valid(replace(record, ['state'], value)), true, `${command}/state/allowed`);
+    for (const value of ['unknown', 'not_run', ...(command === composer ? [] : ['blocked'])]) {
+      assert.equal(valid(replace(record, ['state'], value)), false, `${command}/state/forbidden`);
+    }
+    const index = command === composer ? 1 : 0;
+    const literals = [[['ruleResults', index, 'ruleId'], `proofkit.${command}.accepted`],
+      [['ruleResults', index, 'status'], 'passed'], [['ruleResults', index, 'message'], acceptedMessages[command]]];
+    if (command === composer) {
+      literals.push([['ruleResults', 0, 'ruleId'], 'proofkit.registry-consumer-proof-input-compose.preconditions']);
+      for (const value of ['passed', 'failed', 'blocked']) assert.equal(valid(replace(record, ['ruleResults', 0, 'status'], value)), true);
+      assert.equal(valid(replace(record, ['ruleResults', 0, 'status'], 'unknown')), false);
+      for (const field of ['blockedPreconditionCount', 'failureCount']) {
+        assert.equal(valid(replace(record, ['summary', field], 0)), true);
+        for (const value of [-1, 0.5]) assert.equal(valid(replace(record, ['summary', field], value)), false, `${command}/${field}/numeric-domain`);
+      }
+    } else {
+      const keys = command === external ? ['artifactEvidence', 'consumerProof'] : ['consumerProof', 'registryArtifact'];
+      keys.forEach((key, i) => literals.push([['diagnostics', i, 'key'], key]));
+    }
+    if (command === external) {
+      literals.push([['summary', 'packageName'], '@research-engineering/agentic-proofkit']);
+      for (const channel of ['github_release_archive', 'pypi_registry_release', 'python_wheel_candidate', 'registry_release', 'tarball_pilot', 'invalid']) {
+        assert.equal(valid(replace(record, ['summary', 'releaseAuthorityChannel'], channel)), true);
+      }
+      assert.equal(valid(replace(record, ['summary', 'releaseAuthorityChannel'], 'foreign')), false);
+    }
+    for (const [path, value] of literals) {
+      assert.equal(at(record, path), value);
+      assert.equal(valid(replace(record, path, value + '.foreign')), false, `${command}/${path}/literal`);
+    }
+    const minimum = command === composer ? 4 : 2;
+    assert.equal(valid(replace(record, ['nonClaims'], record.nonClaims.slice(0, minimum))), true);
+    assert.equal(valid(replace(record, ['nonClaims'], record.nonClaims.slice(0, minimum - 1))), false);
+    const input = seed(command); (input.input ?? input).releaseAuthorityInput = null;
+    const failed = output(command, input).record;
+    for (const specimen of [record, failed]) {
+      assert.equal(valid(replace(specimen, ['ruleResults'], [])), false);
+      specimen.ruleResults.forEach((rule, i) => {
+        assert.deepEqual(rule.diagnostics, []);
+        assert.equal(valid(replace(specimen, ['ruleResults', i, 'diagnostics'], ['foreign'])), false);
+        if (rule.status === 'failed') assert.equal(valid(replace(specimen, ['ruleResults', i, 'status'], 'passed')), false);
+      });
+    }
+    if (command !== composer) {
+      const absent = seed(command);
+      if (command === external) absent.evidence.consumerProof = null; else delete absent.proof;
+      const withoutProof = output(command, absent).record, i = command === external ? 1 : 0;
+      assert.deepEqual(withoutProof.diagnostics[i].value, {executed: false});
+      assert.equal(valid(replace(withoutProof, ['diagnostics', i, 'value', 'executed'], true)), false);
+    }
+  }
+});
