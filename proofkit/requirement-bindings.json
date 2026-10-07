@@ -1027,6 +1027,28 @@
   ],
   "bindings": [
     {
+      "commandIds": ["proofkit.boundary-contract-check"],
+      "environmentClasses": ["local-go-node"],
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.proof-lookup-schema-independent-runtime",
+      "witnessId": "proofkit.proof-lookup-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/proof-lookup-structure.test.mjs"
+    },
+    {
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"],
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.proof-lookup-schema-owner",
+      "witnessId": "proofkit.proof-lookup-schema-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/proof_lookup_structure_test.go",
+      "witnessSelectors": [{
+        "command": "go test ./internal/tools/commandcontractgen -run '^TestProofLookupStructuresPreserveVersionsAndOwnerIsolation$'",
+        "selector": "TestProofLookupStructuresPreserveVersionsAndOwnerIsolation"
+      }]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-043",
       "scenarioId": "proofkit.spec-proof-core.transaction-signal-scope",
       "witnessId": "proofkit.transaction-signal.scope-falsifier",
