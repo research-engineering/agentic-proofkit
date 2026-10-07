@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "0070455af8dd7ae33ba9818f22fb1aedc7a776d79fc9424124c0208c03c4bfae"
+	cliContractPublicABISHA256               = "52fb53bdcf600dbae9d326295203c5e52ab6e7fc8f30a562710997671f18cd26"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -535,6 +535,13 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 	}
 	if structural {
 		if _, admitted := map[string]struct{}{
+			"proofkit.repository-inventory.output.v1.json-schema":                     {},
+			"proofkit.adopt-plan.output.v1.json-schema":                               {},
+			"proofkit.adoption-materialization.plan-input.v2.json-schema":             {},
+			"proofkit.adoption-materialization.apply-input.v2.json-schema":            {},
+			"proofkit.adoption-materialization.plan-output.v1.json-schema":            {},
+			"proofkit.adoption-materialization.apply-output.v1.json-schema":           {},
+			"proofkit.adoption-materialization.recover-output.v1.json-schema":         {},
 			"proofkit.changed-path-set.input.v1.json-schema":                          {},
 			"proofkit.changed-path-set.output.v1.json-schema":                         {},
 			"proofkit.secret-scan.input.v1.json-schema":                               {},

@@ -2019,6 +2019,7 @@
         "scripts/impact-structure.test.mjs",
         "scripts/inventory-coverage-fixtures.mjs",
         "scripts/inventory-coverage-structure.test.mjs",
+        "scripts/materialization-structure.test.mjs",
         "scripts/overview-claims-structure.test.mjs",
         "scripts/proof-lookup-structure.test.mjs",
         "scripts/proof-routing-fixtures.mjs",

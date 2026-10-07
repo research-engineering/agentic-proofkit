@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 
@@ -113,7 +114,10 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 			input["rootDefinitionDigest"] = definition["canonicalDigest"]
 			input["contractId"] = owner.contractID(name, version)
 			input["schemaVersion"] = version
-			input["compatibilitySummary"] = owner.summary(version)
+			input["compatibilitySummary"], err = enrichedCompatibilitySummary(owner, version, input["compatibilitySummary"])
+			if err != nil {
+				return nil, err
+			}
 			command[key] = input
 			commands[i] = command
 			wire.Commands[i], err = encodeContractSource(command)
@@ -237,6 +241,32 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 		return nil, fmt.Errorf("generated CLI contract has %d bytes, exceeding installed carrier byte limit %d", len(encoded), installedclicontract.MaximumContractBytes)
 	}
 	return encoded, nil
+}
+
+// Enrichment owns the generated header and shape annotation, not other policy notes.
+func enrichedCompatibilitySummary(owner nativeStructure, version json.Number, raw any) ([]any, error) {
+	previous, ok := raw.([]any)
+	if !ok || len(previous) == 0 {
+		return nil, fmt.Errorf("native structure compatibility summary must be a nonempty array")
+	}
+	result := owner.summary(version)
+	for index, rawNote := range previous {
+		note, ok := rawNote.(string)
+		if !ok {
+			return nil, fmt.Errorf("native structure compatibility note must be text")
+		}
+		if index == 0 || strings.HasPrefix(note, "structural JSON Schema definition "+owner.id+";") {
+			continue
+		}
+		obsolete := false
+		for _, predecessor := range owner.predecessors {
+			obsolete = obsolete || strings.HasPrefix(note, "root-shape-only definition "+predecessor+";")
+		}
+		if !obsolete {
+			result = append(result, note)
+		}
+	}
+	return result, nil
 }
 
 func encodeContractSource(value any) ([]byte, error) {

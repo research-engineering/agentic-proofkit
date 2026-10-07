@@ -21,6 +21,10 @@ type nativeChildBinding struct {
 // These are ownership links, not copies of the child schema or native policy.
 func nativeChildBindings() []nativeChildBinding {
 	return []nativeChildBinding{
+		{"adopt-materialize-apply", "input", "proofkit.adopt-plan.output.v1.json-schema", [][]string{{"sourcePlan"}}, ""},
+		{"adopt-materialize-plan", "input", "proofkit.adopt-plan.output.v1.json-schema", [][]string{{"sourcePlan"}}, ""},
+		{"adopt-materialize-apply", "input", "proofkit.requirement-bindings.input.v1.json-schema", [][]string{{"requirementProofBinding", "record"}}, ""},
+		{"adopt-materialize-plan", "input", "proofkit.requirement-bindings.input.v1.json-schema", [][]string{{"requirementProofBinding", "record"}}, ""},
 		{"adopt-materialize-apply", "input", sourceV2DefinitionID, [][]string{{"requirementSources", "*"}}, ""},
 		{"adopt-materialize-plan", "input", sourceV2DefinitionID, [][]string{{"requirementSources", "*"}}, ""},
 		{"requirement-coverage-input-compose", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}, ""},

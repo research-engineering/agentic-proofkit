@@ -46,6 +46,22 @@ func OutputStructure() map[string]any {
 	return map[string]any{"$schema": "https://json-schema.org/draft/2020-12/schema", "oneOf": alternatives}
 }
 
+// PlanningHintShape describes the compact projection replayed by
+// AdmitPlanningHint, without copying preset policy into its parent commands.
+func PlanningHintShape() jsonshape.Shape {
+	alternatives := make([]jsonshape.Shape, 0, len(presetIDs))
+	for _, id := range presetIDs {
+		item := presets[id]
+		alternatives = append(alternatives, jsonshape.Object(
+			jsonshape.Required("presetId", jsonshape.StringLiteral(id)),
+			jsonshape.Required("primaryLanguages", textTuple(item.PrimaryLanguages)),
+			jsonshape.Required("starterEnvironmentClasses", textTuple(item.StarterEnvironmentClasses)),
+			jsonshape.Required("starterWitnessKinds", textTuple(item.StarterWitnessKinds)),
+		))
+	}
+	return jsonshape.OneOf(alternatives...)
+}
+
 func textTuple(values []string) jsonshape.Shape {
 	items := make([]jsonshape.Shape, len(values))
 	for index, value := range values {

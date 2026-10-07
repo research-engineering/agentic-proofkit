@@ -62,8 +62,8 @@ func TestChangedSourceChildrenBindTheSinglePublishedOwner(t *testing.T) {
 			})
 		}
 	}
-	if seen != 32 {
-		t.Fatalf("changed source-child path count=%d, want 32", seen)
+	if seen != 36 {
+		t.Fatalf("changed source-child path count=%d, want 36", seen)
 	}
 }
 
