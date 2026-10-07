@@ -15,6 +15,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
+	"github.com/research-engineering/agentic-proofkit/internal/command/externalconsumer"
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/command/migrationparityadmission"
@@ -29,6 +30,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receipttrustclass"
+	"github.com/research-engineering/agentic-proofkit/internal/command/registryconsumer"
+	"github.com/research-engineering/agentic-proofkit/internal/command/registryconsumerinputcompose"
 	"github.com/research-engineering/agentic-proofkit/internal/command/releaseauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/command/renderedartifactfreshness"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
@@ -547,6 +550,30 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.readiness-closeout.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.readiness-closeout.output.v1.root-shape"}, commands: []string{"readiness-closeout"},
 		schema: func() (map[string]any, error) { return readinesscloseout.OutputStructure(), nil },
+	}, {
+		id: "proofkit.external-consumer.input.v2.json-schema", direction: "input", semanticVersion: 2,
+		predecessors: []string{"proofkit.external-consumer.input.v1.root-shape"}, commands: []string{"external-consumer"},
+		schema: func() (map[string]any, error) { return externalconsumer.InputStructure(), nil },
+	}, {
+		id: "proofkit.external-consumer.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.external-consumer.output.v1.root-shape"}, commands: []string{"external-consumer"},
+		schema: func() (map[string]any, error) { return externalconsumer.OutputStructure(), nil },
+	}, {
+		id: "proofkit.registry-consumer.input.v2.json-schema", direction: "input", semanticVersion: 2,
+		predecessors: []string{"proofkit.registry-consumer.input.v1.root-shape"}, commands: []string{"registry-consumer"},
+		schema: func() (map[string]any, error) { return registryconsumer.InputStructure(), nil },
+	}, {
+		id: "proofkit.registry-consumer.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.registry-consumer.output.v1.root-shape"}, commands: []string{"registry-consumer"},
+		schema: func() (map[string]any, error) { return registryconsumer.OutputStructure(), nil },
+	}, {
+		id: "proofkit.registry-consumer-proof-input-compose.input.v2.json-schema", direction: "input", semanticVersion: 2,
+		predecessors: []string{"proofkit.registry-consumer-proof-input-compose.input.v1.root-shape"}, commands: []string{"registry-consumer-proof-input-compose"},
+		schema: func() (map[string]any, error) { return registryconsumerinputcompose.InputStructure(), nil },
+	}, {
+		id: "proofkit.registry-consumer-proof-input-compose.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.registry-consumer-proof-input-compose.output.v1.root-shape"}, commands: []string{"registry-consumer-proof-input-compose"},
+		schema: func() (map[string]any, error) { return registryconsumerinputcompose.OutputStructure(), nil },
 	}, {
 		id: "proofkit.producer-policy-self-proof.input.v1.json-schema", direction: "input",
 		predecessors: []string{"proofkit.producer-policy-self-proof.input.v1.root-shape"}, commands: []string{"producer-policy-self-proof"},

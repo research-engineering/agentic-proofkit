@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "150872de240192c8747c7703d813f99129f2556dc29d02da05a0644076aaccbe"
+	cliContractPublicABISHA256               = "926565b4a4ed26d301f8dd319b230c9171d510b60d8ef3e7c445e2cb77b0c6aa"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -181,12 +181,12 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 		required     []string
 	}{
 		{
-			definitionID: "proofkit.external-consumer.input.v1.root-shape",
+			definitionID: "proofkit.external-consumer.input.v2.json-schema",
 			allowed:      []string{"evidence", "input", "schemaVersion"},
 			required:     []string{"evidence", "input", "schemaVersion"},
 		},
 		{
-			definitionID: "proofkit.registry-consumer.input.v1.root-shape",
+			definitionID: "proofkit.registry-consumer.input.v2.json-schema",
 			allowed:      []string{"input", "proof", "schemaVersion"},
 			required:     []string{"input", "schemaVersion"},
 		},
@@ -567,6 +567,12 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.readiness-closeout.output.v1.json-schema":                       {},
 			"proofkit.release-authority.input.v1.json-schema":                         {},
 			"proofkit.release-authority.output.v1.json-schema":                        {},
+			"proofkit.external-consumer.input.v2.json-schema":                         {},
+			"proofkit.external-consumer.output.v1.json-schema":                        {},
+			"proofkit.registry-consumer.input.v2.json-schema":                         {},
+			"proofkit.registry-consumer.output.v1.json-schema":                        {},
+			"proofkit.registry-consumer-proof-input-compose.input.v2.json-schema":     {},
+			"proofkit.registry-consumer-proof-input-compose.output.v1.json-schema":    {},
 			"proofkit.requirement-coverage-view.input.v3.json-schema":                 {},
 			"proofkit.test-evidence-inventory.input.v3.json-schema":                   {},
 			"proofkit.test-evidence-inventory.output.v2.json-schema":                  {},

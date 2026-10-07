@@ -57,7 +57,8 @@ function native(name, value, {exit = 0, report = true, extra = [], carrier = "st
     const path = join(directory, "input.json"); writeFileSync(path, JSON.stringify({payload: value}));
     args = [name, "--input", path, "--input-pointer", "/payload", ...extra]; input = "";
   } else if (carrier === "compact") args.unshift("--json-layout", "compact");
-  const invoke = file => spawnSync(file, args, {input, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
+  const invoke = file => spawnSync(file, args, {...(carrier === "argv-only" ? {stdio: ["ignore", "pipe", "pipe"]} : {input}),
+    encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
   assert.equal(result.error, undefined); assert.equal(result.signal, null); assert.equal(result.status, exit, `${name}: ${result.stderr}`);
   if (expectedStderr !== undefined) assert.equal(result.stderr, expectedStderr);
@@ -256,7 +257,8 @@ test("every envelope mode includes invalid-input and bounded failure carriers", 
   const large = native(names[3], crowded, {exit: 1, extra: ["--agent-envelope"]});
   assert.equal(large.actionPlan.length, 20); assert.equal(large.contextRefs.length, 48); assert.ok(large.bounds.maxContextRefs > 48);
   assert.equal(large.omitted.length, 1); assert.equal(large.bounds.truncated, true);
-  native(names[2], projectionInput(), {exit: 1, report: false, extra: ["--agent-envelope"]});
+  native(names[2], undefined, {exit: 1, report: false, carrier: "argv-only", extra: ["--agent-envelope"],
+    expectedStderr: "unsupported argument for selective-gate-obligation-decision-input: --agent-envelope\n"});
 });
 
 test("closed nested input objects and populated list items reject malformed neighbors", () => {

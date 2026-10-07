@@ -115,7 +115,7 @@ func admitReportInput(raw any) (reportInput, error) {
 	if !ok {
 		return reportInput{}, fmt.Errorf("proofkit registry-consumer report input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"input", "proof", "schemaVersion"}, "proofkit registry-consumer report input"); err != nil {
+	if err := admit.KnownKeys(record, reportInputFields, "proofkit registry-consumer report input"); err != nil {
 		return reportInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -141,7 +141,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("proofkit registry-consumer input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"consumerId", "dependencyName", "dependencySpec", "nonClaims", "packageName", "packageVersion", "registryUrl", "releaseAuthorityInput", "rollbackVersionPin", "schemaVersion", "tarballFileName", "tarballIntegrity", "tarballShasum"}, "proofkit registry-consumer input"); err != nil {
+	if err := admit.KnownKeys(record, inputFields, "proofkit registry-consumer input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -213,7 +213,7 @@ func admitProof(raw any) (proof, error) {
 	if !ok {
 		return proof{}, fmt.Errorf("proofkit registry-consumer proof must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"binarySmokeOutputSha256", "cliWitnessPlanOutputSha256", "dependencySpec", "frozenLockContainsPackage", "frozenLockUsesWorkspace", "installLockContainsPackage", "installLockUsesWorkspace", "registryPackIntegrityMatches", "registryPackNameMatches", "registryPackShasumMatches", "registryPackVersionMatches", "releaseAuthorityOutputSha256", "releaseAuthorityReportKind", "releaseAuthorityState", "rollbackLockContainsPackage", "tempConsumerLocation"}, "proofkit registry-consumer proof"); err != nil {
+	if err := admit.KnownKeys(record, proofFields, "proofkit registry-consumer proof"); err != nil {
 		return proof{}, err
 	}
 	tempConsumerLocation, err := text(record["tempConsumerLocation"], "proofkit registry-consumer proof tempConsumerLocation")
@@ -439,9 +439,9 @@ func ruleResults(failures []string) []report.RuleResult {
 	if len(failures) == 0 {
 		return []report.RuleResult{
 			{
-				RuleID:      "proofkit.registry-consumer.accepted",
+				RuleID:      acceptedRuleID,
 				Status:      "passed",
-				Message:     "registry consumer install proof accepted",
+				Message:     acceptedMessage,
 				Diagnostics: []report.Diagnostic{},
 			},
 		}
@@ -449,7 +449,7 @@ func ruleResults(failures []string) []report.RuleResult {
 	results := make([]report.RuleResult, 0, len(failures))
 	for index, failure := range failures {
 		results = append(results, report.RuleResult{
-			RuleID:      fmt.Sprintf("proofkit.registry-consumer.failure.%03d", index+1),
+			RuleID:      fmt.Sprintf(failureRulePrefix+"%03d", index+1),
 			Status:      "failed",
 			Message:     failure,
 			Diagnostics: []report.Diagnostic{},
