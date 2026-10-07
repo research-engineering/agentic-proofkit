@@ -175,6 +175,26 @@ test('populated consumer records close nested key type optional null and cardina
   assert.equal(validators[external].input(witness), false, 'external/witness/commands/minItems');
 });
 
+test('canonical output locations and root diagnostic tuples retain independent exact boundaries', () => {
+  for (const command of [external, registry]) {
+    const input = seed(command), proof = command === external ? input.evidence.consumerProof : input.proof;
+    proof.tempConsumerLocation = ' os-temp ';
+    const {record, status} = output(command, input), valid = validators[command].output;
+    assert.equal(status, 0); assert.equal(record.diagnostics.length, 2);
+    const index = command === external ? 1 : 0, path = ['diagnostics', index, 'value', 'tempConsumerLocation'];
+    assert.equal(at(record, path), 'os-temp');
+    assert.equal(valid(replace(record, path, 'os-temp')), true, command + '/location/accepted');
+    for (const value of ['foreign-location', ' os-temp ']) {
+      assert.equal(valid(replace(record, path, value)), false, command + '/location/rejected');
+    }
+    for (const length of [0, 1, 3]) {
+      const diagnostics = record.diagnostics.slice(0, length);
+      if (length === 3) diagnostics.push(structuredClone(record.diagnostics[1]));
+      assert.equal(valid(replace(record, ['diagnostics'], diagnostics)), false, command + '/diagnostics/length/' + length);
+    }
+  }
+});
+
 test('normalized text and unbounded registry identity do not acquire raw literal or RuleID restrictions', () => {
   for (const command of commands) {
     const input = seed(command), source = input.input ?? input;
