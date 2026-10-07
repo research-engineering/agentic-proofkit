@@ -263,6 +263,11 @@ test('empty declarations retain zero counts and explicit empty local policy', ()
   const empty = output(view, structured); assert.deepEqual(empty.requirements, []);
   for (const field of ['commandCount', 'omittedRequirementCount', 'requirementCount']) assert.equal(empty[field], 0);
   assert.equal(empty.scope, 'slice'); assert.ok(empty.nonClaims.length >= 4);
+  const minimum = structuredClone(structured); minimum.nonClaims = [];
+  for (const scope of ['graph', 'slice']) {
+    const record = output(view, minimum, ['--scope', scope]);
+    assert.equal(record.nonClaims.length, 8, scope + '/native-nonclaim-minimum');
+  }
 });
 
 test('unbound structured requirements retain zero scenarios and empty aggregates', () => {
