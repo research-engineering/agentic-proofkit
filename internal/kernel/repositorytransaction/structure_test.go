@@ -62,6 +62,11 @@ func TestSnapshotStructurePreservesBothPartitionsAndExactBounds(t *testing.T) {
 	if _, err := admitSnapshot(absent, "absent"); err != nil {
 		t.Fatal(err)
 	}
+	wrongAbsent := maps.Clone(absent)
+	wrongAbsent["exists"] = true
+	if _, err := shape.Admit(wrongAbsent, "absent"); err == nil {
+		t.Fatal("absent partition accepted opposite exists boolean")
+	}
 	for _, length := range []json.Number{"0", "1048576"} {
 		for _, mode := range []string{"0400", "0777"} {
 			present := map[string]any{"byteCount": length, "exists": true, "mode": mode, "sha256": sha}
@@ -73,7 +78,7 @@ func TestSnapshotStructurePreservesBothPartitionsAndExactBounds(t *testing.T) {
 			}
 			for field, neighbors := range map[string][]any{
 				"byteCount": {json.Number("-1"), json.Number("1048577"), json.Number("0.5"), "0", nil},
-				"exists":    {json.Number("1"), "true", nil},
+				"exists":    {false, json.Number("1"), "true", nil},
 				"mode":      {"0000", "0300", "0408", "1400", "400", "0400 ", nil},
 				"sha256":    {nil, "sha256:" + strings.Repeat("A", 64), "sha256:" + strings.Repeat("g", 64), "sha256:" + strings.Repeat("a", 63), "sha256:" + strings.Repeat("a", 65)},
 			} {

@@ -255,12 +255,25 @@ func enrichedCompatibilitySummary(owner nativeStructure, version json.Number, ra
 		if !ok {
 			return nil, fmt.Errorf("native structure compatibility note must be text")
 		}
-		if index == 0 && generatedVersionHeader(owner, note) || strings.HasPrefix(note, "structural JSON Schema definition "+owner.id+";") {
+		if index == 0 && generatedVersionHeader(owner, note) || note == result[1] {
 			continue
+		}
+		if strings.HasPrefix(note, "structural JSON Schema definition "+owner.id+";") {
+			return nil, fmt.Errorf("compatibility note contains an unowned annotation suffix")
 		}
 		obsolete := false
 		for _, predecessor := range owner.predecessors {
-			obsolete = obsolete || strings.HasPrefix(note, "root-shape-only definition "+predecessor+";")
+			prefix := "root-shape-only definition " + predecessor + "; "
+			for _, suffix := range []string{
+				"nested fields, types, and cardinalities are non-claims",
+				"nested fields, types, and cardinalities remain native-owner claims",
+				"nested fields, types, cardinalities, and cross-record closure remain native-owner claims",
+			} {
+				obsolete = obsolete || note == prefix+suffix
+			}
+			if strings.HasPrefix(note, prefix) && !obsolete {
+				return nil, fmt.Errorf("compatibility note contains an unowned annotation suffix")
+			}
 		}
 		if !obsolete {
 			result = append(result, note)

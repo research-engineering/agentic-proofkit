@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -101,6 +102,45 @@ func TestAdoptionStructuresBindSevenDirectionsAndRetainIdentities(t *testing.T) 
 	other, err := adoptionmaterialization.InputStructure()
 	if err != nil || reflect.DeepEqual(input, other) {
 		t.Fatalf("returned mutable shared schema: %v", err)
+	}
+}
+
+func TestStructureEnrichmentRejectsMixedAnnotationBeforeWriting(t *testing.T) {
+	owner := nativeStructures()[0]
+	annotations := []string{owner.summary(json.Number("1"))[1].(string)}
+	for _, suffix := range []string{
+		"nested fields, types, and cardinalities are non-claims",
+		"nested fields, types, and cardinalities remain native-owner claims",
+		"nested fields, types, cardinalities, and cross-record closure remain native-owner claims",
+	} {
+		annotations = append(annotations, "root-shape-only definition "+owner.predecessors[0]+"; "+suffix)
+	}
+	for _, annotation := range annotations {
+		root := writeNativeStructureFixture(t)
+		contract := readFixtureContract(t, root)
+		input := commandAt(contract, owner.commands[0])["inputContract"].(map[string]any)
+		input["compatibilitySummary"] = []any{"schemaVersion=1", annotation + " Independent policy must not disappear."}
+		writeFixtureContract(t, root, contract)
+		before, err := os.ReadFile(filepath.Join(root, cliContractPath))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := refreshStructures(root); err == nil {
+			t.Fatal("mixed annotation was not rejected before write")
+		}
+		after, err := os.ReadFile(filepath.Join(root, cliContractPath))
+		if err != nil || !bytes.Equal(before, after) {
+			t.Fatalf("mixed annotation changed caller policy: %v", err)
+		}
+		for _, path := range []string{appGeneratedPath, presetGeneratedPath} {
+			if _, err := os.Stat(filepath.Join(root, path)); !os.IsNotExist(err) {
+				t.Fatal("mixed annotation wrote a generated projection")
+			}
+		}
+		got, err := enrichedCompatibilitySummary(owner, json.Number("1"), []any{"schemaVersion=1", annotation})
+		if err != nil || !reflect.DeepEqual(got, owner.summary(json.Number("1"))) {
+			t.Fatalf("exact generator-owned annotation stopped being refreshable: %v", err)
+		}
 	}
 }
 

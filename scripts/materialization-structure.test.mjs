@@ -75,7 +75,7 @@ function closedObjectsAndDigests(command, direction, record) {
     }
     if (path.length && !reusedCandidate) {
       const dotted = path.join('.'), nested = path[0] === 'sourcePlan' ? path.slice(1).join('.') : dotted;
-      if (nested === 'summary.codeBaselineDeclared') {
+      if (nested === 'summary.codeBaselineDeclared' || path.at(-1) === 'exists' && ['before', 'after'].includes(path.at(-2))) {
         validates(command, direction, replaced(record, path, !value), false, path + '/opposite-boolean');
       }
       const nullable = value === null || ['stackHint', 'summary.selectedStackPreset', 'failureClass', 'transactionResult'].includes(nested)
@@ -99,12 +99,13 @@ function closedObjectsAndDigests(command, direction, record) {
   }
 }
 
-test('all intent and stack plans preserve actual hierarchical CLI streams and nested owners', () => {
+test('all intent and stack plans preserve actual hierarchical CLI streams and nested owners', t => {
   const repo = repository();
   const inventory = report('repository-inventory', native('repository-inventory', repo));
   closedObjectsAndDigests('repository-inventory', 'output', inventory);
   const presets = ['agentic_runtime_repo', 'generated_docs_contract_repo', 'python_service',
     'python_typescript_service', 'typescript_monorepo', 'typescript_workspace'];
+  let predecessorComparisons = 0;
   for (const mode of ['fresh', 'code-baseline', 'audit-from-code']) for (const preset of ['', ...presets]) {
     for (const format of ['json', 'text']) {
       const flags = ['--mode', mode, '--format', format, ...(preset ? ['--stack', preset] : [])];
@@ -113,6 +114,7 @@ test('all intent and stack plans preserve actual hierarchical CLI streams and ne
       if (process.env.PROOFKIT_MATERIALIZATION_BASELINE) {
         const old = native('adopt-plan', repo, undefined, flags, process.env.PROOFKIT_MATERIALIZATION_BASELINE);
         assert.deepEqual([result.status, result.stdout, result.stderr], [old.status, old.stdout, old.stderr]);
+        predecessorComparisons++;
       }
       if (format === 'text') continue;
       const plan = report('adopt-plan', result);
@@ -130,6 +132,7 @@ test('all intent and stack plans preserve actual hierarchical CLI streams and ne
       }
     }
   }
+  t.diagnostic(JSON.stringify({kind: 'proofkit.materialization.predecessor-comparison', scope: 'plan_streams', comparisons: predecessorComparisons}));
 });
 
 function filesystem(repo, prefix = '') {
@@ -169,7 +172,7 @@ function chain(executable, repo, request) {
   return {results, files: filesystem(repo)};
 }
 
-test('actual materialization chain, replay and recovery preserve operation and filesystem outcomes', () => {
+test('actual materialization chain, replay and recovery preserve operation and filesystem outcomes', t => {
   const repo = repository(), request = structuredClone(requestSeed);
   validates('adopt-materialize-plan', 'input', request); validates('adopt-materialize-apply', 'input', request);
   closedObjectsAndDigests('adopt-materialize-plan', 'input', request);
@@ -180,6 +183,7 @@ test('actual materialization chain, replay and recovery preserve operation and f
   }
   const current = chain(binary, repo, request);
   if (old) assert.deepEqual(current, old, 'undeclared process or filesystem predecessor delta');
+  t.diagnostic(JSON.stringify({kind: 'proofkit.materialization.predecessor-comparison', scope: 'chain_streams', comparisons: old ? old.results.length : 0, filesystemCompared: !!old}));
 });
 
 test('parent cardinality, ID, claim and operation boundaries are not native write approval', () => {
@@ -254,4 +258,16 @@ test('catalog omissions and public transaction snapshots preserve inclusive reso
   }
   for (const version of [1, 2, 3]) validates('adopt-materialize-plan', 'output', replaced(plan, ['transaction', 'schemaVersion'], version));
   validates('adopt-materialize-plan', 'output', replaced(plan, ['transaction', 'schemaVersion'], 4), false);
+  // Child snapshot grammar is conservative; these specimens do not approve
+  // the parent plan's stronger native route/content/identity relations.
+  for (const position of ['before', 'after']) for (const snapshot of [
+    {byteCount: 0, exists: false, mode: '0000', sha256: null},
+    {byteCount: 0, exists: true, mode: '0400', sha256: 'sha256:' + '0'.repeat(64)},
+  ]) {
+    const path = ['transaction', 'operations', 0, position];
+    const specimen = replaced(plan, path, snapshot);
+    validates('adopt-materialize-plan', 'output', specimen, true, position + '/partition');
+    validates('adopt-materialize-plan', 'output', replaced(specimen, [...path, 'exists'], !snapshot.exists), false,
+      position + '/opposite-boolean-partition');
+  }
 });
