@@ -163,6 +163,11 @@ test('source index literals raw enums strict whitespace IDs and tuple arities ar
     const variant = structuredClone(bounded); variant.projection.kind = kind;
     assert.deepEqual(output(source, variant).selectedSourceIds, bounded.projection.selectedSourceIds, kind + '/valid-maximum');
   }
+  for (const sourceId of ['A', 'Source.Local', 'A_B.9-C:Part_3']) for (const kind of ['canonical_contract', 'resolver_input']) {
+    const variant = replace(populated, id, sourceId);
+    variant.projection = {kind, selectedSourceIds: [sourceId]};
+    assert.deepEqual(output(source, variant).selectedSourceIds, [sourceId], kind + '/lexical-preservation');
+  }
   assert.equal(invoke(source, replace(bounded, selected, 'a'.repeat(257))).status, 1);
   for (const value of ['', '0'.repeat(63), '0'.repeat(65), 'g'.repeat(64), 'A'.repeat(64), 'sha256:' + '0'.repeat(64)]) assert.equal(valid(source, 'input', replace(input, ['sourceSet', 'sources', 0, 2], value)), false);
   for (const role of ['foreign', ' requirement_proof_route_declaration_contract ']) assert.equal(valid(source, 'input', replace(input, ['sourceSet', 'sources', 0, 3], role)), false);
