@@ -191,10 +191,12 @@ test('lookup output identities wire versions counts and ordered route roles are 
     for (const index of [0, 1]) {
       assert.equal(valid(command, 'output', replace(record, [...path, index, 'role'], 'foreign')), false);
       for (const value of [-1, 0.5, 9007199254740992]) assert.equal(valid(command, 'output', replace(record, [...path, index, 'resolutionOrderIndex'], value)), false);
-      const maximumInput = seed('compact'), role = routes[index].role;
-      maximumInput.bindings[0][maximumInput.binding_columns.indexOf(role + '_witness')][maximumInput.witness_columns.indexOf('resolution_order_index')] = 9007199254740991;
-      const maximumOutput = output(command, maximumInput, flags);
-      assert.equal(at(maximumOutput, [...path, index, 'resolutionOrderIndex']), 9007199254740991, role + '/valid-maximum');
+      for (const order of [0, 9007199254740991]) {
+        const boundaryInput = seed('compact'), role = routes[index].role;
+        boundaryInput.bindings[0][boundaryInput.binding_columns.indexOf(role + '_witness')][boundaryInput.witness_columns.indexOf('resolution_order_index')] = order;
+        const boundaryOutput = output(command, boundaryInput, flags);
+        assert.equal(at(boundaryOutput, [...path, index, 'resolutionOrderIndex']), order, role + '/order-' + order);
+      }
       for (const field of ['bindingRecordId', 'witnessRouteId']) assert.equal(valid(command, 'output', replace(record, [...path, index, field], 'sha256:' + 'A'.repeat(64))), false);
     }
     assert.equal(valid(command, 'output', replace(record, ['localEnvironmentPolicy', 'authority'], 'foreign')), false);
