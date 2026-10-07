@@ -144,7 +144,7 @@ test('source index literals raw enums strict whitespace IDs and tuple arities ar
   for (const path of paths) assert.equal(valid(source, 'input', replace(input, path, typeof at(input, path) === 'number' ? 3 : 'foreign')), false, path.join('.'));
   for (const path of [['sourceSet', 'source_columns'], ['canonicalEnvelope', 'surfaceColumns'], ['canonicalEnvelope', 'bindingColumns'], ['canonicalEnvelope', 'witnessColumns']]) {
     const columns = at(input, path);
-    for (const invalid of [columns.slice(0, -1), [...columns, 'foreign'], columns.toReversed(), columns.map((x, i) => i ? x : 'foreign')]) assert.equal(valid(source, 'input', replace(input, path, invalid)), false, path.join('.'));
+    for (const invalid of [columns.slice(0, -1), [...columns, 'foreign'], columns.toReversed(), ...columns.map((_, index) => columns.map((x, i) => i === index ? 'foreign' : x))]) assert.equal(valid(source, 'input', replace(input, path, invalid)), false, path.join('.'));
   }
   for (const path of [['canonicalEnvelope', 'contractId'], ['sources', 0, 'path'], ['sourceSet', 'sources', 0, 1]]) {
     for (const value of ['', ' ', '\u00a0', ' padded', 'padded\n']) assert.equal(valid(source, 'input', replace(input, path, value)), false, path.join('.'));
@@ -176,9 +176,12 @@ test('lookup output identities wire versions counts and ordered route roles are 
     }
     if (name !== 'compact') continue;
     const path = ['bindings', 0, 'declaredWitnessRoutes'], routes = at(record, path);
-    for (const value of [[], routes.slice(1), [...routes, routes[0]], routes.toReversed()]) assert.equal(valid(command, 'output', replace(record, path, value)), false);
-    for (const value of [-1, 0.5, 9007199254740992]) assert.equal(valid(command, 'output', replace(record, [...path, 0, 'resolutionOrderIndex'], value)), false);
-    for (const field of ['bindingRecordId', 'witnessRouteId']) assert.equal(valid(command, 'output', replace(record, [...path, 0, field], 'sha256:' + 'A'.repeat(64))), false);
+    for (const value of [[], routes.slice(0, -1), [...routes, routes[0]], routes.toReversed()]) assert.equal(valid(command, 'output', replace(record, path, value)), false);
+    for (const index of [0, 1]) {
+      assert.equal(valid(command, 'output', replace(record, [...path, index, 'role'], 'foreign')), false);
+      for (const value of [-1, 0.5, 9007199254740992]) assert.equal(valid(command, 'output', replace(record, [...path, index, 'resolutionOrderIndex'], value)), false);
+      for (const field of ['bindingRecordId', 'witnessRouteId']) assert.equal(valid(command, 'output', replace(record, [...path, index, field], 'sha256:' + 'A'.repeat(64))), false);
+    }
     assert.equal(valid(command, 'output', replace(record, ['localEnvironmentPolicy', 'authority'], 'foreign')), false);
   }
 });
@@ -228,7 +231,7 @@ test('source output array minima and canonical child headers have separating nei
   }
   for (const field of ['surface_columns', 'binding_columns', 'witness_columns']) {
     const columns = record.contract[field];
-    for (const value of [columns.slice(0, -1), [...columns, 'foreign'], columns.toReversed(), columns.map((x, i) => i ? x : 'foreign')]) {
+    for (const value of [columns.slice(0, -1), [...columns, 'foreign'], columns.toReversed(), ...columns.map((_, index) => columns.map((x, i) => i === index ? 'foreign' : x))]) {
       assert.equal(valid(source, 'output', replace(record, ['contract', field], value)), false, field);
     }
   }
