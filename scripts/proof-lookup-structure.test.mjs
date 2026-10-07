@@ -180,6 +180,38 @@ test('source index literals raw enums strict whitespace IDs and tuple arities ar
   for (const projection of [{kind: ' resolver_input '}, {kind: 'foreign'}, {selectedSourceIds: []}, {selectedSourceIds: [' a']}]) assert.equal(valid(source, 'input', replace(input, ['projection'], projection)), false);
 });
 
+test('source identifier grammar preserves exact guards at every parent occurrence', () => {
+  const inputSchema = contract.contractDefinitions.find(row => row.definitionId === 'proofkit.requirement-proof-source-set.input.v2.json-schema').fieldTree.variants[0].schema;
+  const outputSchemas = contract.contractDefinitions.find(row => row.definitionId === 'proofkit.requirement-proof-source-set.output.v2.json-schema').fieldTree.variants.map(row => row.schema);
+  const schemas = [inputSchema.properties.sourceSet.properties.sources.items.prefixItems[0],
+    inputSchema.properties.projection.anyOf[1].properties.selectedSourceIds.anyOf[1].items,
+    ...outputSchemas.map(schema => schema.properties.selectedSourceIds.items)];
+  for (const schema of schemas) {
+    assert.equal(schema.pattern, '^(?:[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*)(?![\\s\\S])');
+    assert.equal(schema.maxLength, 256);
+  }
+  const input = seed('canonical');
+  input.projection = {kind: 'canonical_contract', selectedSourceIds: [input.sourceSet.sources[0][0]]};
+  const invalid = ['1A', '_A', '\u00c9A', 'A.', 'A..B', 'A-', 'A--B', 'A:', 'A::B', 'A\n'];
+  for (const path of [['sourceSet', 'sources', 0, 0], ['projection', 'selectedSourceIds', 0]]) for (const value of invalid) {
+    const specimen = replace(input, path, value);
+    assert.equal(valid(source, 'input', specimen), false, path.join('/') + '/' + value);
+    const result = invoke(source, specimen);
+    assert.equal(result.status, 1); assert.equal(result.stdout, '');
+    assert.match(result.stderr, /stable rule identifier text/);
+  }
+  for (const kind of ['canonical_contract', 'resolver_input']) {
+    const specimen = structuredClone(input); specimen.projection.kind = kind;
+    const record = output(source, specimen);
+    for (const value of invalid) assert.equal(valid(source, 'output', replace(record, ['selectedSourceIds', 0], value)), false, kind + '/' + value);
+    for (const sourceId of ['A_', 'A__B', 'A._', 'A:0', 'A-0', 'A.0']) {
+      const variant = replace(specimen, ['sourceSet', 'sources', 0, 0], sourceId);
+      variant.projection.selectedSourceIds = [sourceId];
+      assert.deepEqual(output(source, variant).selectedSourceIds, [sourceId], kind + '/valid-segment');
+    }
+  }
+});
+
 test('lookup output identities wire versions counts and ordered route roles are independent', () => {
   for (const [command, name, flags, version] of [[source, 'canonical', [], 2], [source, 'canonical-resolver', [], 2], [view, 'structured', [], 1], [view, 'compact', ['--local-environment-class', 'local-go'], 2]]) {
     const record = output(command, seed(name), flags);
