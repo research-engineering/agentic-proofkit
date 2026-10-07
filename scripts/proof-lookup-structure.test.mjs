@@ -130,13 +130,21 @@ test('populated lookup variants close all object members and nonnull type bounda
 
 test('source index literals raw enums strict whitespace IDs and tuple arities are exact', () => {
   const input = seed('canonical');
+  const populated = structuredClone(input);
+  populated.projection = {kind: 'canonical_contract', selectedSourceIds: [input.sourceSet.sources[0][0]]};
+  for (const {path, value} of walk(populated)) {
+    if (typeof value !== 'string' || path[0] === 'sources' && path.at(-1) === 'text') continue;
+    for (const padded of [' ' + value, value + '\n', '\u00a0' + value]) {
+      assert.equal(valid(source, 'input', replace(populated, path, padded)), false, 'strict-input/' + path.join('.'));
+    }
+  }
   const paths = [['schemaVersion'], ['sourceSet', 'schema_version'], ['sourceSet', 'contract_kind'], ['sourceSet', 'contract_id'],
     ['sourceSet', 'authority_state'], ['sourceSet', 'normalization_profile'], ['canonicalEnvelope', 'schemaVersion'],
     ['canonicalEnvelope', 'contractKind'], ['canonicalEnvelope', 'authorityState'], ['canonicalEnvelope', 'normalizationProfile']];
   for (const path of paths) assert.equal(valid(source, 'input', replace(input, path, typeof at(input, path) === 'number' ? 3 : 'foreign')), false, path.join('.'));
   for (const path of [['sourceSet', 'source_columns'], ['canonicalEnvelope', 'surfaceColumns'], ['canonicalEnvelope', 'bindingColumns'], ['canonicalEnvelope', 'witnessColumns']]) {
     const columns = at(input, path);
-    for (const invalid of [columns.slice(1), [...columns, 'foreign'], columns.toReversed(), columns.map((x, i) => i ? x : 'foreign')]) assert.equal(valid(source, 'input', replace(input, path, invalid)), false, path.join('.'));
+    for (const invalid of [columns.slice(0, -1), [...columns, 'foreign'], columns.toReversed(), columns.map((x, i) => i ? x : 'foreign')]) assert.equal(valid(source, 'input', replace(input, path, invalid)), false, path.join('.'));
   }
   for (const path of [['canonicalEnvelope', 'contractId'], ['sources', 0, 'path'], ['sourceSet', 'sources', 0, 1]]) {
     for (const value of ['', ' ', '\u00a0', ' padded', 'padded\n']) assert.equal(valid(source, 'input', replace(input, path, value)), false, path.join('.'));
@@ -198,4 +206,32 @@ test('empty declarations retain zero counts and explicit empty local policy', ()
   const empty = output(view, structured); assert.deepEqual(empty.requirements, []);
   for (const field of ['commandCount', 'omittedRequirementCount', 'requirementCount']) assert.equal(empty[field], 0);
   assert.equal(empty.scope, 'slice'); assert.ok(empty.nonClaims.length >= 4);
+});
+
+test('source output array minima and canonical child headers have separating neighbors', () => {
+  for (const name of ['canonical', 'canonical-resolver']) {
+    const record = output(source, seed(name));
+    for (const field of ['inputPaths', 'selectedSourceIds']) {
+      assert.equal(record[field].length, 1);
+      assert.ok(valid(source, 'output', replace(record, [field], [record[field][0]])), name + '/' + field + '/singleton');
+      assert.equal(valid(source, 'output', replace(record, [field], [])), false, name + '/' + field + '/empty');
+      assert.equal(valid(source, 'output', replace(record, [field, 0], ' padded ')), false, name + '/' + field + '/padding');
+    }
+    for (const value of ['foreign/id', 'a'.repeat(257)]) assert.equal(valid(source, 'output', replace(record, ['selectedSourceIds', 0], value)), false);
+  }
+  const input = seed('canonical'), payload = JSON.parse(input.sources[0].text);
+  payload.surfaces = []; payload.bindings = [];
+  input.sources[0].text = JSON.stringify(payload); input.sourceSet.sources[0][2] = hash(input.sources[0].text);
+  const record = output(source, input); assert.deepEqual(record.contract.surfaces, []); assert.deepEqual(record.contract.bindings, []);
+  for (const field of ['schema_version', 'contract_kind', 'authority_state', 'normalization_profile']) {
+    assert.equal(valid(source, 'output', replace(record, ['contract', field], field === 'schema_version' ? 3 : 'foreign')), false, field);
+  }
+  for (const field of ['surface_columns', 'binding_columns', 'witness_columns']) {
+    const columns = record.contract[field];
+    for (const value of [columns.slice(0, -1), [...columns, 'foreign'], columns.toReversed(), columns.map((x, i) => i ? x : 'foreign')]) {
+      assert.equal(valid(source, 'output', replace(record, ['contract', field], value)), false, field);
+    }
+  }
+  assert.equal(valid(source, 'output', replace(record, ['contract', 'non_claims'], [])), false);
+  for (const value of [' padded', 'padded\n']) assert.equal(valid(source, 'output', replace(record, ['contract', 'contract_id'], value)), false);
 });
