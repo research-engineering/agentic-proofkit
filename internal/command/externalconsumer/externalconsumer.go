@@ -201,7 +201,7 @@ func admitReportInput(raw any) (reportInput, error) {
 	if !ok {
 		return reportInput{}, fmt.Errorf("proofkit external-consumer report input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"evidence", "input", "schemaVersion"}, "proofkit external-consumer report input"); err != nil {
+	if err := admit.KnownKeys(record, reportInputFields, "proofkit external-consumer report input"); err != nil {
 		return reportInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -223,7 +223,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("proofkit external-consumer input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"npmIntegrity", "npmShasum", "nonClaims", "packageName", "packageVersion", "packMetadataPath", "packMetadataSha256", "pilotId", "pilotMode", "releaseAuthorityInput", "rollback", "binarySmokeProbeRuleId", "schemaVersion", "sourceArtifactName", "sourceCommit", "sourceRepository", "sourceWorkflowRun", "tarballPath", "tarballSha256", "witnessPlan"}, "proofkit external-consumer input"); err != nil {
+	if err := admit.KnownKeys(record, inputFields, "proofkit external-consumer input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -327,7 +327,7 @@ func admitWitnessPlan(raw any) (witnessPlan, error) {
 	if !ok {
 		return witnessPlan{}, fmt.Errorf("proofkit external-consumer witnessPlan must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"commands", "vocabulary"}, "proofkit external-consumer witnessPlan"); err != nil {
+	if err := admit.KnownKeys(record, witnessFields, "proofkit external-consumer witnessPlan"); err != nil {
 		return witnessPlan{}, err
 	}
 	if _, ok := record["vocabulary"].(map[string]any); !ok {
@@ -358,7 +358,7 @@ func admitRollback(raw any) (rollback, error) {
 	if !ok {
 		return rollback{}, fmt.Errorf("proofkit external-consumer rollback must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"dependencyRemoval", "localWorkspaceFallbackPreserved"}, "proofkit external-consumer rollback"); err != nil {
+	if err := admit.KnownKeys(record, rollbackFields, "proofkit external-consumer rollback"); err != nil {
 		return rollback{}, err
 	}
 	if record["dependencyRemoval"] != "temp_consumer_package_and_lockfile" {
@@ -379,7 +379,7 @@ func admitEvidence(raw any) (evidence, error) {
 	if !ok {
 		return evidence{}, fmt.Errorf("proofkit external-consumer evidence must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"consumerProof", "packMetadata", "schemaVersion", "tarball"}, "proofkit external-consumer evidence"); err != nil {
+	if err := admit.KnownKeys(record, evidenceFields, "proofkit external-consumer evidence"); err != nil {
 		return evidence{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -412,7 +412,7 @@ func admitTarballEvidence(raw any) (tarballEvidence, error) {
 	if !ok {
 		return tarballEvidence{}, fmt.Errorf("proofkit external-consumer tarball evidence must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"path", "sha1", "sha256"}, "proofkit external-consumer tarball evidence"); err != nil {
+	if err := admit.KnownKeys(record, tarballFields, "proofkit external-consumer tarball evidence"); err != nil {
 		return tarballEvidence{}, err
 	}
 	path, err := pathText(record["path"], "tarball evidence path")
@@ -435,7 +435,7 @@ func admitPackMetadataEvidence(raw any) (packMetadataEvidence, error) {
 	if !ok {
 		return packMetadataEvidence{}, fmt.Errorf("proofkit external-consumer pack metadata evidence must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"path", "records", "sha256"}, "proofkit external-consumer pack metadata evidence"); err != nil {
+	if err := admit.KnownKeys(record, packMetadataFields, "proofkit external-consumer pack metadata evidence"); err != nil {
 		return packMetadataEvidence{}, err
 	}
 	path, err := pathText(record["path"], "pack metadata evidence path")
@@ -466,7 +466,7 @@ func admitPackMetadataRecord(raw any) (packMetadataRecord, error) {
 	if !ok {
 		return packMetadataRecord{}, fmt.Errorf("proofkit external-consumer pack metadata record must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"filename", "files", "integrity", "name", "shasum", "version"}, "proofkit external-consumer pack metadata record"); err != nil {
+	if err := admit.KnownKeys(record, packRecordFields, "proofkit external-consumer pack metadata record"); err != nil {
 		return packMetadataRecord{}, err
 	}
 	filesRaw, ok := record["files"].([]any)
@@ -509,7 +509,7 @@ func admitPackMetadataFile(raw any) (packMetadataFile, error) {
 	if !ok {
 		return packMetadataFile{}, fmt.Errorf("proofkit external-consumer pack metadata file must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"path"}, "proofkit external-consumer pack metadata file"); err != nil {
+	if err := admit.KnownKeys(record, packFileFields, "proofkit external-consumer pack metadata file"); err != nil {
 		return packMetadataFile{}, err
 	}
 	path, err := pathText(record["path"], "pack metadata file path")
@@ -524,7 +524,7 @@ func admitConsumerProof(raw any) (consumerProof, error) {
 	if !ok {
 		return consumerProof{}, fmt.Errorf("proofkit external-consumer proof evidence must be an object or null")
 	}
-	if err := admit.KnownKeys(record, []string{"cliWitnessPlanOutputSha256", "dependencySpec", "frozenLockContainsPackage", "frozenLockContainsTarball", "frozenLockUsesWorkspace", "installLockContainsPackage", "installLockContainsTarball", "installLockUsesWorkspace", "releaseAuthorityOutputSha256", "releaseAuthorityReportKind", "releaseAuthorityState", "rollbackLockContainsPackage", "binarySmokeOutputSha256", "tempConsumerLocation"}, "proofkit external-consumer proof evidence"); err != nil {
+	if err := admit.KnownKeys(record, proofFields, "proofkit external-consumer proof evidence"); err != nil {
 		return consumerProof{}, err
 	}
 	tempConsumerLocation, err := text(record["tempConsumerLocation"], "consumer proof tempConsumerLocation")
@@ -878,9 +878,9 @@ func ruleResults(failures []string) []report.RuleResult {
 	if len(failures) == 0 {
 		return []report.RuleResult{
 			{
-				RuleID:      "proofkit.external-consumer.accepted",
+				RuleID:      acceptedRuleID,
 				Status:      "passed",
-				Message:     "external consumer evidence is explicit and bounded to the tarball pilot channel",
+				Message:     acceptedMessage,
 				Diagnostics: []report.Diagnostic{},
 			},
 		}
@@ -888,7 +888,7 @@ func ruleResults(failures []string) []report.RuleResult {
 	results := make([]report.RuleResult, 0, len(failures))
 	for index, failure := range failures {
 		results = append(results, report.RuleResult{
-			RuleID:      fmt.Sprintf("proofkit.external-consumer.failure.%03d", index+1),
+			RuleID:      fmt.Sprintf(failureRulePrefix+"%03d", index+1),
 			Status:      "failed",
 			Message:     failure,
 			Diagnostics: []report.Diagnostic{},

@@ -161,7 +161,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("registry consumer proof input compose input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"compositionId", "consumerId", "dependencyName", "dependencySpec", "frozenInstall", "install", "nonClaims", "packageName", "packageVersion", "preconditions", "registryMetadata", "registryPackProof", "registryUrl", "releaseAuthorityInput", "releaseAuthorityReport", "rollback", "rollbackVersionPin", "schemaVersion", "smoke"}, "registry consumer proof input compose input"); err != nil {
+	if err := admit.KnownKeys(record, inputFields, "registry consumer proof input compose input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -262,7 +262,7 @@ func admitRegistryMetadata(raw any) (registryMetadata, error) {
 	if !ok {
 		return registryMetadata{}, fmt.Errorf("registry consumer proof input compose registryMetadata must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"packageName", "packageVersion", "tarballFileName", "tarballIntegrity", "tarballShasum"}, "registry consumer proof input compose registryMetadata"); err != nil {
+	if err := admit.KnownKeys(record, metadataFields, "registry consumer proof input compose registryMetadata"); err != nil {
 		return registryMetadata{}, err
 	}
 	name, err := packageName(record["packageName"], "registryMetadata.packageName")
@@ -293,7 +293,7 @@ func admitRegistryPackProof(raw any) (registryPackProof, error) {
 	if !ok {
 		return registryPackProof{}, fmt.Errorf("registry consumer proof input compose registryPackProof must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"integrityMatches", "nameMatches", "shasumMatches", "versionMatches"}, "registry consumer proof input compose registryPackProof"); err != nil {
+	if err := admit.KnownKeys(record, packProofFields, "registry consumer proof input compose registryPackProof"); err != nil {
 		return registryPackProof{}, err
 	}
 	integrityMatches, err := admit.Bool(record["integrityMatches"], "registryPackProof.integrityMatches")
@@ -325,7 +325,7 @@ func admitLockFacts(raw any, label string) (lockFacts, error) {
 	if !ok {
 		return lockFacts{}, fmt.Errorf("registry consumer proof input compose %s must be an object", label)
 	}
-	if err := admit.KnownKeys(record, []string{"dependencySpec", "lockContainsPackage", "lockUsesWorkspace"}, "registry consumer proof input compose "+label); err != nil {
+	if err := admit.KnownKeys(record, lockFields, "registry consumer proof input compose "+label); err != nil {
 		return lockFacts{}, err
 	}
 	dependencySpec, err := packageVersion(record["dependencySpec"], label+".dependencySpec")
@@ -348,7 +348,7 @@ func admitSmokeFacts(raw any) (smokeFacts, error) {
 	if !ok {
 		return smokeFacts{}, fmt.Errorf("registry consumer proof input compose smoke must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"binarySmokeOutputSha256", "cliWitnessPlanOutputSha256"}, "registry consumer proof input compose smoke"); err != nil {
+	if err := admit.KnownKeys(record, smokeFields, "registry consumer proof input compose smoke"); err != nil {
 		return smokeFacts{}, err
 	}
 	binarySmoke, err := sha256Text(record["binarySmokeOutputSha256"], "smoke.binarySmokeOutputSha256")
@@ -367,7 +367,7 @@ func admitReleaseAuthorityReport(raw any) (releaseAuthorityReport, error) {
 	if !ok {
 		return releaseAuthorityReport{}, fmt.Errorf("registry consumer proof input compose releaseAuthorityReport must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"outputSha256", "reportKind", "state"}, "registry consumer proof input compose releaseAuthorityReport"); err != nil {
+	if err := admit.KnownKeys(record, releaseReportFields, "registry consumer proof input compose releaseAuthorityReport"); err != nil {
 		return releaseAuthorityReport{}, err
 	}
 	outputSHA, err := sha256Text(record["outputSha256"], "releaseAuthorityReport.outputSha256")
@@ -390,7 +390,7 @@ func admitRollbackFacts(raw any) (rollbackFacts, error) {
 	if !ok {
 		return rollbackFacts{}, fmt.Errorf("registry consumer proof input compose rollback must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"lockContainsPackage"}, "registry consumer proof input compose rollback"); err != nil {
+	if err := admit.KnownKeys(record, rollbackFields, "registry consumer proof input compose rollback"); err != nil {
 		return rollbackFacts{}, err
 	}
 	lockContainsPackage, err := admit.Bool(record["lockContainsPackage"], "rollback.lockContainsPackage")
@@ -412,14 +412,14 @@ func admitPreconditions(raw any) ([]precondition, error) {
 		if !ok {
 			return nil, fmt.Errorf("registry consumer proof input compose precondition #%d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"preconditionId", "reason", "state"}, "registry consumer proof input compose precondition"); err != nil {
+		if err := admit.KnownKeys(record, preconditionFields, "registry consumer proof input compose precondition"); err != nil {
 			return nil, err
 		}
 		id, err := admit.RuleID(record["preconditionId"], "registry consumer proof input compose preconditionId")
 		if err != nil {
 			return nil, err
 		}
-		state, err := admit.Enum(record["state"], map[string]struct{}{"available": {}, "unavailable": {}}, "registry consumer proof input compose precondition state")
+		state, err := admit.Enum(record["state"], preconditionStates, "registry consumer proof input compose precondition state")
 		if err != nil {
 			return nil, err
 		}
@@ -634,15 +634,15 @@ func ruleResults(blockers []string, failures []string) []any {
 	results = append(results, map[string]any{
 		"diagnostics": []any{},
 		"message":     preconditionMessage,
-		"ruleId":      "proofkit.registry-consumer-proof-input-compose.preconditions",
+		"ruleId":      preconditionRuleID,
 		"status":      preconditionStatus,
 	})
 	semanticFailures := nonMatchingFailures(failures, "precondition")
 	if len(semanticFailures) == 0 && len(blockers) == 0 {
 		results = append(results, map[string]any{
 			"diagnostics": []any{},
-			"message":     "registry-consumer input composition is accepted by registry-consumer",
-			"ruleId":      "proofkit.registry-consumer-proof-input-compose.accepted",
+			"message":     acceptedMessage,
+			"ruleId":      acceptedRuleID,
 			"status":      "passed",
 		})
 		return results
@@ -651,7 +651,7 @@ func ruleResults(blockers []string, failures []string) []any {
 		results = append(results, map[string]any{
 			"diagnostics": []any{},
 			"message":     failure,
-			"ruleId":      fmt.Sprintf("proofkit.registry-consumer-proof-input-compose.failure.%03d", index+1),
+			"ruleId":      fmt.Sprintf(failureRulePrefix+"%03d", index+1),
 			"status":      "failed",
 		})
 	}

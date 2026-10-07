@@ -43,6 +43,34 @@ func TestBuildComposesInputAcceptedByRegistryConsumer(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsDownstreamOnlyArtifactMismatch(t *testing.T) {
+	input := validComposeInput(t)
+	releaseInput := input["releaseAuthorityInput"].(map[string]any)
+	releaseInput["package"].(map[string]any)["artifactPath"] = "artifacts/package/other-1.2.3.tgz"
+	input["releaseAuthorityReport"].(map[string]any)["outputSha256"] = releaseAuthorityOutputSHA256(t, releaseInput)
+	admitted, err := admitInput(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockers, failures := findings(admitted)
+	if len(blockers) != 0 || len(failures) != 0 {
+		t.Fatalf("separating case failed preliminary checks: blockers=%v failures=%v", blockers, failures)
+	}
+	child, childExit, childErr := registryconsumer.Build(composeRegistryConsumerInput(admitted))
+	if childErr != nil || childExit != 1 || child.State != "failed" {
+		t.Fatalf("child exit=%d state=%s error=%v, want semantic rejection", childExit, child.State, childErr)
+	}
+	output, exitCode, err := Build(input)
+	if err != nil || exitCode != 1 || output["state"] != "failed" || output["registryConsumerInput"] != nil {
+		t.Fatalf("final guard emitted downstream-invalid input: output=%#v exit=%d error=%v", output, exitCode, err)
+	}
+	summary := output["summary"].(map[string]any)
+	if summary["failureCount"] != 1 || summary["blockedPreconditionCount"] != 0 {
+		t.Fatalf("unexpected final-guard counters: %#v", summary)
+	}
+	assertRuleMessage(t, output, "composed registry-consumer input must be accepted by registry-consumer")
+}
+
 func TestIntegrityShapePreservesCompositionAndFailureClassification(t *testing.T) {
 	valid := "sha512-" + strings.Repeat("A", 85) + "Q=="
 	for _, tt := range []struct {

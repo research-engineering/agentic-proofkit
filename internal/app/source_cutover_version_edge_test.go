@@ -120,15 +120,15 @@ var nativeBoundaryDirectionDeltas = []string{
 	"adopt-materialize-apply/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-plan/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-recover/output:compatibilitySummary,contractId,nativeSources",
-	"external-consumer/input:compatibilitySummary,contractId,nativeSource,nativeSources",
-	"external-consumer/output:nativeSource,nativeSources",
+	"external-consumer/input:compatibilitySummary,contractId,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
+	"external-consumer/output:compatibilitySummary,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
 	"integration-apply/output:compatibilitySummary,contractId,nativeSources",
 	"integration-plan/output:compatibilitySummary,contractId,nativeSources",
 	"integration-recover/output:compatibilitySummary,contractId,nativeSources",
-	"registry-consumer/input:compatibilitySummary,contractId,nativeSource,nativeSources",
-	"registry-consumer/output:nativeSource,nativeSources",
-	"registry-consumer-proof-input-compose/input:compatibilitySummary,contractId,nativeSource,nativeSources",
-	"registry-consumer-proof-input-compose/output:nativeSource,nativeSources",
+	"registry-consumer/input:compatibilitySummary,contractId,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
+	"registry-consumer/output:compatibilitySummary,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
+	"registry-consumer-proof-input-compose/input:compatibilitySummary,contractId,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
+	"registry-consumer-proof-input-compose/output:compatibilitySummary,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
 	"typescript-public-api-surfaces/input:compatibilitySummary,nonClaims,rootDefinitionDigest,rootDefinitionRef,sourceGrammar",
 	"typescript-public-api-surfaces/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"workspace-changed-package-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
@@ -157,10 +157,13 @@ func TestIntegrityInputSemanticVersionsPreserveWireShapes(t *testing.T) {
 			if prior["contractId"] != "proofkit."+name+".input.v1" || next["contractId"] != "proofkit."+name+".input.v2" {
 				t.Fatal("narrowed integrity domain must have a new input semantic identity")
 			}
-			for _, field := range []string{"schemaVersion", "rootDefinitionRef", "rootDefinitionDigest"} {
+			for _, field := range []string{"schemaVersion"} {
 				if !reflect.DeepEqual(prior[field], next[field]) {
 					t.Fatalf("unchanged wire field %s changed", field)
 				}
+			}
+			if prior["rootDefinitionRef"] != "proofkit."+name+".input.v1.root-shape" || next["rootDefinitionRef"] != "proofkit."+name+".input.v2.json-schema" {
+				t.Fatal("existing input semantic identity must retain truthful structural refinement")
 			}
 			if before[name]["outputContract"].(map[string]any)["contractId"] != after[name]["outputContract"].(map[string]any)["contractId"] {
 				t.Fatal("output identity changed without a wire-shape change")
@@ -192,7 +195,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 108 || len(added) != 104+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 114 || len(added) != 110+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {
