@@ -2020,6 +2020,7 @@
         "scripts/inventory-coverage-fixtures.mjs",
         "scripts/inventory-coverage-structure.test.mjs",
         "scripts/overview-claims-structure.test.mjs",
+        "scripts/proof-lookup-structure.test.mjs",
         "scripts/proof-routing-fixtures.mjs",
         "scripts/proof-routing-structure.test.mjs",
         "scripts/public-api-structure.test.mjs",

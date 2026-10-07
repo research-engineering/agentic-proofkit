@@ -43,7 +43,7 @@ func nativeChildBindings() []nativeChildBinding {
 		{"requirement-coverage-view", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
 		{"requirement-impact-input-compose", "input", compactV2DefinitionID, [][]string{{"baseCompactProofContract"}, {"currentCompactProofContract"}}, ""},
 		{"test-evidence-inventory", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "03-proof-binding-derived"},
-		{"requirement-proof-source-set", "output", compactV2DefinitionID, [][]string{{"resolverInput"}}, ""},
+		{"requirement-proof-source-set", "output", compactV2DefinitionID, [][]string{{"resolverInput"}}, "02-resolver-input"},
 		{"selective-gate-obligation-decision-input", "input", "proofkit.receipt-currentness-scope.input.v1.json-schema", [][]string{{"receiptCurrentnessScopeAdmission"}}, ""},
 		{"selective-gate-obligation-decision-input", "input", "proofkit.receipt-trust-class.input.v1.json-schema", [][]string{{"receiptTrustClassAdmission"}}, ""},
 		{"selective-gate-evidence", "input", "proofkit.receipt-producer-admission.input.v1.json-schema", [][]string{{"producerAdmission"}}, ""},
