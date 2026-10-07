@@ -153,6 +153,14 @@ test('source index literals raw enums strict whitespace IDs and tuple arities ar
   const id = ['sourceSet', 'sources', 0, 0];
   for (const value of ['a'.repeat(256), 'source.example']) assert.ok(valid(source, 'input', replace(input, id, value)));
   for (const value of ['', 'a'.repeat(257), ' source.example', 'source/example']) assert.equal(valid(source, 'input', replace(input, id, value)), false);
+  const selected = ['projection', 'selectedSourceIds', 0];
+  for (const length of [256, 257]) {
+    assert.equal(valid(source, 'input', replace(populated, selected, 'a'.repeat(length))), length === 256, 'selected-input/length-' + length);
+  }
+  const bounded = replace(populated, id, 'a'.repeat(256));
+  bounded.projection.selectedSourceIds = ['a'.repeat(256)];
+  assert.deepEqual(output(source, bounded).selectedSourceIds, bounded.projection.selectedSourceIds);
+  assert.equal(invoke(source, replace(bounded, selected, 'a'.repeat(257))).status, 1);
   for (const value of ['', '0'.repeat(63), 'A'.repeat(64), 'sha256:' + '0'.repeat(64)]) assert.equal(valid(source, 'input', replace(input, ['sourceSet', 'sources', 0, 2], value)), false);
   for (const role of ['foreign', ' requirement_proof_route_declaration_contract ']) assert.equal(valid(source, 'input', replace(input, ['sourceSet', 'sources', 0, 3], role)), false);
   for (const row of [input.sourceSet.sources[0].slice(0, -1), [...input.sourceSet.sources[0], 'foreign']]) assert.equal(valid(source, 'input', replace(input, ['sourceSet', 'sources', 0], row)), false);
@@ -211,6 +219,19 @@ test('empty declarations retain zero counts and explicit empty local policy', ()
   assert.equal(empty.scope, 'slice'); assert.ok(empty.nonClaims.length >= 4);
 });
 
+test('unbound structured requirements retain zero scenarios and empty aggregates', () => {
+  const input = seed('structured');
+  input.bindings = []; input.witnessCommands = [];
+  input.requirements[0].claimLevel = 'advisory'; input.requirements[0].proofState = 'not_bound';
+  for (const scope of ['graph', 'slice']) {
+    const record = output(view, input, ['--scope', scope]);
+    assert.equal(record.scope, scope); assert.equal(record.requirementCount, 1); assert.equal(record.commandCount, 0);
+    assert.equal(record.requirements.length, 1); assert.equal(record.requirements[0].requirementId, 'REQ-PROOFKIT-ONE');
+    assert.equal(record.requirements[0].proofState, 'not_bound'); assert.equal(record.requirements[0].scenarioCount, 0);
+    for (const field of ['scenarios', 'commandIds', 'environmentClasses', 'witnessPaths']) assert.deepEqual(record.requirements[0][field], [], field);
+  }
+});
+
 test('source output array minima and canonical child headers have separating neighbors', () => {
   for (const name of ['canonical', 'canonical-resolver']) {
     const record = output(source, seed(name));
@@ -236,5 +257,11 @@ test('source output array minima and canonical child headers have separating nei
     }
   }
   assert.equal(valid(source, 'output', replace(record, ['contract', 'non_claims'], [])), false);
+  for (const [index, value] of record.contract.non_claims.entries()) {
+    assert.ok(valid(source, 'output', replace(record, ['contract', 'non_claims', index], value)));
+    for (const padded of [' ' + value, value + '\n', '\u00a0' + value]) {
+      assert.equal(valid(source, 'output', replace(record, ['contract', 'non_claims', index], padded)), false, 'canonical-output/nonclaim-' + index + '/padding');
+    }
+  }
   for (const value of [' padded', 'padded\n']) assert.equal(valid(source, 'output', replace(record, ['contract', 'contract_id'], value)), false);
 });
