@@ -159,9 +159,12 @@ test('source index literals raw enums strict whitespace IDs and tuple arities ar
   }
   const bounded = replace(populated, id, 'a'.repeat(256));
   bounded.projection.selectedSourceIds = ['a'.repeat(256)];
-  assert.deepEqual(output(source, bounded).selectedSourceIds, bounded.projection.selectedSourceIds);
+  for (const kind of ['canonical_contract', 'resolver_input']) {
+    const variant = structuredClone(bounded); variant.projection.kind = kind;
+    assert.deepEqual(output(source, variant).selectedSourceIds, bounded.projection.selectedSourceIds, kind + '/valid-maximum');
+  }
   assert.equal(invoke(source, replace(bounded, selected, 'a'.repeat(257))).status, 1);
-  for (const value of ['', '0'.repeat(63), 'A'.repeat(64), 'sha256:' + '0'.repeat(64)]) assert.equal(valid(source, 'input', replace(input, ['sourceSet', 'sources', 0, 2], value)), false);
+  for (const value of ['', '0'.repeat(63), '0'.repeat(65), 'A'.repeat(64), 'sha256:' + '0'.repeat(64)]) assert.equal(valid(source, 'input', replace(input, ['sourceSet', 'sources', 0, 2], value)), false);
   for (const role of ['foreign', ' requirement_proof_route_declaration_contract ']) assert.equal(valid(source, 'input', replace(input, ['sourceSet', 'sources', 0, 3], role)), false);
   for (const row of [input.sourceSet.sources[0].slice(0, -1), [...input.sourceSet.sources[0], 'foreign']]) assert.equal(valid(source, 'input', replace(input, ['sourceSet', 'sources', 0], row)), false);
   for (const path of [['canonicalEnvelope', 'nonClaims'], ['sourceSet', 'non_claims'], ['sourceSet', 'sources'], ['sourceSet', 'sources', 0, 4]]) assert.equal(valid(source, 'input', replace(input, path, [])), false);
