@@ -133,6 +133,16 @@ func TestInventoryStructurePreservesNativeCatalogAndEndpoints(t *testing.T) {
 	}
 	omissions, _ := shape.Property("omissions")
 	omitted, _ := omissions.Property("omittedRecognized")
+	for _, count := range []int{0, 25, 26} {
+		members := make([]any, count)
+		for index := range members {
+			members[index] = map[string]any{"path": "README.md", "reason": "non_text"}
+		}
+		_, err := omitted.Admit(members, "omittedRecognized")
+		if (err == nil) != (count <= 25) {
+			t.Fatalf("omission cardinality %d: %v", count, err)
+		}
+	}
 	omission, _ := omitted.Element()
 	reason, _ := omission.Property("reason")
 	for _, value := range []string{"non_text", "over_file_limit"} {

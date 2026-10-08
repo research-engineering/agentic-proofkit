@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/repositorytransaction"
 )
@@ -94,6 +95,16 @@ func TestMaterializationWrapperPathsPreserveNativeNormalization(t *testing.T) {
 					t.Fatalf("schema rejected native normalization: %s %v", field, err)
 				}
 			}
+		}
+	}
+}
+
+func TestMaterializationTextStructurePreservesNativeCanonicalStrings(t *testing.T) {
+	for _, value := range []string{"x", "A boundary.", "x\ninside", "\ufeffx", "", " ", "\t", "\u0085", "\u3000", " x", "x ", "\u0085x", "x\u3000"} {
+		_, nativeErr := admit.PreserveSortedText([]string{value}, "text control", false)
+		_, shapeErr := materializationTextShape().Admit(value, "text control")
+		if (nativeErr == nil) != (shapeErr == nil) {
+			t.Fatal("strict text structure differs from native canonical text")
 		}
 	}
 }

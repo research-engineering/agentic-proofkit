@@ -75,13 +75,41 @@ function closedObjectsAndDigests(command, direction, record) {
     }
     if (path.length && !reusedCandidate) {
       const dotted = path.join('.'), nested = path[0] === 'sourcePlan' ? path.slice(1).join('.') : dotted;
+      const rawArtifactPath = direction === 'input' && path.length === 2 && path[1] === 'path'
+        && ['requirementProofBinding', 'testEvidenceInventory'].includes(path[0]);
+      if (typeof value === 'string' && path[0] !== 'manifest' && !rawArtifactPath) {
+        for (const invalid of ['', ' ' + value, value + ' ', '\u0085' + value, value + '\u3000']) {
+          validates(command, direction, replaced(record, path, invalid), false, path + '/strict-text');
+        }
+      }
+      if (['observedCatalogFileCount', 'omittedRecognizedCount', 'unrecognizedRootEntryCount'].includes(path.at(-1))) {
+        for (const count of [0, 1, -1, 0.5]) {
+          validates(command, direction, replaced(record, path, count), count >= 0 && Number.isInteger(count), path + '/count-bound');
+        }
+      }
+      if (path.at(-1) === 'omittedRecognized') {
+        // Repeated members are shape endpoints, not native unique inventory.
+        for (const count of [0, 25, 26]) {
+          const omitted = Array.from({length: count}, () => ({path: 'README.md', reason: 'non_text'}));
+          validates(command, direction, replaced(record, path, omitted), count <= 25, path + '/omission-bound');
+        }
+      }
+      const numericMaximum = {appliedCount: 32, byteLength: 1048576, byteCount: 1048576, rootEntryCount: 4096, unrecognizedCount: 4096}[path.at(-1)];
+      if (numericMaximum !== undefined && path[0] !== 'manifest') {
+        const maximum = path.at(-1) === 'byteCount' && at(record, path.slice(0, -1)).exists === false ? 0 : numericMaximum;
+        for (const count of [0, maximum, -1, maximum + 1, 0.5]) {
+          validates(command, direction, replaced(record, path, count), count >= 0 && count <= maximum && Number.isInteger(count), path + '/numeric-bound');
+        }
+      }
       if (nested === 'summary.codeBaselineDeclared' || path.at(-1) === 'exists' && ['before', 'after'].includes(path.at(-2))) {
         validates(command, direction, replaced(record, path, !value), false, path + '/opposite-boolean');
       }
       const nullable = value === null || ['stackHint', 'summary.selectedStackPreset', 'failureClass', 'transactionResult'].includes(nested)
         || /^transactionResult\.(appliedCount|failureClass|recoveredBy|transactionId)$/.test(dotted);
       validates(command, direction, replaced(record, path, null), nullable, path + '/null');
-      validates(command, direction, replaced(record, path, typeof value === 'string' || value === null ? 0 : 'wrong-type'), false, path + '/type');
+      const wrongType = value === null && numericMaximum !== undefined ? 'wrong-type'
+        : typeof value === 'string' || value === null ? 0 : 'wrong-type';
+      validates(command, direction, replaced(record, path, wrongType), false, path + '/type');
       const literal = ['authority', 'planKind', 'inventoryKind', 'policyId', 'syntaxState', 'repositoryRootState', 'versionControlState', 'intent', 'declarationClass',
         'capabilityMapTrustMode', 'packetKind', 'commandId', 'instruction', 'order', 'outputKind', 'owner', 'taskId',
         'slotCount', 'guidanceId', 'requestKind', 'receiptKind', 'operation', 'state', 'sourceIntent', 'action', 'recoveredBy', 'reason',
@@ -163,6 +191,7 @@ function chain(executable, repo, request) {
   }
   const rollback = run('adopt-materialize-recover', undefined, ['--transaction', transaction.transactionId, '--action', 'rollback'], 1);
   assert.equal(rollback.state, 'recovery_required'); assert.equal(rollback.failureClass, 'committed_state_mismatch');
+  closedObjectsAndDigests('adopt-materialize-recover', 'output', rollback);
   for (const [command, value] of [['adopt-materialize-plan', plan], ['adopt-materialize-apply', applied], ['adopt-materialize-recover', resume]]) {
     closedObjectsAndDigests(command, 'output', value);
   }
@@ -175,6 +204,15 @@ function chain(executable, repo, request) {
       validates(command, 'output', replaced(specimen, ['transactionResult', 'recoveredBy'], recoveredBy));
     }
     validates(command, 'output', replaced(specimen, ['transactionResult', 'recoveredBy'], 'foreign'), false, 'recoveredBy/enum');
+    // Nullable grammar specimens do not approve native state/result relations.
+    for (const path of [['failureClass'], ['transactionResult', 'failureClass']]) {
+      for (const value of [null, 'operation_failed', '', ' operation_failed', 'operation_failed ', '\u0085operation_failed', 'operation_failed\u3000']) {
+        validates(command, 'output', replaced(specimen, path, value), value === null || value === 'operation_failed', path + '/strict-text');
+      }
+    }
+  }
+  for (const path of ['canonical/path', '', ' canonical/path', 'canonical/path ', '\u0085canonical/path']) {
+    validates('adopt-materialize-plan', 'output', replaced(plan, ['transaction', 'createdDirectories'], [path]), path === 'canonical/path', 'createdDirectories/strict-text');
   }
   const paths = filesystem(repo).filter(row => !row.path.startsWith('.agentic-proofkit/')).map(row => row.path);
   assert.deepEqual(paths, ['README.md', 'docs/specs/pilot/requirements.v2.json', 'proofkit/project.v1.json', 'proofkit/requirement-bindings.json', 'proofkit/test-evidence-inventory.json']);
@@ -224,6 +262,7 @@ test('parent cardinality, ID, claim and operation boundaries are not native writ
   const blocked = report('adopt-materialize-apply', native('adopt-materialize-apply', repo, request,
     ['--expect-transaction', plan.transaction.transactionId, '--expect-desired-state', 'sha256:' + '0'.repeat(64)]), 1);
   assert.equal(blocked.state, 'blocked'); assert.equal(blocked.transactionResult, null);
+  closedObjectsAndDigests('adopt-materialize-apply', 'output', blocked);
   validates('adopt-materialize-apply', 'output', replaced(blocked, ['expectedTransactionId'], null), false);
   validates('adopt-materialize-apply', 'output', replaced(blocked, ['expectedDesiredStateId'], null), false);
   for (const state of ['blocked', 'cleanup_required', 'durability_unknown', 'failed', 'passed', 'recovery_required']) {
@@ -251,6 +290,7 @@ test('catalog omissions and public transaction snapshots preserve inclusive reso
     for (const command of ['adopt-materialize-plan', 'adopt-materialize-apply']) {
       const candidate = replaced(requestSeed, ['sourcePlan'], sourcePlan);
       validates(command, 'input', candidate);
+      closedObjectsAndDigests(command, 'input', candidate);
       for (const reason of ['non_text', 'over_file_limit', 'foreign']) {
         validates(command, 'input', replaced(candidate, ['sourcePlan', 'repositoryInventory', 'omissions', 'omittedRecognized', 0, 'reason'], reason),
           reason !== 'foreign', mode + '/omission-reason/enum');

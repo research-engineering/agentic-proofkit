@@ -39,6 +39,18 @@ func TestPlanStructurePreservesAllNativeIntentAndHintVariants(t *testing.T) {
 					t.Fatal(err)
 				}
 				value := wire.(map[string]any)
+				for _, field := range []string{"observedCatalogFileCount", "omittedRecognizedCount", "unrecognizedRootEntryCount"} {
+					for _, count := range []json.Number{"0", "1", "-1", "0.5"} {
+						changed := maps.Clone(value)
+						summary := maps.Clone(value["summary"].(map[string]any))
+						summary[field] = count
+						changed["summary"] = summary
+						_, err := shape.Admit(changed, "plan")
+						if (err == nil) != (count == "0" || count == "1") {
+							t.Fatalf("summary count boundary %s=%s: %v", field, count, err)
+						}
+					}
+				}
 				for field := range value {
 					missing := maps.Clone(value)
 					delete(missing, field)
