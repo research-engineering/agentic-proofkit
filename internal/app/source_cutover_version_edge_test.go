@@ -131,6 +131,8 @@ var nativeBoundaryDirectionDeltas = []string{
 	"integration-recover/output:compatibilitySummary,contractId,nativeSources,rootDefinitionDigest,rootDefinitionRef",
 	"integration-source/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"integration-check/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"status/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"next/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"registry-consumer/input:compatibilitySummary,contractId,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
 	"registry-consumer/output:compatibilitySummary,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
 	"registry-consumer-proof-input-compose/input:compatibilitySummary,contractId,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
@@ -202,8 +204,8 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Materialization input replacements were already counted by the source cutover.
-	// Adoption and integration enrichment replace ten retained output roots.
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 128 || len(added) != 124+len(residueCommandAdditions) {
+	// Adoption, integration and navigation enrichment replace twelve retained output roots.
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 130 || len(added) != 126+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {

@@ -25,6 +25,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
 	"github.com/research-engineering/agentic-proofkit/internal/command/producerpolicyselfproof"
+	"github.com/research-engineering/agentic-proofkit/internal/command/projectstatus"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofbindingtestinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
@@ -673,6 +674,14 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.integration-recover.output.v1.json-schema", direction: "output", semanticVersion: 2,
 		predecessors: []string{"proofkit.integration-recover.output.v1.root-shape"}, commands: []string{"integration-recover"},
 		schema: func() (map[string]any, error) { return agentintegration.RecoverOutputStructure(), nil },
+	}, {
+		id: "proofkit.status.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.status.output.v1.root-shape"}, commands: []string{"status"},
+		schema: func() (map[string]any, error) { return projectstatus.StatusOutputStructure(), nil },
+	}, {
+		id: "proofkit.next.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.next.output.v1.root-shape"}, commands: []string{"next"},
+		schema: func() (map[string]any, error) { return projectstatus.NextOutputStructure(), nil },
 	}}
 }
 
