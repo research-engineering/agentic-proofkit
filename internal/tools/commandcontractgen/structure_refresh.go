@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 
@@ -113,7 +114,10 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 			input["rootDefinitionDigest"] = definition["canonicalDigest"]
 			input["contractId"] = owner.contractID(name, version)
 			input["schemaVersion"] = version
-			input["compatibilitySummary"] = owner.summary(version)
+			input["compatibilitySummary"], err = enrichedCompatibilitySummary(owner, version, input["compatibilitySummary"])
+			if err != nil {
+				return nil, err
+			}
 			command[key] = input
 			commands[i] = command
 			wire.Commands[i], err = encodeContractSource(command)
@@ -237,6 +241,57 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 		return nil, fmt.Errorf("generated CLI contract has %d bytes, exceeding installed carrier byte limit %d", len(encoded), installedclicontract.MaximumContractBytes)
 	}
 	return encoded, nil
+}
+
+// Enrichment owns the generated header and shape annotation, not other policy notes.
+func enrichedCompatibilitySummary(owner nativeStructure, version json.Number, raw any) ([]any, error) {
+	previous, ok := raw.([]any)
+	if !ok || len(previous) == 0 {
+		return nil, fmt.Errorf("native structure compatibility summary must be a nonempty array")
+	}
+	result := owner.summary(version)
+	for index, rawNote := range previous {
+		note, ok := rawNote.(string)
+		if !ok {
+			return nil, fmt.Errorf("native structure compatibility note must be text")
+		}
+		if index == 0 && generatedVersionHeader(owner, note) || note == result[1] {
+			continue
+		}
+		if strings.HasPrefix(note, "structural JSON Schema definition "+owner.id+";") {
+			return nil, fmt.Errorf("compatibility note contains an unowned annotation suffix")
+		}
+		obsolete := false
+		for _, predecessor := range owner.predecessors {
+			prefix := "root-shape-only definition " + predecessor + "; "
+			for _, suffix := range []string{
+				"nested fields, types, and cardinalities are non-claims",
+				"nested fields, types, and cardinalities remain native-owner claims",
+				"nested fields, types, cardinalities, and cross-record closure remain native-owner claims",
+			} {
+				obsolete = obsolete || note == prefix+suffix
+			}
+			if strings.HasPrefix(note, prefix) && !obsolete {
+				return nil, fmt.Errorf("compatibility note contains an unowned annotation suffix")
+			}
+		}
+		if !obsolete {
+			result = append(result, note)
+		}
+	}
+	return result, nil
+}
+
+func generatedVersionHeader(owner nativeStructure, note string) bool {
+	key, tail, ok := strings.Cut(note, "=")
+	if !ok || key != owner.schemaVersionField() && key != "contractSchemaVersion" {
+		return false
+	}
+	version, _, _ := strings.Cut(tail, " ")
+	if validateNativeVersion(json.Number(version)) != nil {
+		return false
+	}
+	return note == owner.schemaVersionField()+"="+version || note == owner.summary(json.Number(version))[0]
 }
 
 func encodeContractSource(value any) ([]byte, error) {

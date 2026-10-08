@@ -1030,6 +1030,28 @@
       "commandIds": ["proofkit.boundary-contract-check"],
       "environmentClasses": ["local-go-node"],
       "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.materialization-schema-independent-runtime",
+      "witnessId": "proofkit.materialization-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/materialization-structure.test.mjs"
+    },
+    {
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"],
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.materialization-schema-owner",
+      "witnessId": "proofkit.materialization-schema-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/materialization_structure_test.go",
+      "witnessSelectors": [{
+        "command": "go test ./internal/tools/commandcontractgen -run '^TestAdoptionStructuresBindSevenDirectionsAndRetainIdentities$'",
+        "selector": "TestAdoptionStructuresBindSevenDirectionsAndRetainIdentities"
+      }]
+    },
+    {
+      "commandIds": ["proofkit.boundary-contract-check"],
+      "environmentClasses": ["local-go-node"],
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
       "scenarioId": "proofkit.supply-chain-quality.proof-lookup-schema-independent-runtime",
       "witnessId": "proofkit.proof-lookup-schema-independent-runtime",
       "witnessKind": "contract",

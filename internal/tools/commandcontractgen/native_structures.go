@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionchecklist"
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/command/changedpathset"
@@ -34,6 +36,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/registryconsumerinputcompose"
 	"github.com/research-engineering/agentic-proofkit/internal/command/releaseauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/command/renderedartifactfreshness"
+	"github.com/research-engineering/agentic-proofkit/internal/command/repositoryinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
@@ -616,6 +619,38 @@ func nativeStructures() []nativeStructure {
 		variants: []nativeStructureVariant{
 			{id: "01-compact", when: "compact proof contract root", schema: func() (map[string]any, error) { return requirementproofview.CompactOutputStructure(), nil }},
 			{id: "02-structured", when: "structured requirement proof binding root", schema: func() (map[string]any, error) { return requirementproofview.StructuredOutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.repository-inventory.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.repository-inventory.output.v1.root-shape"}, commands: []string{"repository-inventory"},
+		schema: func() (map[string]any, error) { return repositoryinventory.OutputStructure(), nil },
+	}, {
+		id: "proofkit.adopt-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.adopt-plan.output.v1.root-shape"}, commands: []string{"adopt-plan"},
+		schema: adoptionplan.OutputStructure,
+	}, {
+		id: "proofkit.adoption-materialization.plan-input.v2.json-schema", direction: "input", semanticVersion: 3,
+		predecessors: []string{"proofkit.adoption-materialization.plan-input.v2.root-shape"}, commands: []string{"adopt-materialize-plan"},
+		schema: adoptionmaterialization.InputStructure,
+	}, {
+		id: "proofkit.adoption-materialization.apply-input.v2.json-schema", direction: "input", semanticVersion: 3,
+		predecessors: []string{"proofkit.adoption-materialization.apply-input.v2.root-shape"}, commands: []string{"adopt-materialize-apply"},
+		schema: adoptionmaterialization.InputStructure,
+	}, {
+		id: "proofkit.adoption-materialization.plan-output.v1.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.adoption-materialization.plan-output.v1.root-shape"}, commands: []string{"adopt-materialize-plan"},
+		schema: func() (map[string]any, error) { return adoptionmaterialization.PlanOutputStructure(), nil },
+	}, {
+		id: "proofkit.adoption-materialization.apply-output.v1.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.adoption-materialization.apply-output.v1.root-shape"}, commands: []string{"adopt-materialize-apply"},
+		schema: func() (map[string]any, error) {
+			return adoptionmaterialization.ReceiptOutputStructure(adoptionmaterialization.OperationApply)
+		},
+	}, {
+		id: "proofkit.adoption-materialization.recover-output.v1.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.adoption-materialization.recover-output.v1.root-shape"}, commands: []string{"adopt-materialize-recover"},
+		schema: func() (map[string]any, error) {
+			return adoptionmaterialization.ReceiptOutputStructure(adoptionmaterialization.OperationRecover)
 		},
 	}}
 }

@@ -1,0 +1,250 @@
+{
+  "nonClaims": [
+    "Pilot materialization request is test-only."
+  ],
+  "projectId": "pilot.project",
+  "requestId": "pilot.materialization.request",
+  "requestKind": "proofkit.adoption-materialization-request",
+  "requirementProofBinding": {
+    "path": "proofkit/requirement-bindings.json",
+    "record": {
+      "bindingId": "pilot.bindings",
+      "bindings": [
+        {
+          "commandIds": [
+            "pilot.command.test"
+          ],
+          "environmentClasses": [
+            "local-go"
+          ],
+          "requirementId": "REQ-PILOT-001",
+          "scenarioId": "pilot.scenario.materialization",
+          "witnessId": "pilot.witness.materialization",
+          "witnessKind": "contract",
+          "witnessPath": "internal/pilot/materialization_test.go"
+        }
+      ],
+      "nonClaims": [
+        "Pilot binding fixture does not execute witnesses."
+      ],
+      "requirements": [
+        {
+          "claimLevel": "blocking",
+          "nonClaims": [
+            "Pilot requirement fixture does not prove rollout."
+          ],
+          "ownerId": "pilot.owner",
+          "proofState": "witness_backed",
+          "requirementId": "REQ-PILOT-001",
+          "specPath": "docs/specs/pilot/requirements.v2.json"
+        }
+      ],
+      "schemaVersion": 1,
+      "selection": {
+        "changedPaths": [],
+        "ownerIds": [],
+        "requirementIds": []
+      },
+      "witnessCommands": [
+        {
+          "command": "go test ./internal/pilot",
+          "commandId": "pilot.command.test",
+          "environmentClasses": [
+            "local-go"
+          ]
+        }
+      ]
+    }
+  },
+  "requirementSources": [
+    {
+      "groups": [
+        {
+          "groupId": "RGRP-PILOT",
+          "members": [
+            {
+              "fields": {
+                "claimLevel": "blocking",
+                "deferral": null,
+                "externalNonClaimRefs": [],
+                "lifecycle": {
+                  "state": "active"
+                },
+                "nonClaimRefs": [],
+                "nonClaims": [
+                  "Pilot requirement fixture does not prove rollout."
+                ],
+                "ownerId": "pilot.owner",
+                "proofBindingRefs": [
+                  "proofkit/requirement-bindings.json"
+                ],
+                "riskClass": "high",
+                "updatePolicy": {
+                  "requiresImpactDeclaration": true,
+                  "requiresProofBindingReview": true,
+                  "reviewOwnerId": "pilot.owner"
+                }
+              },
+              "requirementId": "REQ-PILOT-001",
+              "statementCompletion": "Pilot materialization preserves admitted requirement meaning."
+            }
+          ],
+          "profileId": "",
+          "sharedPremises": [],
+          "statementStem": ""
+        }
+      ],
+      "kind": "proofkit.requirement-source",
+      "schemaVersion": 2,
+      "sourceId": "pilot.requirements",
+      "sourceNonClaims": [
+        "Pilot source fixture does not prove production readiness."
+      ],
+      "specPackagePath": "docs/specs/pilot"
+    }
+  ],
+  "schemaVersion": 2,
+  "sourcePlan": {
+    "authoringPacket": {
+      "authority": "candidate_only",
+      "inventoryRef": "sha256:063e490f9d731f154280bdfe0da2b2ff60092243b014b22ded0e31dd419a3e9b",
+      "nativeEvidenceGuidance": {
+        "commandId": "native-evidence-guidance",
+        "contentSha256": "sha256:366f2f37482506b8c94042dbd974469fceda79e2141b4faec61071893190b3ea",
+        "guidanceId": "proofkit.native-evidence-guidance.v1",
+        "slotCount": 22
+      },
+      "packetKind": "proofkit.candidate-authoring-packet-template",
+      "proposedBindingCount": 0,
+      "proposedRequirementCount": 0,
+      "tasks": [
+        {
+          "commandId": null,
+          "instruction": "Ask the consuming repository owner for observable outcomes, supported scenarios, guarantees, limits, edge cases, stable identifiers, owners, risk classes, and explicit non-claims. Do not infer product meaning from inventory filenames.",
+          "order": 1,
+          "outputKind": "candidate_behavior_statements",
+          "owner": "consuming_repository_owner",
+          "taskId": "proofkit.adoption-plan.author-product-contract"
+        },
+        {
+          "commandId": "requirement-source-admission",
+          "instruction": "Materialize only owner-approved statements as a candidate requirement source, then admit that source before creating bindings or claiming coverage.",
+          "order": 2,
+          "outputKind": "candidate_requirement_source",
+          "owner": "consuming_repository_owner",
+          "taskId": "proofkit.adoption-plan.materialize-requirement-source"
+        },
+        {
+          "commandId": "native-evidence-guidance",
+          "instruction": "For every admitted invariant, design a falsifier and native witness by resolving the referenced evidence-guidance slots under consuming-repository authority.",
+          "order": 3,
+          "outputKind": "repository_specific_evidence_design",
+          "owner": "consuming_repository_owner",
+          "taskId": "proofkit.adoption-plan.design-native-evidence"
+        }
+      ]
+    },
+    "authority": "derived_non_authoritative_plan",
+    "intent": "fresh",
+    "nonClaims": [
+      "Adoption plans do not infer or generate requirement meaning, invariant text, product promises, owner decisions, or proof adequacy from repository inventory or stack hints.",
+      "Adoption plans do not read source trees, write files, execute commands or witnesses, promote candidate data, approve merge, release, rollout, or production readiness.",
+      "Selecting code-baseline records an explicit caller declaration; it does not independently prove that current code is correct or suitable as product truth.",
+      "Stack hints are optional non-authoritative suggestions and cannot change the selected source-trust intent."
+    ],
+    "planId": "sha256:f8b07178d629e6b91125b8fe4b2fabc938ea1d1999a9ad4719e0922b02bdb964",
+    "planKind": "proofkit.adoption-plan",
+    "repositoryInventory": {
+      "entries": [
+        {
+          "byteLength": 8,
+          "contentSha256": "sha256:fa63b976b38efeb5b1c03443a1cee8a7808225c371570473c0f971add24b8450",
+          "path": "README.md",
+          "role": "human_overview",
+          "syntaxState": "not_evaluated"
+        }
+      ],
+      "inventoryId": "sha256:063e490f9d731f154280bdfe0da2b2ff60092243b014b22ded0e31dd419a3e9b",
+      "inventoryKind": "proofkit.repository-inventory",
+      "nonClaims": [
+        "Repository inventory records a bounded read observation and does not prove an atomic repository snapshot or continuing freshness.",
+        "Repository inventory re-admission proves canonical structure and content identity; it does not authenticate scanner execution or filesystem origin.",
+        "Repository inventory does not evaluate version-control trackedness, ignored state, manifest syntax, dependencies, source semantics, stack identity, requirement meaning, proof adequacy, merge readiness, release readiness, rollout, or production readiness.",
+        "Unrecognized root entry names are used only for fixed-catalog membership and aggregate counting; their names and metadata are not retained or disclosed, and their file contents are not opened."
+      ],
+      "omissions": {
+        "omittedRecognized": [],
+        "rootEntryCount": 1,
+        "unrecognizedCount": 0
+      },
+      "policyId": "proofkit.repository-root-catalog.v1",
+      "schemaVersion": 1,
+      "scope": {
+        "class": "root_catalog",
+        "repositoryRootState": "caller_selected_not_disclosed",
+        "versionControlState": "not_evaluated"
+      }
+    },
+    "schemaVersion": 1,
+    "sourceTrust": {
+      "capabilityMapTrustMode": null,
+      "declarationClass": "owner_intent_required"
+    },
+    "stackHint": null,
+    "state": "authoring_required",
+    "summary": {
+      "codeBaselineDeclared": false,
+      "generatedBindingCount": 0,
+      "generatedRequirementCount": 0,
+      "observedCatalogFileCount": 1,
+      "omittedRecognizedCount": 0,
+      "selectedStackPreset": null,
+      "taskCount": 3,
+      "unrecognizedRootEntryCount": 0
+    }
+  },
+  "testEvidenceInventory": {
+    "path": "proofkit/test-evidence-inventory.json",
+    "record": {
+      "authority": "caller_owned_inventory",
+      "entries": [
+        {
+          "commandRefs": [
+            "pilot.command.test"
+          ],
+          "evidenceClass": "declared_semantic_falsifier_route",
+          "falsifier": {
+            "dominanceGroup": "pilot.materialization",
+            "falsifierId": "pilot.falsifier.materialization",
+            "negativeCaseId": "pilot.case.materialization",
+            "supersedes": [],
+            "wrongImplementationClassId": "pilot.wrong.materialization"
+          },
+          "nonClaims": [],
+          "oracle": {
+            "assertionSummary": "A contradictory materialization request is rejected before mutation.",
+            "expectedPublicOutcome": "invalid materialization fails closed",
+            "oracleId": "pilot.oracle.materialization",
+            "oracleKind": "negative_exit_and_diagnostic"
+          },
+          "ownerId": "pilot.owner",
+          "ownerInvariantRefs": [],
+          "requirementRefs": [
+            "REQ-PILOT-001"
+          ],
+          "selector": "go test ./internal/pilot -run TestMaterialization",
+          "sourcePath": "internal/pilot/materialization_test.go",
+          "testId": "pilot.test.materialization",
+          "witnessRefs": [
+            "pilot.witness.materialization"
+          ]
+        }
+      ],
+      "inventoryId": "pilot.inventory",
+      "nonClaims": [
+        "Pilot inventory fixture does not execute native tests."
+      ],
+      "schemaVersion": 1
+    }
+  }
+}
