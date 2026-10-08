@@ -177,6 +177,36 @@ byte identity nor publication, authentication, or release approval.
 
 ## Publish
 
+### Source And Signing Policy
+
+The default release path uses reviewed, check-qualified, GitHub-verified squash
+commits on protected `main`. Keep required commit signatures, strict required
+checks, and administrator enforcement enabled. Release tag rules must prohibit
+updates and deletion of `refs/tags/v*` without bypass actors. Those rules do not
+authorize tag creation; the release operator still selects the exact admitted
+version and commit. The readiness gate requires that commit to be reachable
+from `main` before any registry side effect.
+
+Publish GitHub Releases as immutable: create a draft, attach the complete
+admitted asset set, then publish. Verify release and artifact attestations and
+the registry/archive/installed-consumer identities independently. An immutable
+release locks the tag and assets, not its editable title or release notes.
+Configuration readback alone proves neither enforcement on a particular
+operation nor a completed publication.
+
+GitHub is the trusted signature and publication provider in this default path.
+It does not establish an independently held maintainer tag signature or resist
+compromise of every authorized provider administrator. Mandatory independently
+signed annotated tags are not part of the default policy. Introduce that
+stronger boundary only with an admitted signer allowlist, custody, backup,
+recovery, revocation, and rotation policy; another key in the same publisher
+trust domain does not by itself establish independent release authorization.
+The optional verified annotated-tag gate below remains available.
+
+Provider mechanisms: [commit signature verification](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification),
+[ruleset rules](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets),
+and [immutable releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases).
+
 Create and push an exact version tag:
 
 ```bash
