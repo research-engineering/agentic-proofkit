@@ -11,6 +11,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionchecklist"
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/agentintegration"
 	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/command/changedpathset"
@@ -652,6 +653,26 @@ func nativeStructures() []nativeStructure {
 		schema: func() (map[string]any, error) {
 			return adoptionmaterialization.ReceiptOutputStructure(adoptionmaterialization.OperationRecover)
 		},
+	}, {
+		id: "proofkit.integration-source.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.integration-source.output.v1.root-shape"}, commands: []string{"integration-source"},
+		schema: func() (map[string]any, error) { return agentintegration.SourceOutputStructure(), nil },
+	}, {
+		id: "proofkit.integration-check.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.integration-check.output.v1.root-shape"}, commands: []string{"integration-check"},
+		schema: func() (map[string]any, error) { return agentintegration.CheckOutputStructure(), nil },
+	}, {
+		id: "proofkit.integration-plan.output.v1.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.integration-plan.output.v1.root-shape"}, commands: []string{"integration-plan"},
+		schema: func() (map[string]any, error) { return agentintegration.PlanOutputStructure(), nil },
+	}, {
+		id: "proofkit.integration-apply.output.v1.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.integration-apply.output.v1.root-shape"}, commands: []string{"integration-apply"},
+		schema: func() (map[string]any, error) { return agentintegration.ApplyOutputStructure(), nil },
+	}, {
+		id: "proofkit.integration-recover.output.v1.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.integration-recover.output.v1.root-shape"}, commands: []string{"integration-recover"},
+		schema: func() (map[string]any, error) { return agentintegration.RecoverOutputStructure(), nil },
 	}}
 }
 

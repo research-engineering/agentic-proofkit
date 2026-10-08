@@ -2017,6 +2017,7 @@
         "scripts/generated-starter-structure.test.mjs",
         "scripts/impact-fixtures.mjs",
         "scripts/impact-structure.test.mjs",
+        "scripts/integration-structure.test.mjs",
         "scripts/inventory-coverage-fixtures.mjs",
         "scripts/inventory-coverage-structure.test.mjs",
         "scripts/materialization-structure.test.mjs",

@@ -131,10 +131,14 @@ func (document Document) JSONValue() map[string]any {
 		"content": document.content, "contentDigest": document.contentDigest,
 		"capabilityDigest": document.capabilityDigest,
 		"metadataBytes":    document.metadataBytes, "bodyBytes": document.bodyBytes,
-		"nonClaims": []any{
-			"Generation does not install instructions, activate a host skill, or authorize execution.",
-			"The identity binds materialization and consumed registered contracts, not every transitive runtime behavior.",
-		},
+		"nonClaims": sourceNonClaims(),
+	}
+}
+
+func sourceNonClaims() []any {
+	return []any{
+		"Generation does not install instructions, activate a host skill, or authorize execution.",
+		"The identity binds materialization and consumed registered contracts, not every transitive runtime behavior.",
 	}
 }
 
