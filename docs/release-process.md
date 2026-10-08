@@ -188,8 +188,9 @@ version and commit. The readiness gate requires that commit to be reachable
 from `main` before any registry side effect.
 
 Publish GitHub Releases as immutable: create a draft, attach the complete
-admitted asset set, then publish. Verify release and artifact attestations and
-the registry/archive/installed-consumer identities independently. An immutable
+admitted asset set, then publish. Apply the attestation requirements and
+disabled-mode non-claims below; verify required attestations and the
+registry/archive/installed-consumer identities independently. An immutable
 release locks the tag and assets, not its editable title or release notes.
 Configuration readback alone proves neither enforcement on a particular
 operation nor a completed publication.
