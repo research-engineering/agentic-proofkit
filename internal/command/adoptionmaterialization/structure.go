@@ -105,7 +105,7 @@ func ReceiptOutputStructure(operation string) (map[string]any, error) {
 
 func artifactShape(record jsonshape.Shape) jsonshape.Shape {
 	return jsonshape.Object(
-		jsonshape.Required("path", materializationTextShape()),
+		jsonshape.Required("path", jsonshape.NonBlankString()),
 		jsonshape.Required("record", record),
 	)
 }

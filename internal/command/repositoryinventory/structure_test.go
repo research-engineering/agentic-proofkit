@@ -132,6 +132,19 @@ func TestInventoryStructurePreservesNativeCatalogAndEndpoints(t *testing.T) {
 		})
 	}
 	omissions, _ := shape.Property("omissions")
+	omitted, _ := omissions.Property("omittedRecognized")
+	omission, _ := omitted.Element()
+	reason, _ := omission.Property("reason")
+	for _, value := range []string{"non_text", "over_file_limit"} {
+		if _, err := reason.Admit(value, "reason"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, value := range []any{"foreign", "non_text ", "", nil, false} {
+		if _, err := reason.Admit(value, "reason"); err == nil {
+			t.Fatal("accepted invalid omission reason enum member")
+		}
+	}
 	for _, field := range []string{"rootEntryCount", "unrecognizedCount"} {
 		count, _ := omissions.Property(field)
 		for _, valid := range []json.Number{"0", "4096"} {

@@ -47,7 +47,7 @@ func TestMaterializationInputStructurePreservesNativeRequest(t *testing.T) {
 	}
 	for _, field := range []string{"requirementProofBinding", "testEvidenceInventory"} {
 		child := wire[field].(map[string]any)
-		for _, mutation := range []string{"missing-path", "missing-record", "extra", "padded-path"} {
+		for _, mutation := range []string{"missing-path", "missing-record", "extra", "blank-path"} {
 			candidate := maps.Clone(wire)
 			changed := maps.Clone(child)
 			switch mutation {
@@ -57,12 +57,42 @@ func TestMaterializationInputStructurePreservesNativeRequest(t *testing.T) {
 				delete(changed, "record")
 			case "extra":
 				changed["foreign"] = true
-			case "padded-path":
-				changed["path"] = " " + child["path"].(string)
+			case "blank-path":
+				changed["path"] = " \t\u0085\u3000"
 			}
 			candidate[field] = changed
 			if _, err := shape.Admit(candidate, "request"); err == nil {
 				t.Fatalf("accepted %s/%s", field, mutation)
+			}
+		}
+	}
+}
+
+func TestMaterializationWrapperPathsPreserveNativeNormalization(t *testing.T) {
+	shape, err := InputShape()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wire := jsonRoundTripValue(t, validRequest(t, t.TempDir())).(map[string]any)
+	for _, field := range []string{"requirementProofBinding", "testEvidenceInventory"} {
+		child := wire[field].(map[string]any)
+		path := child["path"].(string)
+		for _, padding := range []string{" ", "\t", "\u0085", "\u00a0", "\u2003", "\u2028", "\u3000"} {
+			for _, raw := range []string{padding + path, path + padding, padding + path + padding} {
+				candidate := maps.Clone(wire)
+				changed := maps.Clone(child)
+				changed["path"] = raw
+				candidate[field] = changed
+				request, err := admitRequest(candidate)
+				if err != nil {
+					t.Fatalf("native normalization: %s %v", field, err)
+				}
+				if request.BindingPath != wire["requirementProofBinding"].(map[string]any)["path"] || request.InventoryPath != wire["testEvidenceInventory"].(map[string]any)["path"] {
+					t.Fatal("native normalization changed canonical artifact paths")
+				}
+				if _, err := shape.Admit(candidate, "request"); err != nil {
+					t.Fatalf("schema rejected native normalization: %s %v", field, err)
+				}
 			}
 		}
 	}

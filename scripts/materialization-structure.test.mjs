@@ -84,7 +84,7 @@ function closedObjectsAndDigests(command, direction, record) {
       validates(command, direction, replaced(record, path, typeof value === 'string' || value === null ? 0 : 'wrong-type'), false, path + '/type');
       const literal = ['authority', 'planKind', 'inventoryKind', 'policyId', 'syntaxState', 'repositoryRootState', 'versionControlState', 'intent', 'declarationClass',
         'capabilityMapTrustMode', 'packetKind', 'commandId', 'instruction', 'order', 'outputKind', 'owner', 'taskId',
-        'slotCount', 'guidanceId', 'requestKind', 'receiptKind', 'operation', 'state', 'sourceIntent',
+        'slotCount', 'guidanceId', 'requestKind', 'receiptKind', 'operation', 'state', 'sourceIntent', 'action', 'recoveredBy', 'reason',
         'generatedBindingCount', 'generatedRequirementCount', 'proposedBindingCount', 'proposedRequirementCount'].includes(path.at(-1))
         || ['class', 'role', 'path'].includes(path.at(-1)) && (command === 'repository-inventory' || path.includes('repositoryInventory'));
       if (value !== null && literal) validates(command, direction, replaced(record, path, typeof value === 'number' ? 99 : 'foreign'), false, path + '/literal');
@@ -166,6 +166,16 @@ function chain(executable, repo, request) {
   for (const [command, value] of [['adopt-materialize-plan', plan], ['adopt-materialize-apply', applied], ['adopt-materialize-recover', resume]]) {
     closedObjectsAndDigests(command, 'output', value);
   }
+  for (const action of ['create', 'replace', 'delete', 'unchanged']) {
+    validates('adopt-materialize-plan', 'output', replaced(plan, ['transaction', 'operations', 0, 'action'], action));
+  }
+  for (const command of ['adopt-materialize-apply', 'adopt-materialize-recover']) {
+    const specimen = command === 'adopt-materialize-apply' ? applied : resume;
+    for (const recoveredBy of [null, 'resume', 'rollback']) {
+      validates(command, 'output', replaced(specimen, ['transactionResult', 'recoveredBy'], recoveredBy));
+    }
+    validates(command, 'output', replaced(specimen, ['transactionResult', 'recoveredBy'], 'foreign'), false, 'recoveredBy/enum');
+  }
   const paths = filesystem(repo).filter(row => !row.path.startsWith('.agentic-proofkit/')).map(row => row.path);
   assert.deepEqual(paths, ['README.md', 'docs/specs/pilot/requirements.v2.json', 'proofkit/project.v1.json', 'proofkit/requirement-bindings.json', 'proofkit/test-evidence-inventory.json']);
   for (const path of paths.filter(path => path.endsWith('.json'))) assert.doesNotThrow(() => JSON.parse(readFileSync(join(repo, path))));
@@ -232,6 +242,21 @@ test('catalog omissions and public transaction snapshots preserve inclusive reso
   assert.equal(inventory.entries.length, 0);
   assert.deepEqual(inventory.omissions.omittedRecognized.map(row => row.reason).sort(), ['non_text', 'over_file_limit']);
   closedObjectsAndDigests('repository-inventory', 'output', inventory);
+  for (const reason of ['non_text', 'over_file_limit']) {
+    validates('repository-inventory', 'output', replaced(inventory, ['omissions', 'omittedRecognized', 0, 'reason'], reason));
+  }
+  for (const mode of ['fresh', 'code-baseline', 'audit-from-code']) {
+    const sourcePlan = report('adopt-plan', native('adopt-plan', repo, undefined, ['--mode', mode]));
+    closedObjectsAndDigests('adopt-plan', 'output', sourcePlan);
+    for (const command of ['adopt-materialize-plan', 'adopt-materialize-apply']) {
+      const candidate = replaced(requestSeed, ['sourcePlan'], sourcePlan);
+      validates(command, 'input', candidate);
+      for (const reason of ['non_text', 'over_file_limit', 'foreign']) {
+        validates(command, 'input', replaced(candidate, ['sourcePlan', 'repositoryInventory', 'omissions', 'omittedRecognized', 0, 'reason'], reason),
+          reason !== 'foreign', mode + '/omission-reason/enum');
+      }
+    }
+  }
   for (const field of ['rootEntryCount', 'unrecognizedCount']) for (const [count, valid] of [[0, true], [4096, true], [-1, false], [4097, false], [0.5, false]]) {
     validates('repository-inventory', 'output', replaced(inventory, ['omissions', field], count), valid, field + '/bound');
   }
@@ -270,4 +295,33 @@ test('catalog omissions and public transaction snapshots preserve inclusive reso
     validates('adopt-materialize-plan', 'output', replaced(specimen, [...path, 'exists'], !snapshot.exists), false,
       position + '/opposite-boolean-partition');
   }
+});
+
+test('raw artifact paths normalize without changing CLI plans or blocked apply outcomes', () => {
+  const repo = repository(), request = structuredClone(requestSeed);
+  const plan = report('adopt-materialize-plan', native('adopt-materialize-plan', repo, request));
+  const flags = ['--expect-transaction', plan.transaction.transactionId, '--expect-desired-state', 'sha256:' + '0'.repeat(64)];
+  const blocked = native('adopt-materialize-apply', repo, request, flags);
+  report('adopt-materialize-apply', blocked, 1);
+  const before = filesystem(repo);
+  for (const field of ['requirementProofBinding', 'testEvidenceInventory']) {
+    for (const padding of [' ', '\t', '\u0085', '\u00a0', '\u2003', '\u2028', '\u3000']) {
+      for (const raw of [padding + request[field].path, request[field].path + padding, padding + request[field].path + padding]) {
+        const candidate = replaced(request, [field, 'path'], raw);
+        validates('adopt-materialize-plan', 'input', candidate, true, field + '/native-normalization');
+        validates('adopt-materialize-apply', 'input', candidate, true, field + '/native-normalization');
+        const currentPlan = report('adopt-materialize-plan', native('adopt-materialize-plan', repo, candidate));
+        assert.deepEqual(currentPlan, plan, 'raw padding changed canonical plan');
+        const currentBlocked = native('adopt-materialize-apply', repo, candidate, flags);
+        report('adopt-materialize-apply', currentBlocked, 1);
+        assert.deepEqual([currentBlocked.status, currentBlocked.stdout, currentBlocked.stderr], [blocked.status, blocked.stdout, blocked.stderr]);
+      }
+    }
+    for (const command of ['adopt-materialize-plan', 'adopt-materialize-apply']) {
+      for (const invalid of ['', ' \t\u0085\u3000', null, 0]) {
+        validates(command, 'input', replaced(request, [field, 'path'], invalid), false, field + '/nonblank');
+      }
+    }
+  }
+  assert.deepEqual(filesystem(repo), before, 'normalization or blocked apply gained write authority');
 });

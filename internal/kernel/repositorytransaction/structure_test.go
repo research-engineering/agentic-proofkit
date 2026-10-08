@@ -104,6 +104,33 @@ func TestSnapshotStructurePreservesBothPartitionsAndExactBounds(t *testing.T) {
 	}
 }
 
+func TestTransactionStructureEnumMembership(t *testing.T) {
+	operations, _ := PlanShape().Property("operations")
+	operation, _ := operations.Element()
+	action, _ := operation.Property("action")
+	for _, value := range []string{"create", "replace", "delete", "unchanged"} {
+		if _, err := action.Admit(value, "action"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, value := range []any{"foreign", "create ", "", nil, false} {
+		if _, err := action.Admit(value, "action"); err == nil {
+			t.Fatal("accepted invalid action enum member")
+		}
+	}
+	recoveredBy, _ := ResultShape().Property("recoveredBy")
+	for _, value := range []any{nil, "resume", "rollback"} {
+		if _, err := recoveredBy.Admit(value, "recoveredBy"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, value := range []any{"foreign", "resume ", "", false} {
+		if _, err := recoveredBy.Admit(value, "recoveredBy"); err == nil {
+			t.Fatal("accepted invalid recoveredBy enum member")
+		}
+	}
+}
+
 func TestResultStructurePreservesAllNativeStatesAndNullableCount(t *testing.T) {
 	id := "sha256:" + strings.Repeat("a", 64)
 	results := []Result{
