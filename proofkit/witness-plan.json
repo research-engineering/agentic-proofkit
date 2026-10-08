@@ -2022,6 +2022,7 @@
         "scripts/inventory-coverage-structure.test.mjs",
         "scripts/materialization-structure.test.mjs",
         "scripts/overview-claims-structure.test.mjs",
+        "scripts/project-status-structure.test.mjs",
         "scripts/proof-lookup-structure.test.mjs",
         "scripts/proof-routing-fixtures.mjs",
         "scripts/proof-routing-structure.test.mjs",
