@@ -268,6 +268,8 @@ func enrichedCompatibilitySummary(owner nativeStructure, version json.Number, ra
 				"nested fields, types, and cardinalities are non-claims",
 				"nested fields, types, and cardinalities remain native-owner claims",
 				"nested fields, types, cardinalities, and cross-record closure remain native-owner claims",
+				"nested field shapes, leaf types and relational semantics remain native-owner claims",
+				"nested fields, leaf types, cardinalities, and semantic validity remain native-owner claims",
 			} {
 				obsolete = obsolete || note == prefix+suffix
 			}
