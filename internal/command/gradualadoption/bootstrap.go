@@ -170,6 +170,10 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
 		return BootstrapResult{}, fmt.Errorf("proofkit gradual adoption bootstrap schemaVersion must be 1")
 	}
+	record, err := bootstrapSnapshot(record)
+	if err != nil {
+		return BootstrapResult{}, err
+	}
 	failures := []string{}
 	bootstrapID, err := admit.RuleID(record["bootstrapId"], "gradual adoption bootstrapId")
 	if err != nil {
@@ -283,7 +287,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	plannedFiles := plannedBootstrapFiles(map[string]any{
 		"moduleSpecPath":   module["specPath"],
 		"paths":            paths,
-		"profilePath":      object(record["repository"])["profilePath"],
+		"profilePath":      source.ProfilePath,
 		"proofBindingPath": proofBindingPath,
 	})
 	agentActionPlan := bootstrapAgentActionPlan(nextCommands, plannedFiles)

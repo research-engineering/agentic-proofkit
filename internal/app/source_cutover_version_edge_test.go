@@ -55,6 +55,9 @@ var sourceCutoverDirectionDeltas = []string{
 }
 
 var nativeBoundaryDirectionDeltas = []string{
+	"adoption-contract-envelope/input:compatibilitySummary,contractId",
+	"gradual-adoption-bootstrap/input:compatibilitySummary,contractId",
+	"scaffold-project-structure/input:compatibilitySummary,contractId",
 	"adopt-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"repository-inventory/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"migration-parity-admission/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
