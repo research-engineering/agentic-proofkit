@@ -37,6 +37,7 @@ type adoptionInput struct {
 type adoptionReportResult struct {
 	Record      report.Record
 	WitnessPlan map[string]any
+	ProfilePath string
 }
 
 func Build(raw any) (map[string]any, int, error) {
@@ -139,7 +140,7 @@ func BuildReport(raw any) (adoptionReportResult, error) {
 		RuleResults: adoptionRuleResults(failures),
 		NonClaims:   admit.StringSliceToAny(input.NonClaims),
 	}
-	return adoptionReportResult{Record: record, WitnessPlan: witnessPlan}, nil
+	return adoptionReportResult{Record: record, WitnessPlan: witnessPlan, ProfilePath: stringFromMap(repository, "profilePath")}, nil
 }
 
 func InputFromContractEnvelope(raw any) (map[string]any, error) {
@@ -514,7 +515,7 @@ func intFromMap(record map[string]any, key string) int {
 
 func stringOrEmpty(raw any) string {
 	value, _ := raw.(string)
-	return value
+	return admit.RedactStructuralText(value)
 }
 
 func sameStringSet(left []string, right []string) bool {

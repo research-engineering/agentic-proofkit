@@ -12,6 +12,9 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/contractenv"
 )
 
+// The envelope wire stays v2; bootstrap payload admission is now secret-free.
+const InputContractID = "proofkit.adoption-contract-envelope.input.v3"
+
 const (
 	aggregateEnvelopeSchema = "proofkit.adoption-contract-envelope.v2"
 	pilotEnvelopeSchema     = "proofkit.pilot-admission.v2"

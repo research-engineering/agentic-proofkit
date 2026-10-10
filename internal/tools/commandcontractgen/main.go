@@ -613,6 +613,9 @@ func admitUniqueContractID(command string, direction string, contract map[string
 
 func admitCommandContract(root string, command string, direction string, contract map[string]any, definitions map[string]definitionRecord, activeTestFiles map[string]map[string]struct{}, allowedFlags []string) (string, []string, error) {
 	context := command + " " + direction + "Contract"
+	if err := admitBootstrapSafetyIdentity(command, direction, contract); err != nil {
+		return "", nil, err
+	}
 	contractID, ok := contract["contractId"].(string)
 	if !ok || contractID == "" {
 		return "", nil, fmt.Errorf("%s has invalid contractId", context)

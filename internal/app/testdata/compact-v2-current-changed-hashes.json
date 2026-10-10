@@ -1,4 +1,6 @@
 {
+  "adoption-contract-envelope|input|union": "sha256:61df9498c22500ff59b2e564e83c90efff994765cecc252c409f9aacd78b2f04",
+  "adoption-contract-envelope|output|union": "sha256:2de3e4507eb4630cfe626334f1a1f82c15c73cf790ae3c17f0161b70b63d37cb",
   "conformance-profile|input|union": "sha256:49c2b165835bf43967c3b2f5bb05cb778c61f7d2f158469a85dbb3b32caec328",
   "conformance-profile|output|union": "sha256:16c8cf0a9b60024828f39d84fc222494de1f083f65cca6af814e0aae83c85b60",
   "evidence-graph|input|union": "sha256:44a4d8133bf268f2268eb884c67be771365a0497e69a6b0fded6542cb30080b9",

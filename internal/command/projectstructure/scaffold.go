@@ -12,6 +12,9 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
+// The wire version stays 1; the delegated bootstrap safety boundary changes.
+const InputContractID = "proofkit.scaffold-project-structure.input.v2"
+
 var scaffoldNonClaims = []string{
 	"Project-structure scaffold reports do not execute native witnesses.",
 	"Project-structure scaffold reports do not own final module specifications or final repository profile policy.",
