@@ -4,6 +4,8 @@ import "github.com/research-engineering/agentic-proofkit/internal/kernel/jsonsha
 
 // Descriptors share Build's limits without copying their numeric policy.
 const (
+	MaxActionItems            = hardMaxActionItems
+	MaxCommandRefs            = hardMaxCommandRefs
 	MaxBlockedPreconditions   = hardMaxBlockedPreconditions
 	MaxClarificationQuestions = hardMaxClarificationQuestions
 	MaxContextRefs            = hardMaxContextRefs

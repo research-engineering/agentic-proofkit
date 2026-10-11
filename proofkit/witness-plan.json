@@ -2015,6 +2015,7 @@
         "scripts/consumer-evidence-structure.test.mjs",
         "scripts/explicit-input-structure.test.mjs",
         "scripts/generated-starter-structure.test.mjs",
+        "scripts/gradual-adoption-structure.test.mjs",
         "scripts/impact-fixtures.mjs",
         "scripts/impact-structure.test.mjs",
         "scripts/integration-structure.test.mjs",

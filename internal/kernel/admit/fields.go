@@ -43,10 +43,11 @@ var (
 )
 
 const (
-	maxDiagnosticRunes    = 512
-	maxSecretDecodePasses = 16
-	MaxRuleIDBytes        = 256
-	redactedValueLabel    = "<redacted-diagnostic-value>"
+	maxDiagnosticRunes        = 512
+	maxSecretDecodePasses     = 16
+	MaxRuleIDBytes            = 256
+	redactedValueLabel        = "<redacted-diagnostic-value>"
+	DiagnosticRedactionMarker = redactedValueLabel
 )
 
 type RedactionFixture struct {

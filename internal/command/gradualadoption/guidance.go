@@ -155,7 +155,7 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 	if !ok {
 		return guidanceResult{}, fmt.Errorf("proofkit gradual adoption guidance input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"agentGuidance", "guidanceId", "guidanceMode", "modernization", "nonClaims", "ownerRoute", "schemaVersion", "scopeEvidence", "sourceReport"}, "proofkit gradual adoption guidance input"); err != nil {
+	if err := admit.KnownKeys(record, guidanceInputKeys, "proofkit gradual adoption guidance input"); err != nil {
 		return guidanceResult{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -266,7 +266,7 @@ func admitSourceReport(raw any) (map[string]any, error) {
 	if !ok {
 		return nil, fmt.Errorf("sourceReport must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"diagnostics", "nonClaims", "reportId", "reportKind", "ruleResults", "schemaVersion", "state", "summary"}, "sourceReport"); err != nil {
+	if err := admit.KnownKeys(record, sourceReportKeys, "sourceReport"); err != nil {
 		return nil, err
 	}
 	if !schemaVersionIsOne(record["schemaVersion"]) {
@@ -315,7 +315,7 @@ func admitSourceReportRuleResults(raw any) ([]any, error) {
 		if !ok {
 			return nil, fmt.Errorf("sourceReport ruleResults[%d] must be an object", index)
 		}
-		if err := admit.KnownKeys(rule, []string{"diagnostics", "message", "ruleId", "status"}, fmt.Sprintf("sourceReport ruleResults[%d]", index)); err != nil {
+		if err := admit.KnownKeys(rule, sourceRuleKeys, fmt.Sprintf("sourceReport ruleResults[%d]", index)); err != nil {
 			return nil, err
 		}
 		ruleID, err := admit.RuleID(rule["ruleId"], fmt.Sprintf("sourceReport ruleResults[%d] ruleId", index))

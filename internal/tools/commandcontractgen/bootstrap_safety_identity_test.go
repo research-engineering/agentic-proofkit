@@ -54,7 +54,11 @@ func TestBootstrapSafetyGeneratorBoundaryRejectsRetiredIdentities(t *testing.T) 
 			contract := value.(map[string]any)
 			commandAt(contract, row.command)["inputContract"].(map[string]any)["contractId"] = row.retired
 			_, _, err = renderContract(root, source, contract)
-			if err == nil || !strings.Contains(err.Error(), row.command+" inputContract must use the bootstrap safety semantic identity") {
+			want := row.command + " inputContract must use the bootstrap safety semantic identity"
+			if row.command == "gradual-adoption-bootstrap" {
+				want = row.command + " input contract violates native semantic contract identity"
+			}
+			if err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatal("generator boundary accepted retired identity or refused for an unrelated reason")
 			}
 		})

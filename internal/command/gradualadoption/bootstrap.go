@@ -164,7 +164,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	if !ok {
 		return BootstrapResult{}, fmt.Errorf("proofkit gradual adoption bootstrap input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"bootstrapId", "budget", "checkedScope", "commands", "guidanceMode", "module", "nativeWitnesses", "nonClaims", "ownerRoute", "packageVersionRef", "paths", "proofBindingPath", "repository", "rollback", "schemaVersion", "touchedRuleIds"}, "proofkit gradual adoption bootstrap input"); err != nil {
+	if err := admit.KnownKeys(record, bootstrapInputKeys, "proofkit gradual adoption bootstrap input"); err != nil {
 		return BootstrapResult{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -214,7 +214,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	nextCommands := []string{
 		renderer.DisplayCommand("gradual-adoption", "--input", stringFromMap(paths, "adoptionProfilePath")),
 		renderer.DisplayCommand("gradual-adoption-guidance", "--input", stringFromMap(paths, "adoptionGuidancePath")),
-		renderer.DisplayCommand("witness-scheduler-plan", "--input", stringFromMap(paths, "witnessPlanInputPath")),
+		renderer.DisplayCommand("witness-plan", "--input", stringFromMap(paths, "witnessPlanInputPath")),
 	}
 	adoptionProfile := map[string]any{
 		"adoptionId":      bootstrapID,
@@ -424,11 +424,17 @@ func bootstrapAgentReport(paths map[string]any) map[string]any {
 }
 
 func bootstrapAgentGuidance(paths map[string]any, commands []string, nextCommands []string) map[string]any {
+	combined := append([]string{}, commands...)
+	for _, next := range nextCommands {
+		if !contains(combined, next) {
+			combined = append(combined, next)
+		}
+	}
 	return map[string]any{
 		"artifactPath":                     paths["guidanceReportArtifactPath"],
 		"blockedPreconditions":             []any{},
 		"callerSuggestedAutofixCandidates": []any{},
-		"commands":                         admit.StringSliceToAny(append(append([]string{}, commands...), nextCommands...)),
+		"commands":                         admit.StringSliceToAny(combined),
 		"minimalAdoptionPath": admit.StringSliceToAny([]string{
 			"Start with one bounded module and observe-mode guidance.",
 			"Bind every declared requirement to caller-owned native witnesses.",

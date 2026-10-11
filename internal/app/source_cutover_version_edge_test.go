@@ -56,7 +56,12 @@ var sourceCutoverDirectionDeltas = []string{
 
 var nativeBoundaryDirectionDeltas = []string{
 	"adoption-contract-envelope/input:compatibilitySummary,contractId",
-	"gradual-adoption-bootstrap/input:compatibilitySummary,contractId",
+	"gradual-adoption-bootstrap/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
+	"gradual-adoption-bootstrap/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"gradual-adoption-guidance/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"gradual-adoption-guidance/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"gradual-adoption/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"gradual-adoption/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"scaffold-project-structure/input:compatibilitySummary,contractId",
 	"adopt-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"repository-inventory/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
@@ -208,7 +213,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	}
 	// Materialization input replacements were already counted by the source cutover.
 	// Adoption, integration and navigation enrichment replace twelve retained output roots.
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 130 || len(added) != 126+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 136 || len(added) != 132+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {

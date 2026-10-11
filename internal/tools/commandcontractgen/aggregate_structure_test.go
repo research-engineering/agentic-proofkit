@@ -79,20 +79,19 @@ func TestAggregateStructureSeparatesContractIdentityFromWireHeaders(t *testing.T
 
 func TestAggregateStructureRejectsAmbiguousVersionAuthority(t *testing.T) {
 	for name, mutate := range map[string]func(*nativeStructure){
-		"missing-opt-in":    func(o *nativeStructure) { o.aggregateVersion = "" },
-		"zero":              func(o *nativeStructure) { o.aggregateVersion = "0" },
-		"negative":          func(o *nativeStructure) { o.aggregateVersion = "-1" },
-		"decimal":           func(o *nativeStructure) { o.aggregateVersion = "1.0" },
-		"exponent":          func(o *nativeStructure) { o.aggregateVersion = "1e0" },
-		"overflow":          func(o *nativeStructure) { o.aggregateVersion = "9223372036854775808" },
-		"one-variant":       func(o *nativeStructure) { o.variants = o.variants[:1] },
-		"no-variants":       func(o *nativeStructure) { o.schema = o.variants[0].schema; o.variants = nil },
-		"scalar-schema":     func(o *nativeStructure) { o.schema = o.variants[0].schema },
-		"inline-selector":   func(o *nativeStructure) { o.wireVersion = "3" },
-		"version-field":     func(o *nativeStructure) { o.versionField = "schemaVersion" },
-		"out-of-band":       func(o *nativeStructure) { o.outOfBandVersion = "4" },
-		"optional-inline":   func(o *nativeStructure) { o.optionalInputVersion = true },
-		"semantic-override": func(o *nativeStructure) { o.semanticVersion = 4 },
+		"missing-opt-in":  func(o *nativeStructure) { o.aggregateVersion = "" },
+		"zero":            func(o *nativeStructure) { o.aggregateVersion = "0" },
+		"negative":        func(o *nativeStructure) { o.aggregateVersion = "-1" },
+		"decimal":         func(o *nativeStructure) { o.aggregateVersion = "1.0" },
+		"exponent":        func(o *nativeStructure) { o.aggregateVersion = "1e0" },
+		"overflow":        func(o *nativeStructure) { o.aggregateVersion = "9223372036854775808" },
+		"one-variant":     func(o *nativeStructure) { o.variants = o.variants[:1] },
+		"no-variants":     func(o *nativeStructure) { o.schema = o.variants[0].schema; o.variants = nil },
+		"scalar-schema":   func(o *nativeStructure) { o.schema = o.variants[0].schema },
+		"inline-selector": func(o *nativeStructure) { o.wireVersion = "3" },
+		"version-field":   func(o *nativeStructure) { o.versionField = "schemaVersion" },
+		"out-of-band":     func(o *nativeStructure) { o.outOfBandVersion = "4" },
+		"optional-inline": func(o *nativeStructure) { o.optionalInputVersion = true },
 	} {
 		t.Run(name, func(t *testing.T) {
 			owner := aggregateStructureFixture()
@@ -119,6 +118,25 @@ func TestAggregateStructureRejectsAmbiguousVersionAuthority(t *testing.T) {
 				t.Fatal("non-closed aggregate variant was accepted")
 			}
 		})
+	}
+}
+
+func TestAggregateSemanticIdentityPreservesVariantHeaders(t *testing.T) {
+	owner := aggregateStructureFixture()
+	owner.semanticVersion = 5
+	definition, err := owner.definition()
+	if err != nil {
+		t.Fatal(err)
+	}
+	version, err := owner.contractVersion(definition)
+	if err != nil || version != "4" || owner.contractID("aggregate", version) != "proofkit.aggregate.input.v5" {
+		t.Fatalf("semantic identity erased aggregate version: %s %v", version, err)
+	}
+	for i, raw := range definition["fieldTree"].(map[string]any)["variants"].([]any) {
+		original, err := owner.variants[i].schema()
+		if err != nil || !reflect.DeepEqual(raw.(map[string]any)["schema"], original) {
+			t.Fatal("semantic identity modified a variant header or shape")
+		}
 	}
 }
 
