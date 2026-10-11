@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -16,6 +17,92 @@ type securityScannerPermissionExpectation struct {
 	workflowPermissions map[string]string
 	advisoryJobs        map[string]map[string]string
 	providerJobs        map[string]map[string]string
+}
+
+const expectedCodeQLCommit = "2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2"
+
+func validateCodeQLActionPins(workflow githubWorkflow, expected map[string]int) error {
+	observed := map[string]int{}
+	for _, job := range workflow.Jobs {
+		for _, step := range job.Steps {
+			if !strings.HasPrefix(step.Uses, "github/codeql-action/") {
+				continue
+			}
+			action, commit, ok := strings.Cut(strings.TrimPrefix(step.Uses, "github/codeql-action/"), "@")
+			if !ok || commit != expectedCodeQLCommit {
+				return fmt.Errorf("CodeQL action reference differs from the independently admitted release commit")
+			}
+			observed[action]++
+		}
+	}
+	if !reflect.DeepEqual(observed, expected) {
+		return fmt.Errorf("CodeQL action inventory differs from the independently admitted workflow inventory")
+	}
+	return nil
+}
+
+func TestCodeQLReleasePinCoversEveryScannerReference(t *testing.T) {
+	cases := []struct {
+		name    string
+		actions map[string]int
+	}{
+		{"codeql", map[string]int{"init": 1, "analyze": 1, "upload-sarif": 1}},
+		{"osv-scanner", map[string]int{"upload-sarif": 1}},
+		{"scorecard", map[string]int{"upload-sarif": 1}},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", item.name+".yml"))
+			if err := validateCodeQLActionPins(workflow, item.actions); err != nil {
+				t.Fatal(err)
+			}
+			if err := validateCodeQLActionPins(cloneWorkflow(t, workflow), item.actions); err != nil {
+				t.Fatal(err)
+			}
+			jobIDs := make([]string, 0, len(workflow.Jobs))
+			for id := range workflow.Jobs {
+				jobIDs = append(jobIDs, id)
+			}
+			sort.Strings(jobIDs)
+			references := 0
+			for _, id := range jobIDs {
+				for index, step := range workflow.Jobs[id].Steps {
+					if !strings.HasPrefix(step.Uses, "github/codeql-action/") {
+						continue
+					}
+					references++
+					t.Run(fmt.Sprintf("reference-%d", references), func(t *testing.T) {
+						for _, mutation := range []string{"wrong-full-sha", "missing", "extra"} {
+							t.Run(mutation, func(t *testing.T) {
+								candidate := cloneWorkflow(t, workflow)
+								job := candidate.Jobs[id]
+								switch mutation {
+								case "wrong-full-sha":
+									action, _, _ := strings.Cut(job.Steps[index].Uses, "@")
+									job.Steps[index].Uses = action + "@" + strings.Repeat("0", 40)
+								case "missing":
+									job.Steps = append(job.Steps[:index], job.Steps[index+1:]...)
+								case "extra":
+									job.Steps = append(job.Steps, job.Steps[index])
+								}
+								candidate.Jobs[id] = job
+								if err := validateCodeQLActionPins(cloneWorkflow(t, candidate), item.actions); err == nil {
+									t.Fatal("CodeQL pin oracle admitted the isolated reference mutation")
+								}
+							})
+						}
+					})
+				}
+			}
+			want := 0
+			for _, count := range item.actions {
+				want += count
+			}
+			if references != want {
+				t.Fatal("CodeQL reference mutation inventory is incomplete")
+			}
+		})
+	}
 }
 
 func validateCodeQLStrategy(strategy map[string]any) error {
@@ -66,7 +153,7 @@ func validateCodeQLSourceScan(workflow githubWorkflow) error {
 		}
 	}
 	const codeql = "github/codeql-action/"
-	const codeqlPin = "@cdf488f595d80d6e07e03d4674febd5ab45fa938"
+	const codeqlPin = "@" + expectedCodeQLCommit
 	if err := validateCodeQLSteps(analyze.Steps, []githubStep{
 		{Name: "Checkout", Uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", With: map[string]any{"persist-credentials": false}},
 		{Name: "Setup Go", Uses: "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e", If: "${{ matrix.language == 'go' }}", With: map[string]any{"go-version-file": "go.mod", "cache": true}},
