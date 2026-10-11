@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
@@ -50,6 +51,55 @@ func TestBuildRejectsRollbackShellControlCommand(t *testing.T) {
 	}
 	if !ruleMessageContains(record["ruleResults"], "display-only command text") {
 		t.Fatalf("ruleResults=%#v, want display-only command failure", record["ruleResults"])
+	}
+}
+
+func TestBootstrapCallerGeneratedIntersectionsPreservePrefixAndPass(t *testing.T) {
+	for _, profile := range []struct{ name, python string }{
+		{cliexec.ProfilePath, ""}, {cliexec.ProfileNPMOffline, ""},
+		{cliexec.ProfilePythonModule, "/tmp/proofkit venv/bin/python"},
+	} {
+		renderer, err := cliexec.AdmitLauncherProfile(profile.name, profile.python)
+		if err != nil {
+			t.Fatal(err)
+		}
+		initial, err := BuildBootstrapResultWithRenderer(validBootstrapInput(), renderer)
+		if err != nil || initial.ExitCode != 0 {
+			t.Fatalf("positive: %v", err)
+		}
+		for mask := 0; mask < 8; mask++ {
+			caller := []string{"go test ./..."}
+			for i, command := range initial.NextCommands {
+				if mask&(1<<i) != 0 {
+					caller = append(caller, command)
+				}
+			}
+			input := validBootstrapInput()
+			input["commands"] = admit.StringSliceToAny(caller)
+			result, err := BuildBootstrapResultWithRenderer(input, renderer)
+			if err != nil || result.ExitCode != 0 || result.Record.State != "passed" {
+				t.Fatalf("%s/%d: %v %#v", profile.name, mask, err, result.Record)
+			}
+			commands := anyStrings(result.Payloads["adoptionGuidance"].(map[string]any)["agentGuidance"].(map[string]any)["commands"])
+			if !reflect.DeepEqual(commands[:len(caller)], caller) {
+				t.Fatal("caller prefix changed")
+			}
+			expected := append([]string{}, caller...)
+			for i, command := range initial.NextCommands {
+				if mask&(1<<i) == 0 {
+					expected = append(expected, command)
+				}
+			}
+			if !reflect.DeepEqual(commands, expected) {
+				t.Fatalf("unexpected ordered union: %#v", commands)
+			}
+		}
+		input := validBootstrapInput()
+		input["commands"] = []any{"go test ./...", "go test ./..."}
+		result, err := BuildBootstrapResultWithRenderer(input, renderer)
+		if err != nil || result.ExitCode != 1 || result.Record.State != "failed" {
+			t.Fatal("duplicate caller commands must remain a failure")
+		}
 	}
 }
 
@@ -125,11 +175,11 @@ func TestBootstrapPreservesCallerDisplayCommandInGuidancePayload(t *testing.T) {
 			if !containsString(commands, renderer.DisplayCommand("gradual-adoption", "--input", "proofkit/profile.json")) {
 				t.Fatalf("generated bootstrap command missing: %#v", commands)
 			}
-			if !containsString(commands, renderer.DisplayCommand("witness-scheduler-plan", "--input", "proofkit/witness-plan.json")) {
-				t.Fatalf("generated witness scheduler command missing: %#v", commands)
+			if !containsString(commands, renderer.DisplayCommand("witness-plan", "--input", "proofkit/witness-plan.json")) {
+				t.Fatalf("generated witness-plan command missing: %#v", commands)
 			}
-			if containsString(commands, renderer.DisplayCommand("witness-plan", "--input", "proofkit/witness-plan.json")) {
-				t.Fatalf("generated bootstrap command uses catalog command for scheduler-plan fixture: %#v", commands)
+			if containsString(commands, renderer.DisplayCommand("witness-scheduler-plan", "--input", "proofkit/witness-plan.json")) {
+				t.Fatalf("generated bootstrap command requires unprovided scheduler policies: %#v", commands)
 			}
 			for _, command := range result.NextCommands {
 				if !strings.HasPrefix(command, renderer.DisplayCommand()+" ") {

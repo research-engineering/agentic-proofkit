@@ -19,6 +19,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
 	"github.com/research-engineering/agentic-proofkit/internal/command/externalconsumer"
+	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/command/migrationparityadmission"
@@ -682,7 +683,61 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.next.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.next.output.v1.root-shape"}, commands: []string{"next"},
 		schema: func() (map[string]any, error) { return projectstatus.NextOutputStructure(), nil },
+	}, {
+		id: "proofkit.gradual-adoption.input.v1.json-schema", direction: "input", aggregateVersion: "1",
+		predecessors: []string{"proofkit.gradual-adoption.input.v1.root-shape"}, commands: []string{"gradual-adoption"},
+		variants: []nativeStructureVariant{
+			{id: "01-direct", when: "without --contract-envelope", schema: func() (map[string]any, error) { return gradualadoption.InputStructure(), nil }},
+			{id: "02-contract", when: "--contract-envelope", schema: func() (map[string]any, error) { return gradualadoption.ContractInputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.gradual-adoption.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.gradual-adoption.output.v1.root-shape"}, commands: []string{"gradual-adoption"},
+		schema: func() (map[string]any, error) { return gradualadoption.OutputStructure(), nil },
+	}, {
+		id: "proofkit.gradual-adoption-guidance.input.v1.json-schema", direction: "input", aggregateVersion: "1",
+		predecessors: []string{"proofkit.gradual-adoption-guidance.input.v1.root-shape"}, commands: []string{"gradual-adoption-guidance"},
+		variants: gradualGuidanceInputVariants(),
+	}, {
+		id: "proofkit.gradual-adoption-guidance.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.gradual-adoption-guidance.output.v1.root-shape"}, commands: []string{"gradual-adoption-guidance"},
+		variants: []nativeStructureVariant{
+			{id: "01-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return gradualadoption.GuidanceOutputStructure(), nil }},
+			{id: "02-envelope", when: "--agent-envelope and admitted input", schema: func() (map[string]any, error) { return gradualadoption.GuidanceEnvelopeStructure(), nil }},
+			{id: "03-invalid-input-envelope", when: "--agent-envelope and refused input", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.gradual-adoption-bootstrap.input.v2.json-schema", direction: "input", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.gradual-adoption-bootstrap.input.v1.root-shape"}, commands: []string{"gradual-adoption-bootstrap"},
+		variants: []nativeStructureVariant{
+			{id: "01-direct", when: "without --contract-envelope", schema: func() (map[string]any, error) { return gradualadoption.BootstrapInputStructure(), nil }},
+			{id: "02-contract", when: "--contract-envelope", schema: func() (map[string]any, error) { return gradualadoption.BootstrapContractInputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.gradual-adoption-bootstrap.output.v1.json-schema", direction: "output", aggregateVersion: "1",
+		predecessors: []string{"proofkit.gradual-adoption-bootstrap.output.v1.root-shape"}, commands: []string{"gradual-adoption-bootstrap"},
+		variants: []nativeStructureVariant{
+			{id: "01-payloads", when: "without --agent-envelope or --materialization-manifest", schema: func() (map[string]any, error) { return gradualadoption.BootstrapOutputStructure(), nil }},
+			{id: "02-materialization-manifest", when: "--materialization-manifest", schema: func() (map[string]any, error) { return gradualadoption.BootstrapMaterializationStructure(), nil }},
+			{id: "03-envelope", when: "--agent-envelope and admitted input", schema: func() (map[string]any, error) { return gradualadoption.BootstrapEnvelopeStructure(), nil }},
+			{id: "04-invalid-input-envelope", when: "--agent-envelope and refused input", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
+		},
 	}}
+}
+
+func gradualGuidanceInputVariants() []nativeStructureVariant {
+	variants := []nativeStructureVariant{{id: "01-direct", when: "without --contract-envelope or override flags", schema: func() (map[string]any, error) { return gradualadoption.GuidanceInputStructure(), nil }}}
+	for mask := range 8 {
+		mode, scope, touched := mask&1 != 0, mask&2 != 0, mask&4 != 0
+		variants = append(variants, nativeStructureVariant{
+			id:   fmt.Sprintf("%02d-contract-%03b", mask+2, mask),
+			when: fmt.Sprintf("--contract-envelope; guidance-mode override=%t, checked-scope override=%t, touched-rule-id override=%t", mode, scope, touched),
+			schema: func() (map[string]any, error) {
+				return gradualadoption.GuidanceContractInputStructure(mode, scope, touched), nil
+			},
+		})
+	}
+	return variants
 }
 
 func (owner nativeStructure) schemaVersionField() string {
@@ -951,7 +1006,7 @@ func (owner nativeStructure) root(schema map[string]any) (map[string]any, error)
 	}
 	if owner.aggregateVersion != "" {
 		if len(owner.variants) < 2 || owner.schema != nil || owner.versionField != "" || owner.wireVersion != "" ||
-			owner.outOfBandVersion != "" || owner.optionalInputVersion || owner.semanticVersion != 0 {
+			owner.outOfBandVersion != "" || owner.optionalInputVersion {
 			return nil, fmt.Errorf("aggregate contract version requires multiple variants without other version modes")
 		}
 		if err := validateNativeVersion(owner.aggregateVersion); err != nil {

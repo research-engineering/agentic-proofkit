@@ -666,8 +666,15 @@ test("a later response-less request cannot borrow an earlier document response",
 
 test("a later failed reload cannot complete an earlier successful navigation", async ({page}) => {
   const statuses = [];
+  const acquired = Promise.withResolvers();
+  const originalEvaluateHandle = page.evaluateHandle;
+  page.evaluateHandle = async (...args) => {
+    const handle = await originalEvaluateHandle.apply(page, args);
+    acquired.resolve();
+    return handle;
+  };
   const server = createServer((request, response) => {
-    if (request.url === "/reload.js") return response.writeHead(200, {"Content-Type": "text/javascript"}).end("setTimeout(() => location.reload(), 250)");
+    if (request.url === "/reload.js") return response.writeHead(200, {"Content-Type": "text/javascript"}).end("window.reloadFixture = () => location.reload()");
     if (request.url !== "/") {
       response.writeHead(404).end();
       return;
@@ -686,10 +693,17 @@ test("a later failed reload cannot complete an earlier successful navigation", a
   await once(server, "listening");
   const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
   try {
-    await expect(openWorkspace(page, workspaceURL)).rejects.toThrow("Workspace navigation did not return a successful response");
+    const navigation = openWorkspace(page, workspaceURL);
+    await Promise.race([acquired.promise, navigation.then(() => {
+      throw new Error("Navigation completed before the controlled reload");
+    })]);
+    await page.waitForFunction(() => typeof window.reloadFixture === "function");
+    await page.evaluate(() => window.reloadFixture());
+    await expect(navigation).rejects.toThrow("Workspace navigation did not return a successful response");
     expect(statuses).toEqual([200, 503]);
     await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
   } finally {
+    page.evaluateHandle = originalEvaluateHandle;
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   }

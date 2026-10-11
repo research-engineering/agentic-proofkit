@@ -156,7 +156,7 @@ func admitAdoptionInput(raw any) (adoptionInput, error) {
 	if !ok {
 		return adoptionInput{}, fmt.Errorf("proofkit gradual adoption input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"adoptionId", "adoptionMode", "agentReport", "budget", "module", "nativeWitnesses", "nonClaims", "packageVersionRef", "proofBinding", "repository", "rollback", "rolloutClaim", "schemaVersion"}, "proofkit gradual adoption input"); err != nil {
+	if err := admit.KnownKeys(record, adoptionInputKeys, "proofkit gradual adoption input"); err != nil {
 		return adoptionInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
