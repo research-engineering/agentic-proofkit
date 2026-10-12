@@ -143,12 +143,12 @@ resolution.
 <!-- proofkit:platform-python:start -->
 Supported binary targets are macOS 13 or later on arm64 or x64.
 Linux manylinux 2.17 or later is supported on arm64 or x64. Windows is unsupported. The Python
-runner requires Python 3.9 or later and wraps the same Go CLI; it is not a
+runner requires Python 3.11 or later and wraps the same Go CLI; it is not a
 Python SDK.
 
 Linux wheel installation requires pip 20.3 or later for the manylinux tag.
 Use an installer compatible with the selected Python. The bounded compatibility
-smoke exercises the initial Python 3.9 release with a checksum-pinned compatible
+smoke exercises the initial Python 3.11 release with a checksum-pinned compatible
 installer. This is compatibility evidence, not a recommendation to use an
 obsolete interpreter.
 

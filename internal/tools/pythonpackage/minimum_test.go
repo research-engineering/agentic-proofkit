@@ -26,11 +26,11 @@ func TestMinimumPythonRequiresExactNativeRuntime(t *testing.T) {
 			t.Fatalf("foreign/unknown daemon accepted: %q", identity)
 		}
 	}
-	base := map[string]any{"python": "3.9.0", "machine": "aarch64", "uid": 65534, "pip": "26.0.1", "implementation": "cpython"}
+	base := map[string]any{"python": "3.11.0", "machine": "aarch64", "uid": 65534, "pip": "26.2.1", "implementation": "cpython"}
 	for _, mutation := range []struct {
 		field string
 		value any
-	}{{"python", "3.9.25"}, {"python", "3.14.7"}, {"machine", "x86_64"}, {"uid", 0}, {"pip", "25.2"}, {"pip", "26.1"}, {"implementation", "pypy"}} {
+	}{{"python", "3.9.0"}, {"python", "3.11.17"}, {"python", "3.15.0"}, {"machine", "x86_64"}, {"uid", 0}, {"pip", "26.0.1"}, {"pip", "26.2"}, {"implementation", "pypy"}} {
 		content, _ := json.Marshal(base)
 		if err := minimumPythonIdentity(content, "arm64", true); err != nil {
 			t.Fatal(err)

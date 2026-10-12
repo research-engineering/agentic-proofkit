@@ -675,7 +675,7 @@ func ciSourceQualityProofSteps() []workflowStepExpectation {
 		{name: "Run actionlint", runCommand: "npm run go:actionlint"},
 		{name: "Run govulncheck", runCommand: "npm run go:vulncheck"},
 		{name: "Build and verify package artifacts", runCommand: "npm run package:artifact"},
-		{name: "Verify Python 3.9.0 installed wheel", runCommand: "go run ./internal/tools/pythonpackage verify-minimum"},
+		{name: "Verify Python 3.11.0 installed wheel", runCommand: "go run ./internal/tools/pythonpackage verify-minimum"},
 		{name: "Verify self-hosting receipts", runCommand: "npm run self:receipt"},
 		{name: "Verify self-hosting coverage", runCommand: "npm run self:coverage"},
 	}

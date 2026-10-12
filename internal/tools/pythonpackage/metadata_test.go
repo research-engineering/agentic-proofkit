@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -176,12 +177,12 @@ func TestREADMEPlatformAndPythonProjection(t *testing.T) {
 	expectedBlock := strings.Join([]string{
 		fmt.Sprintf("Supported binary targets are macOS %s or later on %s.", ownerMinimums["darwin"], strings.Join(ownerArchitectures["darwin"], " or ")),
 		fmt.Sprintf("Linux manylinux %s or later is supported on %s. Windows is unsupported. The Python", ownerMinimums["linux"], strings.Join(ownerArchitectures["linux"], " or ")),
-		"runner requires Python 3.9 or later and wraps the same Go CLI; it is not a",
+		"runner requires Python 3.11 or later and wraps the same Go CLI; it is not a",
 		"Python SDK.",
 		"",
 		"Linux wheel installation requires pip 20.3 or later for the manylinux tag.",
 		"Use an installer compatible with the selected Python. The bounded compatibility",
-		"smoke exercises the initial Python 3.9 release with a checksum-pinned compatible",
+		"smoke exercises the initial Python 3.11 release with a checksum-pinned compatible",
 		"installer. This is compatibility evidence, not a recommendation to use an",
 		"obsolete interpreter.",
 		"",
@@ -207,8 +208,46 @@ func TestREADMEPlatformAndPythonProjection(t *testing.T) {
 	if normalizedBlock != expectedNormalized {
 		t.Fatalf("README platform/Python block is not the exact owner projection:\ngot:  %s\nwant: %s", normalizedBlock, expectedNormalized)
 	}
-	if !strings.Contains(metadata(testPackageManifest("1.2.3")), "Requires-Python: >=3.9\n") {
+	if !strings.Contains(metadata(testPackageManifest("1.2.3")), "Requires-Python: >=3.11\n") {
 		t.Fatal("wheel metadata no longer matches the README Python minimum")
+	}
+}
+
+func TestPackageRequirementPythonFloorMatchesMetadataAndMinimum(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "specs", "proofkit-package-boundary", "requirements.v2.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source struct {
+		Groups []struct {
+			Members []struct {
+				RequirementID       string `json:"requirementId"`
+				StatementCompletion string `json:"statementCompletion"`
+			} `json:"members"`
+		} `json:"groups"`
+	}
+	if err := json.Unmarshal(content, &source); err != nil {
+		t.Fatal(err)
+	}
+	floor := regexp.MustCompile(`(?m)^Requires-Python: (>=\d+\.\d+)$`).FindStringSubmatch(metadata(testPackageManifest("1.2.3")))
+	if len(floor) != 2 {
+		t.Fatal("wheel metadata lacks an exact Python floor")
+	}
+	want := "executes literal CPython " + minimumPython + " without narrowing Requires-Python " + floor[1] + ";"
+	found := 0
+	for _, group := range source.Groups {
+		for _, member := range group.Members {
+			if member.RequirementID != "REQ-PROOFKIT-PACKAGE-006" {
+				continue
+			}
+			found++
+			if !strings.Contains(member.StatementCompletion, want) {
+				t.Fatalf("%s must project the metadata and minimum smoke floor: %q", member.RequirementID, want)
+			}
+		}
+	}
+	if found != 1 {
+		t.Fatalf("found %d PACKAGE-006 requirements, want exactly one", found)
 	}
 }
 

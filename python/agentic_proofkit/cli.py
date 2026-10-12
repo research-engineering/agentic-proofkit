@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import os
 import stat
-import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -27,6 +26,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if os.name != "nt":
         os.execve(str(binary), command, environment)
         raise AssertionError("os.execve returned unexpectedly")
+    import subprocess
+
     return subprocess.run(command, check=False, env=environment).returncode
 
 

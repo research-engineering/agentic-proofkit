@@ -36,7 +36,7 @@ func TestCIMinimumFailureCannotSatisfyAggregate(t *testing.T) {
 }
 
 func validateCIMinimumPythonStep(job githubJob) error {
-	index, err := uniqueStepIndex(job.Steps, "Verify Python 3.9.0 installed wheel")
+	index, err := uniqueStepIndex(job.Steps, "Verify Python 3.11.0 installed wheel")
 	if err != nil || index < 0 {
 		return fmt.Errorf("CI must contain exactly one Python minimum installed-wheel step")
 	}
@@ -93,7 +93,7 @@ func TestCIMinimumPythonStepRejectsOmissionAndNeutralization(t *testing.T) {
 		t.Run(mutation.name, func(t *testing.T) {
 			workflow := cloneWorkflow(t, base)
 			job := workflow.Jobs["source-quality"]
-			index, err := uniqueStepIndex(job.Steps, "Verify Python 3.9.0 installed wheel")
+			index, err := uniqueStepIndex(job.Steps, "Verify Python 3.11.0 installed wheel")
 			if err != nil {
 				t.Fatal(err)
 			}

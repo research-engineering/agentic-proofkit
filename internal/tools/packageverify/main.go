@@ -615,8 +615,8 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.License != "MIT AND BSD-3-Clause" {
 		return fmt.Errorf("root package license must be MIT AND BSD-3-Clause, got %s", manifest.License)
 	}
-	if manifest.PackageManager != "npm@12.0.2" {
-		return fmt.Errorf("root package packageManager must be npm@12.0.2, got %s", manifest.PackageManager)
+	if manifest.PackageManager != "npm@12.2.0" {
+		return fmt.Errorf("root package packageManager must be npm@12.2.0, got %s", manifest.PackageManager)
 	}
 	if manifest.Type != "module" {
 		return fmt.Errorf("root package type must be module, got %s", manifest.Type)
@@ -624,7 +624,7 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.SideEffects {
 		return fmt.Errorf("root package sideEffects must be false")
 	}
-	expectedDevDependencies := map[string]string{"@playwright/test": "1.62.1", "ajv": "8.20.0", "axe-core": "4.13.0", "typescript": "7.0.2"}
+	expectedDevDependencies := map[string]string{"@playwright/test": "1.63.0", "ajv": "8.20.0", "axe-core": "4.14.0", "typescript": "7.0.2"}
 	if !maps.Equal(manifest.DevDependencies, expectedDevDependencies) {
 		return fmt.Errorf("root package devDependencies must equal the source-only proof toolchain")
 	}

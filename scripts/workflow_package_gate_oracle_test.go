@@ -19,10 +19,10 @@ import (
 const mergeSatisfyingProducerEnv = "PROOFKIT_MERGE_SATISFYING_PRODUCER"
 
 const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild current && ./dist/agentic-proofkit --help >/dev/null && go run ./internal/tools/pythonpackage build-current && go run ./internal/tools/pythonpackage verify-current"
-const setupVerifiedNPMActionSHA256 = "73e760391a9f93b95034aec8edd12af081051ce6859d3114e3561c4d255d061f"
-const ciSourceQualityStepInventorySHA256 = "0b652521b1081811e1ab23365ddc1cbe63dae60f8c4663cbe32a34fc1cda2be6"
-const ciBrowserRuntimeStepInventorySHA256 = "2dffdabe3b99a1a8fa55a2a67142327950e24ddf1c912f0f590bd2cebd5bd816"
-const releaseCandidateStepInventorySHA256 = "1986a71842c1e23a1a64ed169bd20072c6019ab4082320d17570c8b18f9a32db"
+const setupVerifiedNPMActionSHA256 = "e5b863b6c0c9fac02ed3e00708d760cb3bc3ef6dc33c138b6ca13670d5895339"
+const ciSourceQualityStepInventorySHA256 = "9e7fdac5768a868929325052379a0b6382d18fc47052af7c1a148663b46ad153"
+const ciBrowserRuntimeStepInventorySHA256 = "c157f7ee933119596eecbce7dd03478c84389736fd99248ef884e338f24d9ee4"
+const releaseCandidateStepInventorySHA256 = "8e5002e046eab875b8549f4e90238f37a5d4d9bc77b4a9abe86d221fe6c7c2d5"
 
 type packageGateWorkflowExpectation struct {
 	label                              string
@@ -1558,9 +1558,9 @@ func validateExactPlatformSmokeSteps(job githubJob) error {
 		},
 		{
 			Name: "Setup Node",
-			Uses: "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+			Uses: "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
 			With: map[string]any{
-				"node-version":          "26.8.1",
+				"node-version":          "26.11.1",
 				"package-manager-cache": false,
 			},
 		},
@@ -1575,6 +1575,11 @@ func validateExactPlatformSmokeSteps(job githubJob) error {
 				"go-version-file": "go.mod",
 				"cache":           true,
 			},
+		},
+		{
+			Name: "Setup Python",
+			Uses: "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+			With: map[string]any{"python-version": "3.15.0"},
 		},
 		{
 			Name: "Run Darwin filesystem and process invariants",

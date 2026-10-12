@@ -255,13 +255,13 @@ func TestVerifyRootManifestBoundaryRejectsDevDependencyDrift(t *testing.T) {
 		{
 			name: "missing dependency",
 			patch: func(manifest string) string {
-				return strings.Replace(manifest, "    \"axe-core\": \"4.13.0\",\n", "", 1)
+				return strings.Replace(manifest, "    \"axe-core\": \"4.14.0\",\n", "", 1)
 			},
 		},
 		{
 			name: "wrong dependency version",
 			patch: func(manifest string) string {
-				return strings.Replace(manifest, "\"axe-core\": \"4.13.0\"", "\"axe-core\": \"4.12.1\"", 1)
+				return strings.Replace(manifest, "\"axe-core\": \"4.14.0\"", "\"axe-core\": \"4.13.0\"", 1)
 			},
 		},
 		{
@@ -270,7 +270,7 @@ func TestVerifyRootManifestBoundaryRejectsDevDependencyDrift(t *testing.T) {
 				return strings.Replace(
 					manifest,
 					"  \"devDependencies\": {\n",
-					"  \"devDependencies\": {\n    \"@axe-core/playwright\": \"4.13.0\",\n",
+					"  \"devDependencies\": {\n    \"@axe-core/playwright\": \"4.14.0\",\n",
 					1,
 				)
 			},
@@ -2114,13 +2114,13 @@ func packageManifestFixture(repositoryURL string) string {
   "name": "@research-engineering/agentic-proofkit",
   "version": "1.2.3",
   "license": "MIT AND BSD-3-Clause",
-  "packageManager": "npm@12.0.2",
+  "packageManager": "npm@12.2.0",
   "type": "module",
   "sideEffects": false,
   "devDependencies": {
-    "@playwright/test": "1.62.1",
+    "@playwright/test": "1.63.0",
     "ajv": "8.20.0",
-    "axe-core": "4.13.0",
+    "axe-core": "4.14.0",
     "typescript": "7.0.2"
   },
   "repository": {

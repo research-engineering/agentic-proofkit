@@ -19,7 +19,7 @@ type securityScannerPermissionExpectation struct {
 	providerJobs        map[string]map[string]string
 }
 
-const expectedCodeQLCommit = "2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2"
+const expectedCodeQLCommit = "24c54180a607b1449ed407dd24f251e4e9147c8d"
 
 func validateCodeQLActionPins(workflow githubWorkflow, expected map[string]int) error {
 	observed := map[string]int{}
@@ -162,7 +162,7 @@ func validateCodeQLSourceScan(workflow githubWorkflow) error {
 			"output": "codeql-results", "category": "codeql-${{ matrix.language }}", "upload": "never", "upload-database": false, "wait-for-processing": false,
 		}},
 		{Name: "Upload CodeQL SARIF artifact", If: "${{ always() && steps.analyze.outputs.sarif-output != '' }}",
-			Uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", With: map[string]any{
+			Uses: "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9", With: map[string]any{
 				"name": "codeql-sarif-${{ matrix.language }}-${{ github.sha }}", "path": "codeql-results/**/*.sarif", "if-no-files-found": "error", "retention-days": 14,
 			}},
 	}); err != nil {
@@ -171,7 +171,7 @@ func validateCodeQLSourceScan(workflow githubWorkflow) error {
 	// The pinned upload action recursively discovers SARIF and preserves the
 	// categories already emitted by analyze. Separate artifact directories avoid collisions.
 	return validateCodeQLSteps(upload.Steps, []githubStep{
-		{Name: "Download CodeQL SARIF artifact", Uses: "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c", With: map[string]any{
+		{Name: "Download CodeQL SARIF artifact", Uses: "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333", With: map[string]any{
 			"pattern": "codeql-sarif-*-${{ github.sha }}", "path": "codeql-results", "merge-multiple": false,
 		}},
 		{Name: "Upload CodeQL SARIF", Uses: codeql + "upload-sarif" + codeqlPin, With: map[string]any{"sarif_file": "codeql-results"}},

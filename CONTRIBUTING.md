@@ -63,9 +63,12 @@ the same engines and Linux system dependencies before running that gate.
 
 The Firefox test project explicitly enables
 [site-origin process isolation](https://searchfox.org/mozilla-central/source/dom/ipc/ProcessIsolation.cpp)
-with `fission.webContentIsolationStrategy=1`. This avoids the observed navigation
-completion failure in the pinned bundle's shared-process configuration, without
-replacing its browser binary or weakening CSP, navigation assertions or retries.
+with `fission.webContentIsolationStrategy=1`. This avoided the navigation
+completion failure observed in the Playwright 1.62.1 bundle's shared-process
+configuration, without replacing its browser binary or weakening CSP, navigation
+assertions or retries. One complete Firefox run of the pinned 1.63.0 bundle
+without the preference passed; the policy remains until repeated qualification
+admits its removal.
 The engine fixture checks the requested launch policy. Keep the exact stable SDK
 and all three engine gates until a complete qualification admits a successor.
 

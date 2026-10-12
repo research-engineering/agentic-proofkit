@@ -195,7 +195,7 @@ func metadata(manifest packageJSON) string {
 		"Summary: " + manifest.Description,
 		"License-Expression: " + licenseExpression,
 		"License-File: " + licenseFilename,
-		"Requires-Python: >=3.9",
+		"Requires-Python: >=3.11",
 		"Project-URL: Source, " + strings.TrimPrefix(manifest.Repository.URL, "git+"),
 		"",
 		"Package-manager wrapper for the agentic-proofkit Go CLI.",
