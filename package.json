@@ -83,7 +83,7 @@
   "devDependencies": {
     "@playwright/test": "1.62.1",
     "ajv": "8.20.0",
-    "axe-core": "4.13.0",
+    "axe-core": "4.14.0",
     "typescript": "7.0.2"
   }
 }
