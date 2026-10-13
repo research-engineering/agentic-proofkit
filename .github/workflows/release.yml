@@ -184,7 +184,7 @@ jobs:
           NODE
 
       - name: Upload release candidate evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-candidate-evidence-${{ github.sha }}
           path: |
@@ -497,7 +497,7 @@ jobs:
           cp "$consumer/registry-audit-signatures.txt" artifacts/registry/audit-signatures.txt
 
       - name: Upload registry evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: registry-evidence-${{ github.sha }}
           path: |
@@ -599,7 +599,7 @@ jobs:
           go run ./internal/tools/pypiregistry
 
       - name: Upload PyPI registry evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pypi-registry-evidence-${{ github.sha }}
           path: |
@@ -688,7 +688,7 @@ jobs:
         run: go run ./internal/tools/releasemanifest
 
       - name: Upload final release metadata
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-metadata-${{ github.sha }}
           path: |
@@ -793,7 +793,7 @@ jobs:
           NODE
 
       - name: Upload attestation evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-attestation-evidence-${{ github.sha }}
           path: artifacts/attestations/github-artifact-attestations.json
@@ -987,7 +987,7 @@ jobs:
           done
 
       - name: Upload release evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-evidence-${{ github.sha }}
           path: |
@@ -1019,7 +1019,7 @@ jobs:
 
       - name: Upload PyPI release evidence
         if: ${{ vars.PROOFKIT_ENABLE_PYPI_PUBLISH == 'true' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pypi-release-evidence-${{ github.sha }}
           path: |
