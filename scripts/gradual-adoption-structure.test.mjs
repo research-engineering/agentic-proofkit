@@ -5,7 +5,6 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
 import {expandSharedDefinitions} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -117,7 +116,7 @@ function invoke(command, input, phase = 'passed', flags = [], inputIndex = 0, la
     input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 8 << 20,
     env: {...process.env, ...launcher},
   });
-  assertCLITransport(result);
+  assert.equal(result.error, undefined); assert.equal(result.signal, null);
   if (phase === 'refused') {
     assert.equal(result.status, 1); assert.equal(result.stdout, ''); assert.notEqual(result.stderr, ''); return result;
   }
@@ -603,7 +602,7 @@ test('populated, blocked, failed-reference and normalized payload output domains
     carrierPredicates('gradual-adoption-bootstrap', 0, value, 'payload');
     invoke('gradual-adoption', value.payloads.adoptionProfile, phase);
     const guidanceResult = spawnSync(binary, ['gradual-adoption-guidance', '--input', '-'], {input: JSON.stringify(value.payloads.adoptionGuidance), encoding: 'utf8', timeout: 10000});
-    assertCLITransport(guidanceResult); assert.equal(guidanceResult.stderr, '');
+    assert.equal(guidanceResult.error, undefined); assert.equal(guidanceResult.stderr, '');
     schema('gradual-adoption-guidance', 'output', 0, JSON.parse(guidanceResult.stdout));
     const manifest = invoke('gradual-adoption-bootstrap', input, phase, ['--materialization-manifest']);
     carrierPredicates('gradual-adoption-bootstrap', 1, manifest, 'manifest');
@@ -796,12 +795,12 @@ test('post-redaction identity and all starter consumers preserve native wire dom
   const execute = (command, input, pointer, exit) => {
     const flags = pointer ? ['--input-pointer', pointer] : [];
     const result = spawnSync(binary, [command, '--input', '-', ...flags], {input, encoding: 'utf8', timeout: 10000, maxBuffer: 8 << 20});
-    assertCLITransport(result);
+    assert.equal(result.error, undefined); assert.equal(result.signal, null);
     assert.equal(result.status, exit, result.stderr); assert.equal(result.stderr, '');
     return result;
   };
   const normal = spawnSync(binary, ['gradual-adoption-bootstrap', '--input', '-'], {input: JSON.stringify(bootstrap()), encoding: 'utf8', timeout: 10000});
-  assertCLITransport(normal); assert.equal(normal.status, 0); assert.equal(normal.stderr, '');
+  assert.equal(normal.error, undefined); assert.equal(normal.status, 0); assert.equal(normal.stderr, '');
   const payloads = JSON.parse(normal.stdout);
   assert.equal(payloads.nextCommands[2], 'agentic-proofkit witness-plan --input proofkit/witness.json');
   const plan = execute('witness-plan', normal.stdout, '/payloads/witnessPlanInput', 0);
@@ -810,14 +809,14 @@ test('post-redaction identity and all starter consumers preserve native wire dom
     const input = JSON.stringify(bootstrap()).replace('"profileLines":42', '"profileLines":' + token);
     assert(input.includes('"profileLines":' + token));
     const producer = spawnSync(binary, ['gradual-adoption-bootstrap', '--input', '-'], {input, encoding: 'utf8', timeout: 10000, maxBuffer: 8 << 20});
-    assertCLITransport(producer); assert.equal(producer.status, 1); assert.equal(producer.stderr, '');
+    assert.equal(producer.error, undefined); assert.equal(producer.status, 1); assert.equal(producer.stderr, '');
     assert(new RegExp('"profileLines"\\s*:\\s*' + token + '(?=[,}\\s])').test(producer.stdout));
     const profile = execute('gradual-adoption', producer.stdout, '/payloads/adoptionProfile', 1);
     assert(new RegExp('"profileLineCount"\\s*:\\s*' + token + '(?=[,}\\s])').test(profile.stdout));
     execute('gradual-adoption-guidance', producer.stdout, '/payloads/adoptionGuidance', 0);
     execute('witness-plan', producer.stdout, '/payloads/witnessPlanInput', 0);
     const manifest = spawnSync(binary, ['gradual-adoption-bootstrap', '--input', '-', '--materialization-manifest'], {input, encoding: 'utf8', timeout: 10000, maxBuffer: 8 << 20});
-    assertCLITransport(manifest); assert.equal(manifest.status, 1); assert.equal(manifest.stderr, '');
+    assert.equal(manifest.error, undefined); assert.equal(manifest.status, 1); assert.equal(manifest.stderr, '');
     const content = JSON.parse(manifest.stdout).files.find(file => file.payloadKey === 'adoptionProfile').content;
     assert(new RegExp('"profileLines"\\s*:\\s*' + token + '(?=[,}\\s])').test(content));
     execute('gradual-adoption', content, '', 1);

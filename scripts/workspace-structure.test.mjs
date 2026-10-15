@@ -6,7 +6,6 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
 import {compileVariantUnion, expandSharedDefinitions} from "./schema-definitions.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -56,7 +55,8 @@ function native(command, input, extra = [], carrier = "stdin") {
   }
   if (carrier === "compact") argv = ["--json-layout", "compact", ...argv];
   const result = spawnSync(binary, argv, {input: bytes, encoding: "utf8", timeout: 10_000, maxBuffer: 4 << 20});
-  assertCLITransport(result, command);
+  assert.equal(result.error, undefined, `${command}/transport-error`);
+  assert.equal(result.signal, null, `${command}/transport-signal`);
   assert.ok(result.status === 0 || result.status === 1, `${command}/exit`);
   result.output = undefined;
   if (result.stdout) {

@@ -6,7 +6,6 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
 import {compileVariantUnion} from "./schema-definitions.mjs";
 
 const root = new URL("../", import.meta.url), release = "release-authority", readiness = "readiness-closeout";
@@ -43,7 +42,7 @@ const trim = text => text.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, "");
 const mergedClaims = (command, values) => [...new Set([...builtin[command], ...values.map(trim)])].sort(order);
 function invoke(row) {
   const result = spawnSync(binary, row.argv, {input: row.input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
-  return assertCLITransport(result);
+  assert.equal(result.error, undefined); assert.equal(result.signal, null); return result;
 }
 function expectedHelp(row) {
   const summaries = contract.commands.find(x => x.command === row.command).inputContract.compatibilitySummary;

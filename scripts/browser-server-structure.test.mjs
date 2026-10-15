@@ -7,7 +7,6 @@ import {delimiter, join} from 'node:path';
 import test, {after, before} from 'node:test';
 import {setTimeout as sleep} from 'node:timers/promises';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
 import {bindingInput, resolverInput} from './proof-routing-fixtures.mjs';
 import {directComposeInput, inventoryInput, normalizedComposeInput, requirementSource} from './inventory-coverage-fixtures.mjs';
 
@@ -120,7 +119,9 @@ function spawnCLI(args, input, options = {}) {
     encoding: 'utf8', timeout: 30000, maxBuffer: 32 << 20, ...options});
 }
 function run(args, input, options = {}) {
-  return assertCLITransport(spawnCLI(args, input, options), args.join(' '));
+  const result = spawnCLI(args, input, options);
+  assert.equal(result.error, undefined); assert.equal(result.signal, null);
+  return result;
 }
 function json(args, input) {
   const result = run(args, input);
@@ -131,9 +132,13 @@ const browserArgs = (view, flags = []) => ['requirement-browser-server', '--inpu
 function refusedResult(result, label) {
   assert.equal(result.status, 1, `${label}: ${result.stdout}`); assert.equal(result.stdout, '', label); assert.notEqual(result.stderr, '', label);
 }
+// A refusal may exit before it reads stdin, and spawnSync then reports EPIPE for the unwritten payload. As in
+// internal/tools/workflowsmoke/process_streams.go, only that early exit is tolerated, and only on this refusal path;
+// run() keeps rejecting every spawn error because a successful command must consume its input.
 function refused(args, input, label) {
-  const result = assertCLITransport(spawnCLI(args, input), label);
-  refusedResult(result, label);
+  const result = spawnCLI(args, input);
+  if (result.error !== undefined) assert.equal(result.error.code, 'EPIPE', `${label}: ${result.error}`);
+  assert.equal(result.signal, null, label); refusedResult(result, label);
   return result;
 }
 // A browser plan is admitted output only through the exactly selected variant.
@@ -436,13 +441,12 @@ test('serving browse mode emits one non-JSON URL record and terminates on SIGTER
   ]) refused(args, fixtures.workspace, label);
 });
 
-test('a CLI that exits before reading its stdin is accepted only as a refusal', () => {
+test('only the refusal path tolerates a CLI that exits before reading its stdin', () => {
   // 8 MiB exceeds every pipe buffer; the flag refusal exits before reading stdin, so writing the payload must report EPIPE.
   const payload = {...clone(fixtures.workspace), padding: 'x'.repeat(8 << 20)};
   const args = browserArgs('workspace', ['--serve', '--session-mode', 'one-shot-question']);
   assert.equal(refused(args, payload, 'oversized one-shot without --open').error?.code, 'EPIPE');
-  // The closed pipe passes the transport check, so a caller that expects success fails on the refusal status.
-  assert.throws(() => json(args, payload), error => error.code === 'ERR_ASSERTION' && error.actual === 1 && error.expected === 0);
+  assert.throws(() => run(args, payload), error => error.code === 'ERR_ASSERTION' && /EPIPE/.test(error.message));
 });
 
 test('the project view whole chain emits the workspace plan and refuses incomplete roots', () => {

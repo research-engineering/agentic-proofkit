@@ -5,7 +5,6 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
 import {expandSharedDefinitions} from './schema-definitions.mjs';
 
 // Independently authored expectations for adoption-doctor, scaffold-project-structure
@@ -198,7 +197,7 @@ function run(command, input, flags = [], global = []) {
     input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 20000, maxBuffer: 16 << 20,
     env: {...process.env, ...pathLauncher},
   });
-  assertCLITransport(result);
+  assert.equal(result.error, undefined); assert.equal(result.signal, null);
   return result;
 }
 function invoke(command, input, phase = 'passed', flags = [], global = []) {

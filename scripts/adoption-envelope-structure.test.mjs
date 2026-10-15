@@ -5,7 +5,6 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
 import {impactInput} from './impact-fixtures.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -238,7 +237,7 @@ function run(command, input, flags = [], env = {}) {
     input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 20000, maxBuffer: 16 << 20,
     env: {...process.env, AGENTIC_PROOFKIT_LAUNCHER_PROFILE: 'path', AGENTIC_PROOFKIT_PYTHON_EXECUTABLE: '', ...env},
   });
-  assertCLITransport(result);
+  assert.equal(result.error, undefined); assert.equal(result.signal, null);
   return result;
 }
 // phase: passed | failed | refused (stderr only) | repair (invalid-input envelope).

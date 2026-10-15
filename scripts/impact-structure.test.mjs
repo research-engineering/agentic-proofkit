@@ -6,7 +6,6 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
 import {compileVariantUnion} from "./schema-definitions.mjs";
 import {composeInput, impactInput, obligation} from "./impact-fixtures.mjs";
 
@@ -60,10 +59,11 @@ function native(name, value, {exit = 0, report = true, carrier = "stdin", extra 
   } else if (carrier === "compact") args.unshift("--json-layout", "compact");
   const invoke = file => spawnSync(file, args, {input, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
-  assertCLITransport(result);
+  assert.equal(result.error, undefined); assert.equal(result.signal, null);
   assert.equal(result.status, exit, `${name}: ${result.stderr}`);
   if (subjects) {
-    const previous = assertCLITransport(invoke(process.env.PROOFKIT_IMPACT_BASELINE), "baseline");
+    const previous = invoke(process.env.PROOFKIT_IMPACT_BASELINE);
+    assert.equal(previous.error, undefined);
     assert.deepEqual([result.status, result.signal, result.stdout, result.stderr],
       [previous.status, previous.signal, previous.stdout, previous.stderr], "native predecessor observation changed");
   }

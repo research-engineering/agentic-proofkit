@@ -6,7 +6,6 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
 import {compileVariantUnion, expandSharedDefinitions} from "./schema-definitions.mjs";
 import {bindingInput, witnessInput, projectedWitnessInput, schedulerInput, populatedSchedulerInput, resolverInput} from "./proof-routing-fixtures.mjs";
 
@@ -64,10 +63,12 @@ function native(command, input, {exit = 0, report = true, carrier = "stdin", ext
   } else if (carrier === "compact") args.unshift("--json-layout", "compact");
   const invoke = executable => spawnSync(executable, args, {input: bytes, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
-  assertCLITransport(result);
+  assert.equal(result.error, undefined);
+  assert.equal(result.signal, null);
   assert.equal(result.status, exit, `${command}: ${result.stderr}`);
   if (process.env.PROOFKIT_ROUTING_BASELINE) {
-    const prior = assertCLITransport(invoke(process.env.PROOFKIT_ROUTING_BASELINE), "baseline");
+    const prior = invoke(process.env.PROOFKIT_ROUTING_BASELINE);
+    assert.equal(prior.error, undefined);
     assert.deepEqual([result.status, result.signal, result.stdout, result.stderr], [prior.status, prior.signal, prior.stdout, prior.stderr], "native predecessor observation changed");
   }
   if (!report) {
