@@ -63,14 +63,24 @@ the same engines and Linux system dependencies before running that gate.
 
 The Firefox test project explicitly enables
 [site-origin process isolation](https://searchfox.org/mozilla-central/source/dom/ipc/ProcessIsolation.cpp)
-with `fission.webContentIsolationStrategy=1`. This avoided the navigation
-completion failure observed in the Playwright 1.62.1 bundle's shared-process
-configuration, without replacing its browser binary or weakening CSP, navigation
-assertions or retries. One complete Firefox run of the pinned 1.63.0 bundle
-without the preference passed; the policy remains until repeated qualification
-admits its removal.
-The engine fixture checks the requested launch policy. Keep the exact stable SDK
-and all three engine gates until a complete qualification admits a successor.
+with `fission.webContentIsolationStrategy=1` instead of the bundle default `0`.
+With it, no navigation completion failure (a navigation the driver never reports
+as finished) has been observed, and it replaces no browser binary and weakens no
+CSP, navigation assertion or retry. Without it, Firefox runs of the 1.62.1
+bundle and, under host load, of the pinned 1.63.0 bundle reproduced that
+failure, so the preference stays until its removal is qualified. Both bundles
+predate the Firefox channel-identity repair
+([microsoft/playwright@e5d880b](https://github.com/microsoft/playwright/commit/e5d880b05f9a1d7fb5d17dd031b53739e5e39c0e),
+Firefox r1551, first released in 1.64.0); 1.63.0 ships Firefox r1543.
+The engine fixture checks the requested launch policy. Keep the exact stable SDK,
+the preference and all three engine gates until a complete qualification admits
+a successor that contains the r1551 repair and lacks the WebKit select/CSP
+regression. Remove the preference only when at least five complete Firefox runs
+of that successor without it, interleaved with control runs that keep it and
+including runs under host load at least as high as the 1.63.0 complete run that
+reproduced the failure (1-minute load average median 19 on 8 CPUs), all pass
+with zero retries and no navigation completion failure, and update the fixture
+and this explanation together with it.
 
 The composed `go:check` and CI source job both run `npm run go:deps`:
 `go mod tidy -diff` rejects manifest drift without rewriting `go.mod` or
