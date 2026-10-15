@@ -43,7 +43,7 @@ func minimumPythonIdentity(content []byte, architecture string, withPip bool) er
 	}
 	machine := map[string]string{"arm64": "aarch64", "amd64": "x86_64"}[architecture]
 	if machine == "" || identity.Implementation != "cpython" || identity.Python != minimumPython || identity.Machine != machine || identity.UID != 65534 || (withPip && identity.Pip != minimumPipVersion) {
-		return fmt.Errorf("minimum smoke requires exact CPython 3.9.0, native architecture, unprivileged UID and pinned installer")
+		return fmt.Errorf("minimum smoke requires exact CPython 3.11.0, native architecture, unprivileged UID and pinned installer")
 	}
 	return nil
 }

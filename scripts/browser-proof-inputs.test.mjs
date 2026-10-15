@@ -30,7 +30,7 @@ test("browser accessibility harness closes direct audit topology", async () => {
       snapshots: true,
       sources: true,
     });
-    assert.equal(axeDistributionVersion, "4.13.0");
+    assert.equal(axeDistributionVersion, "4.14.0");
     assert(axeDistributionSource.length > 0);
     const exactConfigureOptions = {
       allowedOrigins: ["<same_origin>"],

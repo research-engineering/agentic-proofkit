@@ -27,11 +27,11 @@ import (
 )
 
 const (
-	minimumPipVersion = "26.0.1"
-	minimumPipFile    = "pip-26.0.1-py3-none-any.whl"
-	minimumPipSHA256  = "bdb1b08f4274833d62c1aa29e20907365a2ceb950410df15fc9521bad440122b"
-	minimumPipURL     = "https://files.pythonhosted.org/packages/de/f0/c81e05b613866b76d2d1066490adf1a3dbc4ee9d9c839961c3fc8a6997af/pip-26.0.1-py3-none-any.whl"
-	minimumPython     = "3.9.0"
+	minimumPipVersion = "26.2.1"
+	minimumPipFile    = "pip-26.2.1-py3-none-any.whl"
+	minimumPipSHA256  = "71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e"
+	minimumPipURL     = "https://files.pythonhosted.org/packages/f3/6e/1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/pip-26.2.1-py3-none-any.whl"
+	minimumPython     = "3.11.0"
 	minimumTimeout    = 5 * time.Minute
 )
 
@@ -59,9 +59,9 @@ type minimumReceipt struct {
 func minimumImage(architecture string) (string, error) {
 	switch architecture {
 	case "arm64":
-		return "python@sha256:4836b32c5536098f6b42d1b30252af2bf9735fe581a82479024c8884a13a97b4", nil
+		return "python@sha256:924c9f87d90abaff0f5cc88c240935ea934323bd24d1ea80bd31caed8bf9cc5e", nil
 	case "amd64":
-		return "python@sha256:12b7deafe25f6b34a66d8fb03bfc0ff5e86464fd49100fc2a64d0a98371ec4e1", nil
+		return "python@sha256:ff09e30b44097b761742f1c460f385046d3627c1cfdc5511e191b4274b416257", nil
 	default:
 		return "", fmt.Errorf("minimum Python smoke requires native Linux arm64 or amd64")
 	}

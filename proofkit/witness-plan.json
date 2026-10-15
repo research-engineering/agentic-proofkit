@@ -1788,7 +1788,7 @@
       "nonClaims": [
         "Disabled cachePolicy prohibits witness-result reuse, not Go build-cache or Docker image-cache writes.",
         "Native prerequisites are not provisioned by this plan: repository-root execution, go and git on PATH, an accessible native Linux arm64/amd64 Docker daemon matching host architecture, and the fresh package:artifact wheel set.",
-        "Network external covers host acquisition of the pinned official image, checksum-pinned pip wheel, and required Go dependencies; installed CPython 3.9.0/pip 26.0.1 execution is offline and unprivileged.",
+        "Network external covers host acquisition of the pinned official image, checksum-pinned pip wheel, and required Go dependencies; installed CPython 3.11.0/pip 26.2.1 execution is offline and unprivileged.",
         "Planned environment allowlisting is a caller obligation; this metadata does not attest ambient CI filtering, registry credential absence, or daemon state.",
         "Prerequisite ordering is owned by CI and native validation, not a scheduler dependency graph; this record does not execute or authenticate a minimum-runtime witness.",
         "Shared Docker and Go caches may be populated; images are retained without exclusive ownership or cleanup. Only the owned container and temporary workdir are removed before success; SIGKILL or daemon loss can prevent cleanup.",
