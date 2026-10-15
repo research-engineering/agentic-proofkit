@@ -6,19 +6,40 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// errRecordAbsent distinguishes a zero-length kern.proc.pid answer from a
+// short record. SysctlKinfoProc reports both as EIO.
+var errRecordAbsent = errors.New("retained child record absent")
+
 func observeTerminal(pid, parent int) (bool, error) {
 	for attempt := 0; attempt < 3; attempt++ {
-		record, err := unix.SysctlKinfoProc("kern.proc.pid", pid)
+		records, err := unix.SysctlKinfoProcSlice("kern.proc.pid", pid)
 		if errors.Is(err, unix.EINTR) {
 			continue
 		}
-		return classifyDarwin(record, err, pid, parent)
+		return classifyDarwinRecords(records, err, pid, parent)
 	}
 	return false, unix.EINTR
 }
 
+// An unreaped retained child always has a record. A zero-length answer means a
+// foreign waiter reaped it, so its numeric identity may already be reused.
+func classifyDarwinRecords(records []unix.KinfoProc, err error, pid, parent int) (bool, error) {
+	if err != nil {
+		return classifyDarwin(nil, err, pid, parent)
+	}
+	switch len(records) {
+	case 0:
+		return false, errors.Join(ErrOwnershipLost, errRecordAbsent)
+	case 1:
+		return classifyDarwin(&records[0], nil, pid, parent)
+	default:
+		return false, errors.New("ambiguous retained child record")
+	}
+}
+
 func classifyDarwin(record *unix.KinfoProc, err error, pid, parent int) (bool, error) {
-	// The pinned wrapper rejects short records with EIO before returning one.
+	// A partial-record size error stays ordinary: some record exists, so the
+	// unreaped child still pins its identity and retained cleanup applies.
 	if errors.Is(err, unix.ESRCH) || errors.Is(err, unix.ECHILD) {
 		return false, errors.Join(ErrOwnershipLost, err)
 	}

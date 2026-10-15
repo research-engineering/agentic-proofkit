@@ -16,7 +16,7 @@ func TestCIMinimumFailureCannotSatisfyAggregate(t *testing.T) {
 	for _, status := range []string{"success", "failure", "skipped", "cancelled"} {
 		t.Run(status, func(t *testing.T) {
 			script := workflow.Jobs["ci-required-gate"].Steps[0].Run
-			for _, job := range []string{"source-quality", "browser-runtime", "platform-smoke"} {
+			for _, job := range []string{"source-quality", "browser-runtime", "platform-smoke", "platform-smoke-intel"} {
 				value := "success"
 				if job == "source-quality" {
 					value = status

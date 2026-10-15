@@ -162,3 +162,45 @@ func validate(value string) error {
 	}
 	return nil
 }
+
+// ContainsComponentEquivalent reports whether any component of a canonical
+// relative path names reserved on a supported filesystem. Besides canonical
+// caseless equivalence, HFS+ drops the ignorable scalars Git rejects in .git;
+// reserved and every component are normalized identically, and a reserved
+// name whose visible form is empty, "." or ".." is invalid.
+func ContainsComponentEquivalent(value, reserved string) (bool, error) {
+	reservedKey, err := CanonicalCaseless.Key(hfsVisible(reserved))
+	if err != nil || strings.Contains(reserved, "/") {
+		return false, fmt.Errorf("reserved path component is invalid")
+	}
+	if _, err := CanonicalCaseless.Key(value); err != nil {
+		return false, err
+	}
+	for _, component := range strings.Split(value, "/") {
+		visible := hfsVisible(component)
+		if visible == "" {
+			continue
+		}
+		key, err := CanonicalCaseless.Key(visible)
+		if err != nil {
+			return false, err
+		}
+		if key == reservedKey {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func hfsVisible(component string) string {
+	return strings.Map(func(r rune) rune {
+		if hfsIgnorable(r) {
+			return -1
+		}
+		return r
+	}, component)
+}
+
+func hfsIgnorable(r rune) bool {
+	return r >= 0x200c && r <= 0x200f || r >= 0x202a && r <= 0x202e || r >= 0x206a && r <= 0x206f || r == 0xfeff
+}

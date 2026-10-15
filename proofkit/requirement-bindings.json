@@ -159,7 +159,7 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
-        "This requirement does not claim repository scanning, source freshness computation from files, requirement meaning, native witness execution, protection from adversarial concurrent content or namespace mutation by the same operating-system user during the operation, filesystem crash or fsync durability, committed generated HTML, merge approval, release approval, rollout approval, or production readiness."
+        "This requirement does not claim repository scanning, source freshness computation from files, requirement meaning, native witness execution, protection from adversarial concurrent content or namespace mutation by the same operating-system user during the operation, protection of non-Git version-control metadata or of hook files outside .git beyond removing execute bits on replacement, detection of a working directory inside Git metadata, where a relative --output is accepted and hooks stay inert only because written files never keep execute bits, filesystem crash or fsync durability, committed generated HTML, merge approval, release approval, rollout approval, or production readiness."
       ]
     },
     {
@@ -2551,6 +2551,37 @@
         {
           "selector": "TestOutputWriterRejectsDeterministicParentSwap",
           "command": "go test ./internal/app -run '^TestOutputWriterRejectsDeterministicParentSwap$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "scenarioId": "proofkit.spec-proof-core.requirement-spec-tree-view-protected-output",
+      "witnessId": "proofkit.requirement-spec-tree-view.protected-output-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/requirement_commands_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPresentationOutputRefusesProtectedNamespacesPreservingBytesAndMode",
+          "command": "go test ./internal/app -run '^TestPresentationOutputRefusesProtectedNamespacesPreservingBytesAndMode$'"
+        },
+        {
+          "selector": "TestPresentationOutputSymlinkAndHardLinkAliasesNeverReachHooks",
+          "command": "go test ./internal/app -run '^TestPresentationOutputSymlinkAndHardLinkAliasesNeverReachHooks$'"
+        },
+        {
+          "selector": "TestPresentationOutputReplacementKeepsReadWriteBitsAndDropsExecuteBits",
+          "command": "go test ./internal/app -run '^TestPresentationOutputReplacementKeepsReadWriteBitsAndDropsExecuteBits$'"
+        },
+        {
+          "selector": "TestPresentationOutputRefusesPathsOutsidePathIdentityDomain",
+          "command": "go test ./internal/app -run '^TestPresentationOutputRefusesPathsOutsidePathIdentityDomain$'"
         }
       ],
       "commandIds": [
