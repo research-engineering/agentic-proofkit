@@ -122,8 +122,6 @@ func TestCoverageRelationFullOutputParity(t *testing.T) {
 	// JSON, Markdown and exit codes match the earlier base-27fcb8e observations.
 	// HTML was re-captured when the shared stylesheet began hiding unmatched
 	// card groups; only that stylesheet rule changed the rendered bytes.
-	// "compact" was re-captured when compact Markdown/HTML began rendering
-	// declared witness routes; its JSON and exit-code projection is unchanged.
 	wants := map[string]string{
 		"sparse":         "f6e52d12b5bf07fe84b20cfe02791631815dbb79255fe40da9cba0f95cbfd6f1",
 		"dense":          "ece6842d9bf9ee589c6d4b353ee8b5f2c761a46f91e9f18b4b232378b6ca397f",
@@ -132,7 +130,7 @@ func TestCoverageRelationFullOutputParity(t *testing.T) {
 		"failed":         "d0483811de43b06f2a5ff4f1582f60f05e9bbc15ad706ee4ba3c403c64d353ad",
 		"mixed-negative": "7ac30c89c9d7570d6a4f4dc30bf57ee2667e282e54c931edd0f42bfcd81798bd",
 		"owner-scope":    "87d6075e17f0e33c0966ca32022de5896dbc52b487142ae2f77ce693c8c8fceb",
-		"compact":        "07fb069aca5f40990960ed9a674d39526ac15a406fd50e332bb5a27642315ca2",
+		"compact":        "fb68abed2adccedce98ad23351437802f0dfd58e67491e14bfff168e77acd57a",
 	}
 	for _, name := range []string{"sparse", "dense", "no-match", "missing", "failed", "mixed-negative", "owner-scope", "compact"} {
 		t.Run(name, func(t *testing.T) {

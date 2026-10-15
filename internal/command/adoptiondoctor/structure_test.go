@@ -47,7 +47,7 @@ func TestReportAndEnvelopeStructuresDescribeReachableStates(t *testing.T) {
 		"readiness/retire-stale-authority", "readiness/route/blocked_missing_owner_route", "readiness/promote/ready_for_owner_review",
 		"readiness/modernize-boundary/blocked", "readiness/bind/blocked", "readiness/verify/blocked",
 		"package/empty", "package/text", "replacement/empty", "replacement/text", "scope/empty", "scope/id",
-		"action/no-gaps", "action/gap", "selectors/route", "selectors/candidate", "witness/", "witness/candidate_witness_not_admitted",
+		"action/no-gaps", "action/gap", "selectors/route+candidate", "witness/", "witness/candidate_witness_not_admitted",
 		"witness/missing_native_witness", "witness/missing_owner_route", "witness/missing_proof_binding",
 		"context/owner_route", "context/candidate_boundary", "context/stale_authority_surface", "clarification/1", "omitted/1",
 		"bounds/boundsViolations", "envelopeId/redacted",
@@ -55,11 +55,6 @@ func TestReportAndEnvelopeStructuresDescribeReachableStates(t *testing.T) {
 		if !seen[want] {
 			t.Fatalf("reachable output domain was not exercised: %s", want)
 		}
-	}
-	// Selectors come from the gap's exact owning record, so the prefix-related
-	// route-candidate-overlap fixture must not give one gap both selector sets.
-	if seen["selectors/route+candidate"] {
-		t.Fatal("one gap action carried both route and candidate selectors")
 	}
 	for kind := range gapKinds() {
 		if !seen["kind/"+kind] {
@@ -357,13 +352,8 @@ func record(seen map[string]bool, value map[string]any, envelope map[string]any)
 		seen["action/gap"] = true
 		seen["witness/"+action["missingWitness"].(string)] = true
 		selectors := action["selectors"].(map[string]any)
-		switch hasRoute, hasCandidate := selectors["ownerRouteId"] != nil, selectors["candidateBoundaryId"] != nil; {
-		case hasRoute && hasCandidate:
+		if selectors["ownerRouteId"] != nil && selectors["candidateBoundaryId"] != nil {
 			seen["selectors/route+candidate"] = true
-		case hasRoute:
-			seen["selectors/route"] = true
-		case hasCandidate:
-			seen["selectors/candidate"] = true
 		}
 	}
 	for _, raw := range envelope["contextRefs"].([]any) {

@@ -144,18 +144,14 @@ type precondition struct {
 }
 
 type gap struct {
-	// CandidateBoundaryID and RouteID name the source record exactly; GapID
-	// is a display identity and prefix-related stable IDs make it ambiguous.
-	CandidateBoundaryID string
-	EvidenceRefs        []string
-	GapID               string
-	Kind                string
-	Message             string
-	Owner               string
-	Phase               string
-	RouteID             string
-	RuleRefs            []string
-	Touched             bool
+	EvidenceRefs []string
+	GapID        string
+	Kind         string
+	Message      string
+	Owner        string
+	Phase        string
+	RuleRefs     []string
+	Touched      bool
 }
 
 type Result struct {
@@ -324,28 +320,26 @@ func adoptionGaps(input Input) []gap {
 		candidateTouched := hasTouched(candidate.RequirementRefs, touched) || input.CheckedScope == adoptionmode.ScopeAll
 		if candidate.AdmissionState != "owner_admitted" {
 			gaps = append(gaps, gap{
-				CandidateBoundaryID: candidate.BoundaryID,
-				EvidenceRefs:        sortedUnique(append(append([]string{}, candidate.AffectedPaths...), candidate.ProofBindingRefs...)),
-				GapID:               candidate.BoundaryID + ".candidate-boundary-not-admitted",
-				Kind:                gapKindCandidateBoundaryNotAdmitted,
-				Message:             "Candidate boundary is advisory until the consuming repository owner admits stable requirements and proof bindings.",
-				Owner:               candidate.CandidateOwner,
-				Phase:               phaseModernizeBoundary,
-				RuleRefs:            candidate.RequirementRefs,
-				Touched:             candidateTouched,
+				EvidenceRefs: sortedUnique(append(append([]string{}, candidate.AffectedPaths...), candidate.ProofBindingRefs...)),
+				GapID:        candidate.BoundaryID + ".candidate-boundary-not-admitted",
+				Kind:         gapKindCandidateBoundaryNotAdmitted,
+				Message:      "Candidate boundary is advisory until the consuming repository owner admits stable requirements and proof bindings.",
+				Owner:        candidate.CandidateOwner,
+				Phase:        phaseModernizeBoundary,
+				RuleRefs:     candidate.RequirementRefs,
+				Touched:      candidateTouched,
 			})
 		}
 		for _, precondition := range candidate.BlockedPreconditions {
 			gaps = append(gaps, gap{
-				CandidateBoundaryID: candidate.BoundaryID,
-				EvidenceRefs:        candidate.AffectedPaths,
-				GapID:               candidate.BoundaryID + ".blocked-precondition",
-				Kind:                gapKindBlockedPrecondition,
-				Message:             precondition,
-				Owner:               candidate.CandidateOwner,
-				Phase:               phaseVerify,
-				RuleRefs:            candidate.RequirementRefs,
-				Touched:             candidateTouched,
+				EvidenceRefs: candidate.AffectedPaths,
+				GapID:        candidate.BoundaryID + ".blocked-precondition",
+				Kind:         gapKindBlockedPrecondition,
+				Message:      precondition,
+				Owner:        candidate.CandidateOwner,
+				Phase:        phaseVerify,
+				RuleRefs:     candidate.RequirementRefs,
+				Touched:      candidateTouched,
 			})
 		}
 	}
@@ -844,7 +838,6 @@ func gapForRoute(route ownerRoute, kind string, phase string, message string, to
 	return gap{
 		EvidenceRefs: route.SpecPaths,
 		GapID:        route.RouteID + "." + kind,
-		RouteID:      route.RouteID,
 		Kind:         kind,
 		Message:      message,
 		Owner:        route.Owner,

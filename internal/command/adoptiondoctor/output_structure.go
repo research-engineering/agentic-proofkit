@@ -104,8 +104,8 @@ func EnvelopeShape(envelopeID string) jsonshape.Shape {
 		)),
 		jsonshape.Required("stepId", jsonshape.StringLiteral(noGapsRuleID)), jsonshape.Required("uncertainty", text),
 	)
-	// Route or candidate selectors are present only when the gap names that
-	// owner record by exact identity; no gap names both.
+	// Route and candidate selectors are independently present when the gap ID
+	// has the corresponding owner prefix; both can apply to one gap.
 	gapAction := jsonshape.Object(
 		jsonshape.Required("candidateAction", text), jsonshape.Required("commandIds", texts), jsonshape.Required("evidenceRefs", evidence),
 		jsonshape.Required("instruction", text),

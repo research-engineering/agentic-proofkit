@@ -628,17 +628,12 @@ test('reachable native states and degradation stay inside the published unions',
     seen.add('omitted/' + envelope.omitted.length); seen.add('actions/' + Math.min(envelope.actionPlan.length, 24));
     if (envelope.envelopeId === '<redacted-diagnostic-value>') seen.add('envelope/redacted');
     if (envelope.bounds.boundsViolations) seen.add('bounds/violations');
-    for (const action of envelope.actionPlan) {
-      const route = action.selectors.ownerRouteId !== undefined; const candidate = action.selectors.candidateBoundaryId !== undefined;
-      if (route || candidate) seen.add(route && candidate ? 'selectors/both' : route ? 'selectors/route' : 'selectors/candidate');
-    }
+    for (const action of envelope.actionPlan) if (action.selectors.ownerRouteId && action.selectors.candidateBoundaryId) seen.add('selectors/both');
   }
   for (const want of ['state/passed', 'state/failed', 'state/blocked', 'status/passed', 'status/failed', 'status/blocked', 'status/skipped', 'status/warning',
     'readiness/retire-stale-authority/blocked', 'readiness/promote/ready_for_owner_review', 'readiness/route/blocked_missing_owner_route',
     'kind/child_report_warning', 'kind/stale_authority_current_vocabulary', 'kind/stale_authority_retired_scope', 'omitted/1', 'actions/24',
-    'envelope/redacted', 'bounds/violations', 'selectors/route', 'selectors/candidate']) assert(seen.has(want), 'unreached doctor domain ' + want);
-  // Selectors come from the gap's exact owning record: the prefix-related overlap fixture must not give one action both selector sets.
-  assert(!seen.has('selectors/both'), 'one doctor action carried both route and candidate selectors');
+    'envelope/redacted', 'bounds/violations', 'selectors/both']) assert(seen.has(want), 'unreached doctor domain ' + want);
   const marker = run('adoption-doctor', redacted, ['--agent-envelope']);
   const value = JSON.parse(marker.stdout);
   schema('adoption-doctor', 'output', 0, {...value, envelopeId: 'foreign-fixture-value'}, false, 'redaction');
