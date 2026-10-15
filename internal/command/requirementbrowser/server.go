@@ -196,13 +196,13 @@ func serveOneShot(ctx context.Context, handle ServerHandle, options Options, std
 	select {
 	case packet = <-handle.Handoff:
 	case <-timer.C:
-		packet = commitOrReadTerminal(handle, terminalPacket("expired", handle))
+		packet = commitOrReadTerminal(handle, terminalPacket(questionStateExpired, handle))
 	case <-ctx.Done():
-		packet = commitOrReadTerminal(handle, terminalPacket("cancelled", handle))
+		packet = commitOrReadTerminal(handle, terminalPacket(questionStateCancelled, handle))
 	case err := <-handle.Done():
 		return errors.Join(err, closeHandle(handle))
 	}
-	unsuccessful := packet["state"] != "submitted"
+	unsuccessful := packet["state"] != questionStateSubmitted
 	if cleanupErr := closeAndWaitServer(handle); cleanupErr != nil {
 		if unsuccessful {
 			return errors.Join(ErrOneShotTerminal, cleanupErr)
@@ -221,13 +221,13 @@ func commitOrReadTerminal(handle ServerHandle, candidate map[string]any) map[str
 
 func terminalPacket(state string, handle ServerHandle) map[string]any {
 	packet := map[string]any{
-		"handoffKind":   "proofkit.requirement-browser-question",
+		"handoffKind":   questionHandoffKind,
 		"nonClaims":     admit.StringSliceToAny(serverNonClaims),
 		"schemaVersion": json.Number(fmt.Sprint(questionPacketSchemaVersion)),
 		"state":         state,
 	}
 	if handle.SnapshotID != "" {
-		packet["snapshotRefs"] = []any{map[string]any{"role": "current", "snapshotId": handle.SnapshotID}}
+		packet["snapshotRefs"] = []any{map[string]any{"role": questionSnapshotRole, "snapshotId": handle.SnapshotID}}
 	}
 	return packet
 }

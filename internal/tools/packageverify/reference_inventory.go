@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
-	"net/url"
 	"slices"
 	"sort"
 	"strings"
 
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/schemadefs"
 )
 
 type referenceScope uint8
@@ -18,6 +17,7 @@ const (
 	structuralSchema
 	schemaProperties
 	schemaDefinitions
+	schemaDependentRequired
 	literalStringMap
 )
 
@@ -40,6 +40,11 @@ func verifyClosedReferenceInventory(label string, value any, classifications map
 		if scope == schemaDefinitions {
 			if _, ok := current.(map[string]any); !ok {
 				return fmt.Errorf("package %s schema definitions must be an object", label)
+			}
+		}
+		if scope == schemaDependentRequired {
+			if _, ok := current.(map[string]any); !ok {
+				return fmt.Errorf("package %s schema dependentRequired must be an object", label)
 			}
 		}
 		switch typed := current.(type) {
@@ -70,6 +75,10 @@ func verifyClosedReferenceInventory(label string, value any, classifications map
 					default:
 						return fmt.Errorf("package %s property declaration must be an object or boolean schema", label)
 					}
+				} else if scope == schemaDependentRequired {
+					if !stringArray(typed[key]) {
+						return fmt.Errorf("package %s dependentRequired declaration must list property names", label)
+					}
 				} else if scope == structuralSchema && key == "$ref" {
 					if err := verifyLocalSchemaReference(typed[key], resource); err != nil {
 						return fmt.Errorf("package %s: %w", label, err)
@@ -99,25 +108,11 @@ func verifyClosedReferenceInventory(label string, value any, classifications map
 // Only direct definitions in this resource are admitted. This closes references
 // without interpreting validation keywords, following cycles or fetching URLs.
 func verifyLocalSchemaReference(raw any, resource map[string]any) error {
-	ref, ok := raw.(string)
-	if !ok || !strings.HasPrefix(ref, "#") {
+	if ref, ok := raw.(string); !ok || !strings.HasPrefix(ref, "#") {
 		return fmt.Errorf("unclassified reference-bearing field: schema reference must name a local definition")
 	}
-	pointer, err := url.PathUnescape(strings.TrimPrefix(ref, "#"))
-	name, local := strings.CutPrefix(pointer, "/$defs/")
-	if err != nil || !local || name == "" || strings.Contains(name, "/") {
-		return fmt.Errorf("schema reference must name one local definition")
-	}
-	target, err := jsonpointer.Select(resource, pointer)
-	if err != nil {
-		return fmt.Errorf("schema reference has no local definition")
-	}
-	switch target.(type) {
-	case map[string]any, bool:
-		return nil
-	default:
-		return fmt.Errorf("schema reference target must be an object or boolean declaration")
-	}
+	_, err := schemadefs.Resolve(resource, raw)
+	return err
 }
 
 // Declaration names are not instance references. Only schema applicators
@@ -132,18 +127,36 @@ func referenceChildScope(scope referenceScope, route []string, key string) refer
 			return structuralSchema
 		}
 	case structuralSchema:
-		switch key {
-		case "properties":
+		switch schemadefs.KeywordSubschemaForm(key) {
+		case schemadefs.SubschemaMap:
+			if key == "$defs" {
+				return schemaDefinitions
+			}
 			return schemaProperties
-		case "$defs":
-			return schemaDefinitions
-		case "items", "prefixItems", "anyOf", "oneOf", "allOf", "not", "contains", "if", "then", "else", "additionalProperties", "propertyNames", "unevaluatedProperties":
+		case schemadefs.SingleSubschema, schemadefs.SubschemaList:
 			return structuralSchema
+		}
+		// Its member names and listed values are declared property names.
+		if key == "dependentRequired" {
+			return schemaDependentRequired
 		}
 	case schemaProperties, schemaDefinitions:
 		return structuralSchema
 	}
 	return referenceRecord
+}
+
+func stringArray(value any) bool {
+	items, ok := value.([]any)
+	if !ok {
+		return false
+	}
+	for _, item := range items {
+		if _, ok := item.(string); !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func referenceBearingField(key string) bool {

@@ -144,7 +144,7 @@ func TestAdmitCommandRouteTokenBoundariesAreExact(t *testing.T) {
 }
 
 func TestAdmitContractResourceBoundsAreExact(t *testing.T) {
-	const expectedBytes = 4 << 20
+	const expectedBytes = 8 << 20
 	if MaximumContractBytes != expectedBytes {
 		t.Fatal("machine-contract ceiling differs from its resource policy")
 	}

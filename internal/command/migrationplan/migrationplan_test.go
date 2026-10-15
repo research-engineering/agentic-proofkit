@@ -133,3 +133,30 @@ func validMigrationPlanInput() map[string]any {
 func jsonNumber(value string) any {
 	return json.Number(value)
 }
+
+// Every letter and digit of a blocker reason survives in its blockerId suffix,
+// in order and lowercased; camelCase field names split into words.
+func TestBlockerReasonSlugKeepsEveryReasonCharacter(t *testing.T) {
+	if got, want := blockerReasonSlug(candidateRetainedOwner.reason), "retirement-candidate-must-not-be-listed-in-retained-owners"; got != want {
+		t.Fatalf("blockerReasonSlug(%q)=%q, want %q", candidateRetainedOwner.reason, got, want)
+	}
+	alphanumeric := func(text string) string {
+		var builder strings.Builder
+		for _, character := range strings.ToLower(text) {
+			if character >= 'a' && character <= 'z' || character >= '0' && character <= '9' {
+				builder.WriteRune(character)
+			}
+		}
+		return builder.String()
+	}
+	for _, rule := range blockerRules {
+		slug := blockerReasonSlug(rule.reason)
+		if alphanumeric(slug) != alphanumeric(rule.reason) || strings.Trim(slug, "-") != slug || strings.Contains(slug, "--") {
+			t.Fatalf("blocker slug %q lost characters of reason %q", slug, rule.reason)
+		}
+	}
+	record := blocker("old.owner", candidateRetainedOwner)
+	if record.BlockerID != blockerIDPrefix+"old.owner.retirement-candidate-must-not-be-listed-in-retained-owners" {
+		t.Fatalf("blockerId=%q", record.BlockerID)
+	}
+}

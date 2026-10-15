@@ -32,6 +32,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
@@ -212,7 +213,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	contract, err := readJSON[cliContract]("proofkit/cli-contract.v2.json")
+	contract, err := readBoundedJSON[cliContract]("proofkit/cli-contract.v2.json", installedclicontract.MaximumContractBytes)
 	if err != nil {
 		return err
 	}
@@ -731,13 +732,17 @@ func readAnyJSON(path string) (any, error) {
 }
 
 func readJSON[T any](path string) (T, error) {
+	return readBoundedJSON[T](path, 16<<20)
+}
+
+func readBoundedJSON[T any](path string, maximumBytes int64) (T, error) {
 	var out T
 	file, err := os.Open(path)
 	if err != nil {
 		return out, err
 	}
 	defer file.Close()
-	out, err = admission.DecodeTypedJSON[T](file, 16<<20)
+	out, err = admission.DecodeTypedJSON[T](file, maximumBytes)
 	if err != nil {
 		return out, fmt.Errorf("decode %s: %w", path, err)
 	}

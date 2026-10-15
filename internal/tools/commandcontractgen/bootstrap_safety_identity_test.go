@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 func TestBootstrapSafetyRejectsPredecessorSemanticIdentities(t *testing.T) {
@@ -47,7 +48,7 @@ func TestBootstrapSafetyGeneratorBoundaryRejectsRetiredIdentities(t *testing.T) 
 		{"scaffold-project-structure", "proofkit.scaffold-project-structure.input.v1"},
 	} {
 		t.Run(row.command, func(t *testing.T) {
-			value, err := admission.DecodeJSON(bytes.NewReader(source), maxContractBytes)
+			value, err := admission.DecodeJSON(bytes.NewReader(source), installedclicontract.MaximumContractBytes)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -55,7 +56,8 @@ func TestBootstrapSafetyGeneratorBoundaryRejectsRetiredIdentities(t *testing.T) 
 			commandAt(contract, row.command)["inputContract"].(map[string]any)["contractId"] = row.retired
 			_, _, err = renderContract(root, source, contract)
 			want := row.command + " inputContract must use the bootstrap safety semantic identity"
-			if row.command == "gradual-adoption-bootstrap" {
+			// Native semantic owners refuse the retired identity before the fallback guard.
+			if row.command == "gradual-adoption-bootstrap" || row.command == "scaffold-project-structure" || row.command == "adoption-contract-envelope" {
 				want = row.command + " input contract violates native semantic contract identity"
 			}
 			if err == nil || !strings.Contains(err.Error(), want) {

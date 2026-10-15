@@ -25,7 +25,7 @@ func TestNativeStructureDefinitionOwnsCompleteProjection(t *testing.T) {
 		t.Fatal(err)
 	}
 	variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
-	if !reflect.DeepEqual(variant["schema"], requirementbinding.InputStructure()) {
+	if !equalPublishedSchema(variant["schema"], requirementbinding.InputStructure()) {
 		t.Fatal("wire schema differs from native owner")
 	}
 	if !reflect.DeepEqual(variant["requiredFields"], []any{"bindingId", "bindings", "nonClaims", "requirements", "schemaVersion", "witnessCommands"}) {
@@ -148,7 +148,7 @@ func TestStructureRefreshPreservesUnrelatedRecordsAndIsIdempotent(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	afterValue, err := admission.DecodeJSON(bytes.NewReader(updated), maxContractBytes)
+	afterValue, err := admission.DecodeJSON(bytes.NewReader(updated), installedclicontract.MaximumContractBytes)
 	if err != nil {
 		t.Fatal(err)
 	}

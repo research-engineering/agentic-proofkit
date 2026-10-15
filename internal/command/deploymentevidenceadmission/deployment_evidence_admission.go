@@ -140,7 +140,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("deployment evidence admission input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"admissionId", "evidence", "nonClaims", "policy", "rawOperatorEvidence", "schemaVersion"}, "deployment evidence admission input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "deployment evidence admission input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -200,7 +200,7 @@ func rawOperatorEvidenceArray(raw any) ([]rawOperatorEvidence, error) {
 			return nil, err
 		}
 		context := fmt.Sprintf("deployment evidence rawOperatorEvidence[%d]", index)
-		if err := admit.KnownKeys(record, []string{"evidenceRef", "payload"}, context); err != nil {
+		if err := admit.KnownKeys(record, rawOperatorEvidenceKeys, context); err != nil {
 			return nil, err
 		}
 		evidenceRef, err := text(record["evidenceRef"], context+".evidenceRef")
@@ -220,7 +220,7 @@ func admitPolicy(raw any) (policy, error) {
 	if err != nil {
 		return policy{}, err
 	}
-	if err := admit.KnownKeys(record, []string{"expectedDeploymentClaim", "expectedEvidenceSchema", "expectedProofScope", "forbiddenValueIndicators", "localRefIndicators", "requireDigestPinnedImageRefs", "requireLowercaseSourceCommits", "requiredFactIds", "requiredFactKinds", "requiredNonClaims", "temporaryEndpointHostSuffixes"}, "deployment evidence admission policy"); err != nil {
+	if err := admit.KnownKeys(record, policyKeys, "deployment evidence admission policy"); err != nil {
 		return policy{}, err
 	}
 	requiredFactIDs, err := sortedRuleIDs(record["requiredFactIds"], "deployment evidence requiredFactIds", true)

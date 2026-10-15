@@ -10,6 +10,25 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
 
+// Full-envelope literals are shared with the structural projection.
+const (
+	guidanceSliceRole        = "guidance_slice"
+	callerOwnedInputRole     = "caller_owned_input"
+	commandRefNonClaim       = "Agent-route command refs do not execute commands or admit command results."
+	omittedCommandEscalation = "Provide the omitted command's caller-owned input or choose a narrower route."
+	routeActionPhase         = "route"
+	clarificationAnswerKind  = "caller_owned_input_ref"
+
+	// Route-derived identities append these infixes to the admitted route ID.
+	actionIDInfix   = ".action."
+	commandIDInfix  = ".command."
+	inputRefIDInfix = ".input."
+	// shortHashPattern is the exact alphabet and width emitted by shortTextHash;
+	// sanitizedRefPattern is the nonempty token grammar emitted by sanitizeRefID.
+	shortHashPattern    = `[a-p]{16}`
+	sanitizedRefPattern = `[a-z0-9]+(?:-[a-z0-9]+)*`
+)
+
 func BuildEnvelope(raw any) (map[string]any, int, error) {
 	return BuildEnvelopeWithRenderer(raw, cliexec.PathRenderer())
 }
@@ -44,7 +63,7 @@ func BuildEnvelopeModeWithRenderer(raw any, renderer cliexec.Renderer, mode Enve
 func FullAgentEnvelope(report map[string]any) map[string]any {
 	routeState := stringFromMap(report, "state")
 	sourceState := "failed"
-	if routeState == "routed" {
+	if routeState == stateRouted {
 		sourceState = "passed"
 	}
 	reportID := stringFromMap(report, "reportId")
@@ -65,7 +84,7 @@ func FullAgentEnvelope(report map[string]any) map[string]any {
 			"artifactRef": nil,
 			"nonClaim":    "Agent route source state proves route selection only, not downstream command execution or proof freshness.",
 			"reportId":    reportID,
-			"reportKind":  "proofkit.agent-route",
+			"reportKind":  reportKind,
 			"routeState":  routeState,
 			"stableHash":  nil,
 			"state":       sourceState,
@@ -100,7 +119,7 @@ func guidanceContextRefs(slice map[string]any, reportID string) []map[string]any
 			"description": "Selected compact guidance slice for the agent route.",
 			"path":        "proofkit.agent-route.guidanceSlice",
 			"refId":       reportID + ".guidance-slice",
-			"role":        "guidance_slice",
+			"role":        guidanceSliceRole,
 			"selector":    stringFromMap(slice, "sliceId"),
 		},
 	}
@@ -132,7 +151,7 @@ func inputContextRefs(commands []map[string]any, reportID string) []map[string]a
 			"description": "Caller-owned input selected by agent-route.",
 			"path":        inputRef,
 			"refId":       inputRefID(reportID, inputRef),
-			"role":        "caller_owned_input",
+			"role":        callerOwnedInputRole,
 			"selector":    inputRef,
 		})
 	}
@@ -151,8 +170,8 @@ func commandContextRefs(commands []map[string]any, reportID string) []map[string
 			"argv":          command["argv"],
 			"commandId":     commandID(reportID, command),
 			"display":       cliexec.DisplayArgv(argv),
-			"nonClaim":      "Agent-route command refs do not execute commands or admit command results.",
-			"owner":         "consumer_repository",
+			"nonClaim":      commandRefNonClaim,
+			"owner":         consumerOwner,
 			"proofkitRoute": commandName,
 		})
 	}
@@ -189,9 +208,9 @@ func clarificationQuestions(requiredInputs []map[string]any, reportID string) []
 			"askWhen":            "The selected route is blocked because a required caller-owned input is missing.",
 			"blocking":           true,
 			"evidenceRefs":       []any{reportID},
-			"expectedAnswerKind": "caller_owned_input_ref",
+			"expectedAnswerKind": clarificationAnswerKind,
 			"nonClaim":           "Supplying the input ref does not approve its content.",
-			"owner":              "consumer_repository",
+			"owner":              consumerOwner,
 			"question":           "Which caller-owned input file or report should satisfy " + requiredInputLabel(item) + "?",
 			"questionId":         fmt.Sprintf("%s.clarify.required-input.%02d", reportID, index+1),
 		})
@@ -207,8 +226,8 @@ func actionPlan(commands []map[string]any, requiredInputs []map[string]any, repo
 			"evidenceRefs": []any{reportID},
 			"instruction":  "Provide " + requiredInputLabel(item) + " before running the selected Proofkit route.",
 			"nonClaims":    []any{"Missing-input actions do not approve caller-owned input content."},
-			"owner":        "consumer_repository",
-			"phase":        "route",
+			"owner":        consumerOwner,
+			"phase":        routeActionPhase,
 			"rationale":    stringFromMap(item, "reason"),
 			"stepId":       reportID + ".action.provide-" + sanitizeRefID(requiredInputLabel(item)),
 		})
@@ -219,10 +238,10 @@ func actionPlan(commands []map[string]any, requiredInputs []map[string]any, repo
 			"evidenceRefs": []any{reportID},
 			"instruction":  "Run the selected Proofkit command only after the consuming repository admits the caller-owned input ref.",
 			"nonClaims":    []any{"Route actions do not execute commands, prove command success, or approve merge."},
-			"owner":        "consumer_repository",
-			"phase":        "route",
+			"owner":        consumerOwner,
+			"phase":        routeActionPhase,
 			"rationale":    stringFromMap(command, "why"),
-			"stepId":       reportID + ".action." + commandRefSuffix(command),
+			"stepId":       reportID + actionIDInfix + commandRefSuffix(command),
 		})
 	}
 	return actions
@@ -235,7 +254,7 @@ func blockedPreconditions(requiredInputs []map[string]any, observedReports []map
 			"description":    "Missing " + requiredInputLabel(item) + ".",
 			"evidenceRefs":   []any{reportID},
 			"nonClaim":       "A missing input precondition does not decide requirement meaning, proof adequacy, or merge.",
-			"owner":          "consumer_repository",
+			"owner":          consumerOwner,
 			"preconditionId": fmt.Sprintf("%s.blocked.required-input.%02d", reportID, index+1),
 		})
 	}
@@ -247,7 +266,7 @@ func blockedPreconditions(requiredInputs []map[string]any, observedReports []map
 			"description":    "Observed " + stringFromMap(item, "kind") + " report is " + stringFromMap(item, "state") + ".",
 			"evidenceRefs":   []any{stringFromMap(item, "ref")},
 			"nonClaim":       "Observed report state blocks route guidance but does not let Proofkit repair caller-owned evidence.",
-			"owner":          "consumer_repository",
+			"owner":          consumerOwner,
 			"preconditionId": fmt.Sprintf("%s.blocked.observed-report.%02d", reportID, index+1),
 		})
 	}
@@ -258,7 +277,7 @@ func omittedItems(omitted []map[string]any, reportID string) []map[string]any {
 	items := []map[string]any{}
 	for index, item := range omitted {
 		items = append(items, map[string]any{
-			"escalation":   "Provide the omitted command's caller-owned input or choose a narrower route.",
+			"escalation":   omittedCommandEscalation,
 			"omissionId":   fmt.Sprintf("%s.omitted.command.%02d", reportID, index+1),
 			"omittedCount": 1,
 			"reason":       stringFromMap(item, "reason"),
@@ -290,7 +309,7 @@ func commandInputRef(command map[string]any) string {
 }
 
 func commandID(reportID string, command map[string]any) string {
-	return reportID + ".command." + commandRefSuffix(command)
+	return reportID + commandIDInfix + commandRefSuffix(command)
 }
 
 func commandRefSuffix(command map[string]any) string {
@@ -306,7 +325,7 @@ func commandRefSuffix(command map[string]any) string {
 }
 
 func inputRefID(reportID string, inputRef string) string {
-	return reportID + ".input." + shortTextHash(inputRef)
+	return reportID + inputRefIDInfix + shortTextHash(inputRef)
 }
 
 func shortTextHash(text string) string {

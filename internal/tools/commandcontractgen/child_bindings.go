@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/schemadefs"
 )
 
 const sourceV2DefinitionID = "proofkit.requirement-source.input.v2.json-schema"
@@ -53,6 +55,10 @@ func nativeChildBindings() []nativeChildBinding {
 		{"selective-gate-evidence", "input", "proofkit.receipt-producer-admission.input.v1.json-schema", [][]string{{"producerAdmission"}}, ""},
 		{"selective-gate-obligation-decision-input", "input", "proofkit.selective-gate-evidence.input.v1.json-schema", [][]string{{"evidence"}}, ""},
 		{"selective-gate-obligation-decision-input", "output", "proofkit.obligation-decision.input.v1.json-schema", [][]string{{}}, ""},
+		{"spec-proof-bundle-admission", "input", "proofkit.requirement-bindings.input.v1.json-schema", [][]string{{"requirementBindings"}}, ""},
+		{"spec-proof-bundle-admission", "input", "proofkit.witness-scheduler-plan.input.v1.json-schema", [][]string{{"witnessPlan"}}, ""},
+		{"spec-proof-bundle-admission", "input", "proofkit.proof-receipt-admission.output.v1.json-schema", [][]string{{"receiptAdmission", "report"}}, ""},
+		{"spec-proof-bundle-admission", "input", "proofkit.receipt-producer-admission.output.v1.json-schema", [][]string{{"receiptProducerAdmission", "report"}}, ""},
 	}
 }
 
@@ -109,19 +115,32 @@ func admitChildBindings(command, direction string, contract map[string]any, root
 				continue
 			}
 			allowed := variantRecord["allowedFields"].([]any)
+			// Only a variant that carries the bound root field is checked; an
+			// earlier match must not impose the path on unrelated variants.
+			matched := false
 			if len(path) == 0 {
 				childVariants := definitions[raw.(map[string]any)["definitionRef"].(string)].Content["fieldTree"].(map[string]any)["variants"].([]any)
 				if len(childVariants) != 1 || !reflect.DeepEqual(allowed, childVariants[0].(map[string]any)["allowedFields"]) ||
 					!reflect.DeepEqual(variantRecord["requiredFields"], childVariants[0].(map[string]any)["requiredFields"]) {
 					return fmt.Errorf("%s %s root child binding differs from its source owner", command, direction)
 				}
-				found = true
+				matched = true
 			} else if slices.Contains(allowed, any(path[0].(string))) {
-				found = true
+				matched = true
 			}
-			if found {
-				if schema, complete := variantRecord["schema"].(map[string]any); complete {
-					child := definitions[raw.(map[string]any)["definitionRef"].(string)].Content["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)["schema"].(map[string]any)
+			found = found || matched
+			if matched {
+				if published, complete := variantRecord["schema"].(map[string]any); complete {
+					// Parent and child publish independently shared subtrees, so
+					// containment is decided between their expanded forms.
+					schema, err := schemadefs.Expand(published)
+					if err != nil {
+						return err
+					}
+					child, err := schemadefs.Expand(definitions[raw.(map[string]any)["definitionRef"].(string)].Content["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)["schema"].(map[string]any))
+					if err != nil {
+						return err
+					}
 					leaf, err := schemaChildAtPath(schema, path)
 					if err != nil || !equalBoundChildSchema(leaf, child) {
 						return fmt.Errorf("%s %s child binding path does not contain its source definition", command, direction)
@@ -162,29 +181,41 @@ func equalBoundChildSchema(leaf, child map[string]any) bool {
 }
 
 func schemaChildAtPath(schema map[string]any, path []any) (map[string]any, error) {
-	current := schema
-	for _, raw := range path {
+	return schemaChildFrom(schema, schema, path)
+}
+
+// A value union is entered only when every non-null alternative resolves the
+// remaining path to the same child; one disagreeing alternative refuses it.
+func schemaChildFrom(schema, current map[string]any, path []any) (map[string]any, error) {
+	for index, raw := range path {
 		var err error
 		current, err = localSchemaResource(schema, current)
 		if err != nil {
 			return nil, err
 		}
-		if alternatives, wrapped := current["anyOf"].([]any); wrapped {
-			var nonNull map[string]any
+		if alternatives := valueUnionAlternatives(current); alternatives != nil {
+			var common map[string]any
 			for _, alternative := range alternatives {
-				candidate := alternative.(map[string]any)
+				candidate, ok := alternative.(map[string]any)
+				if !ok {
+					return nil, fmt.Errorf("child schema union member is not an object")
+				}
 				if candidate["type"] == "null" {
 					continue
 				}
-				if nonNull != nil {
+				child, err := schemaChildFrom(schema, candidate, path[index:])
+				if err != nil {
+					return nil, err
+				}
+				if common != nil && !reflect.DeepEqual(common, child) {
 					return nil, fmt.Errorf("ambiguous child schema union")
 				}
-				nonNull = candidate
+				common = child
 			}
-			if nonNull == nil {
+			if common == nil {
 				return nil, fmt.Errorf("child schema union has no value")
 			}
-			current = nonNull
+			return common, nil
 		}
 		current, err = localSchemaResource(schema, current)
 		if err != nil {
@@ -234,6 +265,18 @@ func schemaChildAtPath(schema map[string]any, path []any) (map[string]any, error
 	return current, nil
 }
 
+// anyOf keeps its prior meaning at any node. A oneOf is a value sum only when
+// it is the whole node; beside object members it is a constraint partition.
+func valueUnionAlternatives(node map[string]any) []any {
+	if alternatives, ok := node["anyOf"].([]any); ok {
+		return alternatives
+	}
+	if alternatives, ok := node["oneOf"].([]any); ok && len(node) == 1 {
+		return alternatives
+	}
+	return nil
+}
+
 // Resolve only a pure alias to one directly named local definition. This does
 // not evaluate schemas, fetch resources, or rewrite the child's own references.
 func localSchemaResource(root, value map[string]any) (map[string]any, error) {
@@ -245,12 +288,16 @@ func localSchemaResource(root, value map[string]any) (map[string]any, error) {
 	if !ok || ref == "" || len(value) != 1 {
 		return nil, fmt.Errorf("child schema alias must contain only a resource reference")
 	}
+	// Child bindings admit only the plain spelling of a direct definition name.
 	name, local := strings.CutPrefix(ref, "#/$defs/")
 	if !local || name == "" || strings.ContainsAny(name, "/%~") {
 		return nil, fmt.Errorf("child schema alias must name one direct local definition")
 	}
-	definitions, _ := root["$defs"].(map[string]any)
-	found, ok := definitions[name].(map[string]any)
+	target, err := schemadefs.Resolve(root, ref)
+	if err != nil {
+		return nil, fmt.Errorf("child schema alias: %w", err)
+	}
+	found, ok := target.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("child schema resource is not defined locally")
 	}

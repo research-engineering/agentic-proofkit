@@ -10,7 +10,7 @@ import (
 
 var cliFlagConditionAtomPattern = regexp.MustCompile(`^(--[a-z][a-z0-9-]*)=([a-z0-9][a-z0-9-]*)$`)
 
-const cliFlagConditionModelDefinitionID = "proofkit.adoption-contract-envelope.output.v1.root-shape"
+const cliFlagConditionModelDefinitionID = "proofkit.adoption-contract-envelope.output.v1.json-schema"
 const cliFlagConditionModelCommand = "adoption-contract-envelope"
 const cliFlagConditionModelDirection = "output"
 

@@ -20,7 +20,7 @@ func TestBootstrapJSONValueModeHasExactHeaderAndVersionSemantics(t *testing.T) {
 	variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
 	if definition["rootType"] != "json_value" || variant["rootKind"] != "json_value" ||
 		!reflect.DeepEqual(variant["allowedFields"], []any{}) || !reflect.DeepEqual(variant["requiredFields"], []any{}) ||
-		!reflect.DeepEqual(variant["schema"], selfcheck.InputStructure()) {
+		!equalPublishedSchema(variant["schema"], selfcheck.InputStructure()) {
 		t.Fatal("arbitrary JSON input became a field-constrained root")
 	}
 	if version, err := owner.contractVersion(definition); err != nil || version != "1" {
@@ -79,7 +79,7 @@ func TestBootstrapOutputOwnerDoesNotReuseArbitraryInputMode(t *testing.T) {
 		t.Fatal(err)
 	}
 	variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
-	if definition["rootType"] != "object" || variant["rootKind"] != "object" || !reflect.DeepEqual(variant["schema"], selfcheck.OutputStructure()) {
+	if definition["rootType"] != "object" || variant["rootKind"] != "object" || !equalPublishedSchema(variant["schema"], selfcheck.OutputStructure()) {
 		t.Fatal("bootstrap output owner drift")
 	}
 	if version, err := owner.contractVersion(definition); err != nil || version != "1" {
@@ -107,7 +107,7 @@ func TestBootstrapJSONValueAnnotationsRemainNonSemantic(t *testing.T) {
 		t.Fatalf("annotation-free version=%s error=%v", version, err)
 	}
 	variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
-	if !reflect.DeepEqual(variant["schema"], map[string]any{"$schema": "https://json-schema.org/draft/2020-12/schema"}) {
+	if !equalPublishedSchema(variant["schema"], map[string]any{"$schema": "https://json-schema.org/draft/2020-12/schema"}) {
 		t.Fatal("optional annotation changed the accepted value domain")
 	}
 	for _, description := range []any{nil, false, json.Number("1"), "", " \t ", []any{}, map[string]any{}} {

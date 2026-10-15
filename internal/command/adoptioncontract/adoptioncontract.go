@@ -21,6 +21,7 @@ const (
 )
 
 var supportedModes = []string{"adoption", "bootstrap", "guidance", "pilot", "workflow"}
+var aggregateKeys = []string{"envelopeId", "gradual", "nonClaims", "pilot", "workflow"}
 var supportedPilotVariants = []string{"all", "first", "stack-diverse"}
 var modes = stringSet(supportedModes)
 var pilotVariants = stringSet(supportedPilotVariants)
@@ -93,7 +94,7 @@ func BuildWithRenderer(raw any, options Options, renderer cliexec.Renderer) (any
 }
 
 func admitAggregate(raw any) (aggregateEnvelope, error) {
-	record, err := contractenv.Object(raw, aggregateEnvelopeSchema, "adoption contract envelope", "envelopeId", "gradual", "nonClaims", "pilot", "workflow")
+	record, err := contractenv.Object(raw, aggregateEnvelopeSchema, "adoption contract envelope", aggregateKeys...)
 	if err != nil {
 		return aggregateEnvelope{}, err
 	}

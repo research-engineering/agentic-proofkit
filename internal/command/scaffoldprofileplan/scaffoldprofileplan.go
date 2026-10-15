@@ -57,15 +57,16 @@ var (
 )
 
 type input struct {
-	SchemaVersion       int
-	PlanID              string
-	PresetID            *string
-	Repository          repositoryInput
-	Paths               pathsInput
-	Requirements        requirementsInput
-	EnvironmentClasses  []string
-	CommandMatcherHints []commandMatcher
-	NonClaims           []string
+	SchemaVersion                int
+	PlanID                       string
+	PresetID                     *string
+	Repository                   repositoryInput
+	Paths                        pathsInput
+	Requirements                 requirementsInput
+	EnvironmentClasses           []string
+	EnvironmentClassesFromPreset bool
+	CommandMatcherHints          []commandMatcher
+	NonClaims                    []string
 }
 
 type repositoryInput struct {
@@ -136,7 +137,7 @@ func BuildResult(raw any) (Result, error) {
 	}
 	record := report.Record{
 		SchemaVersion: 1,
-		ReportKind:    "proofkit.repo-profile-scaffold-plan",
+		ReportKind:    PlanKind,
 		ReportID:      input.PlanID,
 		State:         "passed",
 		Summary: map[string]any{
@@ -165,7 +166,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("repo-profile scaffold input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"commandMatcherHints", "environmentClasses", "nonClaims", "paths", "planId", "presetId", "repository", "requirements", "schemaVersion"}, "repo-profile scaffold input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "repo-profile scaffold input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -191,7 +192,7 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
-	environmentClasses, err := admitEnvironmentClasses(record["environmentClasses"], presetID, preset)
+	environmentClasses, environmentClassesFromPreset, err := admitEnvironmentClasses(record["environmentClasses"], presetID, preset)
 	if err != nil {
 		return input{}, err
 	}
@@ -204,15 +205,16 @@ func admitInput(raw any) (input, error) {
 		return input{}, err
 	}
 	return input{
-		SchemaVersion:       1,
-		PlanID:              planID,
-		PresetID:            presetID,
-		Repository:          repository,
-		Paths:               paths,
-		Requirements:        requirements,
-		EnvironmentClasses:  environmentClasses,
-		CommandMatcherHints: commandMatchers,
-		NonClaims:           nonClaims,
+		SchemaVersion:                1,
+		PlanID:                       planID,
+		PresetID:                     presetID,
+		Repository:                   repository,
+		Paths:                        paths,
+		Requirements:                 requirements,
+		EnvironmentClasses:           environmentClasses,
+		EnvironmentClassesFromPreset: environmentClassesFromPreset,
+		CommandMatcherHints:          commandMatchers,
+		NonClaims:                    nonClaims,
 	}, nil
 }
 
@@ -233,7 +235,7 @@ func admitRepository(raw any) (repositoryInput, error) {
 	if !ok {
 		return repositoryInput{}, fmt.Errorf("repo-profile scaffold repository must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"name", "primaryLanguages", "profilePath", "rootPackageName"}, "repo-profile scaffold repository"); err != nil {
+	if err := admit.KnownKeys(record, repositoryKeys, "repo-profile scaffold repository"); err != nil {
 		return repositoryInput{}, err
 	}
 	name, err := nonEmptyText(record["name"], "repo-profile scaffold repository.name")
@@ -265,7 +267,7 @@ func admitPaths(raw any, presetID *string, preset *stackpreset.Profile) (pathsIn
 	if !ok {
 		return pathsInput{}, fmt.Errorf("repo-profile scaffold paths must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"bindingPath", "generatedArtifacts", "policyPath", "proofLikePaths", "retiredProofLikePaths", "routerPath", "specGlobs"}, "repo-profile scaffold paths"); err != nil {
+	if err := admit.KnownKeys(record, pathsKeys, "repo-profile scaffold paths"); err != nil {
 		return pathsInput{}, err
 	}
 	policyPath, err := safePath(record["policyPath"], "repo-profile scaffold paths.policyPath")
@@ -287,13 +289,11 @@ func admitPaths(raw any, presetID *string, preset *stackpreset.Profile) (pathsIn
 	specGlobsRaw, specGlobsFromPreset := record["specGlobs"], false
 	if specGlobsRaw == nil {
 		if preset != nil && presetID != nil {
-			values := []any{}
-			for _, pathValue := range preset.StarterProofLikePaths {
-				if strings.HasPrefix(pathValue, "docs/specs/") {
-					values = append(values, pathValue)
-				}
+			values := presetSpecGlobs(*preset)
+			if len(values) == 0 {
+				return pathsInput{}, fmt.Errorf("repo-profile scaffold paths.specGlobs must be caller-provided: preset %s suggests no docs/specs/ spec source", *presetID)
 			}
-			specGlobsRaw = values
+			specGlobsRaw = admit.StringSliceToAny(values)
 			specGlobsFromPreset = true
 		} else {
 			specGlobsRaw = []any{"docs/specs/**/*.md"}
@@ -349,7 +349,7 @@ func admitRequirements(raw any) (requirementsInput, error) {
 	if !ok {
 		return requirementsInput{}, fmt.Errorf("repo-profile scaffold requirements must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"idPattern"}, "repo-profile scaffold requirements"); err != nil {
+	if err := admit.KnownKeys(record, requirementsKeys, "repo-profile scaffold requirements"); err != nil {
 		return requirementsInput{}, err
 	}
 	idPattern, err := nonEmptyText(record["idPattern"], "repo-profile scaffold requirements.idPattern")
@@ -359,7 +359,23 @@ func admitRequirements(raw any) (requirementsInput, error) {
 	return requirementsInput{IDPattern: idPattern}, nil
 }
 
-func admitEnvironmentClasses(raw any, presetID *string, preset *stackpreset.Profile) ([]string, error) {
+// A preset suggests spec globs only through starter paths under docs/specs/.
+// Other starter paths, such as generated lookup docs, are not requirement
+// sources, so a preset without such a path supplies no specGlobs default and
+// the caller must declare them, as for requirements.idPattern.
+func presetSpecGlobs(preset stackpreset.Profile) []string {
+	globs := []string{}
+	for _, pathValue := range preset.StarterProofLikePaths {
+		if strings.HasPrefix(pathValue, "docs/specs/") {
+			globs = append(globs, pathValue)
+		}
+	}
+	return globs
+}
+
+// Provenance follows the operand that supplied the classes, not preset selection.
+func admitEnvironmentClasses(raw any, presetID *string, preset *stackpreset.Profile) ([]string, bool, error) {
+	fromPreset := false
 	if raw == nil {
 		if preset != nil && presetID != nil {
 			values := make([]any, 0, len(preset.StarterEnvironmentClasses))
@@ -367,11 +383,13 @@ func admitEnvironmentClasses(raw any, presetID *string, preset *stackpreset.Prof
 				values = append(values, value)
 			}
 			raw = values
+			fromPreset = true
 		} else {
 			raw = []any{}
 		}
 	}
-	return sortedUniqueTextRaw(raw, "repo-profile scaffold environmentClasses", true)
+	values, err := sortedUniqueTextRaw(raw, "repo-profile scaffold environmentClasses", true)
+	return values, fromPreset, err
 }
 
 func admitGeneratedArtifacts(raw any) ([]generatedArtifact, error) {
@@ -388,7 +406,7 @@ func admitGeneratedArtifacts(raw any) ([]generatedArtifact, error) {
 		if !ok {
 			return nil, fmt.Errorf("generated artifact #%d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"generator", "path", "sourceOfTruth"}, fmt.Sprintf("generated artifact #%d", index+1)); err != nil {
+		if err := admit.KnownKeys(record, generatedArtifactKeys, fmt.Sprintf("generated artifact #%d", index+1)); err != nil {
 			return nil, err
 		}
 		pathValue, err := safePath(record["path"], fmt.Sprintf("repo-profile scaffold paths.generatedArtifacts[%d].path", index))
@@ -479,7 +497,7 @@ func admitCommandMatcher(raw any) (commandMatcher, error) {
 	if !ok {
 		return commandMatcher{}, fmt.Errorf("repo-profile scaffold commandMatcher must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"allowedArgv", "allowedScripts", "allowedTestPathGlobs", "credentialClass", "id", "kind", "networkPolicy", "parallelGroup"}, "repo-profile scaffold commandMatcher"); err != nil {
+	if err := admit.KnownKeys(record, commandMatcherKeys, "repo-profile scaffold commandMatcher"); err != nil {
 		return commandMatcher{}, err
 	}
 	id, err := nonEmptyText(record["id"], "repo-profile scaffold commandMatcher id")
@@ -559,7 +577,7 @@ func buildPlan(input input) (map[string]any, error) {
 		},
 		"nonClaims":        admit.StringSliceToAny(nonClaims),
 		"planId":           input.PlanID,
-		"planKind":         "proofkit.repo-profile-scaffold-plan",
+		"planKind":         PlanKind,
 		"presetId":         nullableString(input.PresetID),
 		"profilePath":      input.Repository.ProfilePath,
 		"provenance":       provenance,
@@ -678,7 +696,7 @@ func scaffoldProvenance(input input) []any {
 	} else {
 		rows = append(rows, provenanceRow("proofs.proofLikePaths", "caller_input", "paths.proofLikePaths"))
 	}
-	if input.PresetID != nil && len(input.EnvironmentClasses) > 0 {
+	if input.EnvironmentClassesFromPreset && input.PresetID != nil {
 		rows = append(rows, provenanceRow("proofs.environmentClasses", "stack_preset", "stack-preset:"+*input.PresetID+".starterEnvironmentClasses"))
 	} else {
 		rows = append(rows, provenanceRow("proofs.environmentClasses", "caller_input", "environmentClasses"))

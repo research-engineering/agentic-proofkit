@@ -6,6 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {compileVariantUnion, expandSharedDefinitions} from "./schema-definitions.mjs";
 import {bindingInput, witnessInput, projectedWitnessInput, schedulerInput, populatedSchedulerInput, resolverInput} from "./proof-routing-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -17,7 +18,7 @@ for (const command of names) for (const direction of ["input", "output"]) {
   const reference = contract.commands.find(row => row.command === command)[`${direction}Contract`].rootDefinitionRef;
   const definition = contract.contractDefinitions.find(row => row.definitionId === reference);
   assert.equal(definition.fieldTree.kind, "structural_json_schema", `${command}/${direction}`);
-  validators.set(`${command}/${direction}`, ajv.compile({oneOf: definition.fieldTree.variants.map(row => row.schema)}));
+  validators.set(`${command}/${direction}`, compileVariantUnion(() => new Ajv2020({strict: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema)));
 }
 let directory, binary, executionSubjects;
 const fileDigest = path => createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -311,7 +312,7 @@ test("zero exit codes retain decimal integer tokens including raw negative zero"
   for (const command of ["witness-plan", "witness-scheduler-plan"]) {
     const input = seed(command), expected = native(command, input);
     const definitionId = contract.commands.find(row => row.command === command).inputContract.rootDefinitionRef;
-    const schema = contract.contractDefinitions.find(row => row.definitionId === definitionId).fieldTree.variants[0].schema;
+    const schema = expandSharedDefinitions(contract.contractDefinitions.find(row => row.definitionId === definitionId).fieldTree.variants[0].schema);
     const policy = schema.properties.commands.items.properties.exitCodePolicy.oneOf.find(row => row.properties.kind.const === "zero");
     assert.equal(policy.properties.successCodes.prefixItems[0]["x-proofkit-number-encoding"], "decimal-integer-token-int64");
     for (const token of ["0", "-0", "0.0", "0e0"]) {

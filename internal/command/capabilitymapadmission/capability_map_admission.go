@@ -25,8 +25,8 @@ var (
 		TrustModeCodeBaseline:  {},
 	}
 	requiredEvidenceWitnessKind = map[string]string{
-		"negative_test": "falsification",
-		"positive_test": "positive",
+		"negative_test": falsificationWitnessKind,
+		"positive_test": positiveWitnessKind,
 	}
 	anchorStatusValues = map[string]struct{}{
 		"admitted":  {},
@@ -52,6 +52,26 @@ const (
 	maxQuestionsPerScenario         = 8
 	maxTextItems                    = 16
 	maxCommandRunes                 = 240
+	maxNonClaims                    = 12
+	maxNonClaimRunes                = 240
+)
+
+// Report literals are shared by the producer and its structural description.
+const (
+	shapeRuleID                   = "proofkit.capability-map-admission.shape"
+	trustModeRuleIDPrefix         = "proofkit.capability-map-admission.trust-mode."
+	actionIDPrefix                = "proofkit.capability-map."
+	addAnchorActionSuffix         = ".add-anchor"
+	resolveQuestionsActionSuffix  = ".resolve-owner-questions"
+	addAnchorActionType           = "add_scenario_anchor"
+	resolveQuestionsActionType    = "resolve_owner_questions"
+	addAnchorActionMessage        = "Add a scenario anchor with sourcePath, selector, and commandRefs before treating this scenario as covered."
+	resolveQuestionsActionMessage = "Resolve owner questions before promoting candidate requirements to stable source records."
+	reviewSeverity                = "review"
+	missingAnchorCondition        = "missing_anchor"
+	candidateSeedState            = "candidate"
+	positiveWitnessKind           = "positive"
+	falsificationWitnessKind      = "falsification"
 )
 
 var commandNonClaims = []string{
@@ -191,25 +211,25 @@ func buildReport(input input) (report.Record, int) {
 
 			if missingAnchor {
 				actions = append(actions, action{
-					ActionID:     "proofkit.capability-map." + shape.ScenarioID + ".add-anchor",
+					ActionID:     actionIDPrefix + shape.ScenarioID + addAnchorActionSuffix,
 					CapabilityID: capability.CapabilityID,
-					Message:      "Add a scenario anchor with sourcePath, selector, and commandRefs before treating this scenario as covered.",
+					Message:      addAnchorActionMessage,
 					OwnerID:      capability.OwnerID,
 					ScenarioID:   shape.ScenarioID,
-					Severity:     severityForMode(input.TrustMode, "missing_anchor"),
-					Type:         "add_scenario_anchor",
+					Severity:     severityForMode(input.TrustMode, missingAnchorCondition),
+					Type:         addAnchorActionType,
 				})
 			}
 			if len(shape.OwnerQuestions) > 0 {
 				actions = append(actions, action{
-					ActionID:     "proofkit.capability-map." + shape.ScenarioID + ".resolve-owner-questions",
+					ActionID:     actionIDPrefix + shape.ScenarioID + resolveQuestionsActionSuffix,
 					CapabilityID: capability.CapabilityID,
 					CommandRefs:  commandRefsForAnchors(anchors),
-					Message:      "Resolve owner questions before promoting candidate requirements to stable source records.",
+					Message:      resolveQuestionsActionMessage,
 					OwnerID:      capability.OwnerID,
 					ScenarioID:   shape.ScenarioID,
-					Severity:     "review",
-					Type:         "resolve_owner_questions",
+					Severity:     reviewSeverity,
+					Type:         resolveQuestionsActionType,
 				})
 			}
 		}
@@ -257,12 +277,12 @@ func buildReport(input input) (report.Record, int) {
 		},
 		RuleResults: []report.RuleResult{
 			{
-				RuleID:  "proofkit.capability-map-admission.shape",
+				RuleID:  shapeRuleID,
 				Status:  statusForFailures(failures),
 				Message: shapeRuleMessage(failures),
 			},
 			{
-				RuleID:  "proofkit.capability-map-admission.trust-mode." + strings.ReplaceAll(input.TrustMode, "_", "-"),
+				RuleID:  trustModeRuleID(input.TrustMode),
 				Status:  statusForFailures(failures),
 				Message: modeRuleMessage(input.TrustMode, failures),
 			},
@@ -276,7 +296,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("capability map input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"authority", "capabilities", "mapId", "nonClaims", "proofScope", "repository", "requiredVerification", "scenarioAnchors", "schemaVersion", "trustMode"}, "capability map input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "capability map input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -336,7 +356,7 @@ func admitRepository(raw any) (repository, error) {
 	if !ok {
 		return repository{}, fmt.Errorf("capability map repository must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"nonClaims", "primaryLanguages", "repositoryId"}, "capability map repository"); err != nil {
+	if err := admit.KnownKeys(record, repositoryKeys, "capability map repository"); err != nil {
 		return repository{}, err
 	}
 	repositoryID, err := admit.RuleID(record["repositoryId"], "capability map repositoryId")
@@ -359,7 +379,7 @@ func admitProofScope(raw any) (proofScope, error) {
 	if !ok {
 		return proofScope{}, fmt.Errorf("capability map proofScope must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"baseRef", "dirtyState", "headRef", "nonClaims", "scopeId"}, "capability map proofScope"); err != nil {
+	if err := admit.KnownKeys(record, proofScopeKeys, "capability map proofScope"); err != nil {
 		return proofScope{}, err
 	}
 	scopeID, err := admit.RuleID(record["scopeId"], "capability map proofScope.scopeId")
@@ -418,7 +438,7 @@ func admitCapability(raw any, index int) (capability, error) {
 		return capability{}, fmt.Errorf("capability map capabilities[%d] must be an object", index)
 	}
 	context := fmt.Sprintf("capability map capabilities[%d]", index)
-	if err := admit.KnownKeys(record, []string{"capabilityId", "nonClaims", "ownerId", "riskClasses", "scenarioShapes", "sourcePaths", "summary"}, context); err != nil {
+	if err := admit.KnownKeys(record, capabilityKeys, context); err != nil {
 		return capability{}, err
 	}
 	capabilityID, err := admit.RuleID(record["capabilityId"], context+".capabilityId")
@@ -484,7 +504,7 @@ func admitScenarioShape(raw any, context string) (scenarioShape, error) {
 	if !ok {
 		return scenarioShape{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"candidateRequirementId", "nonClaims", "ownerQuestions", "requiredEvidence", "scenarioId", "summary"}, context); err != nil {
+	if err := admit.KnownKeys(record, scenarioShapeKeys, context); err != nil {
 		return scenarioShape{}, err
 	}
 	scenarioID, err := admit.RuleID(record["scenarioId"], context+".scenarioId")
@@ -564,7 +584,7 @@ func admitScenarioAnchor(raw any, index int) (scenarioAnchor, error) {
 		return scenarioAnchor{}, fmt.Errorf("capability map scenarioAnchors[%d] must be an object", index)
 	}
 	context := fmt.Sprintf("capability map scenarioAnchors[%d]", index)
-	if err := admit.KnownKeys(record, []string{"commandRefs", "falsificationWitness", "nonClaims", "positiveWitness", "scenarioId", "selector", "sourcePath", "status"}, context); err != nil {
+	if err := admit.KnownKeys(record, scenarioAnchorKeys, context); err != nil {
 		return scenarioAnchor{}, err
 	}
 	scenarioID, err := admit.RuleID(record["scenarioId"], context+".scenarioId")
@@ -648,7 +668,7 @@ func admitVerificationCommand(raw any, index int) (verificationCommand, error) {
 		return verificationCommand{}, fmt.Errorf("capability map requiredVerification[%d] must be an object", index)
 	}
 	context := fmt.Sprintf("capability map requiredVerification[%d]", index)
-	if err := admit.KnownKeys(record, []string{"command", "commandId", "environmentClass", "nonClaims", "reason"}, context); err != nil {
+	if err := admit.KnownKeys(record, verificationKeys, context); err != nil {
 		return verificationCommand{}, err
 	}
 	commandID, err := admit.RuleID(record["commandId"], context+".commandId")
@@ -726,11 +746,11 @@ func isExecutableAnchor(anchor scenarioAnchor) bool {
 func anchorSatisfiesRequiredEvidence(anchor scenarioAnchor, requiredEvidence []string) bool {
 	for _, required := range requiredEvidence {
 		switch requiredEvidenceWitnessKind[required] {
-		case "positive":
+		case positiveWitnessKind:
 			if !anchor.PositiveWitness {
 				return false
 			}
-		case "falsification":
+		case falsificationWitnessKind:
 			if !anchor.FalsificationWitness {
 				return false
 			}
@@ -750,10 +770,10 @@ func requiredEvidenceFailures(shape scenarioShape, anchors []scenarioAnchor) []s
 			if !isExecutableAnchor(anchor) {
 				continue
 			}
-			if requiredKind == "positive" && anchor.PositiveWitness {
+			if requiredKind == positiveWitnessKind && anchor.PositiveWitness {
 				satisfied = true
 			}
-			if requiredKind == "falsification" && anchor.FalsificationWitness {
+			if requiredKind == falsificationWitnessKind && anchor.FalsificationWitness {
 				satisfied = true
 			}
 		}
@@ -766,7 +786,7 @@ func requiredEvidenceFailures(shape scenarioShape, anchors []scenarioAnchor) []s
 
 func candidateRequirement(input input, capability capability, shape scenarioShape) map[string]any {
 	return map[string]any{
-		"claimLevel":         "candidate",
+		"claimLevel":         candidateSeedState,
 		"sourceTrustMode":    input.TrustMode,
 		"promotionState":     promotionState(input.TrustMode),
 		"nonClaims":          admit.StringSliceToAny(sortedUnique(append(append([]string{}, capability.NonClaims...), shape.NonClaims...))),
@@ -782,10 +802,10 @@ func candidateRequirement(input input, capability capability, shape scenarioShap
 func candidateBinding(input input, requirementID string, requiredEvidence []string, anchor scenarioAnchor) map[string]any {
 	witnessKinds := []string{}
 	if anchor.PositiveWitness {
-		witnessKinds = append(witnessKinds, "positive")
+		witnessKinds = append(witnessKinds, positiveWitnessKind)
 	}
 	if anchor.FalsificationWitness {
-		witnessKinds = append(witnessKinds, "falsification")
+		witnessKinds = append(witnessKinds, falsificationWitnessKind)
 	}
 	return map[string]any{
 		"commandRefs":             admit.StringSliceToAny(anchor.CommandRefs),
@@ -798,7 +818,7 @@ func candidateBinding(input input, requirementID string, requiredEvidence []stri
 		"scenarioId":              anchor.ScenarioID,
 		"selector":                anchor.Selector,
 		"sourcePath":              anchor.SourcePath,
-		"state":                   "candidate",
+		"state":                   candidateSeedState,
 		"witnessKinds":            admit.StringSliceToAny(witnessKinds),
 	}
 }
@@ -919,10 +939,14 @@ func statusForFailures(failures []string) string {
 }
 
 func severityForMode(mode string, condition string) string {
-	if mode == TrustModeCodeBaseline && condition == "missing_anchor" {
+	if mode == TrustModeCodeBaseline && condition == missingAnchorCondition {
 		return "blocking"
 	}
-	return "review"
+	return reviewSeverity
+}
+
+func trustModeRuleID(mode string) string {
+	return trustModeRuleIDPrefix + strings.ReplaceAll(mode, "_", "-")
 }
 
 func scenarioAnchorSortKey(anchor scenarioAnchor) string {
@@ -972,12 +996,12 @@ func admitOptionalNonClaims(raw any, context string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(values) > 12 {
-		return nil, fmt.Errorf("%s must contain at most 12 entries", context)
+	if len(values) > maxNonClaims {
+		return nil, fmt.Errorf("%s must contain at most %d entries", context, maxNonClaims)
 	}
 	for index, value := range values {
-		if len([]rune(value)) > 240 {
-			return nil, fmt.Errorf("%s[%d] must contain at most 240 runes", context, index)
+		if len([]rune(value)) > maxNonClaimRunes {
+			return nil, fmt.Errorf("%s[%d] must contain at most %d runes", context, index, maxNonClaimRunes)
 		}
 	}
 	return values, nil

@@ -64,7 +64,7 @@ func TestGraphCodeSourcesContractMatchesNativeCLI(t *testing.T) {
 		!slices.Equal(stringsFromAny(variant["requiredFields"].([]any)), []string{"context", "graphId", "schemaVersion"}) {
 		t.Fatal("graph root definition contradicts native optional codeSources admission")
 	}
-	if !reflect.DeepEqual(canonicalJSONValue(t, variant["schema"]), canonicalJSONValue(t, requirementgraph.InputStructure())) {
+	if !reflect.DeepEqual(canonicalJSONValue(t, expandedPublishedSchema(t, variant["schema"])), canonicalJSONValue(t, requirementgraph.InputStructure())) {
 		t.Fatal("graph structural definition differs from native input owner")
 	}
 }

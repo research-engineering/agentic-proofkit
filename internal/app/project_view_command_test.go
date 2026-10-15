@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/projectfixture"
@@ -34,6 +35,7 @@ func TestProjectViewCLI(t *testing.T) {
 		t.Fatalf("project plan exit=%d diagnostic=%q", code, diagnostic)
 	}
 	plan := decodeCLIJSON(t, output).(map[string]any)
+	assertBrowserOutputStructure(t, "plan", "workspace", output)
 	assertExactObjectKeys(t, plan, []string{"authority", "host", "htmlByteLength", "nonClaims", "planKind", "port", "portSelection", "renderedAuthority", "renderedViewKind", "schemaVersion", "url", "view"}, "view plan")
 	if plan["authority"] != "presentation_adapter_plan" || plan["planKind"] != "proofkit.requirement-browser-server-plan" || plan["view"] != "workspace" || plan["host"] != "127.0.0.1" || plan["portSelection"] != "ephemeral" || plan["url"] != nil || plan["renderedViewKind"] != "proofkit.requirement-workspace" || plan["renderedAuthority"] != "presentation_adapter" {
 		t.Fatal("project view did not produce the bounded workspace plan")
@@ -324,12 +326,41 @@ func TestProjectViewOneShotCLIOutputVariants(t *testing.T) {
 		t.Fatal("project CLI did not preserve the compact native handoff packet")
 	}
 	assertPublicCLIRootVariant(t, "view", "output", "03-one-shot-submitted", packet)
+	assertBrowserOutputStructure(t, "submitted", "workspace", stdout.String())
 	args[len(args)-1] = "1"
 	code, terminal, diagnostic := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{})
 	if code != 1 || diagnostic != "" || decodeCLIJSON(t, terminal).(map[string]any)["state"] != "expired" {
 		t.Fatal("one-shot expiry did not retain the existing terminal output contract")
 	}
 	assertPublicCLIRootVariant(t, "view", "output", "02-one-shot-terminal", decodeCLIJSON(t, terminal))
+	assertBrowserOutputStructure(t, "terminal", "workspace", terminal)
+}
+
+// The CLI-produced records must satisfy the same native structure owners that
+// generate the published variants. The process oracle
+// (scripts/browser-server-structure.test.mjs) validates the same one-shot
+// records against the published schemas through a launcher shim.
+func assertBrowserOutputStructure(t *testing.T, variant, view, output string) {
+	t.Helper()
+	value, err := admission.DecodeJSON(strings.NewReader(output), int64(len(output)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	switch variant {
+	case "plan":
+		shape, shapeErr := requirementbrowser.PlanOutputShape(view)
+		err = errors.Join(shapeErr, shape.CheckGenerated(value, variant))
+	case "terminal":
+		err = requirementbrowser.TerminalOutputShape().CheckGenerated(value, variant)
+	case "submitted":
+		shape, shapeErr := requirementbrowser.SubmittedOutputShape()
+		err = errors.Join(shapeErr, shape.CheckGenerated(value, variant))
+	default:
+		err = errors.New("unknown browser output variant")
+	}
+	if err != nil {
+		t.Fatalf("%s %s output violates its native structure: %v", view, variant, err)
+	}
 }
 
 func TestProjectViewDiagnosticsDoNotDiscloseCallerText(t *testing.T) {

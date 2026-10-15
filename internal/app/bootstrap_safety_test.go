@@ -17,8 +17,8 @@ func TestBootstrapSafetySemanticCutoverKeepsWireVersions(t *testing.T) {
 	}
 	for _, row := range []struct{ command, identity, wire, root string }{
 		{"gradual-adoption-bootstrap", "proofkit.gradual-adoption-bootstrap.input.v2", "1", "proofkit.gradual-adoption-bootstrap.input.v2.json-schema"},
-		{"adoption-contract-envelope", "proofkit.adoption-contract-envelope.input.v3", "2", "proofkit.adoption-contract-envelope.input.v2.root-shape"},
-		{"scaffold-project-structure", "proofkit.scaffold-project-structure.input.v2", "1", "proofkit.scaffold-project-structure.input.v1.root-shape"},
+		{"adoption-contract-envelope", "proofkit.adoption-contract-envelope.input.v3", "2", "proofkit.adoption-contract-envelope.input.v3.json-schema"},
+		{"scaffold-project-structure", "proofkit.scaffold-project-structure.input.v2", "1", "proofkit.scaffold-project-structure.input.v2.json-schema"},
 	} {
 		input := commands[row.command]["inputContract"].(map[string]any)
 		if input["contractId"] != row.identity || input["schemaVersion"] != json.Number(row.wire) || input["rootDefinitionRef"] != row.root {

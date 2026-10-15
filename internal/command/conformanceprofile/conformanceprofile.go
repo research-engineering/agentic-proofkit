@@ -12,7 +12,32 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-const reportKind = "proofkit.conformance-profile"
+const (
+	reportKind                   = "proofkit.conformance-profile"
+	verificationReportID         = "proofkit.conformance-profile.all"
+	proofContractDeclarationKind = "proofkit.requirement-proof-route-declaration"
+	resolvedRuleID               = "proofkit.conformance-profile.resolved"
+	resolvedRuleMessage          = "Conformance profile scope resolves to admitted requirement bindings."
+	failureRuleIDPrefix          = "proofkit.conformance-profile.failure."
+	profileResolved              = "resolved"
+	profileInvalid               = "invalid"
+	commandExecutionNotRun       = "not_run"
+)
+
+// Admission inventories and vocabularies are shared with the structural
+// description; they are not a second policy source.
+var (
+	inputKeys            = []string{"manifest", "policy", "profileId", "proofContract", "schemaVersion"}
+	policyKeys           = []string{"blockingStatuses", "expectedManifest", "failOnUnusedAllowedEnvironmentClass", "knownEnvironmentClasses", "localEnvironmentClasses"}
+	expectedManifestKeys = []string{"authorityState", "contractId", "contractKind", "nonClaims", "normalizationProfile", "sourceContract"}
+	manifestKeys         = []string{"authorityState", "contractId", "contractKind", "nonClaims", "normalizationProfile", "profiles", "schemaVersion", "sourceContract"}
+	proofContractKeys    = []string{"bindings", "contractId", "declarationKind", "schemaVersion", "surfaces"}
+	surfaceKeys          = []string{"preconditionedEnvironmentClasses", "requiredEnvironmentClasses", "surfaceId"}
+	bindingKeys          = []string{"bindingRecordId", "blockingStatus", "declaredMutationResistanceClaimId", "invariantRole", "ownedInvariant", "requiredEnvironmentClasses", "requirementId", "scenarioId", "surfaceId", "verifyCommands", "witnessRefs"}
+	witnessRefKeys       = []string{"environmentClasses", "resolutionOrderIndex", "role", "selector", "verifyCommands", "witnessRouteId"}
+	profileKeys          = []string{"allowedEnvironmentClasses", "nonClaims", "optionalSurfaceIds", "preconditionPolicy", "profileId", "purpose", "requiredSurfaceIds"}
+	preconditionPolicies = []string{"allow_preconditioned", "local_only"}
+)
 
 type Input struct {
 	Manifest      Manifest
@@ -125,7 +150,7 @@ func BuildVerification(raw any) (report.Record, int, error) {
 	record := report.Record{
 		SchemaVersion: 1,
 		ReportKind:    reportKind,
-		ReportID:      "proofkit.conformance-profile.all",
+		ReportID:      verificationReportID,
 		State:         stateForFailures(result.Failures),
 		Summary: map[string]any{
 			"profileCount": result.ProfileCount,
@@ -243,7 +268,7 @@ func admitInput(raw any) (Input, error) {
 	if !ok {
 		return Input{}, fmt.Errorf("proofkit conformance profile input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"manifest", "policy", "profileId", "proofContract", "schemaVersion"}, "proofkit conformance profile input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "proofkit conformance profile input"); err != nil {
 		return Input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
@@ -276,7 +301,7 @@ func admitPolicy(raw any) (Policy, error) {
 	if !ok {
 		return Policy{}, fmt.Errorf("conformance profile policy must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"blockingStatuses", "expectedManifest", "failOnUnusedAllowedEnvironmentClass", "knownEnvironmentClasses", "localEnvironmentClasses"}, "conformance profile policy"); err != nil {
+	if err := admit.KnownKeys(record, policyKeys, "conformance profile policy"); err != nil {
 		return Policy{}, err
 	}
 	known, err := stringArray(record["knownEnvironmentClasses"], "conformance profile policy knownEnvironmentClasses", false, true)
@@ -322,7 +347,7 @@ func expectedManifest(raw any) (ExpectedManifest, error) {
 	if !ok {
 		return ExpectedManifest{}, fmt.Errorf("conformance profile expectedManifest must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"authorityState", "contractId", "contractKind", "nonClaims", "normalizationProfile", "sourceContract"}, "conformance profile expectedManifest"); err != nil {
+	if err := admit.KnownKeys(record, expectedManifestKeys, "conformance profile expectedManifest"); err != nil {
 		return ExpectedManifest{}, err
 	}
 	nonClaims, err := stringArray(record["nonClaims"], "expectedManifest nonClaims", false, true)
@@ -364,7 +389,7 @@ func admitManifest(raw any, policy Policy) (Manifest, error) {
 	if !ok {
 		return Manifest{}, fmt.Errorf("conformance profile manifest must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"authorityState", "contractId", "contractKind", "nonClaims", "normalizationProfile", "profiles", "schemaVersion", "sourceContract"}, "conformance profile manifest"); err != nil {
+	if err := admit.KnownKeys(record, manifestKeys, "conformance profile manifest"); err != nil {
 		return Manifest{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -429,14 +454,14 @@ func admitProofContract(raw any) (ProofContract, error) {
 	if !ok {
 		return ProofContract{}, fmt.Errorf("conformance proof contract must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"bindings", "contractId", "declarationKind", "schemaVersion", "surfaces"}, "conformance proof contract"); err != nil {
+	if err := admit.KnownKeys(record, proofContractKeys, "conformance proof contract"); err != nil {
 		return ProofContract{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
 		return ProofContract{}, fmt.Errorf("conformance proof contract schemaVersion must be 2")
 	}
-	if record["declarationKind"] != "proofkit.requirement-proof-route-declaration" {
-		return ProofContract{}, fmt.Errorf("conformance proof contract declarationKind must be proofkit.requirement-proof-route-declaration")
+	if record["declarationKind"] != proofContractDeclarationKind {
+		return ProofContract{}, fmt.Errorf("conformance proof contract declarationKind must be %s", proofContractDeclarationKind)
 	}
 	contractID, err := nonEmptyText(record["contractId"], "conformance proof contract contractId")
 	if err != nil {
@@ -486,7 +511,7 @@ func surfaceFrom(raw any) (Surface, error) {
 	if !ok {
 		return Surface{}, fmt.Errorf("conformance proof surface must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"preconditionedEnvironmentClasses", "requiredEnvironmentClasses", "surfaceId"}, "conformance proof surface"); err != nil {
+	if err := admit.KnownKeys(record, surfaceKeys, "conformance proof surface"); err != nil {
 		return Surface{}, err
 	}
 	surfaceID, err := admit.RuleID(record["surfaceId"], "conformance proof surfaceId")
@@ -509,7 +534,7 @@ func bindingFrom(raw any) (Binding, error) {
 	if !ok {
 		return Binding{}, fmt.Errorf("conformance proof binding must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"bindingRecordId", "blockingStatus", "declaredMutationResistanceClaimId", "invariantRole", "ownedInvariant", "requiredEnvironmentClasses", "requirementId", "scenarioId", "surfaceId", "verifyCommands", "witnessRefs"}, "conformance proof binding"); err != nil {
+	if err := admit.KnownKeys(record, bindingKeys, "conformance proof binding"); err != nil {
 		return Binding{}, err
 	}
 	requirementID, err := admit.RuleID(record["requirementId"], "conformance proof binding requirementId")
@@ -603,7 +628,7 @@ func witnessRefs(raw any, requirementID, bindingRecordID string) ([]WitnessRef, 
 		if !ok {
 			return nil, fmt.Errorf("conformance proof binding %s witnessRef must be an object", requirementID)
 		}
-		if err := admit.KnownKeys(record, []string{"environmentClasses", "resolutionOrderIndex", "role", "selector", "verifyCommands", "witnessRouteId"}, "conformance proof binding "+requirementID+" witnessRef"); err != nil {
+		if err := admit.KnownKeys(record, witnessRefKeys, "conformance proof binding "+requirementID+" witnessRef"); err != nil {
 			return nil, err
 		}
 		environmentClasses, err := stringArray(record["environmentClasses"], "conformance proof binding "+requirementID+" witnessRef environmentClasses", false, false)
@@ -670,7 +695,7 @@ func profileFrom(raw any, index int) (Profile, error) {
 	if !ok {
 		return Profile{}, fmt.Errorf("conformance profile #%d must be an object", index)
 	}
-	if err := admit.KnownKeys(record, []string{"allowedEnvironmentClasses", "nonClaims", "optionalSurfaceIds", "preconditionPolicy", "profileId", "purpose", "requiredSurfaceIds"}, fmt.Sprintf("conformance profile #%d", index)); err != nil {
+	if err := admit.KnownKeys(record, profileKeys, fmt.Sprintf("conformance profile #%d", index)); err != nil {
 		return Profile{}, err
 	}
 	profileID, err := admit.RuleID(record["profileId"], fmt.Sprintf("conformance profile #%d profileId", index))
@@ -684,7 +709,7 @@ func profileFrom(raw any, index int) (Profile, error) {
 	if err != nil {
 		return Profile{}, err
 	}
-	if preconditionPolicy != "allow_preconditioned" && preconditionPolicy != "local_only" {
+	if !slices.Contains(preconditionPolicies, preconditionPolicy) {
 		return Profile{}, fmt.Errorf("conformance profile #%d has unsupported preconditionPolicy", index)
 	}
 	required, err := stringArray(record["requiredSurfaceIds"], fmt.Sprintf("conformance profile #%d requiredSurfaceIds", index), false, true)
@@ -810,14 +835,14 @@ func buildProfileReport(profile Profile, proofContract ProofContract, policy Pol
 			preconditioned++
 		}
 	}
-	state := "resolved"
+	state := profileResolved
 	if len(failures) > 0 {
-		state = "invalid"
+		state = profileInvalid
 	}
 	return ProfileReport{
 		BindingCount:               len(bindings),
 		CommandCount:               len(verifyCommands),
-		CommandExecutionState:      "not_run",
+		CommandExecutionState:      commandExecutionNotRun,
 		EnvironmentClasses:         environmentClasses,
 		Failures:                   failures,
 		NonClaims:                  profile.NonClaims,
@@ -911,16 +936,16 @@ func isPreconditionedBinding(binding Binding, policy Policy) bool {
 func ruleResults(failures []string) []report.RuleResult {
 	if len(failures) == 0 {
 		return []report.RuleResult{{
-			RuleID:      "proofkit.conformance-profile.resolved",
+			RuleID:      resolvedRuleID,
 			Status:      "passed",
-			Message:     "Conformance profile scope resolves to admitted requirement bindings.",
+			Message:     resolvedRuleMessage,
 			Diagnostics: []report.Diagnostic{},
 		}}
 	}
 	results := make([]report.RuleResult, 0, len(failures))
 	for index, failure := range failures {
 		results = append(results, report.RuleResult{
-			RuleID:      fmt.Sprintf("proofkit.conformance-profile.failure.%03d", index+1),
+			RuleID:      fmt.Sprintf(failureRuleIDPrefix+"%03d", index+1),
 			Status:      "failed",
 			Message:     failure,
 			Diagnostics: []report.Diagnostic{},

@@ -70,16 +70,16 @@ func contextRefs(routes []ownerRoute, candidates []candidateBoundary, surfaces [
 	for _, route := range routes {
 		paths := append(append([]string{}, route.SpecPaths...), append(route.ProofBindingPaths, route.NativeWitnessRefs...)...)
 		for index, path := range paths {
-			refs = append(refs, contextRef(fmt.Sprintf("%s.context.%03d", route.RouteID, index+1), path, route.Owner, "owner_route"))
+			refs = append(refs, contextRef(fmt.Sprintf("%s.context.%03d", route.RouteID, index+1), path, route.Owner, contextKindOwnerRoute))
 		}
 	}
 	for _, candidate := range candidates {
 		for index, path := range candidate.AffectedPaths {
-			refs = append(refs, contextRef(fmt.Sprintf("%s.context.%03d", candidate.BoundaryID, index+1), path, candidate.CandidateOwner, "candidate_boundary"))
+			refs = append(refs, contextRef(fmt.Sprintf("%s.context.%03d", candidate.BoundaryID, index+1), path, candidate.CandidateOwner, contextKindCandidateBoundary))
 		}
 	}
 	for _, surface := range surfaces {
-		refs = append(refs, contextRef(surface.SurfaceID+".context", surface.Path, surface.Owner, "stale_authority_surface"))
+		refs = append(refs, contextRef(surface.SurfaceID+".context", surface.Path, surface.Owner, contextKindStaleAuthoritySurface))
 	}
 	sort.Slice(refs, func(left int, right int) bool {
 		return refs[left]["refId"].(string) < refs[right]["refId"].(string)
@@ -123,15 +123,15 @@ func actionPlan(result Result) []map[string]any {
 				"Adoption doctor action steps do not approve edits, proof freshness, merge, or enforcement.",
 			},
 			"observedFact": "Caller-provided adoption facts contain no missing owner routes, advisory candidate boundaries, failed child reports, or blocked preconditions.",
-			"owner":        "consumer_repository",
-			"phase":        "promote",
-			"proofCommand": "consumer_repository_full_gate",
+			"owner":        consumerRepositoryOwner,
+			"phase":        phasePromote,
+			"proofCommand": consumerRepositoryFullGate,
 			"rationale":    "Promotion remains caller-owned even when Proofkit reports no adoption gaps.",
 			"selectors": map[string]any{
 				"evidenceRefs": []any{result.Input.DoctorID},
 				"ruleRefs":     []any{},
 			},
-			"stepId":      "proofkit.adoption-doctor.no-gaps",
+			"stepId":      noGapsRuleID,
 			"uncertainty": "Proofkit did not execute native witnesses or authenticate receipts.",
 		}}
 	}
@@ -240,24 +240,24 @@ func proofCommandForRoute(route ownerRoute, ok bool) string {
 	if ok && len(route.Commands) > 0 {
 		return route.Commands[0]
 	}
-	return "missing_command_route"
+	return gapKindMissingCommandRoute
 }
 
 func missingWitness(item gap, route ownerRoute, hasRoute bool, candidate candidateBoundary, hasCandidate bool) string {
-	if item.Kind == "missing_owner_route" {
-		return "missing_owner_route"
+	if item.Kind == gapKindMissingOwnerRoute {
+		return gapKindMissingOwnerRoute
 	}
-	if item.Kind == "missing_native_witness" {
-		return "missing_native_witness"
+	if item.Kind == gapKindMissingNativeWitness {
+		return gapKindMissingNativeWitness
 	}
-	if item.Kind == "missing_proof_binding" {
-		return "missing_proof_binding"
+	if item.Kind == gapKindMissingProofBinding {
+		return gapKindMissingProofBinding
 	}
 	if hasRoute && len(route.NativeWitnessRefs) == 0 {
-		return "missing_native_witness"
+		return gapKindMissingNativeWitness
 	}
 	if hasCandidate && len(candidate.NativeWitnessRefs) == 0 && len(candidate.ContractWitnessRefs) == 0 {
-		return "candidate_witness_not_admitted"
+		return missingWitnessCandidateNotAdmitted
 	}
 	return ""
 }
@@ -271,23 +271,23 @@ func ownerQuestionsForGap(candidate candidateBoundary, ok bool) []any {
 
 func candidateAction(item gap) string {
 	switch item.Kind {
-	case "candidate_boundary_not_admitted":
+	case gapKindCandidateBoundaryNotAdmitted:
 		return "Ask the consuming repository owner whether the candidate boundary should become an admitted semantic owner before creating stable requirements."
-	case "missing_owner_route":
+	case gapKindMissingOwnerRoute:
 		return "Create or select the caller-owned owner route before treating adoption facts as enforceable."
-	case "missing_proof_binding":
+	case gapKindMissingProofBinding:
 		return "Create or repair the proof binding only after the requirement owner admits the semantic boundary."
-	case "missing_native_witness":
+	case gapKindMissingNativeWitness:
 		return "Add or route a native witness before treating the requirement as enforceable."
-	case "missing_command_route":
+	case gapKindMissingCommandRoute:
 		return "Add a caller-owned command route for the native witness before collecting receipts."
-	case "blocked_precondition", "child_report_blocked":
+	case gapKindBlockedPrecondition, childReportGapKindPrefix + stateBlocked:
 		return "Resolve the blocked caller-owned precondition before promotion."
-	case "child_report_failed", "child_report_skipped", "child_report_warning":
+	case childReportGapKindPrefix + stateFailed, childReportGapKindPrefix + stateSkipped, childReportGapKindPrefix + stateWarning:
 		return "Repair, rerun, or explicitly downgrade the non-passing caller-owned child report before promotion."
-	case "stale_authority_current_vocabulary":
+	case gapKindStaleCurrentVocabulary:
 		return "Replace obsolete current authority vocabulary with the admitted package and proof-owner terms before enforcement."
-	case "stale_authority_retired_scope":
+	case gapKindStaleRetiredScope:
 		return "Move obsolete vocabulary into an admitted historical scope or remove it from current adoption authority surfaces."
 	default:
 		return "Review the caller-owned adoption gap before enforcement."
@@ -296,21 +296,21 @@ func candidateAction(item gap) string {
 
 func actionInstruction(item gap) string {
 	switch item.Phase {
-	case "route":
+	case phaseRoute:
 		return "Load the caller-owned selectors for this adoption gap and identify the owner route."
-	case "modernize-boundary":
+	case phaseModernizeBoundary:
 		return "Resolve the candidate boundary by owner decision before creating stable requirement records."
-	case "bind":
+	case phaseBind:
 		return "Create or repair stable requirement records and proof bindings for owner-admitted behavior only."
-	case "verify":
+	case phaseVerify:
 		return "Run caller-owned native witnesses and collect admitted receipts outside Proofkit."
-	case "parity":
+	case phaseParity:
 		return "Compare old and new proof surfaces before retiring old infrastructure."
-	case "retirement-review":
+	case phaseRetirementReview:
 		return "Retire old proof owners only after parity, owner approval, and post-retirement validation exist."
-	case "retire-stale-authority":
+	case phaseRetireStaleAuthority:
 		return "Repair caller-owned stale authority vocabulary facts before treating the consumer adoption state as current."
-	case "promote":
+	case phasePromote:
 		return "Promote enforcement only after gaps are closed and merge policy accepts the resulting evidence."
 	default:
 		return "Review the caller-owned adoption gap before enforcement."
@@ -333,9 +333,9 @@ func clarificationQuestions(result Result) []map[string]any {
 			"askWhen":            "The consuming repository has candidate boundaries or missing proof routes.",
 			"blocking":           adoptionmode.IsEnforcing(result.Input.Mode),
 			"evidenceRefs":       []any{result.Input.DoctorID},
-			"expectedAnswerKind": "owner_decision",
+			"expectedAnswerKind": ownerDecisionAnswerKind,
 			"nonClaim":           "This question does not admit the owner decision.",
-			"owner":              "consumer_repository",
+			"owner":              consumerRepositoryOwner,
 			"question":           "Which candidate boundaries are stable semantic owners and which proof bindings must be created before enforcement?",
 			"questionId":         "proofkit.adoption-doctor.clarify-owner-boundary",
 		},

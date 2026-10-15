@@ -1,7 +1,6 @@
 package main
 
 import (
-	"reflect"
 	"slices"
 	"testing"
 
@@ -38,7 +37,7 @@ func TestExplicitInputStructuresRetainEveryInvocationVariant(t *testing.T) {
 			}
 			for index, expected := range item.schemas {
 				variant := variants[index].(map[string]any)
-				if !reflect.DeepEqual(variant["schema"], expected) {
+				if !equalPublishedSchema(variant["schema"], expected) {
 					t.Fatalf("variant%d differs from its native owner", index)
 				}
 			}

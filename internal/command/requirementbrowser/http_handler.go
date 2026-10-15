@@ -439,7 +439,7 @@ func serveCancel(response http.ResponseWriter, request *http.Request, expectedOr
 		writeAPIError(response, request.Method, err)
 		return
 	}
-	packet := map[string]any{"handoffKind": "proofkit.requirement-browser-question", "nonClaims": admit.StringSliceToAny(serverNonClaims), "schemaVersion": json.Number(fmt.Sprint(questionPacketSchemaVersion)), "snapshotRefs": []any{map[string]any{"role": "current", "snapshotId": session.SnapshotID}}, "state": "cancelled"}
+	packet := map[string]any{"handoffKind": questionHandoffKind, "nonClaims": admit.StringSliceToAny(serverNonClaims), "schemaVersion": json.Number(fmt.Sprint(questionPacketSchemaVersion)), "snapshotRefs": []any{map[string]any{"role": questionSnapshotRole, "snapshotId": session.SnapshotID}}, "state": questionStateCancelled}
 	if oneShot {
 		if !terminal.TryCommit(packet) {
 			response.WriteHeader(http.StatusGone)
@@ -673,7 +673,7 @@ func buildHandoffPacket(request *http.Request, session workspaceSession) (map[st
 	}
 	slice, err := requirementcontext.SliceSnapshot(
 		session.Snapshot,
-		map[string]any{"maxNodes": json.Number("4096"), "maxRequirements": json.Number("16384"), "profile": "review", "requirementIds": selectedRequirementIDs},
+		map[string]any{"maxNodes": json.Number("4096"), "maxRequirements": json.Number("16384"), "profile": handoffContextProfile, "requirementIds": selectedRequirementIDs},
 		"browser.handoff.context",
 	)
 	if err != nil {
@@ -686,13 +686,13 @@ func buildHandoffPacket(request *http.Request, session workspaceSession) (map[st
 	packet := map[string]any{
 		"annotations":          annotations,
 		"context":              slice,
-		"handoffKind":          "proofkit.requirement-browser-question",
-		"instructionAuthority": "browser_session_submission",
+		"handoffKind":          questionHandoffKind,
+		"instructionAuthority": questionInstructionAuthority,
 		"nonClaims":            admit.StringSliceToAny(serverNonClaims),
 		"schemaVersion":        json.Number(fmt.Sprint(questionPacketSchemaVersion)),
-		"snapshotRefs":         []any{map[string]any{"role": "current", "snapshotId": session.SnapshotID}},
-		"sourceTextAuthority":  "untrusted_context",
-		"state":                "submitted",
+		"snapshotRefs":         []any{map[string]any{"role": questionSnapshotRole, "snapshotId": session.SnapshotID}},
+		"sourceTextAuthority":  questionSourceTextAuthority,
+		"state":                questionStateSubmitted,
 	}
 	findings, err := secretjson.Scan(packet, "browser_handoff")
 	if err != nil || len(findings) > 0 {
@@ -750,8 +750,8 @@ func admitAnnotation(annotation map[string]any, session workspaceSession) (map[s
 	if len([]byte(question)) > maxHandoffQuestionBytes {
 		return nil, fmt.Errorf("browser handoff question exceeds byte limit")
 	}
-	prefixStart := max(0, start-32)
-	suffixEnd := min(len(anchorRunes), end+32)
+	prefixStart := max(0, start-handoffQuoteContextCodePoints)
+	suffixEnd := min(len(anchorRunes), end+handoffQuoteContextCodePoints)
 	return map[string]any{"anchor": anchorValue(anchor), "endCodePoint": end, "exactQuote": quote, "prefix": string(anchorRunes[prefixStart:start]), "question": question, "startCodePoint": start, "suffix": string(anchorRunes[end:suffixEnd])}, nil
 }
 

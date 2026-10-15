@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/compactfixture"
@@ -269,4 +270,116 @@ func validCacheNegativeChecks() []any {
 		})
 	}
 	return checks
+}
+
+// Caller text that the report echoes is admitted before projection: secret-
+// shaped values refuse the input without a report and are never repeated,
+// while ordinary wrong values stay collected failures with their echo.
+func TestBuildAdmitsReportVisibleCallerTextBeforeProjection(t *testing.T) {
+	secret := "GL" + "PAT" + "-EXAMPLE-01"
+	if !admit.ContainsSecretLikeValue(secret) {
+		t.Fatal("synthetic value must satisfy the shared secret-like predicate")
+	}
+	sites := []struct {
+		name string
+		set  func(map[string]any, any)
+	}{
+		{"blocking status", func(input map[string]any, value any) {
+			input["blockingRequirements"].(map[string]any)["requirements"].([]any)[0].(map[string]any)["status"] = value
+		}},
+		{"pilot mode", func(input map[string]any, value any) { input["pilotMode"] = value }},
+		{"stack dimension", func(input map[string]any, value any) {
+			input["stackDiversity"].(map[string]any)["dimensions"].([]any)[0].(map[string]any)["dimension"] = value
+		}},
+		{"cache outcome", func(input map[string]any, value any) {
+			input["cacheNegativeChecks"].([]any)[0].(map[string]any)["expectedOutcome"] = value
+		}},
+		{"cache input class", func(input map[string]any, value any) {
+			input["cacheNegativeChecks"].([]any)[0].(map[string]any)["invalidatedInputClass"] = value
+		}},
+	}
+	for _, site := range sites {
+		t.Run(site.name, func(t *testing.T) {
+			input := validPilotInput()
+			input["stackDiversity"] = validStackDiversity()
+			input["cacheNegativeChecks"] = validCacheNegativeChecks()
+			if record, code, err := Build(input, Options{}); err != nil || code != 0 || record.State != "passed" {
+				t.Fatalf("control input must pass: code=%d err=%v rules=%#v", code, err, record.RuleResults)
+			}
+			for _, value := range []any{secret, "prefix " + secret} {
+				refused := validPilotInputWith(site.set, value)
+				record, code, err := Build(refused, Options{})
+				if err == nil || code != 1 || record.ReportKind != "" || !strings.Contains(err.Error(), "must not contain secret-like values") {
+					t.Fatalf("secret-shaped %s was not refused before the report: code=%d err=%v", site.name, code, err)
+				}
+				if strings.Contains(err.Error(), secret) {
+					t.Fatal("refused value reached the error")
+				}
+			}
+			ordinary := validPilotInputWith(site.set, "unrecognized_value")
+			record, code, err := Build(ordinary, Options{})
+			wire, _ := json.Marshal(record.JSONValue())
+			if err != nil || code != 1 || record.State != "failed" || !strings.Contains(string(wire), "unrecognized_value") {
+				t.Fatalf("ordinary wrong %s must stay a collected failure: code=%d err=%v", site.name, code, err)
+			}
+		})
+	}
+	// The raw pilotMode JSON value is echoed, so nested keys and strings count.
+	for name, value := range map[string]any{
+		"nested value": map[string]any{"mode": []any{secret}},
+		"nested key":   map[string]any{secret: "non_blocking"},
+	} {
+		_, code, err := Build(validPilotInputWith(func(input map[string]any, value any) { input["pilotMode"] = value }, value), Options{})
+		if err == nil || code != 1 || strings.Contains(err.Error(), secret) {
+			t.Fatalf("pilotMode %s was not refused without echo: code=%d err=%v", name, code, err)
+		}
+	}
+}
+
+// The summary echoes pilotMode as serialized JSON, so the shared secret-like
+// predicate is applied to that serialization: a credential label and its value
+// split across a key and a string, or across array members, refuse the input.
+// Empty or control-character keys are not secrets; such ordinary values stay
+// collected failures with their echo.
+func TestBuildAdmitsSerializedPilotModeBeforeEcho(t *testing.T) {
+	setMode := func(input map[string]any, value any) { input["pilotMode"] = value }
+	sensitive := "synthetic-fixture-value"
+	token := "GL" + "PAT" + "-EXAMPLE-01"
+	for name, value := range map[string]any{
+		"password pair":         map[string]any{"password": sensitive},
+		"token pair":            map[string]any{"token": "abcdefghijklmnop"},
+		"authorization pair":    map[string]any{"authorization": "Basic " + sensitive},
+		"split array":           []any{"password=", sensitive},
+		"token after empty key": map[string]any{"": "ordinary", "z": token},
+	} {
+		t.Run(name, func(t *testing.T) {
+			record, code, err := Build(validPilotInputWith(setMode, value), Options{})
+			if err == nil || code != 1 || record.ReportKind != "" || err.Error() != "proofkit pilot pilotMode must not contain secret-like values" {
+				t.Fatalf("pilotMode %v was not refused before the report: code=%d err=%v", value, code, err)
+			}
+		})
+	}
+	for name, value := range map[string]any{
+		"empty key":   map[string]any{"": "ordinary"},
+		"control key": map[string]any{"a\u0001": "ordinary"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			record, code, err := Build(validPilotInputWith(setMode, value), Options{})
+			if err != nil || code != 1 || record.State != "failed" {
+				t.Fatalf("ordinary pilotMode must stay a collected failure: code=%d err=%v", code, err)
+			}
+			wire, _ := json.Marshal(record.JSONValue())
+			if !strings.Contains(string(wire), "pilotMode must be non_blocking") || !strings.Contains(string(wire), `"ordinary"`) {
+				t.Fatalf("ordinary pilotMode failure or echo is missing: %s", wire)
+			}
+		})
+	}
+}
+
+func validPilotInputWith(set func(map[string]any, any), value any) map[string]any {
+	input := validPilotInput()
+	input["stackDiversity"] = validStackDiversity()
+	input["cacheNegativeChecks"] = validCacheNegativeChecks()
+	set(input, value)
+	return input
 }

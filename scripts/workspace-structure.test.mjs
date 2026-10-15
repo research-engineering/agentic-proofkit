@@ -6,6 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {compileVariantUnion, expandSharedDefinitions} from "./schema-definitions.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_WORKSPACE_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -25,7 +26,7 @@ const families = Object.fromEntries(names.map(command => [command, Object.fromEn
   assert.equal(binding.rootDefinitionRef, id);
   const definition = contract.contractDefinitions.find(row => row.definitionId === id);
   assert.ok(definition, id);
-  return [direction, ajv.compile({oneOf: definition.fieldTree.variants.map(row => row.schema)})];
+  return [direction, compileVariantUnion(() => new Ajv2020({strict: false, allErrors: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema))];
 }))]));
 const seed = command => structuredClone(corpus.observations.find(row => row.command === command && row.name === "positive").input);
 const hash = text => createHash("sha256").update(text).digest("hex");
@@ -165,7 +166,7 @@ test("array elements and optional defaults are independently constrained", () =>
     }
   }
   const base = seed(changed), expected = native(changed, base).stdout;
-  const properties = contract.contractDefinitions.find(row => row.definitionId === `proofkit.${changed}.input.v1.json-schema`).fieldTree.variants[0].schema.properties;
+  const properties = expandSharedDefinitions(contract.contractDefinitions.find(row => row.definitionId === `proofkit.${changed}.input.v1.json-schema`).fieldTree.variants[0].schema).properties;
   assert.equal(properties.includeReverseDependents.default, true, "includeReverseDependents/default");
   assert.equal(properties.packagesRoot.default, "packages", "packagesRoot/default");
   for (const [key, value] of [["includeReverseDependents", true], ["packagesRoot", "packages"]]) {

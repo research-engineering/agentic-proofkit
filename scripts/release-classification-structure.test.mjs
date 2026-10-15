@@ -6,6 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {compileVariantUnion} from "./schema-definitions.mjs";
 
 const root = new URL("../", import.meta.url), release = "release-authority", readiness = "readiness-closeout";
 const baseline = JSON.parse(readFileSync(new URL("internal/app/testdata/release-classification-native-observations.json", root)));
@@ -13,13 +14,12 @@ assert.equal(baseline.head, "264f256daa4516e41ddf9b6dfcd89dee6580431d");
 assert.equal(baseline.tree, "2329c6e31810f9a8b2ec7741bb2ddd5378f1deeb");
 assert.equal(baseline.observations.length, 74);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_RELEASE_CLASSIFICATION_CONTRACT || new URL("proofkit/cli-contract.v2.json", root)));
-const ajv = new Ajv2020({strict: false, validateFormats: false});
 const validators = Object.fromEntries([release, readiness].map(command => [command, Object.fromEntries(["input", "output"].map(direction => {
   const id = `proofkit.${command}.${direction}.v1.json-schema`, record = contract.commands.find(x => x.command === command);
   assert.equal(record[direction + "Contract"].contractId, `proofkit.${command}.${direction}.v1`);
   assert.equal(record[direction + "Contract"].rootDefinitionRef, id);
   const variants = contract.contractDefinitions.find(x => x.definitionId === id).fieldTree.variants;
-  return [direction, ajv.compile({oneOf: variants.map(x => x.schema)})];
+  return [direction, compileVariantUnion(() => new Ajv2020({strict: false, validateFormats: false}), variants.map(x => x.schema))];
 }))]));
 const builtin = {
   [release]: ["Release authority does not publish packages, authenticate registry credentials, execute consumer installs, approve rollout, or prove registry freshness.",

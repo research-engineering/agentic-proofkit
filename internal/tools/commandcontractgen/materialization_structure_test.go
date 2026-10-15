@@ -14,6 +14,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 func TestAdoptionStructuresBindSevenDirectionsAndRetainIdentities(t *testing.T) {
@@ -46,7 +47,7 @@ func TestAdoptionStructuresBindSevenDirectionsAndRetainIdentities(t *testing.T) 
 			t.Fatal(err)
 		}
 		variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
-		if !reflect.DeepEqual(variant["schema"], want) {
+		if !equalPublishedSchema(variant["schema"], want) {
 			t.Fatalf("schema is not child-owner-derived: %s", row.id)
 		}
 		for _, mutation := range []string{"open", "required", "version"} {
@@ -163,7 +164,7 @@ func TestStructureEnrichmentPreservesIndependentCompatibilityNotes(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	after, err := admission.DecodeJSON(bytes.NewReader(updated), maxContractBytes)
+	after, err := admission.DecodeJSON(bytes.NewReader(updated), installedclicontract.MaximumContractBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +184,7 @@ func TestStructureEnrichmentPreservesIndependentCompatibilityNotes(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	after, err = admission.DecodeJSON(bytes.NewReader(updated), maxContractBytes)
+	after, err = admission.DecodeJSON(bytes.NewReader(updated), installedclicontract.MaximumContractBytes)
 	if err != nil {
 		t.Fatal(err)
 	}

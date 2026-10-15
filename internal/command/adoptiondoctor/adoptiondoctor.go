@@ -12,17 +12,70 @@ import (
 
 const reportKind = "proofkit.adoption-doctor"
 
+// Output vocabulary. The producer and the published structures both use these
+// names, so neither keeps a second literal inventory.
+const (
+	noGapsRuleID = reportKind + ".no-gaps"
+
+	// Report states, gap rule statuses and caller child-report states.
+	statePassed  = "passed"
+	stateFailed  = "failed"
+	stateBlocked = "blocked"
+	stateSkipped = "skipped"
+	stateWarning = "warning"
+
+	gapKindBlockedPrecondition          = "blocked_precondition"
+	gapKindCandidateBoundaryNotAdmitted = "candidate_boundary_not_admitted"
+	gapKindMissingCommandRoute          = "missing_command_route"
+	gapKindMissingNativeWitness         = "missing_native_witness"
+	gapKindMissingOwnerRoute            = "missing_owner_route"
+	gapKindMissingProofBinding          = "missing_proof_binding"
+	gapKindStaleCurrentVocabulary       = "stale_authority_current_vocabulary"
+	gapKindStaleRetiredScope            = "stale_authority_retired_scope"
+	// A non-passing child report yields this prefix plus its state.
+	childReportGapKindPrefix = "child_report_"
+
+	phaseRoute                = "route"
+	phaseModernizeBoundary    = "modernize-boundary"
+	phaseBind                 = "bind"
+	phaseVerify               = "verify"
+	phaseParity               = "parity"
+	phaseRetirementReview     = "retirement-review"
+	phasePromote              = "promote"
+	phaseRetireStaleAuthority = "retire-stale-authority"
+
+	readinessCallerReview      = "caller_review_required"
+	readinessBlocked           = "blocked"
+	readinessBlockedOwnerRoute = "blocked_missing_owner_route"
+	readinessReady             = "ready_for_owner_review"
+	readinessNotReady          = "not_ready"
+
+	// The other missing-witness values are the gap kinds they report.
+	missingWitnessCandidateNotAdmitted = "candidate_witness_not_admitted"
+
+	contextKindCandidateBoundary     = "candidate_boundary"
+	contextKindOwnerRoute            = "owner_route"
+	contextKindStaleAuthoritySurface = "stale_authority_surface"
+
+	consumerRepositoryOwner    = "consumer_repository"
+	consumerRepositoryFullGate = "consumer_repository_full_gate"
+	ownerDecisionAnswerKind    = "owner_decision"
+)
+
+// promotionPhases are the fixed promotion-readiness phases in report order.
+var promotionPhases = []string{phaseRoute, phaseModernizeBoundary, phaseBind, phaseVerify, phaseParity, phaseRetirementReview, phasePromote}
+
 var (
 	admissionStates = map[string]struct{}{
 		"advisory":       {},
 		"owner_admitted": {},
 	}
 	childReportStates = map[string]struct{}{
-		"blocked": {},
-		"failed":  {},
-		"passed":  {},
-		"skipped": {},
-		"warning": {},
+		stateBlocked: {},
+		stateFailed:  {},
+		statePassed:  {},
+		stateSkipped: {},
+		stateWarning: {},
 	}
 	baseNonClaims = []string{
 		"Adoption doctor reports do not approve enforcement, merge, release, rollout, or old proof-owner retirement.",
@@ -137,7 +190,7 @@ func admitInput(raw any) (Input, error) {
 	if !ok {
 		return Input{}, fmt.Errorf("adoption doctor input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"blockedPreconditions", "checkedScope", "childReports", "doctorId", "mode", "modernization", "nonClaims", "ownerRoutes", "schemaVersion", "staleAuthority", "touchedRuleIds"}, "adoption doctor input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "adoption doctor input"); err != nil {
 		return Input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -205,13 +258,13 @@ func build(input Input) Result {
 	blocked := blockedGaps(gaps)
 	enforced := enforcedGaps(input, gaps)
 	blocking := append(append([]gap{}, blocked...), enforced...)
-	state := "passed"
+	state := statePassed
 	exitCode := 0
 	if len(blocked) > 0 {
-		state = "blocked"
+		state = stateBlocked
 		exitCode = 1
 	} else if len(enforced) > 0 {
-		state = "failed"
+		state = stateFailed
 		exitCode = 1
 	}
 	rec := report.Record{
@@ -254,13 +307,13 @@ func adoptionGaps(input Input) []gap {
 	for _, route := range input.OwnerRoutes {
 		routeTouched := hasTouched(route.TouchedRuleIDs, touched) || input.CheckedScope == adoptionmode.ScopeAll
 		if len(route.ProofBindingPaths) == 0 {
-			gaps = append(gaps, gapForRoute(route, "missing_proof_binding", "bind", "Owner route has no proof binding path.", routeTouched))
+			gaps = append(gaps, gapForRoute(route, gapKindMissingProofBinding, phaseBind, "Owner route has no proof binding path.", routeTouched))
 		}
 		if len(route.NativeWitnessRefs) == 0 {
-			gaps = append(gaps, gapForRoute(route, "missing_native_witness", "verify", "Owner route has no native witness reference.", routeTouched))
+			gaps = append(gaps, gapForRoute(route, gapKindMissingNativeWitness, phaseVerify, "Owner route has no native witness reference.", routeTouched))
 		}
 		if len(route.Commands) == 0 {
-			gaps = append(gaps, gapForRoute(route, "missing_command_route", "verify", "Owner route has no command route.", routeTouched))
+			gaps = append(gaps, gapForRoute(route, gapKindMissingCommandRoute, phaseVerify, "Owner route has no command route.", routeTouched))
 		}
 	}
 	for _, candidate := range input.CandidateBoundaries {
@@ -269,10 +322,10 @@ func adoptionGaps(input Input) []gap {
 			gaps = append(gaps, gap{
 				EvidenceRefs: sortedUnique(append(append([]string{}, candidate.AffectedPaths...), candidate.ProofBindingRefs...)),
 				GapID:        candidate.BoundaryID + ".candidate-boundary-not-admitted",
-				Kind:         "candidate_boundary_not_admitted",
+				Kind:         gapKindCandidateBoundaryNotAdmitted,
 				Message:      "Candidate boundary is advisory until the consuming repository owner admits stable requirements and proof bindings.",
 				Owner:        candidate.CandidateOwner,
-				Phase:        "modernize-boundary",
+				Phase:        phaseModernizeBoundary,
 				RuleRefs:     candidate.RequirementRefs,
 				Touched:      candidateTouched,
 			})
@@ -281,10 +334,10 @@ func adoptionGaps(input Input) []gap {
 			gaps = append(gaps, gap{
 				EvidenceRefs: candidate.AffectedPaths,
 				GapID:        candidate.BoundaryID + ".blocked-precondition",
-				Kind:         "blocked_precondition",
+				Kind:         gapKindBlockedPrecondition,
 				Message:      precondition,
 				Owner:        candidate.CandidateOwner,
-				Phase:        "verify",
+				Phase:        phaseVerify,
 				RuleRefs:     candidate.RequirementRefs,
 				Touched:      candidateTouched,
 			})
@@ -292,14 +345,14 @@ func adoptionGaps(input Input) []gap {
 	}
 	for _, child := range input.ChildReports {
 		childTouched := hasTouched(child.TouchedRuleIDs, touched) || input.CheckedScope == adoptionmode.ScopeAll
-		if child.State != "passed" {
+		if child.State != statePassed {
 			gaps = append(gaps, gap{
 				EvidenceRefs: child.EvidenceRefs,
 				GapID:        child.ReportID + "." + child.State,
-				Kind:         "child_report_" + child.State,
+				Kind:         childReportGapKindPrefix + child.State,
 				Message:      child.Summary,
-				Owner:        "consumer_repository",
-				Phase:        "verify",
+				Owner:        consumerRepositoryOwner,
+				Phase:        phaseVerify,
 				RuleRefs:     child.TouchedRuleIDs,
 				Touched:      childTouched,
 			})
@@ -310,10 +363,10 @@ func adoptionGaps(input Input) []gap {
 		gaps = append(gaps, gap{
 			EvidenceRefs: blocked.EvidenceRefs,
 			GapID:        blocked.PreconditionID,
-			Kind:         "blocked_precondition",
+			Kind:         gapKindBlockedPrecondition,
 			Message:      blocked.Reason,
 			Owner:        blocked.Owner,
-			Phase:        "verify",
+			Phase:        phaseVerify,
 			RuleRefs:     blocked.TouchedRuleIDs,
 			Touched:      hasTouched(blocked.TouchedRuleIDs, touched) || input.CheckedScope == adoptionmode.ScopeAll,
 		})
@@ -329,10 +382,10 @@ func missingOwnerRouteGaps(input Input, touched map[string]struct{}) []gap {
 		return []gap{{
 			EvidenceRefs: []string{input.DoctorID},
 			GapID:        input.DoctorID + ".missing-owner-route",
-			Kind:         "missing_owner_route",
+			Kind:         gapKindMissingOwnerRoute,
 			Message:      "Checked adoption scope has no caller-owned owner route.",
-			Owner:        "consumer_repository",
-			Phase:        "route",
+			Owner:        consumerRepositoryOwner,
+			Phase:        phaseRoute,
 			RuleRefs:     append([]string{}, input.TouchedRuleIDs...),
 			Touched:      input.CheckedScope != adoptionmode.ScopeNone,
 		}}
@@ -361,10 +414,10 @@ func missingOwnerRouteGaps(input Input, touched map[string]struct{}) []gap {
 	return []gap{{
 		EvidenceRefs: []string{input.DoctorID},
 		GapID:        input.DoctorID + ".missing-touched-owner-route",
-		Kind:         "missing_owner_route",
+		Kind:         gapKindMissingOwnerRoute,
 		Message:      "Touched adoption requirements have no covering caller-owned owner route.",
-		Owner:        "consumer_repository",
-		Phase:        "route",
+		Owner:        consumerRepositoryOwner,
+		Phase:        phaseRoute,
 		RuleRefs:     missing,
 		Touched:      input.CheckedScope != adoptionmode.ScopeNone,
 	}}
@@ -393,14 +446,14 @@ func blockedGaps(gaps []gap) []gap {
 }
 
 func isUnconditionalBlockedGap(item gap) bool {
-	return item.Kind == "blocked_precondition" || item.Kind == "child_report_blocked"
+	return item.Kind == gapKindBlockedPrecondition || item.Kind == childReportGapKindPrefix+stateBlocked
 }
 
 func ruleResults(input Input, gaps []gap, enforced []gap) []report.RuleResult {
 	if len(gaps) == 0 {
 		return []report.RuleResult{{
-			RuleID:  "proofkit.adoption-doctor.no-gaps",
-			Status:  "passed",
+			RuleID:  noGapsRuleID,
+			Status:  statePassed,
 			Message: "Caller-provided adoption facts contain no missing owner routes, advisory candidate boundaries, non-passing child reports, or blocked preconditions.",
 		}}
 	}
@@ -412,8 +465,8 @@ func ruleResults(input Input, gaps []gap, enforced []gap) []report.RuleResult {
 	for _, item := range gaps {
 		if isUnconditionalBlockedGap(item) {
 			results = append(results, report.RuleResult{
-				RuleID:  "proofkit.adoption-doctor." + item.Kind,
-				Status:  "blocked",
+				RuleID:  reportKind + "." + item.Kind,
+				Status:  stateBlocked,
 				Message: item.Message,
 				Diagnostics: []report.Diagnostic{
 					{Key: "gapId", Value: item.GapID},
@@ -423,15 +476,15 @@ func ruleResults(input Input, gaps []gap, enforced []gap) []report.RuleResult {
 			})
 			continue
 		}
-		status := "skipped"
+		status := stateSkipped
 		if input.Mode == adoptionmode.Warn {
-			status = "warning"
+			status = stateWarning
 		}
 		if _, ok := enforcedSet[item.GapID]; ok {
-			status = "failed"
+			status = stateFailed
 		}
 		results = append(results, report.RuleResult{
-			RuleID:  "proofkit.adoption-doctor." + item.Kind,
+			RuleID:  reportKind + "." + item.Kind,
 			Status:  status,
 			Message: item.Message,
 			Diagnostics: []report.Diagnostic{
@@ -456,28 +509,28 @@ func doctorDiagnostic(input Input, state string) map[string]any {
 
 func promotionReadiness(input Input, enforced []gap) map[string]any {
 	status := map[string]any{}
-	for _, phase := range []string{"route", "modernize-boundary", "bind", "verify", "parity", "retirement-review", "promote"} {
-		status[phase] = "caller_review_required"
+	for _, phase := range promotionPhases {
+		status[phase] = readinessCallerReview
 	}
 	if len(input.OwnerRoutes) == 0 {
-		status["route"] = "blocked_missing_owner_route"
+		status[phaseRoute] = readinessBlockedOwnerRoute
 	} else {
-		status["route"] = "ready_for_owner_review"
+		status[phaseRoute] = readinessReady
 	}
 	if len(input.CandidateBoundaries) == 0 {
-		status["modernize-boundary"] = "ready_for_owner_review"
+		status[phaseModernizeBoundary] = readinessReady
 	}
 	if len(enforced) == 0 && input.Mode == adoptionmode.EnforceAll {
-		status["promote"] = "ready_for_owner_review"
+		status[phasePromote] = readinessReady
 	} else {
-		status["promote"] = "not_ready"
+		status[phasePromote] = readinessNotReady
 	}
 	for _, item := range enforced {
-		if item.Kind == "missing_owner_route" && item.Phase == "route" {
-			status[item.Phase] = "blocked_missing_owner_route"
+		if item.Kind == gapKindMissingOwnerRoute && item.Phase == phaseRoute {
+			status[item.Phase] = readinessBlockedOwnerRoute
 			continue
 		}
-		status[item.Phase] = "blocked"
+		status[item.Phase] = readinessBlocked
 	}
 	return status
 }
@@ -494,7 +547,7 @@ func ownerRoutes(raw any) ([]ownerRoute, error) {
 		if !ok {
 			return nil, fmt.Errorf("adoption doctor ownerRoutes[%d] must be an object", index)
 		}
-		if err := admit.KnownKeys(record, []string{"commands", "nativeWitnessRefs", "nonClaims", "owner", "proofBindingPaths", "routeId", "specPaths", "touchedRuleIds"}, fmt.Sprintf("adoption doctor ownerRoutes[%d]", index)); err != nil {
+		if err := admit.KnownKeys(record, ownerRouteKeys, fmt.Sprintf("adoption doctor ownerRoutes[%d]", index)); err != nil {
 			return nil, err
 		}
 		routeID, err := admit.RuleID(record["routeId"], fmt.Sprintf("adoption doctor ownerRoutes[%d] routeId", index))
@@ -541,7 +594,7 @@ func modernizationCandidates(raw any) ([]candidateBoundary, error) {
 	if !ok {
 		return nil, fmt.Errorf("adoption doctor modernization must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"candidateBoundaries"}, "adoption doctor modernization"); err != nil {
+	if err := admit.KnownKeys(record, modernizationKeys, "adoption doctor modernization"); err != nil {
 		return nil, err
 	}
 	values, ok := record["candidateBoundaries"].([]any)
@@ -570,7 +623,7 @@ func candidateFromAny(raw any, index int) (candidateBoundary, error) {
 		return candidateBoundary{}, fmt.Errorf("adoption doctor candidateBoundaries[%d] must be an object", index)
 	}
 	context := fmt.Sprintf("adoption doctor candidateBoundaries[%d]", index)
-	if err := admit.KnownKeys(record, []string{"admissionState", "affectedPaths", "blockedPreconditions", "boundaryId", "candidateOwner", "contractWitnessRefs", "nativeWitnessRefs", "nonClaims", "observedFacts", "ownerQuestions", "proofBindingRefs", "requirementRefs", "uncertainties"}, context); err != nil {
+	if err := admit.KnownKeys(record, candidateKeys, context); err != nil {
 		return candidateBoundary{}, err
 	}
 	boundaryID, err := admit.RuleID(record["boundaryId"], context+" boundaryId")
@@ -632,7 +685,7 @@ func childReports(raw any) ([]childReport, error) {
 			return nil, fmt.Errorf("adoption doctor childReports[%d] must be an object", index)
 		}
 		context := fmt.Sprintf("adoption doctor childReports[%d]", index)
-		if err := admit.KnownKeys(record, []string{"evidenceRefs", "nonClaim", "reportId", "reportKind", "state", "summary", "touchedRuleIds"}, context); err != nil {
+		if err := admit.KnownKeys(record, childReportKeys, context); err != nil {
 			return nil, err
 		}
 		reportID, err := admit.RuleID(record["reportId"], context+" reportId")
@@ -685,7 +738,7 @@ func blockedPreconditions(raw any) ([]precondition, error) {
 			return nil, fmt.Errorf("adoption doctor blockedPreconditions[%d] must be an object", index)
 		}
 		context := fmt.Sprintf("adoption doctor blockedPreconditions[%d]", index)
-		if err := admit.KnownKeys(record, []string{"evidenceRefs", "nonClaim", "owner", "preconditionId", "reason", "touchedRuleIds"}, context); err != nil {
+		if err := admit.KnownKeys(record, preconditionKeys, context); err != nil {
 			return nil, err
 		}
 		preconditionID, err := admit.RuleID(record["preconditionId"], context+" preconditionId")

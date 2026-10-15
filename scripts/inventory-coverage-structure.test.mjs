@@ -5,6 +5,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {compileVariantUnion} from "./schema-definitions.mjs";
 import {annotatedInventoryInput, directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, ownerInvariantRegistry, proofInventoryInput, sourceSetInput, twoSourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -15,7 +16,7 @@ for (const command of [inventory, composer, view]) for (const direction of ["inp
   const ref = contract.commands.find(row => row.command === command)[`${direction}Contract`].rootDefinitionRef;
   const definition = contract.contractDefinitions.find(row => row.definitionId === ref);
   assert.equal(definition.fieldTree.kind, "structural_json_schema");
-  validators.set(`${command}/${direction}`, new Ajv2020({strict: false, validateFormats: false}).compile({oneOf: definition.fieldTree.variants.map(row => row.schema)}));
+  validators.set(`${command}/${direction}`, compileVariantUnion(() => new Ajv2020({strict: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema)));
 }
 let directory, binary;
 before(() => {

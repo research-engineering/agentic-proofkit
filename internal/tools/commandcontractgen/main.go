@@ -26,13 +26,13 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 const (
 	cliContractPath     = "proofkit/cli-contract.v2.json"
 	appGeneratedPath    = "internal/app/command_contract_generated.go"
 	presetGeneratedPath = "internal/command/stackpreset/preset_ids_generated.go"
-	maxContractBytes    = 16 << 20
 )
 
 var (
@@ -157,14 +157,14 @@ func readContract(path string) ([]byte, map[string]any, error) {
 }
 
 func readContractInput(reader io.Reader) ([]byte, map[string]any, error) {
-	content, err := io.ReadAll(io.LimitReader(reader, maxContractBytes+1))
+	content, err := io.ReadAll(io.LimitReader(reader, installedclicontract.MaximumContractBytes+1))
 	if err != nil {
 		return nil, nil, fmt.Errorf("read CLI contract: %w", err)
 	}
-	if len(content) > maxContractBytes {
+	if len(content) > installedclicontract.MaximumContractBytes {
 		return nil, nil, errors.New("CLI contract exceeds size limit")
 	}
-	value, err := admission.DecodeJSON(bytes.NewReader(content), maxContractBytes)
+	value, err := admission.DecodeJSON(bytes.NewReader(content), installedclicontract.MaximumContractBytes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("admit CLI contract: %w", err)
 	}

@@ -3,6 +3,7 @@ package specproofbundleadmission
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
@@ -12,6 +13,15 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+)
+
+// Report literals are shared by the producer and its structural description.
+const (
+	reportKind          = "proofkit.spec-proof-bundle-admission"
+	acceptedRuleID      = reportKind + ".accepted"
+	acceptedRuleMessage = "spec proof bundle is internally linked and child reports are admitted"
+	failureRuleIDPrefix = reportKind + ".failure."
+	notAttachedState    = "not_attached"
 )
 
 var boundaryNonClaims = []string{
@@ -42,7 +52,7 @@ func Build(raw any) (report.Record, int, error) {
 	if !ok {
 		return report.Record{}, 1, fmt.Errorf("spec proof bundle admission input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"bundleId", "mergeRequiredReceiptIds", "nonClaims", "receiptAdmission", "receiptProducerAdmission", "requirementBindings", "schemaVersion", "witnessPlan"}, "spec proof bundle admission input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "spec proof bundle admission input"); err != nil {
 		return report.Record{}, 1, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -99,7 +109,7 @@ func Build(raw any) (report.Record, int, error) {
 	sort.Strings(allNonClaims)
 	output := report.Record{
 		SchemaVersion: 1,
-		ReportKind:    "proofkit.spec-proof-bundle-admission",
+		ReportKind:    reportKind,
 		ReportID:      bundleID,
 		State:         state,
 		Summary: map[string]any{
@@ -138,9 +148,9 @@ func optionalChild(raw any, label string, expectedKind string) (*childReport, er
 	if !ok || record["report"] == nil {
 		return nil, fmt.Errorf("spec proof bundle %s must be a %s report", label, label)
 	}
-	allowedKeys := []string{"exitCode", "failures", "nonClaims", "producers", "receipts", "report"}
+	allowedKeys := childKeys
 	if expectedKind == "proofkit.receipt-producer-admission" {
-		allowedKeys = append(allowedKeys, "environmentClasses", "receiptKinds")
+		allowedKeys = append(slices.Clone(childKeys), producerChildKeys...)
 	}
 	if err := admit.KnownKeys(record, allowedKeys, "spec proof bundle "+label); err != nil {
 		return nil, err
@@ -149,7 +159,7 @@ func optionalChild(raw any, label string, expectedKind string) (*childReport, er
 	if !ok {
 		return nil, fmt.Errorf("spec proof bundle %s.report must be an object", label)
 	}
-	if err := admit.KnownKeys(reportRecord, []string{"diagnostics", "nonClaims", "reportId", "reportKind", "ruleResults", "schemaVersion", "state", "summary"}, "spec proof bundle "+label+".report"); err != nil {
+	if err := admit.KnownKeys(reportRecord, childReportKeys, "spec proof bundle "+label+".report"); err != nil {
 		return nil, err
 	}
 	if !childReportSchemaVersionOne(reportRecord["schemaVersion"]) {
@@ -520,18 +530,18 @@ func receiptsOrNil(child *childReport) []map[string]any {
 
 func childState(child *childReport) string {
 	if child == nil {
-		return "not_attached"
+		return notAttachedState
 	}
 	return child.State
 }
 
 func bundleRuleResults(failures []string) []report.RuleResult {
 	if len(failures) == 0 {
-		return []report.RuleResult{{RuleID: "proofkit.spec-proof-bundle-admission.accepted", Status: "passed", Message: "spec proof bundle is internally linked and child reports are admitted"}}
+		return []report.RuleResult{{RuleID: acceptedRuleID, Status: "passed", Message: acceptedRuleMessage}}
 	}
 	result := make([]report.RuleResult, 0, len(failures))
 	for index, failure := range failures {
-		result = append(result, report.RuleResult{RuleID: fmt.Sprintf("proofkit.spec-proof-bundle-admission.failure.%03d", index+1), Status: "failed", Message: failure})
+		result = append(result, report.RuleResult{RuleID: fmt.Sprintf("%s%03d", failureRuleIDPrefix, index+1), Status: "failed", Message: failure})
 	}
 	return result
 }

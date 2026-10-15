@@ -93,6 +93,22 @@ var (
 		"serve_local_view": {},
 		"view_plan":        {},
 	}
+	// Native member inventories, shared by admission and InputShape.
+	inputKeys = []string{"availableInputs", "browserMode", "goal", "knownChangedPaths", "mode", "nonClaims", "observedReports",
+		"openBrowser", "routeId", "schemaVersion"}
+	availableInputKeys = []string{"kind", "ref"}
+	observedReportKeys = []string{"kind", "ref", "state"}
+)
+
+// Route literals are shared by the producers and their structural projection.
+const (
+	reportKind                 = "proofkit.agent-route"
+	stateRouted                = "routed"
+	stateBlockedMissingInput   = "blocked_missing_input"
+	stateBlockedAmbiguousState = "blocked_ambiguous_state"
+	stateBlockedUnknownGoal    = "blocked_unknown_goal"
+	consumerOwner              = "consumer_repository"
+	reportSchemaVersion        = 3
 )
 
 const (
@@ -416,15 +432,15 @@ func BuildWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int,
 		return buildUnknownGoal(input, renderer), 1, nil
 	}
 	missing := missingRequiredInputs(spec, input)
-	state := "routed"
+	state := stateRouted
 	exitCode := 0
 	blockedReports := blockingObservedReports(input.ObservedReports)
 	if len(missing) > 0 {
-		state = "blocked_missing_input"
+		state = stateBlockedMissingInput
 		exitCode = 1
 	}
 	if len(blockedReports) > 0 {
-		state = "blocked_ambiguous_state"
+		state = stateBlockedAmbiguousState
 		exitCode = 1
 	}
 	return buildReport(input, spec, state, missing, renderer), exitCode, nil
@@ -553,7 +569,7 @@ func OutputContract() map[string]any {
 				"detailAccess":       "binds source report ID, stable digest, and launcher profile and provides exact outputArgs suffixes for report and full retrieval from the original admitted input and launcher context",
 				"nextAction":         "null for blocked states; otherwise the first canonical nextCommands entry with exact command identity and inline argv unless the byte bound requires argvState=detail_required",
 				"omissionSummary":    "exact counts for unselected available commands, source-omitted commands, and blockers omitted by the packet bound",
-				"packetKind":         "proofkit.agent-route.brief",
+				"packetKind":         briefPacketKind,
 				"schemaVersion":      "1",
 			},
 			"nonClaims": []any{
@@ -582,7 +598,7 @@ func admitInput(raw any) (routeInput, error) {
 	if !ok {
 		return routeInput{}, fmt.Errorf("agent route input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"availableInputs", "browserMode", "goal", "knownChangedPaths", "mode", "nonClaims", "observedReports", "openBrowser", "routeId", "schemaVersion"}, "agent route input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "agent route input"); err != nil {
 		return routeInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -675,7 +691,7 @@ func admitAvailableInputs(raw any) (map[string]string, error) {
 		if !ok {
 			return nil, fmt.Errorf("agent route availableInputs[%d] must be an object", index)
 		}
-		if err := admit.KnownKeys(record, []string{"kind", "ref"}, fmt.Sprintf("agent route availableInputs[%d]", index)); err != nil {
+		if err := admit.KnownKeys(record, availableInputKeys, fmt.Sprintf("agent route availableInputs[%d]", index)); err != nil {
 			return nil, err
 		}
 		kind, err := admit.Enum(record["kind"], inputKindValues, fmt.Sprintf("agent route availableInputs[%d].kind", index))
@@ -727,7 +743,7 @@ func admitObservedReports(raw any) ([]observedReport, error) {
 		if !ok {
 			return nil, fmt.Errorf("agent route observedReports[%d] must be an object", index)
 		}
-		if err := admit.KnownKeys(record, []string{"kind", "ref", "state"}, fmt.Sprintf("agent route observedReports[%d]", index)); err != nil {
+		if err := admit.KnownKeys(record, observedReportKeys, fmt.Sprintf("agent route observedReports[%d]", index)); err != nil {
 			return nil, err
 		}
 		kind, err := admit.Enum(record["kind"], reportKindValues, fmt.Sprintf("agent route observedReports[%d].kind", index))
@@ -890,11 +906,11 @@ func buildUnknownGoal(input routeInput, renderer cliexec.Renderer) map[string]an
 			map[string]any{"reason": "Unknown goals are not routed because that would create an implicit policy owner inside Proofkit."},
 		},
 		"reportId":            input.RouteID,
-		"reportKind":          "proofkit.agent-route",
+		"reportKind":          reportKind,
 		"requiredInputs":      []any{},
-		"schemaVersion":       3,
+		"schemaVersion":       reportSchemaVersion,
 		"selectedRouteFamily": string(routeFamilyUnknown),
-		"state":               "blocked_unknown_goal",
+		"state":               stateBlockedUnknownGoal,
 		"stopConditions":      []any{"Stop before running a Proofkit command until the caller supplies a known goal."},
 		"callerNonClaims":     toAnySlice(input.CallerNonClaims),
 		"guidanceSlice":       guidanceSliceReport(input.Goal, spec),
@@ -916,7 +932,7 @@ func buildUnknownGoal(input routeInput, renderer cliexec.Renderer) map[string]an
 func buildReport(input routeInput, spec routeSpec, state string, missing []map[string]any, renderer cliexec.Renderer) map[string]any {
 	availableCommands := commandReports(spec.NextCommands, input, renderer)
 	nextCommands := availableCommands
-	if state != "routed" {
+	if state != stateRouted {
 		nextCommands = []any{}
 	}
 	return map[string]any{
@@ -927,9 +943,9 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 		"omitted":             omittedReports(spec.NextCommands, input.AvailableInputs),
 		"observedReports":     observedReportReports(input.ObservedReports),
 		"reportId":            input.RouteID,
-		"reportKind":          "proofkit.agent-route",
+		"reportKind":          reportKind,
 		"requiredInputs":      requiredInputReports(missing),
-		"schemaVersion":       3,
+		"schemaVersion":       reportSchemaVersion,
 		"selectedRouteFamily": string(spec.RouteFamily),
 		"state":               state,
 		"stopConditions":      toAnySlice(spec.StopConditions),

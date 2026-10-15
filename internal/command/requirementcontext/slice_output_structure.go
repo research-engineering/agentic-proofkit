@@ -23,6 +23,15 @@ func makeSliceOutputShape() jsonshape.Shape {
 
 func SliceOutputStructure() map[string]any { return sliceOutputShape.JSONSchema() }
 
+// SliceOutputProfileShape exposes one branch of this owner for consumers that
+// fix the slice profile. It neither copies nor relaxes the slice structure.
+func SliceOutputProfileShape(profile string) (jsonshape.Shape, bool) {
+	if _, ok := sliceProfiles[profile]; !ok {
+		return jsonshape.Shape{}, false
+	}
+	return sliceOutputVariant(profile), true
+}
+
 func sliceOutputVariant(profile string) jsonshape.Shape {
 	text, count := jsonshape.String(), jsonshape.IntegerMinimum(0)
 	fragment := jsonshape.Object(

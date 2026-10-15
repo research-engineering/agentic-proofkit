@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -1074,7 +1075,8 @@ func TestRequirementBrowserServerSpecTreeCLIABI(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &parsed); err != nil {
 		t.Fatalf("stdout must be JSON: %v\n%s", err, stdout.String())
 	}
-	assertPublicCLIRootVariant(t, "requirement-browser-server", "output", "01-plan", parsed)
+	assertPublicCLIRootVariant(t, "requirement-browser-server", "output", "01-plan-spec-tree", parsed)
+	assertBrowserOutputStructure(t, "plan", "spec-tree", stdout.String())
 	if parsed["planKind"] != "proofkit.requirement-browser-server-plan" || parsed["renderedViewKind"] != "proofkit.requirement-spec-tree-view" || parsed["view"] != "spec-tree" {
 		t.Fatalf("unexpected spec-tree browser plan: %#v", parsed)
 	}
@@ -1166,6 +1168,7 @@ func TestRequirementBrowserOneShotCLIOutputVariants(t *testing.T) {
 		t.Fatalf("submitted stdout must be JSON: %v\n%s", err, submittedStdout.String())
 	}
 	assertPublicCLIRootVariant(t, "requirement-browser-server", "output", "03-one-shot-submitted", submitted)
+	assertBrowserOutputStructure(t, "submitted", "workspace", submittedStdout.String())
 
 	var terminalStdout bytes.Buffer
 	var terminalStderr bytes.Buffer
@@ -1186,6 +1189,7 @@ func TestRequirementBrowserOneShotCLIOutputVariants(t *testing.T) {
 		t.Fatalf("terminal stdout must be JSON: %v\n%s", err, terminalStdout.String())
 	}
 	assertPublicCLIRootVariant(t, "requirement-browser-server", "output", "02-one-shot-terminal", terminal)
+	assertBrowserOutputStructure(t, "terminal", "workspace", terminalStdout.String())
 }
 
 func waitForBrowserLauncherURL(t *testing.T, urlFile string, result <-chan int, stdout, stderr *bytes.Buffer) string {
@@ -1549,7 +1553,9 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			if err := json.Unmarshal([]byte(stdin), &input); err != nil {
 				t.Fatalf("root-oracle input must be JSON: %v", err)
 			}
-			assertPublicCLIRootVariant(t, "adoption-contract-envelope", "input", "01-root", input)
+			if variant := adoptionInputVariantFromArgs(item.args[1:]); variant != "" {
+				assertPublicCLIRootVariant(t, "adoption-contract-envelope", "input", variant, input)
+			}
 			expectsJSON := item.assertJSON != nil
 			if expectsJSON {
 				if item.rootCondition == "" || item.rootVariant == "" {
@@ -1620,6 +1626,36 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 	}
 }
 
+// Delegated input admission is selected by mode, pilot and guidance overrides;
+// argv that fails option admission selects no input variant.
+func adoptionInputVariantFromArgs(args []string) string {
+	options, err := parseAdoptionContractArgs(args)
+	if err != nil {
+		return ""
+	}
+	switch options.mode {
+	case "adoption":
+		return "01-adoption"
+	case "bootstrap":
+		return "02-bootstrap"
+	case "guidance":
+		mask := 0
+		if options.guidanceMode != "" {
+			mask |= 1
+		}
+		if options.checkedScope != "" {
+			mask |= 2
+		}
+		if len(options.touchedRuleIDs) > 0 {
+			mask |= 4
+		}
+		return fmt.Sprintf("%02d-guidance-%03b", mask+3, mask)
+	case "pilot":
+		return map[string]string{"": "12-pilot-first", "first": "12-pilot-first", "all": "11-pilot-all", "stack-diverse": "13-pilot-stack-diverse"}[options.explicitPilot()]
+	}
+	return "14-workflow"
+}
+
 func TestStandaloneMultiVariantCommandsUseExactRootShapes(t *testing.T) {
 	pilotCases := []struct {
 		name          string
@@ -1632,21 +1668,21 @@ func TestStandaloneMultiVariantCommandsUseExactRootShapes(t *testing.T) {
 			name:          "direct input",
 			args:          []string{"pilot-admission", "--input", "-"},
 			stdin:         cliJSON(cliPilotInput("proofkit.cli.pilot.first", false)),
-			inputVariant:  "04-direct-first",
+			inputVariant:  "04-direct",
 			outputVariant: "02-report",
 		},
 		{
 			name:          "direct explicit first",
 			args:          []string{"pilot-admission", "--input", "-", "--pilot", "first"},
 			stdin:         cliJSON(cliPilotInput("proofkit.cli.pilot.first", false)),
-			inputVariant:  "04-direct-first",
+			inputVariant:  "04-direct",
 			outputVariant: "02-report",
 		},
 		{
 			name:          "direct stack diverse",
 			args:          []string{"pilot-admission", "--input", "-", "--pilot", "stack-diverse"},
 			stdin:         cliJSON(cliPilotInput("proofkit.cli.pilot.stack-diverse", true)),
-			inputVariant:  "05-direct-stack-diverse",
+			inputVariant:  "04-direct",
 			outputVariant: "02-report",
 		},
 		{

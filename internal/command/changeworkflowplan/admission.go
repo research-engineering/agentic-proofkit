@@ -8,6 +8,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
+// Admission and structural projection share these exact member inventories.
+var (
+	inputFields      = []string{"checkpoint", "completedStageIds", "contextRefs", "governingAuthorityRefId", "requiredContextRefIds", "schemaVersion"}
+	contextRefFields = []string{"artifactPath", "dependencyRefIds", "refId", "refKind", "subjectDigest"}
+)
+
 var contextRefKinds = map[string]struct{}{
 	"artifact":  {},
 	"authority": {},
@@ -20,10 +26,10 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, reject("proofkit.workflow.input_object", "change workflow input must be an object")
 	}
-	if err := knownKeys(record, []string{"checkpoint", "completedStageIds", "contextRefs", "governingAuthorityRefId", "requiredContextRefIds", "schemaVersion"}, "proofkit.workflow.input_fields"); err != nil {
+	if err := knownKeys(record, inputFields, "proofkit.workflow.input_fields"); err != nil {
 		return admittedInput{}, err
 	}
-	for _, key := range []string{"checkpoint", "completedStageIds", "contextRefs", "governingAuthorityRefId", "requiredContextRefIds", "schemaVersion"} {
+	for _, key := range inputFields {
 		if _, exists := record[key]; !exists {
 			return admittedInput{}, reject("proofkit.workflow.input_fields", "change workflow input is missing a required field")
 		}
@@ -154,10 +160,10 @@ func admitContextRefs(raw any) ([]contextRef, error) {
 		if !ok {
 			return nil, reject("proofkit.workflow.context_ref_object", "contextRefs entries must be objects")
 		}
-		if err := knownKeys(record, []string{"artifactPath", "dependencyRefIds", "refId", "refKind", "subjectDigest"}, "proofkit.workflow.context_ref_fields"); err != nil {
+		if err := knownKeys(record, contextRefFields, "proofkit.workflow.context_ref_fields"); err != nil {
 			return nil, err
 		}
-		for _, key := range []string{"artifactPath", "dependencyRefIds", "refId", "refKind", "subjectDigest"} {
+		for _, key := range contextRefFields {
 			if _, exists := record[key]; !exists {
 				return nil, reject("proofkit.workflow.context_ref_fields", "context ref is missing a required field")
 			}

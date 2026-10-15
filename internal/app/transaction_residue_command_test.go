@@ -51,7 +51,7 @@ func TestTransactionResidueStructuralContracts(t *testing.T) {
 			t.Fatal("residue schema is incomplete")
 		}
 		variant := variants[0].(map[string]any)
-		if !reflect.DeepEqual(canonicalJSONValue(t, variant["schema"]), canonicalJSONValue(t, schema)) {
+		if !reflect.DeepEqual(canonicalJSONValue(t, expandedPublishedSchema(t, variant["schema"])), canonicalJSONValue(t, schema)) {
 			t.Fatal("public residue schema differs from native owner")
 		}
 		fields := []any{"kind", "nonClaims", "observationId", "schemaVersion", "state"}

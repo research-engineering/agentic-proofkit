@@ -128,7 +128,7 @@ func TestBindingStructuralContractMatchesNativeOwner(t *testing.T) {
 		t.Fatal("public binding structural definition is missing")
 	}
 	variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
-	if !reflect.DeepEqual(canonicalJSONValue(t, variant["schema"]), canonicalJSONValue(t, requirementbinding.InputStructure())) {
+	if !reflect.DeepEqual(canonicalJSONValue(t, expandedPublishedSchema(t, variant["schema"])), canonicalJSONValue(t, requirementbinding.InputStructure())) {
 		t.Fatal("shipped structural schema is not the exact native projection")
 	}
 	if err := normalizeBindingStructurePublicABIDelta(contract); err != nil {

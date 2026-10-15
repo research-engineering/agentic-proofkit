@@ -17,6 +17,21 @@ var boundaryNonClaims = []string{
 	"Repo-profile structural admission does not prove command pass evidence.",
 }
 
+// Literals and vocabularies are shared by admission, reports and structures.
+const (
+	profileSchema       = "proofkit.repo-profile.v1"
+	reportKind          = "proofkit.repo-profile-structural"
+	acceptedRuleID      = reportKind + ".accepted"
+	acceptedRuleMessage = "repo profile structural admission passed"
+	failureRuleIDPrefix = reportKind + ".failure."
+)
+
+var (
+	commandMatcherKinds = []string{"bun_workspace_package_script", "bun_repo_script", "exact_argv", "python_pytest_contract"}
+	networkPolicies     = []string{"none", "loopback", "external"}
+	credentialClasses   = []string{"none", "local-secret", "live-github", "live-cloud"}
+)
+
 var shellControlTokens = map[string]struct{}{
 	"&&": {},
 	"&":  {},
@@ -260,15 +275,15 @@ func buildReport(result admissionResult) report.Record {
 	rules := []report.RuleResult{}
 	if state == "passed" {
 		rules = append(rules, report.RuleResult{
-			RuleID:      "proofkit.repo-profile-structural.accepted",
+			RuleID:      acceptedRuleID,
 			Status:      "passed",
-			Message:     "repo profile structural admission passed",
+			Message:     acceptedRuleMessage,
 			Diagnostics: []report.Diagnostic{},
 		})
 	} else {
 		for index, failure := range result.Failures {
 			rules = append(rules, report.RuleResult{
-				RuleID:      fmt.Sprintf("proofkit.repo-profile-structural.failure.%03d", index+1),
+				RuleID:      fmt.Sprintf("%s%03d", failureRuleIDPrefix, index+1),
 				Status:      "failed",
 				Message:     failure,
 				Diagnostics: []report.Diagnostic{},
@@ -277,8 +292,8 @@ func buildReport(result admissionResult) report.Record {
 	}
 	return report.Record{
 		SchemaVersion: 1,
-		ReportKind:    "proofkit.repo-profile-structural",
-		ReportID:      "proofkit.repo-profile-structural",
+		ReportKind:    reportKind,
+		ReportID:      reportKind,
 		State:         state,
 		Summary: map[string]any{
 			"commandMatcherCount":         result.CommandMatcherCount,
@@ -297,7 +312,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("repo profile must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"facts", "policy", "profile", "schemaVersion"}, "repo profile input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "repo profile input"); err != nil {
 		return input{}, err
 	}
 	if value, ok := record["schemaVersion"]; ok && !admit.JSONNumberEquals(value, 1) {
@@ -323,11 +338,11 @@ func admitProfile(raw any) (profile, error) {
 	if !ok {
 		return profile{}, fmt.Errorf("repo profile must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"commandMatchers", "documents", "nonClaims", "proofs", "repository", "requirements", "schema"}, "repo profile"); err != nil {
+	if err := admit.KnownKeys(record, profileKeys, "repo profile"); err != nil {
 		return profile{}, err
 	}
-	if record["schema"] != "proofkit.repo-profile.v1" {
-		return profile{}, fmt.Errorf("repo profile schema must be proofkit.repo-profile.v1")
+	if record["schema"] != profileSchema {
+		return profile{}, fmt.Errorf("repo profile schema must be %s", profileSchema)
 	}
 	repositoryValue, err := admitRepository(record["repository"])
 	if err != nil {
@@ -368,7 +383,7 @@ func admitRepository(raw any) (repository, error) {
 	if !ok {
 		return repository{}, fmt.Errorf("repo profile repository must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"name", "primaryLanguages", "rootPackageName"}, "repo profile repository"); err != nil {
+	if err := admit.KnownKeys(record, repositoryKeys, "repo profile repository"); err != nil {
 		return repository{}, err
 	}
 	primaryLanguages, err := stringArray(record["primaryLanguages"], "repo profile repository.primaryLanguages", false, true)
@@ -395,7 +410,7 @@ func admitDocuments(raw any) (documents, error) {
 	if !ok {
 		return documents{}, fmt.Errorf("repo profile documents must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"generatedArtifacts", "policyPath", "routerPath"}, "repo profile documents"); err != nil {
+	if err := admit.KnownKeys(record, documentsKeys, "repo profile documents"); err != nil {
 		return documents{}, err
 	}
 	artifactsRaw, ok := record["generatedArtifacts"].([]any)
@@ -430,7 +445,7 @@ func admitRequirements(raw any) (requirements, error) {
 	if !ok {
 		return requirements{}, fmt.Errorf("repo profile requirements must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"idPattern", "specGlobs"}, "repo profile requirements"); err != nil {
+	if err := admit.KnownKeys(record, requirementsKeys, "repo profile requirements"); err != nil {
 		return requirements{}, err
 	}
 	specGlobs, err := stringArray(record["specGlobs"], "repo profile requirements.specGlobs", false, true)
@@ -452,7 +467,7 @@ func admitProofs(raw any) (proofs, error) {
 	if !ok {
 		return proofs{}, fmt.Errorf("repo profile proofs must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"bindingPath", "environmentClasses", "proofLikePaths", "retiredProofLikePaths"}, "repo profile proofs"); err != nil {
+	if err := admit.KnownKeys(record, proofsKeys, "repo profile proofs"); err != nil {
 		return proofs{}, err
 	}
 	proofLikePaths, err := stringArray(record["proofLikePaths"], "repo profile proofs.proofLikePaths", false, true)
@@ -507,28 +522,28 @@ func parseCommandMatcher(raw any, index int) (commandMatcher, error) {
 	if !ok {
 		return commandMatcher{}, fmt.Errorf("command matcher #%d must be an object", index)
 	}
-	if err := admit.KnownKeys(record, []string{"allowedArgv", "allowedScripts", "allowedTestPathGlobs", "credentialClass", "id", "kind", "networkPolicy", "parallelGroup"}, fmt.Sprintf("command matcher #%d", index)); err != nil {
+	if err := admit.KnownKeys(record, commandMatcherKeys, fmt.Sprintf("command matcher #%d", index)); err != nil {
 		return commandMatcher{}, err
 	}
 	kind, err := stringField(record, "kind", fmt.Sprintf("command matcher #%d", index))
 	if err != nil {
 		return commandMatcher{}, err
 	}
-	if !contains([]string{"bun_workspace_package_script", "bun_repo_script", "exact_argv", "python_pytest_contract"}, kind) {
+	if !contains(commandMatcherKinds, kind) {
 		return commandMatcher{}, fmt.Errorf("command matcher #%d has unsupported kind", index)
 	}
 	networkPolicy, err := stringField(record, "networkPolicy", fmt.Sprintf("command matcher #%d", index))
 	if err != nil {
 		return commandMatcher{}, err
 	}
-	if !contains([]string{"none", "loopback", "external"}, networkPolicy) {
+	if !contains(networkPolicies, networkPolicy) {
 		return commandMatcher{}, fmt.Errorf("command matcher #%d has unsupported networkPolicy", index)
 	}
 	credentialClass, err := stringField(record, "credentialClass", fmt.Sprintf("command matcher #%d", index))
 	if err != nil {
 		return commandMatcher{}, err
 	}
-	if !contains([]string{"none", "local-secret", "live-github", "live-cloud"}, credentialClass) {
+	if !contains(credentialClasses, credentialClass) {
 		return commandMatcher{}, fmt.Errorf("command matcher #%d has unsupported credentialClass", index)
 	}
 	id, err := stringField(record, "id", fmt.Sprintf("command matcher #%d", index))
@@ -578,7 +593,7 @@ func admitFacts(raw any) (facts, error) {
 	if !ok {
 		return facts{}, fmt.Errorf("repo profile facts must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"commandEnvironmentPairs", "docsPolicyGeneratedArtifacts", "packageScripts", "rootPackageName", "rootScripts", "trackedFiles"}, "repo profile facts"); err != nil {
+	if err := admit.KnownKeys(record, factsKeys, "repo profile facts"); err != nil {
 		return facts{}, err
 	}
 	commandPairs, err := parseCommandEnvironmentPairs(record["commandEnvironmentPairs"])
@@ -628,14 +643,14 @@ func admitPolicy(raw any) (policy, error) {
 	if !ok {
 		return policy{}, fmt.Errorf("repo profile policy must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"environmentPolicy", "packageNamePattern"}, "repo profile policy"); err != nil {
+	if err := admit.KnownKeys(record, policyKeys, "repo profile policy"); err != nil {
 		return policy{}, err
 	}
 	environment, ok := record["environmentPolicy"].(map[string]any)
 	if !ok {
 		return policy{}, fmt.Errorf("repo profile policy.environmentPolicy must be an object")
 	}
-	if err := admit.KnownKeys(environment, []string{"environmentClassPolicies", "liveGithubRequiredClasses", "localSecretRequiredClasses"}, "repo profile policy.environmentPolicy"); err != nil {
+	if err := admit.KnownKeys(environment, environmentPolicyKeys, "repo profile policy.environmentPolicy"); err != nil {
 		return policy{}, err
 	}
 	liveGithub, err := arrayOfNonEmptyStrings(environment["liveGithubRequiredClasses"], "repo profile environmentPolicy.liveGithubRequiredClasses", true)
@@ -684,7 +699,7 @@ func admitEnvironmentClassPolicies(raw any) ([]environmentClassPolicy, bool, err
 		if !ok {
 			return nil, true, fmt.Errorf("repo profile environmentClassPolicies #%d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"credentialClass", "environmentClass", "networkPolicy"}, fmt.Sprintf("repo profile environmentClassPolicies #%d", index+1)); err != nil {
+		if err := admit.KnownKeys(record, environmentClassPolicyKeys, fmt.Sprintf("repo profile environmentClassPolicies #%d", index+1)); err != nil {
 			return nil, true, err
 		}
 		environmentClass, err := nonEmptyString(record["environmentClass"], fmt.Sprintf("repo profile environmentClassPolicies #%d environmentClass", index+1))
@@ -695,14 +710,14 @@ func admitEnvironmentClassPolicies(raw any) ([]environmentClassPolicy, bool, err
 		if err != nil {
 			return nil, true, err
 		}
-		if !contains([]string{"none", "loopback", "external"}, networkPolicy) {
+		if !contains(networkPolicies, networkPolicy) {
 			return nil, true, fmt.Errorf("repo profile environmentClassPolicies #%d has unsupported networkPolicy", index+1)
 		}
 		credentialClass, err := nonEmptyString(record["credentialClass"], fmt.Sprintf("repo profile environmentClassPolicies #%d credentialClass", index+1))
 		if err != nil {
 			return nil, true, err
 		}
-		if !contains([]string{"none", "local-secret", "live-github", "live-cloud"}, credentialClass) {
+		if !contains(credentialClasses, credentialClass) {
 			return nil, true, fmt.Errorf("repo profile environmentClassPolicies #%d has unsupported credentialClass", index+1)
 		}
 		policies = append(policies, environmentClassPolicy{
@@ -723,7 +738,7 @@ func parseGeneratedArtifact(raw any, context string) (generatedArtifact, error) 
 	if !ok {
 		return generatedArtifact{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"generator", "path", "sourceOfTruth"}, context); err != nil {
+	if err := admit.KnownKeys(record, generatedArtifactKeys, context); err != nil {
 		return generatedArtifact{}, err
 	}
 	sourceOfTruth, err := stringArray(record["sourceOfTruth"], context+" sourceOfTruth", false, true)
@@ -756,7 +771,7 @@ func parseCommandEnvironmentPairs(raw any) ([]commandEnvironmentPair, error) {
 		if !ok {
 			return nil, fmt.Errorf("repo profile commandEnvironmentPairs #%d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"command", "environmentClasses"}, fmt.Sprintf("repo profile commandEnvironmentPairs #%d", index+1)); err != nil {
+		if err := admit.KnownKeys(record, commandEnvironmentPairKeys, fmt.Sprintf("repo profile commandEnvironmentPairs #%d", index+1)); err != nil {
 			return nil, err
 		}
 		command, err := admit.DisplayOnlyCommandText(record["command"], fmt.Sprintf("repo profile commandEnvironmentPairs #%d command", index+1))
@@ -783,7 +798,7 @@ func parsePackageScripts(raw any) ([]packageScripts, error) {
 		if !ok {
 			return nil, fmt.Errorf("repo profile packageScripts #%d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"packageName", "scripts"}, fmt.Sprintf("repo profile packageScripts #%d", index+1)); err != nil {
+		if err := admit.KnownKeys(record, packageScriptsKeys, fmt.Sprintf("repo profile packageScripts #%d", index+1)); err != nil {
 			return nil, err
 		}
 		packageName, err := nonEmptyString(record["packageName"], fmt.Sprintf("repo profile packageScripts #%d packageName", index+1))
@@ -854,13 +869,13 @@ func validateMatchers(matchers []commandMatcher, failures *[]string) [][]pathpat
 		*failures = append(*failures, "repo profile commandMatchers.id must be sorted and unique")
 	}
 	for index, matcher := range matchers {
-		if !contains([]string{"bun_workspace_package_script", "bun_repo_script", "exact_argv", "python_pytest_contract"}, matcher.Kind) {
+		if !contains(commandMatcherKinds, matcher.Kind) {
 			*failures = append(*failures, fmt.Sprintf("command matcher #%d has unsupported kind", index))
 		}
-		if !contains([]string{"none", "loopback", "external"}, matcher.NetworkPolicy) {
+		if !contains(networkPolicies, matcher.NetworkPolicy) {
 			*failures = append(*failures, fmt.Sprintf("command matcher #%d has unsupported networkPolicy", index))
 		}
-		if !contains([]string{"none", "local-secret", "live-github", "live-cloud"}, matcher.CredentialClass) {
+		if !contains(credentialClasses, matcher.CredentialClass) {
 			*failures = append(*failures, fmt.Sprintf("command matcher #%d has unsupported credentialClass", index))
 		}
 		if matcher.Kind == "python_pytest_contract" && !matcher.HasAllowedTestGlobs {

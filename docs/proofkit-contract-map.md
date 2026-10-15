@@ -15,9 +15,10 @@ In a command direction, `childDefinitionBindings` binds `pathSegments` to the
 one shipped `definitionRef` and its digest; `*` means each array element.
 `pathRelations` declares a native-owned derived path rule, while
 `handoffClauses` scopes the changed anchor schema to the submitted one-shot
-variant. These records describe named changed children only. A root-shape
-definition still does not claim the semantics of other nested fields; native
-admission and runtime witnesses remain mandatory.
+variant. These records describe named changed children only. Every published
+contract definition is a structural JSON Schema that describes nested fields
+too; structure does not claim their semantics, so native admission and runtime
+witnesses remain mandatory.
 Its `commandRouteGrammar.omittedRoutePolicy` field owns how consumers expand a
 command record that omits an explicit `route`.
 
@@ -29,9 +30,27 @@ once and compose `$ref` references to its `$id`, rather than duplicating the
 identified schema inline. Child bindings apply to the child value when present
 and non-null in the admitted variant; they do not make an optional child required.
 Native admission still owns canonical numeric tokens, privacy, normalization,
-identity parsing and cross-record references. Parent commands retain their own
-root-shape-only limits. The installed machine-contract resource is bounded to
-4 MiB; this does not raise other package entry limits.
+identity parsing and cross-record references. Parent commands publish their
+own structural schemas with the same native-semantic limits. The installed
+machine-contract resource is bounded to 8 MiB; this does not raise other
+package entry limits.
+
+Each structural variant `schema` is a self-contained JSON Schema document.
+A repeated object subschema of its root resource is shared when it contains no
+`$id`, `$anchor`, `$dynamicAnchor`, `$dynamicRef`, `$recursiveAnchor` or
+`$recursiveRef`, is neither the root nor a direct root `$defs` entry, and
+sharing it reduces the canonical byte count. Larger subschemas are decided
+first. When a subschema is shared, its first counted occurrence in canonical
+order becomes the entry: copies inside that occurrence keep counting as
+repetitions, and copies inside its other occurrences no longer count. A shared
+subschema is published once as a root `$defs` entry named `shared-` plus the
+first 16 hexadecimal digits of the SHA-256 of its canonical expanded JSON,
+and every counted occurrence becomes a pure `$ref` to it.
+Other repetitions stay inline; for an eligible subschema this means that one
+reference per copy plus the entry would not be shorter than the copies.
+Inlining exactly the `shared-` entries yields the native owner schema;
+embedded `$id` resources are never shared. Compile each variant as its own
+document, because its references resolve only at its root.
 
 `receipt-currentness-scope` and `receipt-trust-class` publish nested input and
 output structures, including required nullable fields and typed report
@@ -42,7 +61,30 @@ trust-policy evaluation. A failed JSON report is an admitted negative result,
 not an input-admission error; the latter produces stderr without a report.
 
 A command's `contractId` versions its admitted semantics; `schemaVersion`
-names the outer JSON wire shape. These versions need not coincide. Adoption
+names the outer JSON wire shape.
+
+Precisely, a direction's `contractId` versions its wire shape and its
+specified meaning. Between two releases it changes exactly when (a) the outer
+`schemaVersion` changes, the new release emits a record shape the previous
+release never emitted, or the new release requires an input shape the previous
+release did not accept; or (b) the CLI contract or a bound requirement
+statement gives a record that both releases admit or emit a meaning different
+from the one the previous release's text gave it. It does not change for
+implementation-only changes: a defect correction, narrower or wider admission,
+a changed value of a behavior the previous text did not specify, human
+diagnostics, or text, Markdown or HTML renderings. The release change record
+declares each such observable change and states whether it is breaking. The
+specified text is the direction's shipped CLI contract record (compatibility
+summary, field descriptions, structural schema) and the requirement statements
+bound to the command; guides such as the README, `ADOPTION.md` and this map's
+prose, runtime messages and code comments are not. A change that makes the
+previous text false for a record both releases handle must change that text,
+so (b) applies. Correcting published text that the previous release's
+behavior already contradicted is a defect correction, not a change of
+specified meaning. The rule governs changes made after its adoption; identities
+set before it are retained.
+
+`contractId` and `schemaVersion` need not coincide. Adoption
 materialization plan/apply input v3 retains payload `schemaVersion: 2`, while the
 six adoption/integration lifecycle output contracts use semantic v2 with outer
 `schemaVersion: 1`. Fresh transaction plans and journals use `schemaVersion: 3`
@@ -50,7 +92,7 @@ and Unicode 17 canonical caseless path matching; retained transaction versions
 1 and 2 keep their historical path rules and recovery identities. Transaction
 receipt version 2 is independent.
 The exact compatibility clauses and native-owner bindings are shipped in the
-CLI contract, not inferred from the enclosing root-shape definition.
+CLI contract, not inferred from the enclosing structural definition.
 
 `workspace-shard-partition` input/output contract v2 retains wire
 `schemaVersion: 1`. Native admission limits the shard count before nested node
@@ -160,8 +202,9 @@ explains route families without becoming an
 execution, freshness, or merge decision.
 The exact route input vocabulary is machine-readable in
 `proofkit/cli-contract.v2.json` under `agent-route.inputContract`; the Go
-admission implementation owns nested and semantic behavior, while the shipped
-CLI contract owns the bounded root-shape variants and their ABI digest.
+admission implementation still owns admission and nested semantic behavior,
+while the shipped CLI contract owns the structural variants and their ABI
+digest.
 
 Formal rule:
 
