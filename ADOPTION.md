@@ -538,7 +538,7 @@ Reverse review is distinct from the forward execution route above:
 ```mermaid
 flowchart TB
     Change["Changed source, test or route"] --> Facts["Exact base/current records"]
-    Facts --> Impact["Impact composition and routing"]
+    Facts --> Impact["Semantic diff, proof slices and currentness"]
     Impact --> Review["Review affected meanings and checks"]
     Review --> Decision{"Adequacy preserved?"}
     Decision -->|Yes| Confirm["Consumer records exact-subject confirmation"]
@@ -547,10 +547,13 @@ flowchart TB
     Update --> Run
 ```
 
-`requirement-impact-input-compose` and `impact` own routing, not the confirmation
-store or the consumer's selection of fresh checks. This cookbook is a bounded
-workflow template, not a shipped native-discovery adapter or universal test
-completeness claim. A language migration must preserve observed promises while
+For materialized v1 bindings, `requirement-semantic-diff`,
+`requirement-context-slice` and `receipt-currentness-scope` own this
+comparison, not the confirmation store or the consumer's selection of fresh
+checks. `requirement-impact-input-compose` reads compact proof contracts, not
+these bindings, and `impact` routes its composed input; do not author a second
+binding copy to reach them. This cookbook is a bounded workflow template, not a
+shipped native-discovery adapter or universal test completeness claim. A language migration must preserve observed promises while
 reviewing native adapters and evidence again; stable IDs do not prove parity.
 
 ## Rendering And Browser Views

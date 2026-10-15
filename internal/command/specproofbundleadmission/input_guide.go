@@ -15,9 +15,10 @@ const inputGuide = `Spec proof bundle input guide:
   Prerequisites: reviewed requirement-bindings input, witness-scheduler-plan
   input and a completed proof-receipt-admission input. This guide does not
   create the scheduler policy, execute its commands or authenticate results.
-  Obtain binding shapes from adopt materialize plan --help and the receipt
-  operand recipe from proof-receipt-admission --help. Preserve complete inputs,
-  not report summaries. A later scheduler declaration is not proof that an
+  Obtain binding shapes from adopt materialize plan --help, the scheduler
+  recipe from witness-scheduler-plan --help and the receipt operand recipe
+  from proof-receipt-admission --help. Preserve complete inputs, not report
+  summaries. A later scheduler declaration is not proof that an
   earlier process executed under that policy.
 
   Admit each input separately and retain exact output plus process exit code:

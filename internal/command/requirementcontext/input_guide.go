@@ -82,7 +82,46 @@ Connected context packet (store in a caller-selected scratch file):
   added as {"path":"<coverage-input-path>"} after preparing an actual
   requirement-coverage-view INPUT, not its rendered report; see:
     {{cli}} requirement-coverage-input-compose --help
-  Do not invent an empty passing coverage report. Continue with
-  requirement-context-slice, requirement-semantic-diff or
-  requirement-traceability-graph using their command-specific --help.
+  Do not invent an empty passing coverage report. Continue with a bounded
+  slice, a base/current semantic comparison or requirement-traceability-graph:
+    {{cli}} requirement-context-slice --help
+    {{cli}} requirement-semantic-diff --help
+`
+
+// SliceInputGuide owns the bounded slice request over one retained context.
+func SliceInputGuide(renderer cliexec.Renderer) string {
+	return strings.ReplaceAll(sliceInputGuide, "{{cli}}", renderer.DisplayCommand())
+}
+
+const sliceInputGuide = `Requirement context slice input guide:
+  A slice selects requirements, nodes and their declared records from one
+  retained context. It does not reread files, infer hierarchy, execute witnesses
+  or treat an omitted record as absent. Obtain the context from:
+    {{cli}} requirement-context-compose --help
+  Put that command's complete stdout object into context; never rebuild,
+  reorder or edit it. A changed file requires a new compose and a new slice.
+
+  Select at least one of requirementIds, nodeIds, ownerIds or lifecycleStates
+  unless profile is routing. profile is specification, routing, proof,
+  coverage or review. proof keeps each selected requirement with exactly its
+  proof binding rows and witness commands; review also keeps coverage when the
+  context has it. Requirement and owner IDs are exact stable IDs.
+
+Slice template (required null operands deliberately reject admission):
+` + "```json" + `
+{
+  "schemaVersion": 2,
+  "sliceId": null,
+  "context": null,
+  "query": {"profile": "proof", "requirementIds": null}
+}
+` + "```" + `
+
+  {{cli}} requirement-context-slice --input <slice-input>
+  Exit 0 emits state selected or no_match; no_match is not proof of absence.
+  Inspect omissions before relying on completeness. A selected fragment can
+  be the caller's exact per-requirement review or receipt subject: digest the
+  retained fragment bytes under a declared encoding and recompute them from a
+  fresh slice later. Equal fragments do not prove native test bytes, execution,
+  freshness or trust; bind those subjects separately.
 `

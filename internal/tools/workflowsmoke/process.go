@@ -31,11 +31,16 @@ type ProcessCarrier struct {
 	Environment []string
 }
 
-// VerifyProcess applies Verify to one installed process carrier.
+// VerifyProcess applies Verify and then the whole-operation agent trajectory
+// to one installed process carrier through the same Runner.
 func VerifyProcess(ctx context.Context, carrier ProcessCarrier) error {
-	return Verify(ctx, func(ctx context.Context, invocation Invocation) (Result, error) {
+	run := func(ctx context.Context, invocation Invocation) (Result, error) {
 		return RunProcess(ctx, carrier, invocation)
-	})
+	}
+	if err := Verify(ctx, run); err != nil {
+		return err
+	}
+	return VerifyTrajectory(ctx, run)
 }
 
 // RunProcess executes one bounded carrier invocation with retained group cleanup.
