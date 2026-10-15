@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -630,36 +629,6 @@ func TestRedactDiagnosticValueBoundsCallerScalarsAndTotalProjection(t *testing.T
 			if got != want {
 				t.Fatalf("RedactDiagnosticValue(%d x %q) = %d scalars, want %d", count, scalar, utf8.RuneCountInString(got), utf8.RuneCountInString(want))
 			}
-		}
-	}
-}
-
-// RuleIDGrammar is guidance for the identifiers RuleID admits; its pattern,
-// bound and rejected date and time examples must be the enforced ones.
-func TestRuleIDGrammarStatesTheEnforcedRule(t *testing.T) {
-	grammar := RuleIDGrammar()
-	if !strings.HasPrefix(grammar, fmt.Sprintf("%s, at most %d bytes", RuleIDPatternBody, MaxRuleIDBytes)) {
-		t.Fatalf("grammar %q does not render the enforced pattern and bound", grammar)
-	}
-	// Each stated exclusion conforms to the pattern yet is rejected for the
-	// stated reason, including the pilots' quote.risk-assessment.
-	pattern := regexp.MustCompile(`^` + RuleIDPatternBody + `$`)
-	for reason, examples := range map[string][]string{"timestamp-like": RuleIDTimestampExamples, "secret-like": RuleIDSecretExamples} {
-		for _, example := range examples {
-			id := "quote.run." + example
-			if _, err := RuleID(id, "id"); !pattern.MatchString(id) || err == nil || !strings.Contains(err.Error(), reason) || !strings.Contains(grammar, example) {
-				t.Fatalf("stated %s exclusion %q: pattern=%v err=%v", reason, id, pattern.MatchString(id), err)
-			}
-		}
-	}
-	for _, rejected := range []string{"quote.risk-assessment", "auth.token:refresh", "build.run-12345678", "quote.run.2026-10-12", "quote.run.20261012T044113Z", "src.--init--", "proofkit/requirement-bindings.json#REQ-1"} {
-		if _, err := RuleID(rejected, "id"); err == nil {
-			t.Fatalf("RuleID accepted %q that the grammar text excludes", rejected)
-		}
-	}
-	for _, accepted := range []string{"quote.receipt.weight-run-003", "REQ-QUOTE-001:quote.weight.limit", "greeter.scheduler", "src.init_py"} {
-		if _, err := RuleID(accepted, "id"); err != nil {
-			t.Fatalf("RuleID rejected %q: %v", accepted, err)
 		}
 	}
 }

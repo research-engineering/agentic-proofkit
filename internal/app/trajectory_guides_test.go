@@ -2,7 +2,6 @@ package app
 
 import (
 	"bytes"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -59,9 +58,7 @@ func TestTrajectoryInputGuidesAreLazyAndCarrierBound(t *testing.T) {
 }
 
 // The scheduler guide must compose with the materialization guide's binding
-// without retyping argv, and its one-parallel-group premise must be real. The
-// template leaves sideEffectClass to the owner: the example go test writes the
-// Go build cache, so the copied template is refused until a class is declared.
+// without retyping argv, and its one-parallel-group premise must be real.
 func TestSchedulerGuideProjectsTheConnectedBinding(t *testing.T) {
 	scheduler, help := receiptHelpTemplate(t, "witness-scheduler-plan")
 	binding := adoptionHelpPacket(t, t.TempDir(), "fresh")["requirementProofBinding"].(map[string]any)["record"]
@@ -75,75 +72,15 @@ func TestSchedulerGuideProjectsTheConnectedBinding(t *testing.T) {
 	scheduler["schedulerPlanId"], scheduler["commands"] = "example.scheduler", projectedCommands
 	policy := scheduler["policies"].([]any)[0].(map[string]any)
 	policy["commandId"], policy["inputSelectors"] = "example.test.requests", []any{"src"}
-	schedulerArgs := fillGuideOperands(t, commands[1], map[string]string{"<scheduler-input>": "-"})
-	code, output, diagnostic := executeAgentWorkflowCLI(t, schedulerArgs, bytes.NewReader(adoptionHelpJSON(t, scheduler)), PresentationCapabilities{})
-	if code != 1 || output != "" || !strings.Contains(diagnostic, "witness scheduler example.test.requests sideEffectClass must be one of: ") {
-		t.Fatalf("template without a reviewed sideEffectClass was not refused at sideEffectClass: %d %q", code, diagnostic)
-	}
-	policy["sideEffectClass"], policy["resourceWrites"] = "local_write", []any{"example.build-cache"}
-	report := runAdoptionHelpCLI(t, adoptionHelpJSON(t, scheduler), schedulerArgs...)
+	report := runAdoptionHelpCLI(t, adoptionHelpJSON(t, scheduler), fillGuideOperands(t, commands[1], map[string]string{"<scheduler-input>": "-"})...)
 	if report["state"] != "passed" || report["reportId"] != "example.scheduler" {
 		t.Fatalf("connected scheduler input did not pass: %v", report)
 	}
 	vocabulary := scheduler["vocabulary"].(map[string]any)
 	vocabulary["parallelGroups"] = []any{"example.native", "example.other"}
-	code, output, diagnostic = executeAgentWorkflowCLI(t, []string{"witness-plan", "--input", "-"}, bytes.NewReader(adoptionHelpJSON(t, projection)), PresentationCapabilities{})
+	code, output, diagnostic := executeAgentWorkflowCLI(t, []string{"witness-plan", "--input", "-"}, bytes.NewReader(adoptionHelpJSON(t, projection)), PresentationCapabilities{})
 	if code != 1 || output != "" || !strings.Contains(diagnostic, "exactly one parallelGroup") {
 		t.Fatalf("projection premise is not enforced: %d %q", code, diagnostic)
-	}
-}
-
-// Pilot D7 and D13: the projection passes no environment variable, and the
-// documented explicit catalog admits approved variables and serializes two
-// writers of one resource in separate groups, which one group refuses.
-func TestSchedulerGuideExplicitCatalogAdmitsVariablesAndSeparateWriters(t *testing.T) {
-	scheduler, help := receiptHelpTemplate(t, "witness-scheduler-plan")
-	binding := adoptionHelpPacket(t, t.TempDir(), "fresh")["requirementProofBinding"].(map[string]any)["record"]
-	projection := map[string]any{"schemaVersion": 1, "projection": "requirement-bindings", "requirementProofBinding": binding, "vocabulary": scheduler["vocabulary"]}
-	projected := runAdoptionHelpCLI(t, adoptionHelpJSON(t, projection), "witness-plan", "--input", "-")["commands"].([]any)
-	first := projected[0].(map[string]any)
-	if environment := first["environment"].(map[string]any); environment["inherit"] != "none" || len(environment["allowlist"].([]any)) != 0 {
-		t.Fatalf("projection environment = %v, want inherit none with no variable", environment)
-	}
-	second := cloneMap(t, first)
-	second["id"] = "example.test.requests-second"
-	first["environment"].(map[string]any)["inherit"], first["environment"].(map[string]any)["allowlist"] = "allowlist", []any{"HOME", "PATH"}
-	vocabulary := scheduler["vocabulary"].(map[string]any)
-	writer := func(commandID string) map[string]any {
-		policy := cloneMap(t, scheduler["policies"].([]any)[0].(map[string]any))
-		policy["commandId"], policy["inputSelectors"], policy["sideEffectClass"] = commandID, []any{"src"}, "local_write"
-		policy["resourceWrites"] = []any{"example.build-cache"}
-		return policy
-	}
-	schedule := func(groups ...string) map[string]any {
-		vocabulary["parallelGroups"] = []any{"example.native", "example.writers"}
-		first["parallelGroup"], second["parallelGroup"] = groups[0], groups[1]
-		catalog := map[string]any{"schemaVersion": 1, "commands": []any{first, second}, "vocabulary": vocabulary}
-		admitted := runAdoptionHelpCLI(t, adoptionHelpJSON(t, catalog), "witness-plan", "--input", "-")["commands"]
-		scheduler["schedulerPlanId"], scheduler["commands"] = "example.scheduler", admitted
-		scheduler["policies"] = []any{writer("example.test.requests"), writer("example.test.requests-second")}
-		code, output, diagnostic := executeAgentWorkflowCLI(t, []string{"witness-scheduler-plan", "--input", "-"}, bytes.NewReader(adoptionHelpJSON(t, scheduler)), PresentationCapabilities{})
-		if diagnostic != "" || (code != 0 && code != 1) {
-			t.Fatalf("scheduler exit=%d stderr=%q", code, diagnostic)
-		}
-		return decodeCLIJSON(t, output).(map[string]any)
-	}
-	// Pilot D8: the guide lists exactly the vocabulary native admission enforces.
-	invalid := cloneMap(t, scheduler)
-	invalid["commands"] = []any{first}
-	invalid["policies"] = []any{writer("example.test.requests")}
-	invalid["policies"].([]any)[0].(map[string]any)["sideEffectClass"] = "unknown"
-	_, _, refusal := executeAgentWorkflowCLI(t, []string{"witness-scheduler-plan", "--input", "-"}, bytes.NewReader(adoptionHelpJSON(t, invalid)), PresentationCapabilities{})
-	_, enforced, ok := strings.Cut(strings.TrimSpace(refusal), "sideEffectClass must be one of: ")
-	if !ok {
-		t.Fatalf("unknown side-effect class refusal = %q", refusal)
-	}
-	requireHelpLines(t, "scheduler", help, "sideEffectClass is one of: "+enforced)
-	if report := schedule("example.native", "example.native"); report["state"] != "failed" || !strings.Contains(fmt.Sprint(report["diagnostics"]), "write/write resource collision example.build-cache") {
-		t.Fatalf("one group admitted two writers of one resource: %v", report["diagnostics"])
-	}
-	if report := schedule("example.native", "example.writers"); report["state"] != "passed" {
-		t.Fatalf("separate groups with approved variables did not pass: %v", report["diagnostics"])
 	}
 }
 

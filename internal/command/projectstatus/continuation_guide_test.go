@@ -5,9 +5,8 @@ import (
 	"testing"
 )
 
-// Every reachable action class has exactly one continuation, and every class
-// continues with the help of exactly the route its packet names (pilot D3:
-// verification names native-evidence-guidance instead of an empty route).
+// Every reachable action class has exactly one continuation, and a class
+// whose packet names a command route continues with that same route's help.
 func TestActionContinuationsMatchTheCanonicalActionTable(t *testing.T) {
 	cases := []struct {
 		state      ProjectState
@@ -33,11 +32,11 @@ func TestActionContinuationsMatchTheCanonicalActionTable(t *testing.T) {
 				continue
 			}
 			matches++
-			if !slices.Equal(continuation.HelpRoute, action.CommandRoute) {
+			if len(action.CommandRoute) > 0 && !slices.Equal(continuation.HelpRoute, action.CommandRoute) {
 				t.Fatalf("%s continues with %v, want its packet route %v", action.ActionClass, continuation.HelpRoute, action.CommandRoute)
 			}
-			if action.ActionClass == ActionRunRepositoryVerification && !slices.Equal(action.CommandRoute, []string{"native-evidence-guidance"}) {
-				t.Fatalf("verification packet names route %v", action.CommandRoute)
+			if action.ActionClass == ActionRunRepositoryVerification && !slices.Equal(continuation.HelpRoute, []string{"native-evidence-guidance"}) {
+				t.Fatalf("verification continues with %v", continuation.HelpRoute)
 			}
 		}
 		if matches != 1 {

@@ -158,8 +158,8 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.witness-scheduler-plan.input.v1.root-shape"}, commands: []string{"witness-scheduler-plan"},
 		schema: func() (map[string]any, error) { return witnessschedulerplan.InputStructure(), nil },
 	}, {
-		id: "proofkit.witness-scheduler-plan.output.v2.json-schema", direction: "output",
-		predecessors: []string{"proofkit.witness-scheduler-plan.output.v1.json-schema"}, commands: []string{"witness-scheduler-plan"},
+		id: "proofkit.witness-scheduler-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.witness-scheduler-plan.output.v1.root-shape"}, commands: []string{"witness-scheduler-plan"},
 		schema: func() (map[string]any, error) { return witnessschedulerplan.OutputStructure(), nil },
 	}, {
 		id:           "proofkit.requirement-source.input.v2.json-schema",
@@ -170,9 +170,9 @@ func nativeStructures() []nativeStructure {
 			return requirementsourcecodec.InputStructure(requirementsourcemodel.DefaultLimits())
 		},
 	}, {
-		id:           "proofkit.requirement-source-admission.output.v3.json-schema",
+		id:           "proofkit.requirement-source-admission.output.v2.json-schema",
 		direction:    "output",
-		predecessors: []string{"proofkit.requirement-source-admission.output.v2.json-schema"},
+		predecessors: []string{"proofkit.requirement-source-admission.output.v2.root-shape"},
 		commands:     []string{"requirement-source-admission"},
 		schema:       func() (map[string]any, error) { return requirementsourceadmission.OutputStructure(), nil },
 	}, {
@@ -308,8 +308,8 @@ func nativeStructures() []nativeStructure {
 			return compactproofcontract.InputStructure(), nil
 		}}},
 	}, {
-		id: "proofkit.proof-receipt-admission.input.v2.json-schema", direction: "input",
-		predecessors: []string{"proofkit.proof-receipt-admission.input.v1.json-schema"}, commands: []string{"proof-receipt-admission"},
+		id: "proofkit.proof-receipt-admission.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.proof-receipt-admission.input.v1.root-shape"}, commands: []string{"proof-receipt-admission"},
 		schema: func() (map[string]any, error) { return proofreceiptadmission.InputStructure(), nil },
 	}, {
 		id: "proofkit.proof-receipt-admission.output.v1.json-schema", direction: "output",
@@ -869,8 +869,8 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.repo-profile-admission.output.v1.root-shape"}, commands: []string{"repo-profile-admission"},
 		schema: func() (map[string]any, error) { return repoprofileadmission.OutputStructure(), nil },
 	}, {
-		id: "proofkit.spec-proof-bundle-admission.input.v2.json-schema", direction: "input", semanticVersion: 2,
-		predecessors: []string{"proofkit.spec-proof-bundle-admission.input.v1.json-schema"}, commands: []string{"spec-proof-bundle-admission"},
+		id: "proofkit.spec-proof-bundle-admission.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.spec-proof-bundle-admission.input.v1.root-shape"}, commands: []string{"spec-proof-bundle-admission"},
 		schema: func() (map[string]any, error) { return specproofbundleadmission.InputStructure(), nil },
 	}, {
 		id: "proofkit.spec-proof-bundle-admission.output.v1.json-schema", direction: "output",

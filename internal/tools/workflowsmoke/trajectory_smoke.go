@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -69,13 +68,9 @@ type trajectoryState struct {
 	plan       map[string]any
 	context    map[string]any
 	scheduler  map[string]any
-	// nodeDigests are the CLI-reported node digests of scheduler by command
-	// ID; a receipt records its command's digest, and the bundle links it only
-	// while that node is unchanged.
-	nodeDigests map[string]string
-	receipts    map[string]map[string]any
-	fragments   map[string][]byte
-	lastStale   []any
+	receipts   map[string]map[string]any
+	fragments  map[string][]byte
+	lastStale  []any
 }
 
 func (t *trajectory) discover(state *trajectoryState) error {
@@ -405,15 +400,11 @@ func (t *trajectory) requireVerificationRequired(state *trajectoryState, label s
 	if err != nil {
 		return err
 	}
-	if err := expect(label+" next", next, map[string]any{
+	return expect(label+" next", next, map[string]any{
 		"/projectState": "verification_required", "/issueCodes": []any{},
-		"/action/actionClass": "run_repository_verification", "/action/commandRoute": []any{"native-evidence-guidance"},
+		"/action/actionClass": "run_repository_verification", "/action/commandRoute": []any{},
 		"/action/executable": false, "/action/contextRef": manifestID,
-	}); err != nil {
-		return err
-	}
-	t.name(label+" next", []string{"native-evidence-guidance"})
-	return nil
+	})
 }
 
 func (t *trajectory) scenarioStorage(state *trajectoryState) error {
@@ -591,7 +582,7 @@ func (t *trajectory) schedule(state *trajectoryState) error {
 	if err != nil {
 		return err
 	}
-	scheduler, nodeDigests, err := t.plannedScheduler(state.spec, "initial", []any{
+	scheduler, err := t.plannedScheduler(state.spec, "initial", []any{
 		[]any{trajectoryFarewellCommand, []any{"go", "test", "./greeter", "-run", "TestFarewellNamesOnce"}},
 		[]any{trajectoryPythonCommand, []any{"python3", "-m", "unittest", "tests.test_greeter"}},
 	})
@@ -605,25 +596,23 @@ func (t *trajectory) schedule(state *trajectoryState) error {
 			return err
 		}
 	}
-	state.scheduler, state.nodeDigests = scheduler, nodeDigests
+	state.scheduler = scheduler
 	return nil
 }
 
-// plannedScheduler projects witness commands from the current binding, admits
-// the scheduler policy over that exact projection (after the migration, over
-// its separated explicit catalog) and returns the node digests the report
-// names for receipts.
-func (t *trajectory) plannedScheduler(spec trajectorySpec, label string, wantCommands []any) (map[string]any, map[string]string, error) {
+// plannedScheduler projects witness commands from the current binding and
+// admits the scheduler policy over that exact projection.
+func (t *trajectory) plannedScheduler(spec trajectorySpec, label string, wantCommands []any) (map[string]any, error) {
 	projection, err := encodeInput(map[string]any{
 		"schemaVersion": json.Number("1"), "projection": "requirement-bindings",
 		"requirementProofBinding": trajectoryBinding(spec), "vocabulary": trajectoryVocabulary(),
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	planned, _, err := t.object(label+" witness projection", bytesInvocation(projection, "witness-plan", "--input", "-"), 0)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	commands, _ := planned["commands"].([]any)
 	observed := []any{}
@@ -632,63 +621,13 @@ func (t *trajectory) plannedScheduler(spec trajectorySpec, label string, wantCom
 		observed = append(observed, []any{record["id"], record["argv"]})
 	}
 	if !sameJSON(observed, wantCommands) {
-		return nil, nil, fmt.Errorf("%s witness projection = %s, want %s", label, canonicalText(observed), canonicalText(wantCommands))
-	}
-	vocabulary := trajectoryVocabulary()
-	if spec.Migrated {
-		if commands, vocabulary, err = t.separatedCatalog(label, commands); err != nil {
-			return nil, nil, err
-		}
+		return nil, fmt.Errorf("%s witness projection = %s, want %s", label, canonicalText(observed), canonicalText(wantCommands))
 	}
 	scheduler := map[string]any{
-		"schemaVersion": json.Number("1"), "schedulerPlanId": trajectorySchedulerID, "vocabulary": vocabulary,
+		"schemaVersion": json.Number("1"), "schedulerPlanId": trajectorySchedulerID, "vocabulary": trajectoryVocabulary(),
 		"commands": commands, "policies": trajectoryPolicies(spec),
 		"nonClaims": []any{"Trajectory scheduler declarations do not prove execution or approve merge."},
 	}
-	nodeDigests, err := t.scheduleNodes(label, scheduler)
-	return scheduler, nodeDigests, err
-}
-
-// separatedCatalog follows the scheduler guide for two writers of one
-// resource: both migrated Go witnesses write the Go build cache, so it copies
-// the projected commands, moves only the empty-name witness to its own
-// parallel group and admits that explicit catalog through witness-plan. The
-// farewell command keeps its group, so its node digest stays unchanged.
-func (t *trajectory) separatedCatalog(label string, projected []any) ([]any, map[string]any, error) {
-	commands := []any{}
-	for _, raw := range projected {
-		command := raw.(map[string]any)
-		if command["id"] == trajectoryGoGreetCommand {
-			command = maps.Clone(command)
-			command["parallelGroup"] = trajectoryEmptyNameGroup
-		}
-		commands = append(commands, command)
-	}
-	vocabulary := trajectorySeparatedVocabulary()
-	catalog, err := encodeInput(map[string]any{"schemaVersion": json.Number("1"), "commands": commands, "vocabulary": vocabulary})
-	if err != nil {
-		return nil, nil, err
-	}
-	planned, _, err := t.object(label+" separated witness catalog", bytesInvocation(catalog, "witness-plan", "--input", "-"), 0)
-	if err != nil {
-		return nil, nil, err
-	}
-	admitted, _ := planned["commands"].([]any)
-	groups := []any{}
-	for _, raw := range admitted {
-		record, _ := raw.(map[string]any)
-		groups = append(groups, []any{record["id"], record["parallelGroup"]})
-	}
-	want := []any{[]any{trajectoryFarewellCommand, trajectoryNativeGroup}, []any{trajectoryGoGreetCommand, trajectoryEmptyNameGroup}}
-	if !sameJSON(groups, want) {
-		return nil, nil, fmt.Errorf("%s separated witness catalog groups = %s, want %s", label, canonicalText(groups), canonicalText(want))
-	}
-	return admitted, vocabulary, nil
-}
-
-// scheduleNodes admits one scheduler input through the CLI and returns its
-// reported proofNodeDigests, one per command, by command ID.
-func (t *trajectory) scheduleNodes(label string, scheduler map[string]any) (map[string]string, error) {
 	input, err := encodeInput(scheduler)
 	if err != nil {
 		return nil, err
@@ -697,28 +636,7 @@ func (t *trajectory) scheduleNodes(label string, scheduler map[string]any) (map[
 	if err != nil {
 		return nil, err
 	}
-	if err := expect(label+" scheduler", report, map[string]any{"/state": "passed", "/reportId": trajectorySchedulerID, "/diagnostics/2/key": "proofNodeDigests"}); err != nil {
-		return nil, err
-	}
-	rows, _ := pointerValue(report, "/diagnostics/2/value")
-	values, _ := rows.([]any)
-	commands, _ := scheduler["commands"].([]any)
-	nodeDigests := map[string]string{}
-	for _, raw := range values {
-		row, _ := raw.(map[string]any)
-		commandID, _ := row["commandId"].(string)
-		nodeDigest, _ := row["proofNodeDigest"].(string)
-		nodeDigests[commandID] = nodeDigest
-	}
-	if len(nodeDigests) != len(values) || len(values) != len(commands) {
-		return nil, fmt.Errorf("%s scheduler must report one node digest per command: %s", label, canonicalText(rows))
-	}
-	for _, raw := range commands {
-		if id, _ := raw.(map[string]any)["id"].(string); !strings.HasPrefix(nodeDigests[id], "sha256:") {
-			return nil, fmt.Errorf("%s scheduler reported no node digest for %s", label, id)
-		}
-	}
-	return nodeDigests, nil
+	return scheduler, expect(label+" scheduler", report, map[string]any{"/state": "passed", "/reportId": trajectorySchedulerID})
 }
 
 func (t *trajectory) execute(state *trajectoryState) error {
@@ -743,7 +661,7 @@ func (t *trajectory) execute(state *trajectoryState) error {
 		if err != nil {
 			return err
 		}
-		receipt, err := t.receipt(item.receiptID, "passed", state.nodeDigests, subjects)
+		receipt, err := t.receipt(item.receiptID, "passed", subjects)
 		if err != nil {
 			return err
 		}

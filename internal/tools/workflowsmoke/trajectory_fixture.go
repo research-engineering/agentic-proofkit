@@ -21,8 +21,6 @@ const (
 	trajectoryEmptyScenario    = "greeter.empty_name"
 	trajectoryFarewellScenario = "greeter.farewell"
 	trajectorySchedulerID      = "greeter.scheduler"
-	trajectoryNativeGroup      = "greeter.native"
-	trajectoryEmptyNameGroup   = "greeter.native.empty-name"
 	trajectoryPythonCommand    = "greeter.python-test"
 	trajectoryGoGreetCommand   = "greeter.go-test-greet"
 	trajectoryFarewellCommand  = "greeter.go-test-farewell"
@@ -352,29 +350,9 @@ func trajectoryVocabulary() map[string]any {
 		"artifactKinds": []any{"log"}, "credentialClasses": []any{"none"},
 		"environmentClasses":            []any{"local-go", "local-python"},
 		"environmentClassPolicies":      []any{policy("local-go"), policy("local-python")},
-		"parallelGroups":                []any{trajectoryNativeGroup},
+		"parallelGroups":                []any{"greeter.native"},
 		"nonCacheableCredentialClasses": []any{}, "maxTimeoutMs": json.Number("60000"),
 	}
-}
-
-// trajectorySeparatedVocabulary adds the group of the migrated Go empty-name
-// witness. It and the Go farewell witness both write the Go build cache, so
-// they must not share a parallel group.
-func trajectorySeparatedVocabulary() map[string]any {
-	vocabulary := trajectoryVocabulary()
-	vocabulary["parallelGroups"] = []any{trajectoryNativeGroup, trajectoryEmptyNameGroup}
-	return vocabulary
-}
-
-// trajectoryCacheWrites names the cache a native command writes when a
-// consumer runs it: unittest writes Python bytecode beside the imported
-// modules, and go test always writes the Go build cache. The scheduler guide
-// admits neither as sideEffectClass none, which means no write at all.
-func trajectoryCacheWrites(edge trajectoryEdge) []any {
-	if edge.Environment == "local-python" {
-		return []any{"greeter.python-bytecode"}
-	}
-	return []any{"go.build-cache"}
 }
 
 func trajectoryPolicies(spec trajectorySpec) []any {
@@ -386,8 +364,8 @@ func trajectoryPolicies(spec trajectorySpec) []any {
 		}
 		policies = append(policies, map[string]any{
 			"commandId": edge.CommandID, "inputSelectors": inputSelectors,
-			"outputSelectors": []any{}, "resourceReads": []any{}, "resourceWrites": trajectoryCacheWrites(edge), "exclusiveLocks": []any{},
-			"sideEffectClass": "local_write", "deterministicOutput": true, "cacheAdmissionRefs": []any{},
+			"outputSelectors": []any{}, "resourceReads": []any{}, "resourceWrites": []any{}, "exclusiveLocks": []any{},
+			"sideEffectClass": "none", "deterministicOutput": true, "cacheAdmissionRefs": []any{},
 			"retryPolicy":        map[string]any{"kind": "none", "maxAttempts": json.Number("1")},
 			"cancellationPolicy": map[string]any{"kind": "cooperative", "graceMs": json.Number("1000")},
 			"timeoutPolicy":      map[string]any{"kind": "bounded", "timeoutMs": json.Number("60000")},

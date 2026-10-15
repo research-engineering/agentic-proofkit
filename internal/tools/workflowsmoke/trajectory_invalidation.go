@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
@@ -49,7 +47,7 @@ func (t *trajectory) rejectUnexecutedEvidence(state *trajectoryState) error {
 	}}); err != nil {
 		return err
 	}
-	notRun, err := t.receipt("greeter.receipt.empty-name.not-run", "not_run", state.nodeDigests, subjects)
+	notRun, err := t.receipt("greeter.receipt.empty-name.not-run", "not_run", subjects)
 	if err != nil {
 		return err
 	}
@@ -65,7 +63,7 @@ func (t *trajectory) rejectUnexecutedEvidence(state *trajectoryState) error {
 	}
 	// A failed run relabelled as passed inside its admission report must not
 	// survive the bundle's recomputation of the child report.
-	failedRun, err := t.receipt("greeter.receipt.empty-name.failed", "failed", state.nodeDigests, subjects)
+	failedRun, err := t.receipt("greeter.receipt.empty-name.failed", "failed", subjects)
 	if err != nil {
 		return err
 	}
@@ -406,7 +404,7 @@ func (t *trajectory) reaffirm(state *trajectoryState, label, requirementID, rece
 	if err != nil {
 		return err
 	}
-	receipt, err := t.receipt(receiptID, "passed", state.nodeDigests, subjects)
+	receipt, err := t.receipt(receiptID, "passed", subjects)
 	if err != nil {
 		return err
 	}
@@ -568,18 +566,12 @@ func (t *trajectory) migrate(state *trajectoryState) error {
 		return err
 	}
 	state.spec = migrated
-	previous := state.nodeDigests
 	var err error
-	if state.scheduler, state.nodeDigests, err = t.plannedScheduler(migrated, "migrated", []any{
+	if state.scheduler, err = t.plannedScheduler(migrated, "migrated", []any{
 		[]any{trajectoryFarewellCommand, []any{"go", "test", "./greeter", "-run", "TestFarewellNamesOnce"}},
 		[]any{trajectoryGoGreetCommand, []any{"go", "test", "./greeter", "-run", "TestGreetRejectsEmptyName"}},
 	}); err != nil {
 		return err
-	}
-	// The migration replaces the Python node by a Go node; the farewell node
-	// keeps its execution decision, so the scheduler reports it unchanged.
-	if _, kept := state.nodeDigests[trajectoryPythonCommand]; kept || state.nodeDigests[trajectoryFarewellCommand] != previous[trajectoryFarewellCommand] {
-		return fmt.Errorf("witness migration must replace only the Python node: before %v, after %v", previous, state.nodeDigests)
 	}
 	if state.context, err = t.capture("migration context"); err != nil {
 		return err
@@ -608,8 +600,7 @@ func (t *trajectory) migrate(state *trajectoryState) error {
 			return err
 		}
 	}
-	// Old-language execution evidence is not linked to the migrated binding;
-	// the unaffected farewell receipt still links to its unchanged node.
+	// Old-language execution evidence is not linked to the migrated binding.
 	report, _, err := t.link(state, "python evidence after migration", []any{}, 1, pythonReceipt, state.receipts[trajectoryFarewellID])
 	if err != nil {
 		return err
@@ -634,9 +625,6 @@ func (t *trajectory) migrate(state *trajectoryState) error {
 	if err := expect("go receipt", goReceipt, map[string]any{"/receiptKind": trajectoryGoGreetCommand, "/environmentClass": "local-go", "/witnessSelectors": []any{trajectoryEmptyScenario}}); err != nil {
 		return err
 	}
-	if err := t.rejectChangedNode(state); err != nil {
-		return err
-	}
 	// Replaying the Python receipt beside the Go receipt still fails linkage.
 	report, _, err = t.link(state, "python evidence replay", []any{}, 1, pythonReceipt, goReceipt, state.receipts[trajectoryFarewellID])
 	if err != nil {
@@ -651,48 +639,11 @@ func (t *trajectory) migrate(state *trajectoryState) error {
 	})
 }
 
-// rejectChangedNode edits one command of the admitted scheduler under the same
-// plan ID. The CLI reports a new node digest for that command only, and bundle
-// linkage refuses exactly the receipt recorded for the old node.
-func (t *trajectory) rejectChangedNode(state *trajectoryState) error {
-	edited := maps.Clone(state.scheduler)
-	commands := []any{}
-	for _, raw := range state.scheduler["commands"].([]any) {
-		command := raw.(map[string]any)
-		if command["id"] == trajectoryFarewellCommand {
-			command = maps.Clone(command)
-			command["argv"] = append(slices.Clone(command["argv"].([]any)), "-count=1")
-		}
-		commands = append(commands, command)
-	}
-	edited["commands"] = commands
-	nodeDigests, err := t.scheduleNodes("edited farewell command", edited)
-	if err != nil {
-		return err
-	}
-	if nodeDigests[trajectoryFarewellCommand] == state.nodeDigests[trajectoryFarewellCommand] || nodeDigests[trajectoryGoGreetCommand] != state.nodeDigests[trajectoryGoGreetCommand] {
-		return fmt.Errorf("edited farewell command must change exactly the farewell node digest")
-	}
-	changed := *state
-	changed.scheduler = edited
-	farewell := state.receipts[trajectoryFarewellID]
-	report, _, err := t.link(&changed, "edited farewell command", []any{}, 1, state.receipts[trajectoryEmptyNameID], farewell)
-	if err != nil {
-		return err
-	}
-	return expect("edited farewell command", failedRuleMessages(report), map[string]any{"": []any{trajectoryNodeFailure(farewell["receiptId"].(string), trajectoryFarewellCommand)}})
-}
-
 func trajectoryPythonLinkFailures(receiptID string) []any {
 	return []any{
-		trajectoryNodeFailure(receiptID, trajectoryPythonCommand),
 		"receipt " + receiptID + " receiptKind " + trajectoryPythonCommand + " does not cover witness selector " + trajectoryEmptyScenario,
 		"receipt " + receiptID + " receiptKind must match a requirement binding command id",
 	}
-}
-
-func trajectoryNodeFailure(receiptID, commandID string) string {
-	return "receipt " + receiptID + " proofNodeDigest does not match witness scheduler plan node " + commandID
 }
 
 func (t *trajectory) repair(state *trajectoryState) error {

@@ -36,20 +36,14 @@ func TestAdmissionRecordStructuresConserveIdentityAndRetirePredecessors(t *testi
 		published[definition["definitionId"].(string)] = definition
 	}
 	for _, row := range admissionRecordOwners {
-		contractVersion, semanticVersion := "v1", uint(0)
 		id := "proofkit." + row.command + "." + row.direction + ".v1.json-schema"
 		predecessor := "proofkit." + row.command + "." + row.direction + ".v1.root-shape"
-		if row.command == "spec-proof-bundle-admission" && row.direction == "input" {
-			// Version 2 links receipts by plan node digest; the wire stays version 1.
-			contractVersion, semanticVersion = "v2", 2
-			id, predecessor = "proofkit.spec-proof-bundle-admission.input.v2.json-schema", "proofkit.spec-proof-bundle-admission.input.v1.json-schema"
-		}
 		owner, ok := nativeStructureOwner(id)
 		if !ok || owner.direction != row.direction || !slices.Equal(owner.commands, []string{row.command}) || !slices.Equal(owner.predecessors, []string{predecessor}) {
 			t.Fatalf("wrong native owner binding: %s", id)
 		}
 		if owner.optionalInputVersion != (row.command == "repo-profile-admission" && row.direction == "input") ||
-			owner.semanticVersion != semanticVersion || owner.aggregateVersion != "" || owner.wireVersion != "" || owner.outOfBandVersion != "" || len(owner.variants) != 0 {
+			owner.semanticVersion != 0 || owner.aggregateVersion != "" || owner.wireVersion != "" || owner.outOfBandVersion != "" || len(owner.variants) != 0 {
 			t.Fatalf("version authority drifted: %s", id)
 		}
 		definition, err := owner.definition()
@@ -60,7 +54,7 @@ func TestAdmissionRecordStructuresConserveIdentityAndRetirePredecessors(t *testi
 			t.Fatal(err)
 		}
 		version, err := owner.contractVersion(definition)
-		if err != nil || version != json.Number("1") || owner.contractID(row.command, version) != "proofkit."+row.command+"."+row.direction+"."+contractVersion {
+		if err != nil || version != json.Number("1") || owner.contractID(row.command, version) != "proofkit."+row.command+"."+row.direction+".v1" {
 			t.Fatalf("contract identity drifted: %s %s %v", id, version, err)
 		}
 		variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
@@ -75,7 +69,7 @@ func TestAdmissionRecordStructuresConserveIdentityAndRetirePredecessors(t *testi
 		}
 		binding := commandAt(contract, row.command)[row.direction+"Contract"].(map[string]any)
 		if binding["rootDefinitionRef"] != id || binding["rootDefinitionDigest"] != definition["canonicalDigest"] ||
-			binding["contractId"] != "proofkit."+row.command+"."+row.direction+"."+contractVersion || binding["schemaVersion"] != json.Number("1") {
+			binding["contractId"] != "proofkit."+row.command+"."+row.direction+".v1" || binding["schemaVersion"] != json.Number("1") {
 			t.Fatalf("published consumer binding drifted: %s", id)
 		}
 		canonicalPublished, err := canonicalJSON(published[id])

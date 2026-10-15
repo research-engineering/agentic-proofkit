@@ -2,10 +2,8 @@ package requirementcontext
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"sort"
 
@@ -53,7 +51,7 @@ func Compose(repoRoot string, raw any) (map[string]any, error) {
 	sources := make([]Source, 0, len(entries))
 	totalBytes := 0
 	for _, entry := range entries {
-		value, content, currentDigest, err := readCatalogSource(root, entry)
+		value, content, currentDigest, err := readCatalogSource(root, entry.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -272,14 +270,10 @@ func admitCatalogEntry(raw any, kind, defaultRef string) (catalogSource, error) 
 // admission; it is nil outside tests.
 var sourceAdmissionBarrier func(path string)
 
-func readCatalogSource(root *os.Root, entry catalogSource) (any, []byte, string, error) {
-	path := entry.Path
+func readCatalogSource(root *os.Root, path string) (any, []byte, string, error) {
 	info, err := root.Lstat(path)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil, "", fmt.Errorf("requirement context %s source %s does not exist%s", entry.Kind, path, missingSourceStep(entry.Kind))
-	}
 	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return nil, nil, "", fmt.Errorf("requirement context %s source %s must be a regular non-symlink file", entry.Kind, path)
+		return nil, nil, "", fmt.Errorf("requirement context source must be a regular non-symlink file")
 	}
 	if sourceAdmissionBarrier != nil {
 		sourceAdmissionBarrier(path)
@@ -306,19 +300,6 @@ func readCatalogSource(root *os.Root, entry catalogSource) (any, []byte, string,
 		return nil, nil, "", err
 	}
 	return value, content, digest.SHA256BytesRef(content), nil
-}
-
-// missingSourceStep names the step that creates a missing catalog file. No
-// command writes the specification tree, so its step is the caller's.
-func missingSourceStep(kind string) string {
-	switch kind {
-	case "spec_tree":
-		return "; validate the tree with requirement-spec-tree, then persist that same input there (requirement-context-compose --help); no command creates it"
-	case "coverage":
-		return "; persist the requirement-coverage-input-compose output there"
-	default:
-		return "; adopt materialize apply writes it (adopt materialize plan --help)"
-	}
 }
 
 func expectedDigestCoverage(sources []Source) string {

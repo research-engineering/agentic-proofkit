@@ -9,7 +9,7 @@ import (
 // InputGuide connects a reviewed binding record to declared scheduling policy
 // without executing, selecting or discovering native witnesses.
 func InputGuide(renderer cliexec.Renderer) string {
-	return strings.NewReplacer("{{cli}}", renderer.DisplayCommand(), "{{sideEffectClasses}}", strings.Join(sideEffectClasses, ", ")).Replace(inputGuide)
+	return strings.ReplaceAll(inputGuide, "{{cli}}", renderer.DisplayCommand())
 }
 
 const inputGuide = `Witness scheduler input guide:
@@ -25,26 +25,14 @@ const inputGuide = `Witness scheduler input guide:
   {{cli}} witness-plan --input <projection-input>
   The projection needs exactly one parallelGroup, and each binding environment
   class needs a policy allowing network none, credential none and cache disabled.
-  It is conservative: environment inherit none with an empty allowlist passes
-  no variable, not even PATH or HOME, so e.g. go test cannot run it literally.
-  When the owner approves variables or separate groups, copy its commands,
-  change only environment (inherit allowlist, sorted names) or parallelGroup
-  (also listed in vocabulary.parallelGroups), and admit that explicit catalog
-  with the same witness-plan command as {"schemaVersion":1,"commands":...,
-  "vocabulary":...}. Copy admitted commands unchanged below; never edit argv.
+  Copy its commands array unchanged into commands below; do not edit argv.
 
   Add exactly one policies row per command, ordered like commands. Replace
-  commandId, inputSelectors (sorted repository-relative paths the command
-  reads) and sideEffectClass with reviewed facts. sideEffectClass is one of:
-    {{sideEffectClasses}}
-  none requires empty exclusiveLocks and resourceWrites and means no write at
-  all (caches and bytecode included); admission cannot observe other writes.
-  Commands of one parallelGroup may run concurrently, so two writers of one
-  resource or lock collide: give them separate groups, run one after another,
-  in an explicit catalog; renaming the resource only misdeclares it. Keep
-  retry kind none unless the owner approves idempotent retries. Every
-  nonClaims list must be nonempty and sorted. Never insert secrets or local
-  credentials.
+  commandId and inputSelectors (sorted repository-relative paths the command
+  reads) with reviewed facts. sideEffectClass none requires empty resourceWrites,
+  outputSelectors and exclusiveLocks; select another class for writers. Keep
+  retry kind none unless the owner approves idempotent retries. Every nonClaims
+  list must be nonempty and sorted. Never insert secrets or local credentials.
 
 Scheduler template (required null operands deliberately reject admission):
 ` + "```json" + `
@@ -68,7 +56,7 @@ Scheduler template (required null operands deliberately reject admission):
     "resourceReads": [],
     "resourceWrites": [],
     "exclusiveLocks": [],
-    "sideEffectClass": null,
+    "sideEffectClass": "none",
     "deterministicOutput": true,
     "cacheAdmissionRefs": [],
     "retryPolicy": {"kind": "none", "maxAttempts": 1},
@@ -82,18 +70,8 @@ Scheduler template (required null operands deliberately reject admission):
 
   {{cli}} witness-scheduler-plan --input <scheduler-input>
   Require exit 0 and state passed; a failed report names the violated policy.
-  Use this exact input as witnessPlan in spec-proof-bundle-admission. Record
-  its schedulerPlanId as each receipt's proofPlanId and, as its
-  proofNodeDigest, the report's proofNodeDigests row for the receipt's
-  command (receiptKind). A node digest covers exactly what decides how that
-  command runs: its admitted command record, its policy without nonClaims and
-  the vocabulary rows of the names it references (the policy rows of its
-  environment classes and whether its credential class is non-cacheable).
-  nonClaims, unreferenced vocabulary rows, maxTimeoutMs and other commands,
-  including group co-members, are excluded.
-  A receipt links only while its command's node digest is unchanged, so an
-  edit to one command unlinks only that command's receipts; rerun that
-  witness. Changing a binding command requires a new projection and plan. A
-  passed plan is declared policy only:
+  Use this exact input as witnessPlan in spec-proof-bundle-admission and its
+  schedulerPlanId as each receipt proofPlanId. Changing a binding command
+  requires a new projection and plan. A passed plan is declared policy only:
   it is not execution, currentness, producer trust or merge evidence.
 `
