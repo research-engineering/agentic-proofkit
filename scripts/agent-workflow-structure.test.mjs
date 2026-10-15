@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {assertCLITransport} from './cli-process.mjs';
 import {stableJSONStringify} from './stable-json.mjs';
 
 // Independent oracle for agent-route, change-workflow-plan and
@@ -67,7 +68,7 @@ function run(args, input, {env = pathLauncher, cwd} = {}) {
     input: input === undefined ? undefined : typeof input === 'string' ? input : JSON.stringify(input),
     encoding: 'utf8', timeout: 20000, maxBuffer: 16 << 20, env: {...process.env, ...env}, cwd,
   });
-  assert.equal(result.error, undefined); assert.equal(result.signal, null);
+  assertCLITransport(result);
   return result;
 }
 function emitted(result, status) {

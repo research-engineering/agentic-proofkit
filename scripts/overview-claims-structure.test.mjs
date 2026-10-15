@@ -6,6 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {assertCLITransport} from "./cli-process.mjs";
 
 const root = new URL("../", import.meta.url), command = "spec-overview-claims";
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_OVERVIEW_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -44,7 +45,7 @@ after(() => {if (directory) rmSync(directory, {recursive: true, force: true});})
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 function invoke(input, argv = [command, "--input", "-"]) {
   const result = spawnSync(binary, argv, {input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
-  assert.equal(result.error, undefined); assert.equal(result.signal, null); return result;
+  return assertCLITransport(result);
 }
 function reportSemantics(input, output) {
   const claims = input.claims, known = new Set(input.requirementIds), pathFailures = [], citationFailures = [];
