@@ -456,7 +456,7 @@ func TestMarkdownEscapesCommandCodeSpans(t *testing.T) {
 			t.Fatalf("Markdown() output contains unescaped markup %q:\n%s", forbidden, output)
 		}
 	}
-	if !strings.Contains(output, "``go test ./`pkg```") {
+	if !strings.Contains(output, "- `` go test ./`pkg` ``\n") {
 		t.Fatalf("Markdown() output missing widened code span:\n%s", output)
 	}
 }

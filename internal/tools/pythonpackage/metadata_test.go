@@ -702,3 +702,22 @@ func withWorkingDirectory(t *testing.T, root string, fn func()) {
 	}()
 	fn()
 }
+
+func TestMaterializeAdmittedWheelWritesAdmittedBytesToPrivatePath(t *testing.T) {
+	consumer := t.TempDir()
+	admitted := []byte("admitted wheel bytes")
+	path, err := materializeAdmittedWheel(consumer, "agentic_proofkit-1.2.3-py3-none-any.whl", admitted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Dir(filepath.Dir(path)) != consumer || filepath.Base(path) != "agentic_proofkit-1.2.3-py3-none-any.whl" {
+		t.Fatalf("materialized wheel path %q is not a private consumer path with the wheel filename", path)
+	}
+	content, err := os.ReadFile(path)
+	if err != nil || string(content) != string(admitted) {
+		t.Fatalf("materialized wheel = %q, %v; want admitted bytes", content, err)
+	}
+	if _, err := materializeAdmittedWheel(consumer, "../escape.whl", admitted); err == nil {
+		t.Fatal("materializeAdmittedWheel accepted a path-bearing filename")
+	}
+}

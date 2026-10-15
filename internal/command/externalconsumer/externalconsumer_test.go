@@ -632,10 +632,61 @@ func validExternalRegistryReleaseAuthorityInput(version string, tarballPath stri
 	}
 }
 
+// currentPackagePaths mirrors the root entries the npm package ships under
+// package.json "files"; it is written independently of requiredPackedFiles so
+// admission is checked against the package owner rather than against itself.
+var currentPackagePaths = []string{
+	"ADOPTION.md",
+	"LICENSE",
+	"NON_CLAIMS.md",
+	"README.md",
+	"SECURITY.md",
+	"dist/agentic-proofkit",
+	"docs/images/workspace.png",
+	"docs/proofkit-contract-map.md",
+	"docs/release-process.md",
+	"package.json",
+	"proofkit/cli-contract.v2.json",
+	"proofkit/command-families.v1.json",
+	"proofkit/receipt-producer-policy.json",
+	"proofkit/requirement-bindings.json",
+	"proofkit/witness-plan.json",
+}
+
 func packedFileRecords() []any {
-	records := make([]any, 0, len(requiredPackedFiles))
-	for _, path := range requiredPackedFiles {
-		records = append(records, map[string]any{"path": path})
+	return packedFileRecordsExcept("")
+}
+
+func packedFileRecordsExcept(omitted string) []any {
+	records := make([]any, 0, len(currentPackagePaths))
+	for _, path := range currentPackagePaths {
+		if path != omitted {
+			records = append(records, map[string]any{"path": path})
+		}
 	}
 	return records
+}
+
+func TestBuildAdmitsCurrentPackageFilesAndRequiresRuntimeAssets(t *testing.T) {
+	record, exitCode, err := Build(validExternalConsumerInput(t))
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
+	encoded, _ := json.Marshal(record)
+	if exitCode != 0 || record.State != "passed" {
+		t.Fatalf("Build() rejected current package contents without contributor governance files: exit=%d record=%s", exitCode, string(encoded))
+	}
+	for _, required := range []string{"dist/agentic-proofkit", "proofkit/cli-contract.v2.json", "LICENSE"} {
+		input := validExternalConsumerInput(t)
+		packRecord := input["evidence"].(map[string]any)["packMetadata"].(map[string]any)["records"].([]any)[0].(map[string]any)
+		packRecord["files"] = packedFileRecordsExcept(required)
+		record, exitCode, err := Build(input)
+		if err != nil {
+			t.Fatalf("Build() without %s error=%v", required, err)
+		}
+		encoded, _ := json.Marshal(record)
+		if exitCode == 0 || !strings.Contains(string(encoded), "npm pack metadata missing required packed file: "+required) {
+			t.Fatalf("Build() admitted pack metadata without %s: exit=%d record=%s", required, exitCode, string(encoded))
+		}
+	}
 }

@@ -60,6 +60,7 @@
     "internal/command/requirementcoverageview/output_structure.go",
     "internal/command/requirementcoverageview/output_test_projection.go",
     "internal/command/requirementcoverageview/projection.go",
+    "internal/command/requirementcoverageview/render.go",
     "internal/command/requirementcoverageview/requirementcoverageview.go",
     "internal/command/requirementcoverageview/types.go",
     "internal/command/requirementdiff/input_structure.go",

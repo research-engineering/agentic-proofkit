@@ -33,9 +33,9 @@ var (
 	decimalTextPattern = regexp.MustCompile(`^\d+$`)
 )
 
+// requiredPackedFiles is a subset of the package owner's shipped root entries;
+// contributor-only governance routes are excluded from the npm artifact.
 var requiredPackedFiles = []string{
-	"AGENTS.md",
-	"CONTRIBUTING.md",
 	"LICENSE",
 	"NON_CLAIMS.md",
 	"README.md",

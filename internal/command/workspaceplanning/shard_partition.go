@@ -2,6 +2,7 @@ package workspaceplanning
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
@@ -31,7 +32,8 @@ func buildShardPartition(input shardInput) map[string]any {
 	seenRoots := map[string]struct{}{}
 	seenExecutions := map[string]struct{}{}
 	failures := []string{}
-	if _, err := nodeMap(input.Packages); err != nil {
+	packagesByName, err := nodeMap(input.Packages)
+	if err != nil {
 		failures = append(failures, err.Error())
 	}
 	if duplicate := firstDuplicate(rootNames); duplicate != "" {
@@ -60,6 +62,12 @@ func buildShardPartition(input shardInput) map[string]any {
 			}
 			if _, ok := closureNames[target.Name]; !ok {
 				failures = append(failures, fmt.Sprintf("shard %d dependency closure omits owned package %s", index, target.Name))
+			}
+			// Closure traversal starts from the root record, so its edges must be
+			// the package record's edges or catalog dependencies silently vanish.
+			// A failed closure already rejects the shard with its own diagnostic.
+			if catalog, ok := packagesByName[target.Name]; ok && len(closureFailures) == 0 && !slices.Equal(catalog.WorkspaceDependencies, target.WorkspaceDependencies) {
+				failures = append(failures, fmt.Sprintf("root package %s workspaceDependencies must match its packages record", target.Name))
 			}
 			seenRoots[target.Name] = struct{}{}
 		}

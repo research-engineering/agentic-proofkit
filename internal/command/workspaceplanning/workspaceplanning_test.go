@@ -171,3 +171,29 @@ func validShardPartitionInput() map[string]any {
 		"packages":      []any{map[string]any{"name": "alpha", "workspaceDependencies": []any{}}},
 	}
 }
+
+func TestShardPartitionRejectsRootDependenciesThatContradictPackages(t *testing.T) {
+	input := validShardPartitionInput()
+	input["packages"] = []any{
+		map[string]any{"name": "alpha", "workspaceDependencies": []any{"beta"}},
+		map[string]any{"name": "beta", "workspaceDependencies": []any{}},
+	}
+	partition, exitCode, err := BuildShardPartition(input)
+	if err != nil {
+		t.Fatalf("BuildShardPartition() error=%v", err)
+	}
+	failures := partition["failures"].([]any)
+	if exitCode != 1 || len(failures) != 1 || failures[0] != "root package alpha workspaceDependencies must match its packages record" {
+		t.Fatalf("BuildShardPartition() accepted a root that omits catalog dependency beta: exit=%d failures=%#v", exitCode, failures)
+	}
+
+	input["roots"].([]any)[0].(map[string]any)["workspaceDependencies"] = []any{"beta"}
+	partition, exitCode, err = BuildShardPartition(input)
+	if err != nil || exitCode != 0 {
+		t.Fatalf("BuildShardPartition() consistent root exit=%d err=%v partition=%#v", exitCode, err, partition)
+	}
+	closure := partition["shards"].([]any)[0].(map[string]any)["dependencyClosurePackageNames"]
+	if !reflect.DeepEqual(closure, []any{"beta", "alpha"}) {
+		t.Fatalf("dependencyClosurePackageNames=%#v, want [beta alpha]", closure)
+	}
+}

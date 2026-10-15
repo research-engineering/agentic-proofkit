@@ -7,6 +7,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/compactfixture"
 )
@@ -382,4 +383,59 @@ func validPilotInputWith(set func(map[string]any, any), value any) map[string]an
 	input["cacheNegativeChecks"] = validCacheNegativeChecks()
 	set(input, value)
 	return input
+}
+
+func TestBuildRejectsDuplicateCustomRuleIDsRegardlessOfPosition(t *testing.T) {
+	withRules := func(ids ...string) map[string]any {
+		input := validPilotInput()
+		budget := input["infrastructureBudget"].(map[string]any)
+		rules := []any{}
+		for index, id := range ids {
+			rules = append(rules, map[string]any{
+				"downgradeGenericFailures": false,
+				"owner":                    "proofkit.owner." + string(rune('a'+index)),
+				"purpose":                  "Custom rule purpose.",
+				"ruleId":                   id,
+			})
+		}
+		count := json.Number(string(rune('0' + len(ids))))
+		budget["customRules"], budget["customRuleCount"], budget["maxCustomRuleCount"] = rules, count, count
+		return input
+	}
+	for _, ids := range [][]string{
+		{"proofkit.custom.a", "proofkit.custom.a", "proofkit.custom.b"},
+		{"proofkit.custom.a", "proofkit.custom.b", "proofkit.custom.a"},
+	} {
+		record, exitCode, err := Build(withRules(ids...), Options{})
+		if err != nil {
+			t.Fatalf("Build(%v) error=%v", ids, err)
+		}
+		encoded, _ := json.Marshal(record)
+		if exitCode != 1 || record.State != "failed" || !strings.Contains(string(encoded), "custom rule ruleId must be sorted and unique") {
+			t.Fatalf("Build(%v) admitted duplicate custom rule IDs: exit=%d record=%s", ids, exitCode, encoded)
+		}
+	}
+	for _, ids := range [][]string{{}, {"proofkit.custom.a", "proofkit.custom.b"}, {"proofkit.custom.b", "proofkit.custom.a"}} {
+		record, exitCode, err := Build(withRules(ids...), Options{})
+		if err != nil || exitCode != 0 || record.State != "passed" {
+			t.Fatalf("Build(%v) rejected unique custom rule IDs: exit=%d err=%v", ids, exitCode, err)
+		}
+		rules := diagnosticValue(t, record, "customRules").([]any)
+		for index, id := range ids {
+			if rules[index].(map[string]any)["ruleId"] != id {
+				t.Fatalf("Build(%v) reordered custom rule diagnostics: %#v", ids, rules)
+			}
+		}
+	}
+}
+
+func diagnosticValue(t *testing.T, record report.Record, key string) any {
+	t.Helper()
+	for _, diagnostic := range record.Diagnostics {
+		if diagnostic.Key == key {
+			return diagnostic.Value
+		}
+	}
+	t.Fatalf("missing diagnostic %s", key)
+	return nil
 }

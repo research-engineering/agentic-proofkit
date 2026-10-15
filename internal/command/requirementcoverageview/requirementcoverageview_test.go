@@ -1907,3 +1907,49 @@ func stringArrayContains(raw any, want string) bool {
 	}
 	return false
 }
+
+func TestCompactRenderingsShowDeclaredWitnessRoutes(t *testing.T) {
+	input := validCoverageInput(t)
+	record := input.(map[string]any)
+	record["requirementProofBinding"] = nil
+	record["compactProofContract"] = validCompactCoverageContract()
+	record["localEnvironmentPolicy"] = map[string]any{
+		"authority":               "caller_provided",
+		"localEnvironmentClasses": []any{"local-go"},
+	}
+	inventoryEntry(input)["witnessRefs"] = []any{}
+	const selectorPrefix = "internal/command/requirementcoverageview/requirementcoverageview_test.go::"
+	positive := selectorPrefix + "positive.proofkit_coverage_scenario"
+	falsification := selectorPrefix + "falsification.proofkit_coverage_scenario"
+
+	md, _, err := BuildMarkdown(input)
+	if err != nil {
+		t.Fatalf("BuildMarkdown(compact) error = %v", err)
+	}
+	wantLine := "- Declared witness routes: falsification `" + falsification + "`, positive `" + positive + "`\n"
+	if !strings.Contains(md, wantLine) {
+		t.Fatalf("compact Markdown does not show declared witness routes %q:\n%s", wantLine, md)
+	}
+	if strings.Contains(md, "Witness selectors: none") || strings.Contains(md, "- Witnesses: none") {
+		t.Fatalf("compact Markdown reports absent structured witness fields as none:\n%s", md)
+	}
+
+	html, _, err := BuildHTML(input)
+	if err != nil {
+		t.Fatalf("BuildHTML(compact) error = %v", err)
+	}
+	for _, want := range []string{
+		"<dt>Declared witness routes</dt>",
+		"<dt>falsification</dt><dd><code>" + falsification + "</code></dd>",
+		"<dt>positive</dt><dd><code>" + positive + "</code></dd>",
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("compact HTML missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{"<dt>Witness</dt><dd></dd>", "<dt>Witness kind</dt><dd></dd>", "<dt>Witness selectors</dt><dd>none</dd>"} {
+		if strings.Contains(html, forbidden) {
+			t.Fatalf("compact HTML renders absent structured field %q", forbidden)
+		}
+	}
+}

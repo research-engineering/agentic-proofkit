@@ -253,8 +253,9 @@ jobs:
           git merge-base --is-ancestor "$release_commit" "origin/main"
           if [ "$REQUIRE_VERIFIED_TAG" = "true" ]; then
             test "${GITHUB_REF_PROTECTED}" = "true"
-            curl --fail --silent --show-error \
-              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            # printf is a shell builtin: the token reaches curl on stdin (-H @-), never in argv.
+            printf 'Authorization: Bearer %s\n' "$GITHUB_TOKEN" | curl --fail --silent --show-error \
+              -H @- \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               "${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}" \
@@ -262,8 +263,8 @@ jobs:
             tag_sha="$(python3 -c 'import json; data=json.load(open("/tmp/proofkit-tag-ref.json", encoding="utf-8")); print(data["object"]["sha"])')"
             tag_type="$(python3 -c 'import json; data=json.load(open("/tmp/proofkit-tag-ref.json", encoding="utf-8")); print(data["object"]["type"])')"
             test "$tag_type" = "tag"
-            curl --fail --silent --show-error \
-              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            printf 'Authorization: Bearer %s\n' "$GITHUB_TOKEN" | curl --fail --silent --show-error \
+              -H @- \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               "${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY}/git/tags/${tag_sha}" \

@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 )
 
 type candidate struct {
@@ -44,7 +45,7 @@ var defaultScanPolicy = scanPolicy{
 }
 
 func Scan(ctx context.Context, repositoryRoot string) (Snapshot, error) {
-	return scanForPlatform(ctx, repositoryRoot, runtime.GOOS, os.OpenRoot)
+	return scanForPlatform(ctx, repositoryRoot, runtime.GOOS, rootpath.OpenDirectoryRoot)
 }
 
 func scanForPlatform(ctx context.Context, repositoryRoot, goos string, openRoot repositoryRootOpener) (Snapshot, error) {

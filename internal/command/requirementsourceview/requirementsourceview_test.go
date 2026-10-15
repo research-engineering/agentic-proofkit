@@ -94,13 +94,14 @@ func TestBuildMarkdownEscapesCallerControlledText(t *testing.T) {
 	if strings.Contains(output, "`docs/contracts/\\`") {
 		t.Fatalf("Markdown output uses unsafe backslash-escaped code span: %s", output)
 	}
-	if !strings.Contains(output, "``docs/contracts/`&lt;img src=x onerror=alert(1)&gt;`.json``") {
-		t.Fatalf("Markdown output did not use a longer code-span delimiter: %s", output)
+	// Code spans cannot escape '<', so these paths render as escaped inline text.
+	if !strings.Contains(output, "- Proof bindings: docs/contracts/\\`&lt;img src=x onerror=alert\\(1\\)&gt;\\`\\.json\n") {
+		t.Fatalf("Markdown output did not render the caller-controlled binding path literally: %s", output)
 	}
 	for _, want := range []string{
-		"``docs/specs/proofkit-`&lt;img src=x onerror=alert(1)&gt;```",
-		"``docs/specs/proofkit-`&lt;img src=x onerror=alert(1)&gt;`/overview.md``",
-		"``docs/specs/proofkit-`&lt;img src=x onerror=alert(1)&gt;`/requirements.v2.json``",
+		"Spec package: docs/specs/proofkit\\-\\`&lt;img src=x onerror=alert\\(1\\)&gt;\\`\n",
+		"Overview: docs/specs/proofkit\\-\\`&lt;img src=x onerror=alert\\(1\\)&gt;\\`/overview\\.md\n",
+		"Requirements source: docs/specs/proofkit\\-\\`&lt;img src=x onerror=alert\\(1\\)&gt;\\`/requirements\\.v2\\.json\n",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("Markdown output did not safely render caller-controlled path %q: %s", want, output)

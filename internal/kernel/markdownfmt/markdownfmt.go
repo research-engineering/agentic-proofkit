@@ -11,10 +11,43 @@ func htmlText(value string) string {
 	return replacer.Replace(value)
 }
 
+// CodeSpan renders value literally. CommonMark code spans cannot escape '<',
+// '>' or '&', and Markdown output never emits those bytes raw, so such values
+// (and the empty value, which has no code-span form) become escaped inline text.
+// Line endings become spaces, as CommonMark code spans already render them.
 func CodeSpan(value string) string {
+	value = lineEndings.Replace(value)
+	if value == "" || strings.ContainsAny(value, "<>&") {
+		return literalText(value)
+	}
 	delimiter := strings.Repeat("`", longestBacktickRun(value)+1)
-	return delimiter + htmlText(value) + delimiter
+	if codeSpanStripsEdges(value) {
+		value = " " + value + " "
+	}
+	return delimiter + value + delimiter
 }
+
+var lineEndings = strings.NewReplacer("\r\n", " ", "\r", " ", "\n", " ")
+
+// codeSpanStripsEdges reports whether CommonMark would merge an edge backtick
+// into a delimiter or strip one edge space from each side of the content.
+func codeSpanStripsEdges(value string) bool {
+	if strings.HasPrefix(value, "`") || strings.HasSuffix(value, "`") {
+		return true
+	}
+	return strings.HasPrefix(value, " ") && strings.HasSuffix(value, " ") && strings.Trim(value, " ") != ""
+}
+
+// literalText escapes value as inline text; edge spaces and tabs become numeric
+// references because CommonMark strips them from the start and end of a line.
+func literalText(value string) string {
+	escaped := escapeMarkdownText(value)
+	rest := strings.TrimLeft(escaped, " \t")
+	core := strings.TrimRight(rest, " \t")
+	return edgeWhitespace.Replace(escaped[:len(escaped)-len(rest)]) + core + edgeWhitespace.Replace(rest[len(core):])
+}
+
+var edgeWhitespace = strings.NewReplacer(" ", "&#32;", "\t", "&#9;")
 
 func CodeListOrNone(values []string) string {
 	if len(values) == 0 {
@@ -49,7 +82,7 @@ func escapeMarkdownText(value string) string {
 	builder.Grow(len(value))
 	for _, char := range value {
 		switch char {
-		case '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '#', '+', '-', '.', '!', '|', '>':
+		case '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '#', '+', '-', '.', '!', '|', '>', '~':
 			builder.WriteRune('\\')
 		}
 		builder.WriteRune(char)

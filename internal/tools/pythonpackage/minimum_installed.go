@@ -81,7 +81,7 @@ func verifyMinimumInstalledPython() error {
 	if err != nil {
 		return err
 	}
-	if err := verifyWheelRecord(manifest, native, snapshot.Wheel); err != nil {
+	if _, err := verifyWheelRecord(manifest, native, snapshot.Wheel); err != nil {
 		return err
 	}
 	wheelPath := filepath.Join(root, "artifacts", "pypi", snapshot.Wheel.Filename)
