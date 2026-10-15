@@ -160,6 +160,21 @@ Connected request template (sourcePlan is the only runtime placeholder):
   "nonClaims": ["Synthetic template; review scope, intent and witnesses before materialization."]
 }
 ` + "```\n" + `
+Shared metadata profile (optional; for two or more members of one group):
+  Move metadata repeated by every member of a group into one root profiles
+  entry and set that group's profileId to its profileId. Each metadata field
+  has exactly one owner, the profile or every member, never both or neither;
+  a profile serving fewer than two members is rejected. With this entry,
+  each member's fields keep only nonClaims:
+  Profile entry:
+    {"profileId": "RPROF-REQUESTS", "fields": {
+      "ownerId": "example.backend", "claimLevel": "blocking", "riskClass": "high",
+      "lifecycle": {"state": "active"}, "deferral": null, "nonClaimRefs": [],
+      "externalNonClaimRefs": [], "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "updatePolicy": {"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "example.backend"}}}
+  Scenario records keep every array field, empty or not: one canonical source
+  representation, so omitted arrays are rejected rather than defaulted.
+
 Validate the completed packet (replace <packet> with its scratch file path):
   {{cli}} requirement-source-admission --input <packet> --input-pointer /requirementSources/0
   {{cli}} requirement-bindings --input <packet> --input-pointer /requirementProofBinding/record

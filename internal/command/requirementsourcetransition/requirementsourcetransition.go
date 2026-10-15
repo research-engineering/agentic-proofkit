@@ -13,7 +13,7 @@ import (
 const (
 	reportKind            = "proofkit.requirement-source-transition"
 	inputSchemaVersion    = 2
-	outputSchemaVersion   = 2
+	outputSchemaVersion   = 3
 	boundaryRuleID        = reportKind + ".boundary"
 	sourceRuleID          = reportKind + ".source-admission"
 	latticeRuleID         = reportKind + ".transition-lattice"
@@ -84,10 +84,10 @@ func Build(raw any) (report.Record, int, error) {
 		ReportID:      input.TransitionID,
 		State:         state,
 		Summary:       transitionResultSummary(previousResult, nextResult, failures),
-		Diagnostics: []report.Diagnostic{
+		Diagnostics: append([]report.Diagnostic{
 			{Key: "failures", Value: admit.StringSliceToAny(failures)},
 			{Key: "sourcePaths", Value: admit.StringSliceToAny(sourcePaths)},
-		},
+		}, affectedRequirementDiagnostics(previousResult, nextResult)...),
 		RuleResults: transitionRuleResults(sourceFailures, boundaryFailures, recordFailures),
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
@@ -134,13 +134,70 @@ func sourceBoundaryFailures(previous requirementsourcemodel.AssessmentSummary, n
 
 func transitionResultSummary(previous, next requirementsourceadmission.Result, failures []string) map[string]any {
 	if previous.ExitCode == 0 && next.ExitCode == 0 {
-		return transitionSummary(previous.Source, next.Source, failures)
+		delta := compareRequirementSets(previous.Source, next.Source)
+		return map[string]any{
+			"addedRequirementCount":            len(delta.added),
+			"failureCount":                     len(failures),
+			"lifecycleChangedRequirementCount": len(delta.lifecycleChanged),
+			"missingRequirementCount":          len(delta.missing),
+			"nextRequirementCount":             next.Source.RequirementCount(),
+			"previousRequirementCount":         previous.Source.RequirementCount(),
+		}
 	}
 	return map[string]any{
 		"addedRequirementCount": nil, "lifecycleChangedRequirementCount": nil, "missingRequirementCount": nil,
 		"nextRequirementCount": next.Summary.RequirementCount, "previousRequirementCount": previous.Summary.RequirementCount,
 		"failureCount": len(failures),
 	}
+}
+
+// affectedRequirementDiagnostics names the requirements behind each summary
+// count; like the counts, they are null when either snapshot is not admitted.
+func affectedRequirementDiagnostics(previous, next requirementsourceadmission.Result) []report.Diagnostic {
+	keys := []string{"addedRequirementIds", "lifecycleChangedRequirementIds", "missingRequirementIds"}
+	diagnostics := make([]report.Diagnostic, len(keys))
+	for index, key := range keys {
+		diagnostics[index] = report.Diagnostic{Key: key, Value: nil}
+	}
+	if previous.ExitCode != 0 || next.ExitCode != 0 {
+		return diagnostics
+	}
+	delta := compareRequirementSets(previous.Source, next.Source)
+	for index, ids := range [][]string{delta.added, delta.lifecycleChanged, delta.missing} {
+		diagnostics[index].Value = admit.StringSliceToAny(ids)
+	}
+	return diagnostics
+}
+
+type requirementSetDelta struct {
+	added            []string
+	lifecycleChanged []string
+	missing          []string
+}
+
+// compareRequirementSets owns the transition counts and their identities, so
+// each count equals the length of its sorted identity list.
+func compareRequirementSets(previous requirementsourceadmission.Source, next requirementsourceadmission.Source) requirementSetDelta {
+	previousByID := requirementMap(previous.Requirements())
+	nextByID := requirementMap(next.Requirements())
+	delta := requirementSetDelta{added: []string{}, lifecycleChanged: []string{}, missing: []string{}}
+	for _, nextRequirement := range next.Requirements() {
+		previousRequirement, ok := previousByID[nextRequirement.RequirementID]
+		if !ok {
+			delta.added = append(delta.added, nextRequirement.RequirementID)
+		} else if previousRequirement.Lifecycle.State != nextRequirement.Lifecycle.State {
+			delta.lifecycleChanged = append(delta.lifecycleChanged, nextRequirement.RequirementID)
+		}
+	}
+	for _, previousRequirement := range previous.Requirements() {
+		if _, ok := nextByID[previousRequirement.RequirementID]; !ok {
+			delta.missing = append(delta.missing, previousRequirement.RequirementID)
+		}
+	}
+	sort.Strings(delta.added)
+	sort.Strings(delta.lifecycleChanged)
+	sort.Strings(delta.missing)
+	return delta
 }
 
 func recordTransitionFailures(previous requirementsourceadmission.Source, next requirementsourceadmission.Source) []string {
@@ -226,40 +283,6 @@ func missingStableRefs(previousRefs []string, nextRefs []string, message string)
 		}
 	}
 	return missing
-}
-
-func transitionSummary(previous requirementsourceadmission.Source, next requirementsourceadmission.Source, failures []string) map[string]any {
-	previousByID := requirementMap(previous.Requirements())
-	addedRequirementCount := 0
-	lifecycleChangedRequirementCount := 0
-	for _, nextRequirement := range next.Requirements() {
-		previousRequirement, ok := previousByID[nextRequirement.RequirementID]
-		if !ok {
-			addedRequirementCount++
-			continue
-		}
-		if previousRequirement.Lifecycle.State != nextRequirement.Lifecycle.State {
-			lifecycleChangedRequirementCount++
-		}
-	}
-	nextIDs := map[string]struct{}{}
-	for _, requirement := range next.Requirements() {
-		nextIDs[requirement.RequirementID] = struct{}{}
-	}
-	missingRequirementCount := 0
-	for _, requirement := range previous.Requirements() {
-		if _, ok := nextIDs[requirement.RequirementID]; !ok {
-			missingRequirementCount++
-		}
-	}
-	return map[string]any{
-		"addedRequirementCount":            addedRequirementCount,
-		"failureCount":                     len(failures),
-		"lifecycleChangedRequirementCount": lifecycleChangedRequirementCount,
-		"missingRequirementCount":          missingRequirementCount,
-		"nextRequirementCount":             next.RequirementCount(),
-		"previousRequirementCount":         previous.RequirementCount(),
-	}
 }
 
 func transitionRuleResults(sourceFailures []string, boundaryFailures []string, recordFailures []string) []report.RuleResult {

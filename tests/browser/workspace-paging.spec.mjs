@@ -44,7 +44,7 @@ for (const view of ["diff", "graph"]) {
     expect(failedAttempts[1].body.snapshotId).toBe(failedAttempts[0].body.snapshotId);
     expect(failedAttempts[1].body.requestId).not.toBe(failedAttempts[0].body.requestId);
     if (view === "diff") {
-      await expect(page.locator("[data-diff-summary]")).toHaveText("Changes: 1; requirements: 1; risk changes: 1; lifecycle changes: 0.");
+      await expect(page.locator("[data-diff-summary]")).toHaveText("Changes: 1; requirements: 1; scenarios: 0; risk changes: 1; lifecycle changes: 0.");
       await expect(page.getByRole("list", {name: "Change classes on this page"})).toHaveText("scalar_changed: 1");
       await expect(page.locator("#workspace-content article > p").first()).toHaveText("/requirements/REQ-CONSUMER-001/riskClass");
       await page.getByText("Before and after", {exact: true}).click();

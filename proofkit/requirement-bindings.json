@@ -5763,6 +5763,33 @@
       "environmentClasses": ["local-go"]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-022",
+      "scenarioId": "proofkit.spec-proof-core.requirement-semantic-diff-scenario-entries",
+      "witnessId": "proofkit.requirement-semantic-diff.scenario-entries-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementdiff/scenario_changes_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildReportsScenarioLevelChanges",
+          "command": "go test ./internal/command/requirementdiff -run '^TestBuildReportsScenarioLevelChanges$'"
+        },
+        {
+          "selector": "TestBuildRepresentsChangesBetweenEmptyAndNonEmptyArrays",
+          "command": "go test ./internal/command/requirementdiff -run '^TestBuildRepresentsChangesBetweenEmptyAndNonEmptyArrays$'"
+        },
+        {
+          "selector": "TestScenarioComparisonFieldsCoverEveryScenarioField",
+          "command": "go test ./internal/command/requirementdiff -run '^TestScenarioComparisonFieldsCoverEveryScenarioField$'"
+        },
+        {
+          "selector": "TestScopedScenarioIdentityRoundTripsThroughOutputAdmission",
+          "command": "go test ./internal/command/requirementdiff -run '^TestScopedScenarioIdentityRoundTripsThroughOutputAdmission$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-023",
       "scenarioId": "proofkit.spec-proof-core.requirement-traceability-evidence-planes",
       "witnessId": "proofkit.requirement-traceability.evidence-plane-falsifier",

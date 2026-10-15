@@ -117,109 +117,133 @@ func documentShape(limits requirementsourcemodel.Limits) *shape {
 	})
 }
 
+// validateShape reports every independent shape fault in source order. A
+// faulty node is not descended into, so one fault never implies another.
 func validateShape(value any, expected *shape, path string, locations map[string]rawLocation, source []byte) error {
+	var problems diagnosticCollector
+	collectShapeFaults(value, expected, path, locations, &problems)
+	return problems.locatedErr(source)
+}
+
+func collectShapeFaults(value any, expected *shape, path string, locations map[string]rawLocation, problems *diagnosticCollector) {
+	if code := shapeNodeFault(value, expected, path, locations, problems); code != "" {
+		addShapeFault(problems, locations, code, path, path)
+	}
+}
+
+// shapeNodeFault returns the code of a fault at the node itself; faults in
+// its children are added to problems directly.
+func shapeNodeFault(value any, expected *shape, path string, locations map[string]rawLocation, problems *diagnosticCollector) string {
 	if value == nil {
 		if expected.nullable {
-			return nil
+			return ""
 		}
-		return shapeError(source, locations, "invalid_null", path)
+		return "invalid_null"
 	}
 	switch expected.kind {
 	case shapeObject:
 		record, ok := value.(map[string]any)
 		if !ok {
-			return shapeError(source, locations, "invalid_type", path)
+			return "invalid_type"
 		}
 		if expected.maxItems > 0 && len(record) > expected.maxItems {
-			return shapeError(source, locations, "collection_limit_exceeded", path)
+			return "collection_limit_exceeded"
 		}
 		if expected.dynamic != nil {
 			for _, key := range orderedRecordKeys(record, path, locations) {
 				childPath := joinPointer(path, key)
 				if _, ok := record[key].(string); !ok {
-					return shapeErrorAt(source, locations, "invalid_type", joinPointer(path, "<entry>"), childPath)
+					addShapeFault(problems, locations, "invalid_type", joinPointer(path, "<entry>"), childPath)
 				}
 			}
-			return nil
+			return ""
 		}
+		// A case-folded spelling already reports its canonical field.
+		misspelled := map[string]struct{}{}
 		for _, key := range orderedRecordKeys(record, path, locations) {
 			field, exists := expected.fields[key]
 			if !exists {
-				for canonical := range expected.fields {
-					if strings.EqualFold(key, canonical) {
-						return shapeErrorAt(source, locations, "noncanonical_field", joinPointer(path, canonical), joinPointer(path, key))
-					}
+				if canonical := addUnexpectedFieldFault(problems, expected, path, key, locations); canonical != "" {
+					misspelled[canonical] = struct{}{}
 				}
-				return shapeErrorAt(source, locations, "unknown_field", joinPointer(path, "<unknown>"), joinPointer(path, key))
+				continue
 			}
-			if err := validateShape(record[key], field.shape, joinPointer(path, key), locations, source); err != nil {
-				return err
-			}
+			collectShapeFaults(record[key], field.shape, joinPointer(path, key), locations, problems)
 		}
 		for _, key := range sortedShapeFieldKeys(expected.fields) {
 			field := expected.fields[key]
 			if field.required {
-				if _, exists := record[key]; !exists {
-					return shapeError(source, locations, "missing_field", joinPointer(path, key))
+				_, exists := record[key]
+				_, reported := misspelled[key]
+				if !exists && !reported {
+					addShapeFault(problems, locations, "missing_field", joinPointer(path, key), joinPointer(path, key))
 				}
 			}
 		}
 	case shapeArray:
 		values, ok := value.([]any)
 		if !ok {
-			return shapeError(source, locations, "invalid_type", path)
+			return "invalid_type"
 		}
 		if len(values) > expected.maxItems {
-			return shapeError(source, locations, "collection_limit_exceeded", path)
+			return "collection_limit_exceeded"
 		}
 		for index, child := range values {
-			if err := validateShape(child, expected.element, joinPointer(path, strconv.Itoa(index)), locations, source); err != nil {
-				return err
-			}
+			collectShapeFaults(child, expected.element, joinPointer(path, strconv.Itoa(index)), locations, problems)
 		}
 	case shapeString:
 		text, ok := value.(string)
 		if !ok {
-			return shapeError(source, locations, "invalid_type", path)
+			return "invalid_type"
 		}
 		if expected.exactString != "" && text != expected.exactString {
-			return shapeError(source, locations, "invalid_identity", path)
+			return "invalid_identity"
 		}
 	case shapeInteger:
 		number, ok := value.(json.Number)
 		if !ok {
-			return shapeError(source, locations, "invalid_type", path)
+			return "invalid_type"
 		}
 		integer, canonical := parseCanonicalInt64(string(number))
 		if !canonical {
-			return shapeError(source, locations, "invalid_integer", path)
+			return "invalid_integer"
 		}
 		if expected.exactInt != nil && integer != *expected.exactInt {
-			return shapeError(source, locations, "invalid_identity", path)
+			return "invalid_identity"
 		}
 	case shapeDecimalInteger:
 		text, ok := value.(string)
 		if !ok {
-			return shapeError(source, locations, "invalid_type", path)
+			return "invalid_type"
 		}
 		if _, canonical := parseCanonicalInt64(text); !canonical {
-			return shapeError(source, locations, "invalid_integer", path)
+			return "invalid_integer"
 		}
 	case shapeBoolean:
 		if _, ok := value.(bool); !ok {
-			return shapeError(source, locations, "invalid_type", path)
+			return "invalid_type"
 		}
 	default:
-		return shapeError(source, locations, "invalid_shape", path)
+		return "invalid_shape"
 	}
-	return nil
+	return ""
 }
 
-func shapeError(source []byte, locations map[string]rawLocation, code string, path string) error {
-	return shapeErrorAt(source, locations, code, path, path)
+// addUnexpectedFieldFault returns the canonical field a case-folded key spells.
+func addUnexpectedFieldFault(problems *diagnosticCollector, expected *shape, path string, key string, locations map[string]rawLocation) string {
+	for canonical := range expected.fields {
+		if strings.EqualFold(key, canonical) {
+			addShapeFault(problems, locations, "noncanonical_field", joinPointer(path, canonical), joinPointer(path, key))
+			return canonical
+		}
+	}
+	addShapeFault(problems, locations, "unknown_field", joinPointer(path, "<unknown>"), joinPointer(path, key))
+	return ""
 }
 
-func shapeErrorAt(source []byte, locations map[string]rawLocation, code string, path string, locationPath string) error {
+// addShapeFault locates a fault at locationPath, or at its nearest located
+// ancestor, and reports it under path.
+func addShapeFault(problems *diagnosticCollector, locations map[string]rawLocation, code string, path string, locationPath string) {
 	location, exists := locations[locationPath]
 	if !exists {
 		parent := locationPath
@@ -238,7 +262,7 @@ func shapeErrorAt(source []byte, locations map[string]rawLocation, code string, 
 	if location.key != nil && (code == "unknown_field" || code == "noncanonical_field") {
 		span = *location.key
 	}
-	return diagnosticError(source, code, path, span, true)
+	problems.addLocated(code, path, span)
 }
 
 func orderedRecordKeys(record map[string]any, path string, locations map[string]rawLocation) []string {

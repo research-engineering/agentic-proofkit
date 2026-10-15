@@ -56,7 +56,7 @@ func TestCurrentDiffIdentityRejectsRetiredContracts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v2Output["schemaVersion"] != json.Number("3") || v2Output["baseExpectedDigestCoverage"] != "none" || v2Output["currentExpectedDigestCoverage"] != "none" {
+	if v2Output["schemaVersion"] != json.Number("4") || v2Output["baseExpectedDigestCoverage"] != "none" || v2Output["currentExpectedDigestCoverage"] != "none" {
 		t.Fatalf("semantic diff did not emit current digest coverage: %#v", v2Output)
 	}
 
@@ -113,6 +113,14 @@ func TestCurrentDiffIdentityRejectsRetiredContracts(t *testing.T) {
 		old["schemaVersion"] = json.Number(version)
 		if _, err := AdmitOutput(old, currentV2["snapshotId"].(string)); err == nil {
 			t.Fatalf("old diff output %s accepted", version)
+		}
+	}
+	// Input v3 is current, so the retired v1 to v3 outputs need their own loop.
+	for _, version := range []string{"1", "2", "3"} {
+		retired := cloneRequirementRecord(t, v2Output)
+		retired["schemaVersion"] = json.Number(version)
+		if _, err := AdmitOutput(retired, currentV2["snapshotId"].(string)); err == nil {
+			t.Fatalf("retired diff output %s accepted", version)
 		}
 	}
 	for _, side := range []string{"baseContext", "currentContext"} {

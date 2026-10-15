@@ -218,7 +218,7 @@ func runGenericInputCommand(command string, args []string, stdin io.Reader, stdo
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	input, err := readInput(inputPath, stdin)
+	input, err := readCommandInput(commandDescriptorByName[command], inputPath, stdin)
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1

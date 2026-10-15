@@ -125,6 +125,7 @@ func markdown(view map[string]any) string {
 		"## Requirements",
 		"",
 	}
+	scenarios := scenariosByRequirement(view)
 	for _, item := range anyArray(view["requirements"]) {
 		requirement := item.(map[string]any)
 		lines = append(lines,
@@ -168,6 +169,18 @@ func markdown(view map[string]any) string {
 				"",
 			)
 		}
+		lines = append(lines, "Scenarios:", "")
+		linked := scenarios[stringValue(requirement["requirementId"])]
+		if len(linked.linkedIDs) == 0 {
+			lines = append(lines, "None.")
+		}
+		for _, scenarioID := range linked.linkedIDs {
+			lines = append(lines, "- "+markdownfmt.CodeSpan(scenarioID))
+		}
+		lines = append(lines, "")
+		for _, scenario := range linked.nested {
+			lines = append(lines, declarationRecordMarkdown(scenario, 4)...)
+		}
 	}
 	lines = append(lines, sourceDeclarationsMarkdown(view)...)
 	lines = append(lines, "## Source-Local Non-Claim Definitions", "")
@@ -192,6 +205,7 @@ func html(view map[string]any) string {
 			groups[id] = group
 		}
 	}
+	scenarios := scenariosByRequirement(view)
 	cards := make([]browserdoc.Card, 0, len(requirements))
 	rows := make([]browserdoc.Row, 0, len(requirements))
 	ownerValues := []string{}
@@ -219,6 +233,8 @@ func html(view map[string]any) string {
 		for _, field := range []string{"replacementRequirementIds", "lifecycleEvidenceRefs", "proofBindingRefs", "nonClaimRefs", "externalNonClaimRefs", "nonClaims", "sharedPremises"} {
 			searchParts = append(searchParts, stringArray(requirement[field])...)
 		}
+		linked := scenarios[stringValue(requirement["requirementId"])]
+		searchParts = append(searchParts, linked.linkedIDs...)
 		search := browserdoc.SearchText(searchParts)
 		filters := []browserdoc.FilterValue{
 			{Key: "owner", Value: owner},
@@ -232,7 +248,7 @@ func html(view map[string]any) string {
 			Title:        stringValue(requirement["invariant"]),
 			GroupID:      "source-group:" + stringValue(group["groupId"]),
 			GroupLabel:   sourceGroupLabel(group),
-			Body:         sourceRequirementBody(requirement),
+			Body:         sourceRequirementBody(requirement, linked),
 			SearchText:   search,
 			FilterValues: filters,
 		})
@@ -304,7 +320,7 @@ func html(view map[string]any) string {
 	})
 }
 
-func sourceRequirementBody(requirement map[string]any) browserdoc.Fragment {
+func sourceRequirementBody(requirement map[string]any, scenarios requirementScenarios) browserdoc.Fragment {
 	policy := requirement["updatePolicy"].(map[string]any)
 	parts := []browserdoc.Fragment{browserdoc.DefinitionList(
 		browserdoc.Definition("Owner", browserdoc.Text(stringValue(requirement["ownerId"]))),
@@ -325,6 +341,10 @@ func sourceRequirementBody(requirement map[string]any) browserdoc.Fragment {
 		parts = append(parts, htmlDeferral(deferral))
 	}
 	parts = append(parts, browserdoc.Heading(3, "Non-claims"), browserdoc.ListOrNone(stringArray(requirement["nonClaims"]), false))
+	parts = append(parts, browserdoc.Heading(3, "Scenarios"), scenarioLinksHTML(scenarios.linkedIDs))
+	for _, scenario := range scenarios.nested {
+		parts = append(parts, scenarioRecordHTML(scenario))
+	}
 	return browserdoc.Concat(parts...)
 }
 

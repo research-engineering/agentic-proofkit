@@ -2,20 +2,23 @@
 
 /** @param {any[]} changes */
 export function summarizeDiffPage(changes) {
-  const entities = new Set();
+  const requirements = new Set();
+  const scenarios = new Set();
   /** @type {Map<string, number>} */
   const classes = new Map();
   let riskChanges = 0;
   let lifecycleChanges = 0;
   for (const change of changes) {
-    entities.add(change.entityId);
+    // Scenario identities are source-local; their pointer prefix names the source.
+    if (change.entityKind === "scenario") scenarios.add(String(change.jsonPointer).split("/").slice(0, 5).join("/"));
+    else requirements.add(change.entityId);
     classes.set(change.changeClass, (classes.get(change.changeClass) ?? 0) + 1);
     const entityPointer = String(change.entityId).replaceAll("~", "~0").replaceAll("/", "~1");
     if (change.entityKind === "requirement" && change.changeClass === "scalar_changed" && change.jsonPointer === `/requirements/${entityPointer}/riskClass`) riskChanges++;
     if (change.changeClass === "lifecycle_transition") lifecycleChanges++;
   }
   return {
-    changeCount: changes.length, entityCount: entities.size, riskChanges, lifecycleChanges,
+    changeCount: changes.length, requirementCount: requirements.size, scenarioCount: scenarios.size, riskChanges, lifecycleChanges,
     byClass: [...classes].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0),
   };
 }
@@ -28,7 +31,7 @@ export function renderDiffPage(container, changes) {
   const counts = document.createElement("p");
   counts.className = "page-summary";
   counts.dataset.diffSummary = "";
-  counts.textContent = `Changes: ${summary.changeCount}; requirements: ${summary.entityCount}; risk changes: ${summary.riskChanges}; lifecycle changes: ${summary.lifecycleChanges}.`;
+  counts.textContent = `Changes: ${summary.changeCount}; requirements: ${summary.requirementCount}; scenarios: ${summary.scenarioCount}; risk changes: ${summary.riskChanges}; lifecycle changes: ${summary.lifecycleChanges}.`;
   const partition = document.createElement("ul");
   partition.className = "diff-class-counts";
   partition.setAttribute("aria-label", "Change classes on this page");
@@ -42,7 +45,7 @@ export function renderDiffPage(container, changes) {
     const article = document.createElement("article");
     article.dataset.changeId = change.changeId;
     const title = document.createElement("h3");
-    title.textContent = `${change.changeClass}: ${change.entityId}`;
+    title.textContent = `${change.changeClass}: ${change.entityKind} ${change.entityId}`;
     title.className = "caller-text";
     const pointer = document.createElement("p");
     pointer.className = "caller-text";

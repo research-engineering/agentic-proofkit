@@ -378,6 +378,49 @@ response fits its own bound. A consumer migration must check those limits and
 all affected commands; binding IDs alone do not supply scenario bodies or
 native test results.
 
+### Source Synthesis And The Evidence Chain
+
+Requirements are usually synthesized from material that already exists: code,
+design notes, plans, documentation, owner clarifications and existing tests.
+That material is input to authoring, not authority. An agent turns it into
+candidates (`capability-map-admission` for observed capabilities,
+`requirement-authoring-plan` for owner-reviewed updates); only the owner's
+admitted `requirements.v2.json` states meaning.
+
+A source may record where a requirement came from in `derivations`. Each
+derivation names a `sourceKind` (`code_snapshot`, `design`, `plan`,
+`clarification` or `owner_decision`), the exact Git blob (object format,
+commit, path and SHA-256) and a byte range, plus the requirement IDs it
+supports. Derivations make synthesis reviewable and stale inputs detectable by
+digest; they do not prove that the requirement is correct, complete or still
+wanted. Existing tests enter the chain as declared proof routes and inventory
+entries, never as the definition of the requirement.
+
+The complete chain, with the owner of each hop:
+
+```mermaid
+flowchart TB
+    Inputs["Code, design, plans, docs, tests, clarifications"] --> Candidates["Candidates: capability map or authoring plan"]
+    Candidates --> Source["Owner-admitted requirement source with derivations"]
+    Source --> Scenarios["Scenarios under each requirement"]
+    Scenarios --> Bindings["Proof bindings and test inventory"]
+    Bindings --> Selection["Impact and selective-gate planning"]
+    Selection --> Execution["Repository-native execution"]
+    Execution --> Receipts["Receipt, currentness and trust admission"]
+    Receipts --> Decision["Coverage, views and owner decision"]
+```
+
+| Hop | Owner | Not established by this hop |
+|---|---|---|
+| Inputs to candidates | agent with `capability-map-admission` or `requirement-authoring-plan` | meaning, correctness of observed behavior |
+| Candidates to source | repository owner; `requirement-source-admission` checks shape and lifecycle | that derivations are complete or current |
+| Source to bindings | `requirement-bindings`, `test-evidence-inventory` | that a declared test is an adequate falsifier |
+| Bindings to selection | compact proof contracts: `requirement-impact-input-compose`, then `impact`; materialized v1 bindings: `requirement-semantic-diff`, `requirement-context-slice` and `receipt-currentness-scope`; then `selective-gate-plan` | execution of any check |
+| Selection to receipts | repository runner, then `proof-receipt-admission` and the currentness, producer and trust owners | producer authentication without consumer policy |
+| Receipts to decision | `requirement-coverage-view`, `view`, `requirement-semantic-diff`; the owner decides | merge, release or rollout approval |
+
+A missing hop is reported as missing; no later hop substitutes for it.
+
 Proof bindings are verification-route contracts. They answer which scenario,
 witness, command, environment class, and receipt policy can falsify or support
 a requirement. Native tests and tools own executable verification procedures
@@ -611,6 +654,31 @@ meta spec
 Proofkit may render this tree, filter IDs, show linked test scenarios, or
 export Markdown/HTML. It must not infer the hierarchy from ambient paths or make
 rendered output canonical truth.
+
+## Bounded Comparison Note
+
+On 2026-10-11 an agent executed the same seven tasks (authoring, hierarchy,
+coverage, change review, validation errors, rendering, reduced authoring) on
+one synthetic fixture of four requirements, eight scenarios and three tests
+with the OpenSpec and StrictDoc releases current on that date and the Proofkit
+source of that date, recording 109 runs. The observations below explain
+changes made here; they are not a ranking.
+
+| Area | Observation in that run | Consequence here |
+|---|---|---|
+| Authoring size | Proofkit's source was largest (5398 non-whitespace characters against 2027 and 1750); a profile cut 16% | materialization help shows a profile; scenario arrays stay explicit for one canonical representation |
+| Validation feedback | Proofkit reported one fault per run and JSON syntax errors without a position; OpenSpec reported all faults in one run | source admission describes up to eight independent faults; `--input` syntax rejections report line, column and byte offset, except for commands whose frozen predecessor streams pin exact stderr |
+| Change review | Proofkit summarized scenario edits in a requirement review digest | `requirement-semantic-diff` lists scenario additions, removals and field edits |
+| Reading | source views listed scenarios apart from requirements; the workspace hid deferral facts | each requirement lists its scenarios; a scenario's record renders once, under its only requirement or in a shared section; the workspace shows deferral facts and counts |
+| Gating | Proofkit rejected a dangling reference and a missing declared test route with exit 1 | unchanged fail-closed behavior |
+| Not offered | code line-range trace matrices, JUnit result ingestion and ReqIF, RST or XLSX export were available elsewhere | not added without a named consumer need |
+
+Non-claims: one synthetic fixture, one run per task, an agent author with
+helper-generated inputs, no user study, an automated axe subset only, and tool
+versions pinned on that date. No claim of general superiority, lower adoption
+cost or fitness for another repository follows. The run log, which records the
+exact tool versions, and the scripts are retained as private review evidence
+and are not shipped in the package.
 
 ## Agent Guidance
 

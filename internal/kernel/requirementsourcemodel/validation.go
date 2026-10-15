@@ -39,6 +39,36 @@ func (err *ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", err.Code, err.Path)
 }
 
+// MaxReportedValidationErrors bounds the faults one admission describes;
+// later faults are counted in ValidationErrors.Omitted, never described.
+const MaxReportedValidationErrors = 8
+
+// ValidationErrors reports several independent structural faults of one
+// rejected snapshot in deterministic source order. No model is admitted.
+type ValidationErrors struct {
+	Errors  []*ValidationError
+	Omitted int
+}
+
+func (err *ValidationErrors) Error() string {
+	parts := make([]string, 0, len(err.Errors)+1)
+	for _, item := range err.Errors {
+		parts = append(parts, item.Error())
+	}
+	if err.Omitted > 0 {
+		parts = append(parts, fmt.Sprintf("%d more", err.Omitted))
+	}
+	return strings.Join(parts, "; ")
+}
+
+func (err *ValidationErrors) Unwrap() []error {
+	result := make([]error, len(err.Errors))
+	for index, item := range err.Errors {
+		result[index] = item
+	}
+	return result
+}
+
 func ErrorCode(err error) string {
 	var typed *ValidationError
 	if errors.As(err, &typed) && typed != nil {
@@ -49,6 +79,60 @@ func ErrorCode(err error) string {
 
 func invalid(code string, path string) error {
 	return &ValidationError{Code: code, Path: path}
+}
+
+// validationCollector keeps independent entity faults of one snapshot. Any
+// non-validation error is fatal and replaces the collected diagnostics.
+type validationCollector struct {
+	errors  []*ValidationError
+	omitted int
+	fatal   error
+}
+
+func (collector *validationCollector) add(err error) {
+	if err == nil || collector.fatal != nil {
+		return
+	}
+	var many *ValidationErrors
+	if errors.As(err, &many) && many != nil {
+		for _, item := range many.Errors {
+			collector.record(item)
+		}
+		collector.omitted += many.Omitted
+		return
+	}
+	var one *ValidationError
+	if errors.As(err, &one) && one != nil {
+		collector.record(one)
+		return
+	}
+	collector.fatal = err
+}
+
+func (collector *validationCollector) record(err *ValidationError) {
+	if len(collector.errors) < MaxReportedValidationErrors {
+		collector.errors = append(collector.errors, &ValidationError{Code: err.Code, Path: err.Path})
+		return
+	}
+	collector.omitted++
+}
+
+func (collector *validationCollector) failed() bool {
+	return collector.fatal != nil || len(collector.errors) != 0 || collector.omitted != 0
+}
+
+// err preserves the single-fault error identity and text of fail-fast admission.
+func (collector *validationCollector) err() error {
+	switch {
+	case collector.fatal != nil:
+		return collector.fatal
+	case len(collector.errors) == 0 && collector.omitted == 0:
+		return nil
+	case len(collector.errors) == 1 && collector.omitted == 0:
+		return collector.errors[0]
+	default:
+		return &ValidationErrors{Errors: append([]*ValidationError{}, collector.errors...), Omitted: collector.omitted}
+	}
 }
 
 func identified(root string, id string) string {

@@ -263,6 +263,12 @@ func enrichedCompatibilitySummary(owner nativeStructure, version json.Number, ra
 		}
 		obsolete := false
 		for _, predecessor := range owner.predecessors {
+			// A version bump retires the predecessor's generated structural annotation.
+			structural := "structural JSON Schema definition " + predecessor + "; "
+			obsolete = obsolete || note == structural+"canonicalization and semantic validity remain native admission obligations"
+			if strings.HasPrefix(note, structural) && !obsolete {
+				return nil, fmt.Errorf("compatibility note contains an unowned annotation suffix")
+			}
 			prefix := "root-shape-only definition " + predecessor + "; "
 			for _, suffix := range []string{
 				"nested fields, types, and cardinalities are non-claims",

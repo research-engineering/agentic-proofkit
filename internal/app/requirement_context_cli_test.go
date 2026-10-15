@@ -158,7 +158,7 @@ func TestRequirementContextCommandsComposeThroughWholeCLI(t *testing.T) {
 	if diff["changeCount"] != json.Number("1") {
 		t.Fatalf("whole-CLI semantic diff changeCount=%v, want 1", diff["changeCount"])
 	}
-	if diff["schemaVersion"] != json.Number("3") || diff["baseExpectedDigestCoverage"] != "none" || diff["currentExpectedDigestCoverage"] != "none" || diff["baseBaselineVerification"] != nil || diff["currentBaselineVerification"] != nil {
+	if diff["schemaVersion"] != json.Number("4") || diff["baseExpectedDigestCoverage"] != "none" || diff["currentExpectedDigestCoverage"] != "none" || diff["baseBaselineVerification"] != nil || diff["currentBaselineVerification"] != nil {
 		t.Fatalf("whole-CLI semantic diff did not use the v3 source contract: %#v", diff)
 	}
 	if _, err := requirementdiff.AdmitOutput(diff, current["snapshotId"].(string)); err != nil {

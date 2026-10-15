@@ -193,7 +193,17 @@ func DefinitionList(items ...DefinitionItem) Fragment {
 }
 
 func Details(summary string, values ...Fragment) Fragment {
-	parts := []string{"<details><summary>" + Escape(summary) + "</summary>"}
+	return details("", summary, values)
+}
+
+// AnchoredDetails is Details whose element is the in-page target of every
+// InPageLink with the same TargetKey.
+func AnchoredDetails(targetKey string, summary string, values ...Fragment) Fragment {
+	return details(" id=\""+Escape(FragmentID(targetKey))+"\"", summary, values)
+}
+
+func details(attributes string, summary string, values []Fragment) Fragment {
+	parts := []string{"<details" + attributes + "><summary>" + Escape(summary) + "</summary>"}
 	for _, value := range values {
 		parts = append(parts, value.html)
 	}
@@ -243,6 +253,26 @@ func ListOrNone(values []string, code bool) Fragment {
 			continue
 		}
 		items = append(items, "<li>"+Escape(value)+"</li>")
+	}
+	return Fragment{html: "<ul>" + strings.Join(items, "") + "</ul>"}
+}
+
+// InPageLink links to the AnchoredDetails declared with the same TargetKey in
+// the same document.
+type InPageLink struct {
+	Label     string
+	TargetKey string
+}
+
+// InPageLinkListOrNone renders code-labelled in-page links like a code
+// ListOrNone.
+func InPageLinkListOrNone(links []InPageLink) Fragment {
+	if len(links) == 0 {
+		return Text("none")
+	}
+	items := make([]string, 0, len(links))
+	for _, link := range links {
+		items = append(items, "<li><a href=\"#"+Escape(FragmentID(link.TargetKey))+"\"><code>"+Escape(link.Label)+"</code></a></li>")
 	}
 	return Fragment{html: "<ul>" + strings.Join(items, "") + "</ul>"}
 }
@@ -547,6 +577,7 @@ func css() string {
 		".result-count{margin:12px 2px;color:#586069}",
 		".cards{display:grid;gap:18px}",
 		".cards[hidden]{display:none}",
+		".card-group[hidden]{display:none}",
 		".card-group{display:grid;gap:12px;scroll-margin-top:86px}",
 		".card-group>h2{border-bottom:1px solid #d8dee4;padding-bottom:8px}",
 		".card{padding:18px}",

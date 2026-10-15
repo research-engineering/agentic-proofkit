@@ -43,11 +43,15 @@ create that project.
 
 ```mermaid
 flowchart TB
-    Sources["Code, tests, specs, plans or intent"] --> Draft["Agent: candidate invariants"]
-    Draft --> Spec["Owner accepts specs and check bindings"]
+    Sources["Code, design, plans, docs, tests or intent"] --> Draft["Agent: candidate invariants with provenance"]
+    Draft --> Spec["Owner accepts specs, scenarios and check bindings"]
     Spec --> Run["Proofkit selects; repository runs checks"]
-    Run --> Review["Owner: inspect and decide"]
+    Run --> Receipts["Receipts admitted under consumer policy"]
+    Receipts --> Review["Owner: inspect and decide"]
 ```
+
+Each hop names its owners and leaves the earlier hops' limits intact; see
+[source synthesis and the evidence chain](ADOPTION.md#source-synthesis-and-the-evidence-chain).
 
 **Authoring is not proof.** Observed behavior and generated invariants remain
 candidates until the repository owner admits them. Binding a test declares a

@@ -135,7 +135,8 @@ func TestSliceAndDiffGuidesCompareRetainedContexts(t *testing.T) {
 	base = capture()
 	source["scenarios"] = scenarioGuideExample(t)
 	writeCLIJSONFixture(t, root, admitted.Source.RequirementsPath(), source)
-	if changes := compare(capture()); !reflect.DeepEqual(changes, []any{"/requirements/REQ-EXAMPLE-001/sourceReviewDigest"}) {
+	// The added scenario is named beside its member requirement's review digest.
+	if changes := compare(capture()); !reflect.DeepEqual(changes, []any{"/requirements/REQ-EXAMPLE-001/sourceReviewDigest", "/requirementSources/example.requirements/scenarios/example.requests.empty"}) {
 		t.Fatalf("scenario-body edit changes = %v", changes)
 	}
 }

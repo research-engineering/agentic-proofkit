@@ -13,7 +13,7 @@
     {"mutantId": "multiple_values", "layer": "syntax", "expectedCode": "multiple_values", "expectedPath": "", "property": "single-document-closure"},
     {"mutantId": "negative_zero", "layer": "shape", "expectedCode": "invalid_integer", "expectedPath": "/derivations/0/selector/start", "property": "integer-lexeme"},
     {"mutantId": "secret_shaped_text", "layer": "model", "expectedCode": "invalid_text", "expectedPath": "/nonClaimDefinitions/0/statement", "property": "report-visible-nondisclosure"},
-    {"mutantId": "semantic_duplicate_id", "layer": "model", "expectedCode": "duplicate_id", "expectedPath": "/nonClaimDefinitions", "property": "semantic-owner-delegation"},
+    {"mutantId": "semantic_duplicate_id", "layer": "model", "expectedCode": "duplicate_id", "expectedPath": "/nonClaimDefinitions/1/nonClaimId", "property": "semantic-owner-delegation"},
     {"mutantId": "unknown_field", "layer": "shape", "expectedCode": "unknown_field", "expectedPath": "/<unknown>", "property": "closed-record-fields"},
     {"mutantId": "wrong_identity", "layer": "shape", "expectedCode": "invalid_identity", "expectedPath": "/schemaVersion", "property": "representation-identity"},
     {"mutantId": "wrong_type", "layer": "shape", "expectedCode": "invalid_type", "expectedPath": "/sourceId", "property": "field-type-closure"}

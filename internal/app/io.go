@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -76,7 +77,22 @@ func writeAll(writer io.Writer, output []byte) error {
 	return nil
 }
 
+// readInput locates JSON syntax rejections of --input for the caller.
 func readInput(path string, stdin io.Reader) (any, error) {
+	value, err := decodeInput(path, stdin)
+	return value, locatedInputError(err)
+}
+
+// readCommandInput keeps unlocated diagnostics for owners that pin exact
+// predecessor streams; every other command reports the syntax position.
+func readCommandInput(descriptor commandDescriptor, path string, stdin io.Reader) (any, error) {
+	if descriptor.preservesPredecessorStreams {
+		return decodeInput(path, stdin)
+	}
+	return readInput(path, stdin)
+}
+
+func decodeInput(path string, stdin io.Reader) (any, error) {
 	if path == "-" {
 		return admission.DecodeJSON(stdin, maxInputBytes)
 	}
@@ -86,4 +102,14 @@ func readInput(path string, stdin io.Reader) (any, error) {
 	}
 	defer file.Close()
 	return admission.DecodeJSON(file, maxInputBytes)
+}
+
+// locatedInputError appends the kernel position; the column counts Unicode
+// scalar values and the byte offset is 0-based, so both survive multi-byte text.
+func locatedInputError(err error) error {
+	var syntax *admission.SyntaxError
+	if !errors.As(err, &syntax) {
+		return err
+	}
+	return fmt.Errorf("%w at line %d, column %d (byte offset %d)", err, syntax.Line, syntax.Column, syntax.Offset)
 }

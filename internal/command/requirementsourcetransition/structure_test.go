@@ -122,6 +122,8 @@ func TestTransitionStructureRejectsIndependentInputAndOutputCorruptions(t *testi
 		"wrong state":            func(v map[string]any) { v["state"] = "approved" },
 		"wrong diagnostic order": func(v map[string]any) { rows := v["diagnostics"].([]any); rows[0], rows[1] = rows[1], rows[0] },
 		"short paths":            func(v map[string]any) { v["diagnostics"].([]any)[1].(map[string]any)["value"] = []any{} },
+		"missing identity list":  func(v map[string]any) { v["diagnostics"] = v["diagnostics"].([]any)[:4] },
+		"untyped identity":       func(v map[string]any) { v["diagnostics"].([]any)[2].(map[string]any)["value"] = []any{1} },
 		"invented lattice state": func(v map[string]any) { v["ruleResults"].([]any)[2].(map[string]any)["status"] = "blocked" },
 		"missing rule":           func(v map[string]any) { v["ruleResults"] = v["ruleResults"].([]any)[:2] },
 	} {

@@ -2,7 +2,9 @@ package requirementsourcemodel
 
 import "sort"
 
-func normalizeGroups(values []Group, profiles map[string]Profile) ([]Group, []AtomicRequirement, []Origin, map[string]int, error) {
+// normalizeGroups returns every declared requirement identity, even on
+// failure, so dependent scenario and derivation references stay checkable.
+func normalizeGroups(values []Group, profiles map[string]Profile) ([]Group, []AtomicRequirement, []Origin, map[string]int, map[string]struct{}, error) {
 	groups := make([]Group, len(values))
 	groupIDs := make(map[string]struct{}, len(values))
 	requirementIDs := map[string]struct{}{}
@@ -14,43 +16,49 @@ func normalizeGroups(values []Group, profiles map[string]Profile) ([]Group, []At
 	requirements := make([]AtomicRequirement, 0, memberCount)
 	origins := make([]Origin, 0, memberCount)
 	profileUses := map[string]int{}
+	var problems validationCollector
 
 	for groupIndex, value := range values {
 		path := indexed("groups", groupIndex, "")
+		// Member resolution consumes the admitted group ID, profile and stem.
+		groupAdmitted := true
 		groupID, err := canonicalID(value.GroupID, "RGRP-", path+"groupId")
 		if err != nil {
-			return nil, nil, nil, nil, err
+			problems.add(err)
+			groupAdmitted = false
+		} else if _, exists := groupIDs[groupID]; exists {
+			problems.add(invalid("duplicate_id", path+"groupId"))
+			groupAdmitted = false
+		} else {
+			groupIDs[groupID] = struct{}{}
 		}
-		if _, exists := groupIDs[groupID]; exists {
-			return nil, nil, nil, nil, invalid("duplicate_id", "groups")
-		}
-		groupIDs[groupID] = struct{}{}
 
 		profileID := ""
 		profileFields := MetadataFields{}
 		if value.ProfileID != "" {
 			profileID, err = canonicalID(value.ProfileID, "RPROF-", path+"profileId")
 			if err != nil {
-				return nil, nil, nil, nil, err
+				problems.add(err)
+				groupAdmitted = false
+			} else if profile, exists := profiles[profileID]; !exists {
+				problems.add(invalid("dangling_profile_ref", path+"profileId"))
+				groupAdmitted = false
+			} else {
+				profileFields = profile.Fields
+				profileUses[profileID] += len(value.Members)
 			}
-			profile, exists := profiles[profileID]
-			if !exists {
-				return nil, nil, nil, nil, invalid("dangling_profile_ref", path+"profileId")
-			}
-			profileFields = profile.Fields
-			profileUses[profileID] += len(value.Members)
 		}
 
 		stem, err := canonicalText(value.StatementStem, path+"statementStem", true, true)
 		if err != nil {
-			return nil, nil, nil, nil, err
-		}
-		if stem != "" && len(value.Members) < 2 {
-			return nil, nil, nil, nil, invalid("vacuous_group_stem", path+"statementStem")
+			problems.add(err)
+			groupAdmitted = false
+		} else if stem != "" && len(value.Members) < 2 {
+			problems.add(invalid("vacuous_group_stem", path+"statementStem"))
 		}
 		premises, err := normalizeTexts(value.SharedPremises, path+"sharedPremises", true, true)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			problems.add(err)
 		}
 
 		members := make([]Member, len(value.Members))
@@ -58,29 +66,38 @@ func normalizeGroups(values []Group, profiles map[string]Profile) ([]Group, []At
 			memberPath := indexed(path+"members", memberIndex, "")
 			requirementID, err := canonicalID(memberValue.RequirementID, "REQ-", memberPath+"requirementId")
 			if err != nil {
-				return nil, nil, nil, nil, err
+				problems.add(err)
+				continue
 			}
 			if _, exists := requirementIDs[requirementID]; exists {
-				return nil, nil, nil, nil, invalid("duplicate_requirement_id", "groups.members")
+				problems.add(invalid("duplicate_requirement_id", memberPath+"requirementId"))
+				continue
 			}
 			requirementIDs[requirementID] = struct{}{}
 			completion, err := canonicalText(memberValue.StatementCompletion, memberPath+"statementCompletion", false, true)
 			if err != nil {
-				return nil, nil, nil, nil, err
+				problems.add(err)
+				continue
 			}
 			fields, err := normalizeMetadataFields(memberValue.Fields, memberPath+"fields")
 			if err != nil {
-				return nil, nil, nil, nil, err
+				problems.add(err)
+				continue
+			}
+			if !groupAdmitted {
+				continue
 			}
 			resolved, fieldOwners, err := resolveMetadata(profileID, requirementID, profileFields, fields, memberPath+"fields")
 			if err != nil {
-				return nil, nil, nil, nil, err
+				problems.add(err)
+				continue
 			}
 			invariant := completion
 			if stem != "" {
 				invariant, err = canonicalText(stem+" "+completion, memberPath+"statementCompletion", false, true)
 				if err != nil {
-					return nil, nil, nil, nil, err
+					problems.add(err)
+					continue
 				}
 			}
 			resolved.RequirementID = requirementID
@@ -95,6 +112,9 @@ func normalizeGroups(values []Group, profiles map[string]Profile) ([]Group, []At
 			})
 			members[memberIndex] = Member{RequirementID: requirementID, StatementCompletion: completion, Fields: fields}
 		}
+		if problems.failed() {
+			continue
+		}
 		sort.Slice(members, func(left int, right int) bool { return members[left].RequirementID < members[right].RequirementID })
 		groups[groupIndex] = Group{
 			GroupID:        groupID,
@@ -104,13 +124,16 @@ func normalizeGroups(values []Group, profiles map[string]Profile) ([]Group, []At
 			Members:        members,
 		}
 	}
+	if problems.failed() {
+		return nil, nil, nil, nil, requirementIDs, problems.err()
+	}
 
 	sort.Slice(groups, func(left int, right int) bool { return groups[left].GroupID < groups[right].GroupID })
 	sort.Slice(requirements, func(left int, right int) bool {
 		return requirements[left].RequirementID < requirements[right].RequirementID
 	})
 	sort.Slice(origins, func(left int, right int) bool { return origins[left].RequirementID < origins[right].RequirementID })
-	return groups, requirements, origins, profileUses, nil
+	return groups, requirements, origins, profileUses, requirementIDs, nil
 }
 
 func validateProfileUses(profiles []Profile, uses map[string]int) error {

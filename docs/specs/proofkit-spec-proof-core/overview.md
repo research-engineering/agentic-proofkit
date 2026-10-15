@@ -147,8 +147,10 @@ execution receipts, and merge policy.
   packet from a visibly labelled region only after explicit user submission.
 - `REQ-PROOFKIT-SPEC-022`: semantic diff compares admitted requirement fields
   by owner-declared scalar, set, map, lifecycle, and source-review dependency
-  semantics through schema-v3 records, rejects retired v1/v2 adapters, covers
-  entity additions and removals, and remains closed under output re-admission.
+  semantics and source-scoped scenario fields by owner-declared set, sequence,
+  and opaque semantics, reads schema-v3 inputs and writes schema-v4 outputs,
+  rejects retired v1/v2 inputs and v1-v3 outputs, covers entity additions and
+  removals, and remains closed under output re-admission.
 - `REQ-PROOFKIT-SPEC-023`: traceability graph input schema v3 preserves
   specification, proof, code traceability, and native execution as distinct
   evidence planes, consumes admitted context v4, and accepts

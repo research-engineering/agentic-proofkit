@@ -5,93 +5,108 @@ import (
 	"strings"
 )
 
-func normalizeScenarios(values []Scenario, requirements map[string]AtomicRequirement, vocabulary map[string]struct{}) ([]Scenario, error) {
+func normalizeScenarios(values []Scenario, requirements map[string]struct{}, vocabulary map[string]struct{}) ([]Scenario, error) {
 	result := make([]Scenario, len(values))
 	ids := make(map[string]struct{}, len(values))
+	var problems validationCollector
 	for index, value := range values {
 		path := indexed("scenarios", index, "")
 		scenarioID, err := canonicalScenarioID(value.ScenarioID, path+"scenarioId")
 		if err != nil {
-			return nil, err
+			problems.add(err)
+			continue
 		}
 		if _, exists := ids[scenarioID]; exists {
-			return nil, invalid("duplicate_id", "scenarios")
-		}
-		requirementIDs, err := normalizeIDs(value.RequirementIDs, "REQ-", path+"requirementIds", false)
-		if err != nil {
-			return nil, err
-		}
-		for _, requirementID := range requirementIDs {
-			if _, exists := requirements[requirementID]; !exists {
-				return nil, invalid("dangling_requirement_ref", path+"requirementIds")
-			}
-		}
-		parameters, err := normalizeParameters(value.Parameters, path+"parameters")
-		if err != nil {
-			return nil, err
-		}
-		preconditions, err := normalizeTexts(value.Preconditions, path+"preconditions", false, true)
-		if err != nil {
-			return nil, err
-		}
-		actions, err := normalizeOrderedTexts(value.ActionSequence, path+"actionSequence", false)
-		if err != nil {
-			return nil, err
-		}
-		expected, err := normalizeTexts(value.ExpectedObservations, path+"expectedObservations", false, true)
-		if err != nil {
-			return nil, err
-		}
-		forbidden, err := normalizeTexts(value.ForbiddenObservations, path+"forbiddenObservations", true, true)
-		if err != nil {
-			return nil, err
-		}
-		if sortedStringsIntersect(expected, forbidden) {
-			return nil, invalid("contradictory_observation", path+"expectedObservations")
-		}
-		vocabularyRefs, err := normalizeIDs(value.VocabularyRefs, "TERM-", path+"vocabularyRefs", true)
-		if err != nil {
-			return nil, err
-		}
-		for _, termID := range vocabularyRefs {
-			if _, exists := vocabulary[termID]; !exists {
-				return nil, invalid("dangling_vocabulary_ref", path+"vocabularyRefs")
-			}
-		}
-		nonClaimRefs, err := normalizeIDs(value.NonClaimRefs, "NCL-", path+"nonClaimRefs", true)
-		if err != nil {
-			return nil, err
-		}
-		statements := append([]string{}, preconditions...)
-		statements = append(statements, actions...)
-		statements = append(statements, expected...)
-		statements = append(statements, forbidden...)
-		if err := validateParameterReferences(parameters, statements, path); err != nil {
-			return nil, err
-		}
-		examples, err := normalizeExamples(value.Examples, parameters, path+"examples")
-		if err != nil {
-			return nil, err
-		}
-		if err := validateInstantiatedObservationDisjoint(expected, forbidden, examples, path+"expectedObservations"); err != nil {
-			return nil, err
+			problems.add(invalid("duplicate_id", path+"scenarioId"))
+			continue
 		}
 		ids[scenarioID] = struct{}{}
-		result[index] = Scenario{
-			ScenarioID:            scenarioID,
-			RequirementIDs:        requirementIDs,
-			Parameters:            parameters,
-			Preconditions:         preconditions,
-			ActionSequence:        actions,
-			ExpectedObservations:  expected,
-			ForbiddenObservations: forbidden,
-			Examples:              examples,
-			VocabularyRefs:        vocabularyRefs,
-			NonClaimRefs:          nonClaimRefs,
+		scenario, err := normalizeScenario(value, scenarioID, path, requirements, vocabulary)
+		if err != nil {
+			problems.add(err)
+			continue
 		}
+		result[index] = scenario
+	}
+	if problems.failed() {
+		return nil, problems.err()
 	}
 	sort.Slice(result, func(left int, right int) bool { return result[left].ScenarioID < result[right].ScenarioID })
 	return result, nil
+}
+
+func normalizeScenario(value Scenario, scenarioID string, path string, requirements map[string]struct{}, vocabulary map[string]struct{}) (Scenario, error) {
+	requirementIDs, err := normalizeIDs(value.RequirementIDs, "REQ-", path+"requirementIds", false)
+	if err != nil {
+		return Scenario{}, err
+	}
+	for _, requirementID := range requirementIDs {
+		if _, exists := requirements[requirementID]; !exists {
+			return Scenario{}, invalid("dangling_requirement_ref", path+"requirementIds")
+		}
+	}
+	parameters, err := normalizeParameters(value.Parameters, path+"parameters")
+	if err != nil {
+		return Scenario{}, err
+	}
+	preconditions, err := normalizeTexts(value.Preconditions, path+"preconditions", false, true)
+	if err != nil {
+		return Scenario{}, err
+	}
+	actions, err := normalizeOrderedTexts(value.ActionSequence, path+"actionSequence", false)
+	if err != nil {
+		return Scenario{}, err
+	}
+	expected, err := normalizeTexts(value.ExpectedObservations, path+"expectedObservations", false, true)
+	if err != nil {
+		return Scenario{}, err
+	}
+	forbidden, err := normalizeTexts(value.ForbiddenObservations, path+"forbiddenObservations", true, true)
+	if err != nil {
+		return Scenario{}, err
+	}
+	if sortedStringsIntersect(expected, forbidden) {
+		return Scenario{}, invalid("contradictory_observation", path+"expectedObservations")
+	}
+	vocabularyRefs, err := normalizeIDs(value.VocabularyRefs, "TERM-", path+"vocabularyRefs", true)
+	if err != nil {
+		return Scenario{}, err
+	}
+	for _, termID := range vocabularyRefs {
+		if _, exists := vocabulary[termID]; !exists {
+			return Scenario{}, invalid("dangling_vocabulary_ref", path+"vocabularyRefs")
+		}
+	}
+	nonClaimRefs, err := normalizeIDs(value.NonClaimRefs, "NCL-", path+"nonClaimRefs", true)
+	if err != nil {
+		return Scenario{}, err
+	}
+	statements := append([]string{}, preconditions...)
+	statements = append(statements, actions...)
+	statements = append(statements, expected...)
+	statements = append(statements, forbidden...)
+	if err := validateParameterReferences(parameters, statements, path); err != nil {
+		return Scenario{}, err
+	}
+	examples, err := normalizeExamples(value.Examples, parameters, path+"examples")
+	if err != nil {
+		return Scenario{}, err
+	}
+	if err := validateInstantiatedObservationDisjoint(expected, forbidden, examples, path+"expectedObservations"); err != nil {
+		return Scenario{}, err
+	}
+	return Scenario{
+		ScenarioID:            scenarioID,
+		RequirementIDs:        requirementIDs,
+		Parameters:            parameters,
+		Preconditions:         preconditions,
+		ActionSequence:        actions,
+		ExpectedObservations:  expected,
+		ForbiddenObservations: forbidden,
+		Examples:              examples,
+		VocabularyRefs:        vocabularyRefs,
+		NonClaimRefs:          nonClaimRefs,
+	}, nil
 }
 
 func sortedStringsIntersect(left []string, right []string) bool {
@@ -163,7 +178,7 @@ func normalizeExamples(values []Example, parameters []string, path string) ([]Ex
 			return nil, err
 		}
 		if _, exists := ids[exampleID]; exists {
-			return nil, invalid("duplicate_id", path)
+			return nil, invalid("duplicate_id", examplePath+"exampleId")
 		}
 		keys := make([]string, 0, len(value.Values))
 		for key := range value.Values {

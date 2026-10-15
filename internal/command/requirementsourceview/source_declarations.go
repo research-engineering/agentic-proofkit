@@ -3,6 +3,7 @@ package requirementsourceview
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/browserdoc"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/markdownfmt"
@@ -39,6 +40,9 @@ type declarationRecord struct {
 type declarationSection struct {
 	title   string
 	records []declarationRecord
+	// linkTargets marks scenario records that in-page links reach: each renders
+	// as an anchored details outside a collapsed section wrapper.
+	linkTargets bool
 }
 
 // One field inventory feeds both human renderers. It preserves ordered source
@@ -62,42 +66,12 @@ func sourceDeclarationSections(view map[string]any) []declarationSection {
 			{"Definition", []string{stringValue(row["definition"])}, false},
 		}})
 	}
-	scenarios := declarationSection{title: "Declared Scenarios"}
+	shared := declarationSection{title: "Shared Scenarios", linkTargets: true}
 	for _, raw := range anyArray(view["scenarios"]) {
 		row := raw.(map[string]any)
-		actions := stringArray(row["actionSequence"])
-		for i := range actions {
-			actions[i] = fmt.Sprintf("%d. %s", i+1, actions[i])
+		if !nestsUnderOneRequirement(row) {
+			shared.records = append(shared.records, scenarioRecord(row))
 		}
-		fields := []declarationField{
-			{"Requirements", stringArray(row["requirementIds"]), true},
-			{"Parameters", stringArray(row["parameters"]), true},
-			{"Preconditions", stringArray(row["preconditions"]), false},
-			{"Action sequence", actions, false},
-			{"Expected observations", stringArray(row["expectedObservations"]), false},
-			{"Forbidden observations", stringArray(row["forbiddenObservations"]), false},
-			{"Vocabulary references", stringArray(row["vocabularyRefs"]), true},
-			{"Source-local non-claim refs", stringArray(row["nonClaimRefs"]), true},
-		}
-		examples := anyArray(row["examples"])
-		if len(examples) == 0 {
-			fields = append(fields, declarationField{label: "Examples"})
-		}
-		for _, raw := range examples {
-			example := raw.(map[string]any)
-			values := example["values"].(map[string]any)
-			keys := make([]string, 0, len(values))
-			for key := range values {
-				keys = append(keys, key)
-			}
-			sort.Strings(keys)
-			pairs := make([]string, 0, len(keys))
-			for _, key := range keys {
-				pairs = append(pairs, key+": "+stringValue(values[key]))
-			}
-			fields = append(fields, declarationField{"Example " + stringValue(example["exampleId"]), pairs, false})
-		}
-		scenarios.records = append(scenarios.records, declarationRecord{stringValue(row["scenarioId"]), fields})
 	}
 	derivations := declarationSection{title: "Declared Derivations"}
 	for _, raw := range anyArray(view["derivations"]) {
@@ -115,7 +89,129 @@ func sourceDeclarationSections(view map[string]any) []declarationSection {
 			{"Source-local non-claim refs", stringArray(row["nonClaimRefs"]), true},
 		}})
 	}
-	return []declarationSection{groups, vocabulary, scenarios, derivations}
+	return []declarationSection{groups, vocabulary, shared, derivations}
+}
+
+// scenarioRecord is the one human field inventory of a canonical scenario.
+func scenarioRecord(row map[string]any) declarationRecord {
+	actions := stringArray(row["actionSequence"])
+	for i := range actions {
+		actions[i] = fmt.Sprintf("%d. %s", i+1, actions[i])
+	}
+	fields := []declarationField{
+		{"Requirements", stringArray(row["requirementIds"]), true},
+		{"Parameters", stringArray(row["parameters"]), true},
+		{"Preconditions", stringArray(row["preconditions"]), false},
+		{"Action sequence", actions, false},
+		{"Expected observations", stringArray(row["expectedObservations"]), false},
+		{"Forbidden observations", stringArray(row["forbiddenObservations"]), false},
+		{"Vocabulary references", stringArray(row["vocabularyRefs"]), true},
+		{"Source-local non-claim refs", stringArray(row["nonClaimRefs"]), true},
+	}
+	examples := anyArray(row["examples"])
+	if len(examples) == 0 {
+		fields = append(fields, declarationField{label: "Examples"})
+	}
+	for _, raw := range examples {
+		example := raw.(map[string]any)
+		values := example["values"].(map[string]any)
+		keys := make([]string, 0, len(values))
+		for key := range values {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		pairs := make([]string, 0, len(keys))
+		for _, key := range keys {
+			pairs = append(pairs, key+": "+stringValue(values[key]))
+		}
+		fields = append(fields, declarationField{"Example " + stringValue(example["exampleId"]), pairs, false})
+	}
+	return declarationRecord{stringValue(row["scenarioId"]), fields}
+}
+
+// nestsUnderOneRequirement places a scenario's full record exactly once, so
+// rendered size stays linear in the admitted source: under its requirement
+// when it links to exactly one, otherwise in the shared scenarios section.
+func nestsUnderOneRequirement(row map[string]any) bool {
+	return len(anyArray(row["requirementIds"])) == 1
+}
+
+// scenarioTargetKey names the in-page target of a scenario's single record.
+func scenarioTargetKey(scenarioID string) string {
+	return "scenario:" + scenarioID
+}
+
+// requirementScenarios lists every scenario linked to one requirement by ID
+// and holds the full records of those linked to it alone.
+type requirementScenarios struct {
+	linkedIDs []string
+	nested    []declarationRecord
+}
+
+// scenariosByRequirement indexes scenarios by linked requirement in canonical
+// scenario order. Admission rejects dangling links and empty link sets, so
+// every scenario is listed under at least one requirement.
+func scenariosByRequirement(view map[string]any) map[string]requirementScenarios {
+	result := map[string]requirementScenarios{}
+	for _, raw := range anyArray(view["scenarios"]) {
+		row := raw.(map[string]any)
+		requirementIDs := stringArray(row["requirementIds"])
+		for _, requirementID := range requirementIDs {
+			entry := result[requirementID]
+			entry.linkedIDs = append(entry.linkedIDs, stringValue(row["scenarioId"]))
+			result[requirementID] = entry
+		}
+		if nestsUnderOneRequirement(row) {
+			entry := result[requirementIDs[0]]
+			entry.nested = append(entry.nested, scenarioRecord(row))
+			result[requirementIDs[0]] = entry
+		}
+	}
+	return result
+}
+
+// scenarioLinksHTML links each scenario ID to its single record.
+func scenarioLinksHTML(scenarioIDs []string) browserdoc.Fragment {
+	links := make([]browserdoc.InPageLink, 0, len(scenarioIDs))
+	for _, scenarioID := range scenarioIDs {
+		links = append(links, browserdoc.InPageLink{Label: scenarioID, TargetKey: scenarioTargetKey(scenarioID)})
+	}
+	return browserdoc.InPageLinkListOrNone(links)
+}
+
+func declarationRecordMarkdown(record declarationRecord, level int) []string {
+	lines := []string{strings.Repeat("#", level) + " " + markdownfmt.Text(record.id), ""}
+	for _, field := range record.fields {
+		lines = append(lines, markdownfmt.Text(field.label)+":", "")
+		if len(field.values) == 0 {
+			lines = append(lines, "None.")
+		}
+		for _, value := range field.values {
+			text := markdownfmt.Text(value)
+			if field.code {
+				text = markdownfmt.CodeSpan(value)
+			}
+			lines = append(lines, "- "+text)
+		}
+		lines = append(lines, "")
+	}
+	return lines
+}
+
+func declarationRecordHTML(record declarationRecord) browserdoc.Fragment {
+	return browserdoc.Details(record.id, declarationFieldsHTML(record))
+}
+
+func scenarioRecordHTML(record declarationRecord) browserdoc.Fragment {
+	return browserdoc.AnchoredDetails(scenarioTargetKey(record.id), record.id, declarationFieldsHTML(record))
+}
+
+func declarationFieldsHTML(record declarationRecord) browserdoc.Fragment {
+	fields := []browserdoc.DefinitionItem{}
+	for _, field := range record.fields {
+		fields = append(fields, browserdoc.Definition(field.label, browserdoc.ListOrNone(field.values, field.code)))
+	}
+	return browserdoc.DefinitionList(fields...)
 }
 
 func sourceDeclarationsMarkdown(view map[string]any) []string {
@@ -126,21 +222,7 @@ func sourceDeclarationsMarkdown(view map[string]any) []string {
 		}
 		lines = append(lines, "## "+section.title, "")
 		for _, record := range section.records {
-			lines = append(lines, "### "+markdownfmt.Text(record.id), "")
-			for _, field := range record.fields {
-				lines = append(lines, markdownfmt.Text(field.label)+":", "")
-				if len(field.values) == 0 {
-					lines = append(lines, "None.")
-				}
-				for _, value := range field.values {
-					text := markdownfmt.Text(value)
-					if field.code {
-						text = markdownfmt.CodeSpan(value)
-					}
-					lines = append(lines, "- "+text)
-				}
-				lines = append(lines, "")
-			}
+			lines = append(lines, declarationRecordMarkdown(record, 3)...)
 		}
 	}
 	return lines
@@ -157,13 +239,17 @@ func sourceDeclarationsSummary(view map[string]any) []browserdoc.SummaryItem {
 		}
 		parts := []browserdoc.Fragment{}
 		for _, record := range section.records {
-			fields := []browserdoc.DefinitionItem{}
-			for _, field := range record.fields {
-				fields = append(fields, browserdoc.Definition(field.label, browserdoc.ListOrNone(field.values, field.code)))
+			if section.linkTargets {
+				parts = append(parts, scenarioRecordHTML(record))
+			} else {
+				parts = append(parts, declarationRecordHTML(record))
 			}
-			parts = append(parts, browserdoc.Details(record.id, browserdoc.DefinitionList(fields...)))
 		}
-		items = append(items, browserdoc.SummaryItem{Label: section.title, Value: browserdoc.Details(section.title, parts...)})
+		value := browserdoc.Details(section.title, parts...)
+		if section.linkTargets {
+			value = browserdoc.Concat(parts...)
+		}
+		items = append(items, browserdoc.SummaryItem{Label: section.title, Value: value})
 	}
 	return items
 }

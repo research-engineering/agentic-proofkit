@@ -231,3 +231,21 @@ func TestNativeOutputOwnerRejectsDirectionAliasAndRehashedTupleDrift(t *testing.
 		})
 	}
 }
+
+// A structural-to-structural version bump must not keep the predecessor's
+// generated annotation as if it were an independent policy note.
+func TestVersionBumpRetiresPredecessorStructuralAnnotation(t *testing.T) {
+	owner, ok := nativeStructureOwner("proofkit.requirement-source-transition.output.v3.json-schema")
+	if !ok {
+		t.Fatal("transition output owner absent")
+	}
+	predecessor := "structural JSON Schema definition " + owner.predecessors[0] + "; canonicalization and semantic validity remain native admission obligations"
+	policy := "Preserve this independent caller policy."
+	got, err := enrichedCompatibilitySummary(owner, "3", []any{"schemaVersion=2", predecessor, policy})
+	if want := append(owner.summary("3"), policy); err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("summary = %v, %v; want %v", got, err, want)
+	}
+	if _, err := enrichedCompatibilitySummary(owner, "3", []any{"schemaVersion=2", predecessor + " " + policy}); err == nil {
+		t.Fatal("accepted ambiguous predecessor annotation text")
+	}
+}

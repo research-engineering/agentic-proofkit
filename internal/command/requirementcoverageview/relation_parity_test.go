@@ -120,15 +120,17 @@ func relationParityInput(t *testing.T, mode string) map[string]any {
 func TestCoverageRelationFullOutputParity(t *testing.T) {
 	// Captured from the unindexed base-83eddaf owner with its current renderer.
 	// JSON, Markdown and exit codes match the earlier base-27fcb8e observations.
+	// HTML was re-captured when the shared stylesheet began hiding unmatched
+	// card groups; only that stylesheet rule changed the rendered bytes.
 	wants := map[string]string{
-		"sparse":         "0a1119ae0b9f04131b5cd11614a20005a84fb7c0d30685979f787ea42a9e3c02",
-		"dense":          "ed7129488d06670d2b865de5f9565011dc9d2df45b336cadec439a385b0becbf",
-		"no-match":       "a55d426051d44ca81dc7b70b56935893be9d10c997b23db76983eee86cb664b8",
-		"missing":        "a3bc09e3e9c31f0a10dea500c6fd7cc4b41318bac20af948555042524862dd20",
-		"failed":         "76e4251ce8bd492f4497803fdb640e015ebb62e5cd76217989d3c3e4a78dbb65",
-		"mixed-negative": "ce0b2eff0e925900161d340b0a90b2d4a4b6d837fe523b4be40c72ead9074e22",
-		"owner-scope":    "207615cfc0c1f7a8d901eb4fdc32b76fdd0102725bf0a36675a0e1410abb5580",
-		"compact":        "5455d4b8a80fd247e425920665f06642718e0d403bd4689d0542d53455efac39",
+		"sparse":         "f6e52d12b5bf07fe84b20cfe02791631815dbb79255fe40da9cba0f95cbfd6f1",
+		"dense":          "ece6842d9bf9ee589c6d4b353ee8b5f2c761a46f91e9f18b4b232378b6ca397f",
+		"no-match":       "e1199178877df52b4634abd873e76a6a8a3db289703951d3175fd3b3e53b0c34",
+		"missing":        "2da12f764a429da0b08cd38550c9e401e7715cc4bfcf7af1ddb550c8499c2cf3",
+		"failed":         "d0483811de43b06f2a5ff4f1582f60f05e9bbc15ad706ee4ba3c403c64d353ad",
+		"mixed-negative": "7ac30c89c9d7570d6a4f4dc30bf57ee2667e282e54c931edd0f42bfcd81798bd",
+		"owner-scope":    "87d6075e17f0e33c0966ca32022de5896dbc52b487142ae2f77ce693c8c8fceb",
+		"compact":        "fb68abed2adccedce98ad23351437802f0dfd58e67491e14bfff168e77acd57a",
 	}
 	for _, name := range []string{"sparse", "dense", "no-match", "missing", "failed", "mixed-negative", "owner-scope", "compact"} {
 		t.Run(name, func(t *testing.T) {

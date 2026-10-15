@@ -220,3 +220,24 @@ func TestCardGroupsUseTotalOrderingWhenLabelsMatch(t *testing.T) {
 		t.Fatalf("card groups are not sorted by label then stable group id:\n%s", output)
 	}
 }
+
+// An in-page link and its anchored target derive from one key through
+// FragmentID, so caller text never reaches the id or href attribute.
+func TestInPageLinksResolveToTheirAnchoredDetails(t *testing.T) {
+	key := `scenario:"<a&b>`
+	target := AnchoredDetails(key, "<summary> & text", Text("body")).html
+	links := InPageLinkListOrNone([]InPageLink{{Label: "<b>SCN</b>", TargetKey: key}}).html
+	id := FragmentID(key)
+	if !strings.HasPrefix(target, `<details id="`+id+`"><summary>&lt;summary&gt; &amp; text</summary>`) {
+		t.Fatalf("anchored details = %q", target)
+	}
+	if links != `<ul><li><a href="#`+id+`"><code>&lt;b&gt;SCN&lt;/b&gt;</code></a></li></ul>` || safeHref("#"+id) != "#"+id {
+		t.Fatalf("in-page links = %q", links)
+	}
+	if InPageLinkListOrNone(nil).html != ListOrNone(nil, true).html {
+		t.Fatal("an empty link list must render like an empty code list")
+	}
+	if strings.TrimPrefix(target, `<details id="`+id+`">`) != strings.TrimPrefix(Details("<summary> & text", Text("body")).html, "<details>") {
+		t.Fatal("anchored details must differ from details only by the id")
+	}
+}

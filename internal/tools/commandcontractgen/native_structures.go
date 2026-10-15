@@ -202,9 +202,9 @@ func nativeStructures() []nativeStructure {
 		commands:     []string{"requirement-source-transition"},
 		schema:       func() (map[string]any, error) { return requirementsourcetransition.InputStructure(), nil },
 	}, {
-		id:           "proofkit.requirement-source-transition.output.v2.json-schema",
+		id:           "proofkit.requirement-source-transition.output.v3.json-schema",
 		direction:    "output",
-		predecessors: []string{"proofkit.requirement-source-transition.output.v2.root-shape"},
+		predecessors: []string{"proofkit.requirement-source-transition.output.v2.json-schema"},
 		commands:     []string{"requirement-source-transition"},
 		schema:       func() (map[string]any, error) { return requirementsourcetransition.OutputStructure(), nil },
 	}, {
@@ -265,8 +265,8 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.requirement-context-slice.output.v2.root-shape"}, commands: []string{"requirement-context-slice"},
 		schema: func() (map[string]any, error) { return requirementcontext.SliceOutputStructure(), nil },
 	}, {
-		id: "proofkit.requirement-semantic-diff.output.v3.json-schema", direction: "output",
-		predecessors: []string{"proofkit.requirement-semantic-diff.output.v3.root-shape"}, commands: []string{"requirement-semantic-diff"},
+		id: "proofkit.requirement-semantic-diff.output.v4.json-schema", direction: "output",
+		predecessors: []string{"proofkit.requirement-semantic-diff.output.v3.json-schema"}, commands: []string{"requirement-semantic-diff"},
 		schema: func() (map[string]any, error) { return requirementdiff.OutputStructure(), nil },
 	}, {
 		id: "proofkit.transaction-inspect-residue.output.v1.json-schema", direction: "output",

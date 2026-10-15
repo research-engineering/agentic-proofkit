@@ -3,6 +3,7 @@ package admission
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -163,5 +164,48 @@ func TestDecodeTypedJSONUsesStrictAdmission(t *testing.T) {
 	}
 	if number, ok := large.Metadata["n"].(json.Number); !ok || number.String() != "10000000000000000000" {
 		t.Fatalf("metadata.n=%#v, want exact json.Number", large.Metadata["n"])
+	}
+}
+
+func TestSyntaxErrorKeepsMessageAndLocatesRejectedByte(t *testing.T) {
+	cases := []struct {
+		name, input, message string
+		offset, line, column int
+	}{
+		{name: "duplicate key selects the repeated key", input: `{"x":1,"x":2}`, message: "invalid JSON input: duplicate object key", offset: 7, line: 1, column: 8},
+		{name: "unterminated object ends at input length", input: "{", message: "invalid JSON input: unterminated object", offset: 1, line: 1, column: 2},
+		{name: "empty input", input: "", message: "invalid JSON input: unexpected end", offset: 0, line: 1, column: 1},
+		{name: "second value", input: "{} {}", message: "invalid JSON input: multiple JSON values", offset: 3, line: 1, column: 4},
+		{name: "multi-byte line counts scalar columns", input: "{\n  \"\u00e9\u20ac\U0001F600\": [1 2]\n}", message: "invalid JSON input: array values must be separated by comma", offset: 20, line: 2, column: 13},
+		{name: "CRLF ends one line", input: "{\r\n\"a\":1,\r\n7}", message: "invalid JSON input: object key must be a string", offset: 11, line: 3, column: 1},
+		{name: "bare CR ends one line", input: "[1,\rtruth]", message: "invalid JSON input: unexpected token", offset: 4, line: 2, column: 1},
+		{name: "standard decoder rejection", input: "{\"n\":01}", message: "invalid JSON input: invalid character '1' after object key:value pair", offset: 6, line: 1, column: 7},
+		{name: "invalid UTF-8 byte after scalars", input: "[\"\u00e9\xff\"]", message: "invalid JSON input: source must be valid UTF-8", offset: 4, line: 1, column: 4},
+		{name: "invalid escape selects the escaped byte", input: `["bad\q"]`, message: "invalid JSON input: invalid string token", offset: 6, line: 1, column: 7},
+		{name: "invalid escape after a multi-byte scalar", input: "[\"\u00e9\\q\"]", message: "invalid JSON input: invalid string token", offset: 5, line: 1, column: 5},
+		{name: "invalid escape in an object key", input: `{"a\q":1}`, message: "invalid JSON input: invalid string token", offset: 4, line: 1, column: 5},
+		{name: "raw control character in a string", input: "[\"a\tb\"]", message: "invalid JSON input: invalid string token", offset: 3, line: 1, column: 4},
+		{name: "unpaired high surrogate selects its escape", input: `["ok\ud800x"]`, message: "invalid JSON input: unpaired Unicode surrogate", offset: 4, line: 1, column: 5},
+		{name: "high surrogate followed by a non-surrogate escape", input: `["\ud800\u0041"]`, message: "invalid JSON input: unpaired Unicode surrogate", offset: 2, line: 1, column: 3},
+		{name: "lone low surrogate selects its escape", input: `["a","b\udc00"]`, message: "invalid JSON input: unpaired Unicode surrogate", offset: 7, line: 1, column: 8},
+		{name: "nesting depth selects the value past the limit, not the whitespace before it", input: strings.Repeat(`{"a": `, 512) + "1" + strings.Repeat("}", 512), message: "invalid JSON input: exceeds nesting depth limit", offset: 3072, line: 1, column: 3073},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			_, err := DecodeJSON(strings.NewReader(item.input), 1<<16)
+			var syntax *SyntaxError
+			if !errors.As(err, &syntax) {
+				t.Fatalf("DecodeJSON() error = %T %v, want *SyntaxError", err, err)
+			}
+			if err.Error() != item.message {
+				t.Fatalf("Error() = %q, want the unchanged message %q", err.Error(), item.message)
+			}
+			if syntax.Offset != item.offset || syntax.Line != item.line || syntax.Column != item.column {
+				t.Fatalf("position = byte %d line %d column %d, want byte %d line %d column %d", syntax.Offset, syntax.Line, syntax.Column, item.offset, item.line, item.column)
+			}
+		})
+	}
+	if _, err := DecodeJSON(strings.NewReader(`{"a":1}`), 3); err == nil || errors.As(err, new(*SyntaxError)) {
+		t.Fatalf("resource limit error = %v, want an unlocated non-syntax rejection", err)
 	}
 }

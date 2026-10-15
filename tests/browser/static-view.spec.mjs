@@ -265,3 +265,19 @@ test("static consumers retain unique hierarchy targets and interactive records",
     }
   }
 });
+
+test("static search hides every card group without a matching record", async ({staticViewURL, page}) => {
+  await openWorkspace(page, staticViewURL, heading, "static-view");
+  const groups = page.locator("[data-proofkit-card-group]");
+  expect(await groups.count()).toBeGreaterThan(1);
+  await page.getByRole("searchbox").fill("needle");
+  await expect(page.locator("[data-proofkit-card]:visible .proofkit-id")).toHaveText(["REQ-STATIC-2"]);
+  const states = await groups.evaluateAll(sections => sections.map(section => ({
+    matching: [...section.querySelectorAll("[data-proofkit-card]")].some(card => !card.hidden),
+    hidden: section.hidden, display: getComputedStyle(section).display,
+  })));
+  expect(states.filter(state => state.matching)).toHaveLength(1);
+  for (const state of states.filter(item => !item.matching)) expect(state).toEqual({matching: false, hidden: true, display: "none"});
+  await expect(page.locator("[data-proofkit-card-group]:not(:has([data-proofkit-card]:visible)) > h2")).toHaveCount(states.length - 1);
+  for (const headingLocator of await page.locator("[data-proofkit-card-group]:not(:has([data-proofkit-card]:visible)) > h2").all()) await expect(headingLocator).toBeHidden();
+});

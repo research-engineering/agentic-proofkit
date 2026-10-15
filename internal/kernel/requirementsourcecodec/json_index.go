@@ -8,8 +8,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"unicode/utf8"
 )
+
+// coordinateSweeps counts full-source coordinate sweeps so tests can bound
+// diagnostic work independently of how many faults a source contains.
+var coordinateSweeps atomic.Int64
 
 type rawLocation struct {
 	key   *ByteSpan
@@ -297,6 +302,7 @@ func sourceMap(source []byte, locations map[string]rawLocation) SourceMap {
 }
 
 func positionsAt(source []byte, offsets []int64) map[int64]Position {
+	coordinateSweeps.Add(1)
 	sort.Slice(offsets, func(left, right int) bool { return offsets[left] < offsets[right] })
 	unique := offsets[:0]
 	for _, offset := range offsets {
