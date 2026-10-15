@@ -260,11 +260,10 @@ cancellation deadline or a guarantee about package launchers or proof tools.
 After interruption, use `integration recover --repo-root <root> --transaction
 <pending-sha256-ref> --action <resume|rollback>`. It uses the existing native
 journal, not the current bootstrap source. A completed recovery is historical
-evidence; inspect current files separately. New journals use schema v3 for
-presence and absence and require this or a later supporting binary; new
-identity-bound terminal receipts use schema v2. Finishing recovery alone does
-not establish downgrade compatibility; no automatic downgrade or control-state
-deletion is supported.
+evidence; inspect current files separately. Desired-absence journals and new
+identity-bound terminal receipts use schema v2 and require this or a later
+supporting binary. Finishing recovery alone does not establish downgrade
+compatibility; no automatic downgrade or control-state deletion is supported.
 
 New transactions prepare their complete journal in a private
 `.agentic-proofkit/transaction-residue/preparing-*` directory before publishing
@@ -317,11 +316,10 @@ or control-state deletion. Archive disposal needs separate authority.
 These operations do not prove power-loss durability or protect against
 non-cooperative same-user modification.
 
-Present-only v1 and absence-bearing v2 journals and historical v1 receipts
-remain readable. A legacy receipt does not bind its missing desired identity:
-replan before applying. Repeated apply checks that the retained applied
-transaction binds the exact current desired state under one native lock;
-pending work blocks replay.
+Present-only v1 journals and historical v1 receipts remain readable. A legacy
+receipt does not bind its missing desired identity: replan before applying.
+Repeated apply checks that the retained applied transaction binds the exact
+current desired state under one native lock; pending work blocks replay.
 
 Plan and apply default to JSON. Ready plans and passed receipts exit 0;
 classified conflicts, recovery, cleanup or durability outcomes exit 1 with a
@@ -707,10 +705,9 @@ rendered output canonical truth.
 On 2026-10-11 an agent executed the same seven tasks (authoring, hierarchy,
 coverage, change review, validation errors, rendering, reduced authoring) on
 one synthetic fixture of four requirements, eight scenarios and three tests
-with pinned OpenSpec and StrictDoc releases, which were not the newest
-available on that date, and the Proofkit source of that date, recording 109
-runs. The observations below explain changes made here; they are not a
-ranking.
+with the OpenSpec and StrictDoc releases current on that date and the Proofkit
+source of that date, recording 109 runs. The observations below explain
+changes made here; they are not a ranking.
 
 | Area | Observation in that run | Consequence here |
 |---|---|---|
@@ -724,9 +721,9 @@ ranking.
 Non-claims: one synthetic fixture, one run per task, an agent author with
 helper-generated inputs, no user study, an automated axe subset only, and tool
 versions pinned on that date. No claim of general superiority, lower adoption
-cost or fitness for another repository follows. The run log, the summary that
-records the exact tool versions, and the scripts are retained as private review
-evidence and are not shipped in the package.
+cost or fitness for another repository follows. The run log, which records the
+exact tool versions, and the scripts are retained as private review evidence
+and are not shipped in the package.
 
 ## Agent Guidance
 
