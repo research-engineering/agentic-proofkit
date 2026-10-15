@@ -23,10 +23,9 @@ issue with synthetic data.
 
 ## Security Boundary
 
-Proofkit is intended to validate and render caller-owned inputs after those
-runtime surfaces are imported. It does not execute native witnesses,
-authenticate receipt producers, read implicit repository state, publish
-artifacts, approve merge, approve rollout, or decide proof freshness.
+Proofkit validates and renders caller-owned inputs. It does not execute native
+witnesses, authenticate receipt producers, read implicit repository state,
+publish artifacts, approve merge, approve rollout, or decide proof freshness.
 
 Security-sensitive findings usually belong to one of these classes:
 
@@ -43,8 +42,7 @@ Security-sensitive findings usually belong to one of these classes:
 
 1. Maintainers acknowledge the report and identify the affected surface.
 2. The fix is developed with a targeted regression proof.
-3. A patched version is released only through the documented release process
-   after that process exists in this repository.
+3. A patched version is released only through the documented release process.
 4. The advisory or release notes state impact, affected versions, fixed
    version, and any required consumer action.
 

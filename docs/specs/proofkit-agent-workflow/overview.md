@@ -143,8 +143,9 @@ install option. Managed lifecycle guidance is owned by `ADOPTION.md`.
 selected bootstrap and its canonical cooperative baseline through the existing
 repository transaction owner. Both expected identities are required for apply;
 local edits or malformed baselines block mutation. Recovery uses historical
-journal state without assuming the current tool renderer. Desired absence
-selects journal v2, while present-only v1 identities and recovery remain stable.
+journal state without assuming the current tool renderer. New journals use v3
+for presence and absence, while retained present-only v1 and absence-bearing v2
+identities and recovery remain stable.
 Host discovery, body loading, and approved-launcher invocation require separate
 isolated native-host observations; direct CLI execution cannot prove skill use.
 

@@ -3,7 +3,11 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -103,5 +107,71 @@ func TestCanonicalPathContractIdentitySeparatesWireVersion(t *testing.T) {
 				t.Fatalf("contract boundary mutation rejection: got %v, want %q", err, test.want)
 			}
 		})
+	}
+}
+
+// The contract map restates these lifecycle identities for readers, and
+// ADOPTION.md and the agent-workflow overview restate the fresh journal
+// version. Deriving the expected sentences from the shipped contract keeps a
+// version bump from leaving these owner surfaces behind.
+func TestContractMapDocStatesLifecycleContractVersions(t *testing.T) {
+	commands, _, err := indexPublicABIRecords(readCLIContractRaw(t)["commands"], "command")
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := func(name, direction string) (string, string, []any) {
+		value, ok := commands[name][direction+"Contract"].(map[string]any)
+		if !ok {
+			t.Fatalf("missing %s %s contract", name, direction)
+		}
+		contractID, _ := value["contractId"].(string)
+		prefix := "proofkit." + name + "." + direction + ".v"
+		wire, ok := value["schemaVersion"].(json.Number)
+		if !strings.HasPrefix(contractID, prefix) || !ok {
+			t.Fatalf("unexpected %s %s identity %q", name, direction, contractID)
+		}
+		summary, _ := value["compatibilitySummary"].([]any)
+		return strings.TrimPrefix(contractID, prefix), wire.String(), summary
+	}
+	inputSemantic, inputWire, inputSummary := identity("adopt-materialize-plan", "input")
+	if semantic, wire, _ := identity("adopt-materialize-apply", "input"); semantic != inputSemantic || wire != inputWire {
+		t.Fatalf("materialization plan/apply input identities diverge: v%s/%s and v%s/%s", inputSemantic, inputWire, semantic, wire)
+	}
+	outputSemantic, outputWire, _ := identity("adopt-materialize-apply", "output")
+	for _, name := range []string{"adopt-materialize-plan", "adopt-materialize-recover", "integration-apply", "integration-plan", "integration-recover"} {
+		if semantic, wire, _ := identity(name, "output"); semantic != outputSemantic || wire != outputWire {
+			t.Fatalf("lifecycle output identity of %s diverges: v%s/%s, want v%s/%s", name, semantic, wire, outputSemantic, outputWire)
+		}
+	}
+	if len(inputSummary) == 0 {
+		t.Fatal("materialization input has no compatibility summary")
+	}
+	policy, _ := inputSummary[len(inputSummary)-1].(string)
+	journal := regexp.MustCompile(`fresh plans and journals use transaction schemaVersion=([0-9]+)`).FindStringSubmatch(policy)
+	if journal == nil {
+		t.Fatalf("canonical path policy does not name the fresh journal version: %q", policy)
+	}
+	for _, surface := range []struct {
+		path       string
+		statements []string
+	}{
+		{path: "docs/proofkit-contract-map.md", statements: []string{
+			fmt.Sprintf("Adoption materialization plan/apply input v%s retains payload `schemaVersion: %s`", inputSemantic, inputWire),
+			fmt.Sprintf("six adoption/integration lifecycle output contracts use semantic v%s with outer `schemaVersion: %s`", outputSemantic, outputWire),
+			fmt.Sprintf("Fresh transaction plans and journals use `schemaVersion: %s`", journal[1]),
+		}},
+		{path: "ADOPTION.md", statements: []string{fmt.Sprintf("New journals use schema v%s for presence and absence", journal[1])}},
+		{path: "docs/specs/proofkit-agent-workflow/overview.md", statements: []string{fmt.Sprintf("New journals use v%s for presence and absence", journal[1])}},
+	} {
+		document, err := os.ReadFile(filepath.Join(repoRoot(t), filepath.FromSlash(surface.path)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		normalized := strings.Join(strings.Fields(string(document)), " ")
+		for _, statement := range surface.statements {
+			if !strings.Contains(normalized, statement) {
+				t.Fatalf("%s does not state the shipped contract identity: %s", surface.path, statement)
+			}
+		}
 	}
 }

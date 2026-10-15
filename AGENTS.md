@@ -147,6 +147,13 @@ publishable.
 
 Skipped gates must state the exact blocker and must not be reported as success.
 
+When a change alters behavior that a requirement or its witness covers and a
+requirement clause would become false, change the requirement explicitly or
+escalate; never change only the witness or its expected values to fit the new
+behavior. Expected values captured from current output are part of the reviewed
+candidate. A fix to a reusable mechanism fixes every other site of that
+mechanism in the same change or records the remaining sites.
+
 ## Decision Protocol
 
 Every non-trivial design or implementation decision should answer:
