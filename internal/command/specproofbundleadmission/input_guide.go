@@ -57,10 +57,15 @@ Bundle template (fill required inputs and child result operands):
   "nonClaims": ["Bundle linkage does not execute witnesses, authenticate producers or approve merge."]
 }
 ` + "```\n" + `
-  Match each receipt's proofPlanId to schedulerPlanId, receiptKind to a binding
-  commandId, and each logical witnessSelectors ID to a requirement/scenario
-  covered by that command. Scheduler and binding command/environment sets must
-  agree; unbound scheduler commands fail. Sorting does not repair a wrong link.
+  Match each receipt's proofPlanId to the admitted plan's schedulerPlanId,
+  receiptKind to a binding commandId, proofNodeDigest to that command's
+  proofNodeDigests row, and each logical witnessSelectors ID to a
+  requirement/scenario covered by that command. A receipt links only while
+  its own command's node is unchanged, even under the same plan ID; edits to
+  other commands or to nonClaims do not unlink it. Rerun the witness whose
+  node changed; never copy a receipt under a new digest without running it.
+  Scheduler and binding command/environment sets must agree; unbound
+  scheduler commands fail. Sorting does not repair a wrong link.
   Preserve each receipt's recorded environment; independently check it against
   the actual runner policy. Bundle linkage is not full environment/currentness
   verification and does not inspect files or recompute digest subjects.

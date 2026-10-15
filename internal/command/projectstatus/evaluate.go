@@ -158,7 +158,10 @@ func canonicalAction(state ProjectState, issues []string, contextRef string) (Ne
 		if len(issues) != 0 || contextRef == "" {
 			return NextAction{}, fmt.Errorf("project verification-required projection is invalid")
 		}
+		// Proofkit never runs native witnesses; the route serving this action
+		// is the read-only guide for running them and admitting their evidence.
 		action.ActionClass = ActionRunRepositoryVerification
+		action.CommandRoute = []string{"native-evidence-guidance"}
 		action.ContextRef = contextRef
 	default:
 		return NextAction{}, fmt.Errorf("project state is unsupported")

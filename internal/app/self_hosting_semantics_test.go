@@ -492,7 +492,7 @@ func assertOutputContains(t *testing.T, output []byte, needle string) {
 
 func validProofReceiptInput() map[string]any {
 	return map[string]any{
-		"schemaVersion": 1,
+		"schemaVersion": 2,
 		"receiptSetId":  "proofkit.test.receipts",
 		"nonClaims":     []any{"Receipt test input does not claim producer authenticity."},
 		"receipts": []any{
@@ -513,6 +513,7 @@ func validProofReceiptInput() map[string]any {
 				"producerAdmissionClass": "advisory",
 				"producerId":             "local.test",
 				"proofBindingDigest":     digestText(),
+				"proofNodeDigest":        digestText(),
 				"proofPlanId":            "proofkit.test.plan",
 				"provenanceRef":          "artifacts/test/provenance.json",
 				"receiptId":              "receipt.test.one",

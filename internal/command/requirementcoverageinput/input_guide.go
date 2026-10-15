@@ -3,12 +3,13 @@ package requirementcoverageinput
 import (
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 // InputGuide owns the direct-mode recipe, not the child schemas or test policy.
 func InputGuide(renderer cliexec.Renderer) string {
-	return strings.ReplaceAll(inputGuide, "{{cli}}", renderer.DisplayCommand())
+	return strings.NewReplacer("{{cli}}", renderer.DisplayCommand(), "{{ruleid}}", admit.RuleIDGrammar()).Replace(inputGuide)
 }
 
 const inputGuide = `Declaration coverage input guide:
@@ -30,6 +31,9 @@ const inputGuide = `Declaration coverage input guide:
   selected_paths_advisory keeps dead-zone findings advisory, not completeness.
   Do not narrow scope just to hide an absent test. The CLI does not scan files.
   Give each surface a stable surfaceId, ownerId and repository-relative path.
+  IDs follow: {{ruleid}}
+  Derive surfaceIds from paths without empty parts (src/__init__.py ->
+  src.init_py, not src.--init--).
   Include the required test surfaces independently of discovered entries so a
   missing test remains visible. Include expected command IDs in commandRefs.
   The composer adds inventory paths/commands; omission is not proof of absence.

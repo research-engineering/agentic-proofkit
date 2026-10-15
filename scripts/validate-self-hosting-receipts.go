@@ -14,6 +14,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
@@ -26,6 +27,7 @@ const (
 	artifactRoot                = "artifacts/proofkit"
 	packageArtifactRoot         = "artifacts/package"
 	packageGateEnvironmentClass = "local-go-python"
+	packageGateCommandID        = "proofkit.package-artifact"
 	pythonArtifactRoot          = "artifacts/pypi"
 	maxJSONBytes                = 8 << 20
 )
@@ -66,6 +68,10 @@ func run() error {
 		return err
 	}
 	witnessPlanInput, err := readJSONObject("proofkit/witness-plan.json")
+	if err != nil {
+		return err
+	}
+	proofNodeDigest, err := admittedNodeDigest(witnessPlanInput, packageGateCommandID)
 	if err != nil {
 		return err
 	}
@@ -113,7 +119,7 @@ func run() error {
 		"sourceSnapshotDigest":   executionRecord.SourceSnapshotDigest,
 		"witnessPlanDigest":      witnessPlanDigest,
 	})
-	witnessSelectors, err := requirementIDsForCommand(requirementBindingsInput, "proofkit.package-artifact")
+	witnessSelectors, err := requirementIDsForCommand(requirementBindingsInput, packageGateCommandID)
 	if err != nil {
 		return err
 	}
@@ -132,10 +138,11 @@ func run() error {
 		"producerAdmissionClass": admission.ProducerAdmissionClass,
 		"producerId":             admission.ProducerID,
 		"proofBindingDigest":     proofBindingDigest,
+		"proofNodeDigest":        proofNodeDigest,
 		"proofPlanId":            stringField(witnessPlanInput, "schedulerPlanId"),
 		"provenanceRef":          filepath.Join(artifactRoot, "ci-provenance.json"),
 		"receiptId":              receiptID(admission.IsGitHubActions),
-		"receiptKind":            "proofkit.package-artifact",
+		"receiptKind":            packageGateCommandID,
 		"runnerClass":            admission.RunnerClass,
 		"runnerIdentity":         admission.RunnerIdentity,
 		"sourceRevision":         sourceRevision,
@@ -146,7 +153,7 @@ func run() error {
 		"witnessSelectors":       stringsToAny(witnessSelectors),
 	}
 	proofReceiptInput := map[string]any{
-		"schemaVersion": 1,
+		"schemaVersion": proofreceiptadmission.InputSchemaVersion,
 		"receiptSetId":  "proofkit.self-hosting.proof-receipts",
 		"receipts":      []any{receipt},
 		"nonClaims": sortedStrings([]string{
@@ -510,6 +517,29 @@ func writeJSON(path string, value any) error {
 		return err
 	}
 	return os.WriteFile(path, output, 0o644)
+}
+
+// admittedNodeDigest is the execution-decision identity of commandID in the
+// admitted witness plan; the receipt records it, so the bundle links it only
+// while that plan node is unchanged.
+func admittedNodeDigest(plan map[string]any, commandID string) (string, error) {
+	decoded, err := decodeStableJSON(plan)
+	if err != nil {
+		return "", err
+	}
+	projection, record, exitCode, err := witnessschedulerplan.Evaluate(decoded)
+	if err != nil {
+		return "", err
+	}
+	if exitCode != 0 || record.State != "passed" {
+		return "", fmt.Errorf("proofkit/witness-plan.json must pass witness-scheduler-plan before a receipt records it")
+	}
+	for _, command := range projection.Commands {
+		if command.ID == commandID {
+			return command.ProofNodeDigest, nil
+		}
+	}
+	return "", fmt.Errorf("proofkit/witness-plan.json has no %s command for the receipt", commandID)
 }
 
 func decodeStableJSON(value any) (any, error) {

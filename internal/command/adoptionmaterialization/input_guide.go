@@ -4,11 +4,13 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/repositorytransaction"
 )
 
 // InputGuide owns the connected authoring example, not child admission policy.
 func InputGuide(renderer cliexec.Renderer) string {
-	return strings.ReplaceAll(inputGuide, "{{cli}}", renderer.DisplayCommand())
+	return strings.NewReplacer("{{cli}}", renderer.DisplayCommand(), "{{manifest}}", ProjectManifestPath,
+		"{{control}}", repositorytransaction.ControlRoot).Replace(inputGuide)
 }
 
 const inputGuide = `Materialization input guide:
@@ -20,15 +22,20 @@ const inputGuide = `Materialization input guide:
   No package documentation is needed for this example. It is not an exhaustive
   schema and does not authorize writes, approve meaning or prove test execution.
 
-  First obtain the source plan:
+  First obtain the source plan; adopt plan --help explains each --mode:
   {{cli}} adopt plan --repo-root <root> --mode <intent> --format json
-  Choose fresh for owner-supplied intent, audit-from-code for untrusted code,
-  or code-baseline only when the caller explicitly trusts the existing behavior.
   Replace sourcePlan: null below with that entire output object, not its planId,
   a report wrapper, file path or fabricated digest. Null deliberately fails
   admission. Keep the plan's trust declaration; changing a mode is an owner
-  decision, not a way to make validation pass. This plan is routing context,
-  not proof that the inspected code or witness is current.
+  decision, not a way to make validation pass. Plan and apply accept only the
+  sourcePlanId recorded in {{manifest}} or a plan whose repositoryInventory
+  equals the current root; any other plan is stale. Reuse the recorded plan
+  for later changes. Rerun adopt plan right before the first materialization
+  and for a new mode decision: the inventory changes when a top-level entry
+  is added or removed (a scratch directory, {{control}}/ left by a rolled-back
+  apply, directories integration apply creates) or a recognized root file
+  such as README.md, AGENTS.md, a manifest or a lockfile changes. The plan is
+  routing context, not proof that the inspected code or witness is current.
 
   All other values below form one fictional, connected example. Replace them
   consistently with reviewed repository facts; never copy a fictional witness
@@ -40,6 +47,8 @@ const inputGuide = `Materialization input guide:
   Store your completed packet in a caller-selected scratch JSON file. Its
   requirementSources are requirement-source-admission inputs, not source reports.
   Binding and inventory record fields are raw owner inputs, not passed reports.
+  oracle.oracleKind is a consumer-defined label that Proofkit admits as text
+  and never interprets; keep one documented vocabulary of your own.
   Paths are repository-relative; stable IDs and ID lists must obey admission.
   Sort unique ID/path lists and every nonClaims list lexicographically.
   Do not sort argv; its token order is meaningful. Preserve identical
@@ -182,15 +191,16 @@ Validate the completed packet (replace <packet> with its scratch file path):
   {{cli}} adopt materialize plan --input <packet> --repo-root <root>
   Child success requires exit 0 and state passed; the plan requires exit 0 and
   state ready. On rejection, repair the named input field and rerun admission;
-  never replace a failed report with invented passed JSON. A sourcePlan failure
-  requires a new adopt plan output, not hand-edited task text or hashes.
+  never replace a failed report with invented passed JSON. A rejected or stale
+  sourcePlan requires a new adopt plan output, not hand-edited task text or hashes.
   If a parent error only says a child must pass, invoke that child directly
   with its pointer above to inspect its ruleResults and diagnostics. For more
   sources repeat requirement-source-admission for /requirementSources/<index>.
 
 Before applying, review transaction.operations and manifest. Only requirement
   sources, the binding record, test inventory and project routing manifest are
-  materialized. No test, overview, execution receipt or CI script is generated.
+  materialized. No test, overview, execution receipt or CI script is generated;
+  <specPackagePath>/overview.md is reserved for context the owner writes.
   Source and test path references do not prove that files exist or execute.
   Creating or changing those files requires separate repository authorization.
 
@@ -199,6 +209,11 @@ After explicit approval of the exact planned writes, pass the SAME packet:
   Do not pass the plan output as the apply input. Copy both identities from
   the reviewed plan. If the target changes, replan and review; do not force it.
   Exit 0 and state passed confirms materialization only, not behavioral proof.
+  Apply also keeps control state under {{control}}/: the journal and only the
+  latest terminal receipt. It is no planned operation or project record;
+  status, next and recover read it in this working tree. Keep it out of version
+  control (a committed pending journal would put every clone into recovery);
+  commit the materialized records and retain the apply output as the receipt.
   Any non-passed result stops normal writes. For recovery_required or
   cleanup_required inspect {{cli}} adopt materialize recover --help; never
   delete a journal to retry. durability_unknown means writes may have applied

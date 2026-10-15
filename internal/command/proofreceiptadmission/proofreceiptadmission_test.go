@@ -43,6 +43,25 @@ func TestBuildRejectsUnknownReceiptStatus(t *testing.T) {
 	}
 }
 
+// A version 1 receipt never recorded which plan node it ran under, so it
+// cannot be admitted as node-bound evidence, and a v2 receipt needs the digest.
+func TestBuildRequiresPlanNodeDigestFromVersionTwo(t *testing.T) {
+	input := validProofReceiptInput()
+	input["schemaVersion"] = json.Number("1")
+	if _, _, err := Build(input); err == nil || !strings.Contains(err.Error(), "schemaVersion must be 2") {
+		t.Fatalf("Build() error=%v, want version 1 refusal", err)
+	}
+	input = validProofReceiptInput()
+	delete(input["receipts"].([]any)[0].(map[string]any), "proofNodeDigest")
+	if _, _, err := Build(input); err == nil || !strings.Contains(err.Error(), "receipt.proofNodeDigest") {
+		t.Fatalf("Build() error=%v, want missing proofNodeDigest refusal", err)
+	}
+	projection, _, exitCode, err := Evaluate(validProofReceiptInput())
+	if err != nil || exitCode != 0 || projection.Receipts[0].ProofNodeDigest != testDigest("node") {
+		t.Fatalf("Evaluate() projection=%#v exit=%d err=%v, want projected proofNodeDigest", projection, exitCode, err)
+	}
+}
+
 func TestBuildAdmitsEveryProofVocabularyReceiptStatus(t *testing.T) {
 	for _, status := range proofvocab.ReceiptStatuses() {
 		t.Run(status, func(t *testing.T) {
@@ -63,7 +82,7 @@ func TestBuildAdmitsEveryProofVocabularyReceiptStatus(t *testing.T) {
 
 func validProofReceiptInput() map[string]any {
 	return map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"receiptSetId":  "proofkit.test.receipt-set",
 		"nonClaims":     []any{},
 		"receipts": []any{
@@ -84,6 +103,7 @@ func validProofReceiptInput() map[string]any {
 				"producerAdmissionClass": "advisory",
 				"producerId":             "producer.local",
 				"proofBindingDigest":     testDigest("binding"),
+				"proofNodeDigest":        testDigest("node"),
 				"proofPlanId":            "proofkit.test.plan",
 				"provenanceRef":          nil,
 				"receiptId":              "proofkit.test.receipt",

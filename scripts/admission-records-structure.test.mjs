@@ -177,12 +177,21 @@ function repoProfile() {
   };
 }
 const digest = 'sha256:' + 'a'.repeat(64);
+// Fixture receipts record the node digest the public scheduler reports for their command in the repository plan.
+let nodeDigestCache;
+function nodeDigest(commandId) {
+  nodeDigestCache ??= JSON.parse(run('witness-scheduler-plan', JSON.parse(readFileSync(new URL('proofkit/witness-plan.json', root), 'utf8'))).stdout)
+    .diagnostics.find(diagnostic => diagnostic.key === 'proofNodeDigests').value;
+  const row = nodeDigestCache.find(node => node.commandId === commandId);
+  assert.ok(row, commandId);
+  return row.proofNodeDigest;
+}
 function receipt(overrides = {}) {
   return {
     artifactRefs: [{kind: 'report', path: 'artifacts/test/report.json', sha256: digest}], commandDigest: digest, dependencyDigest: null,
     environmentClass: 'local-go', environmentDigest: digest, evidenceRefs: ['artifacts/test/report.json'], exitCode: 0,
     finishedAt: '2026-06-22T00:00:01Z', lockfileDigest: null, nonClaims: ['Test receipt does not claim freshness.'], preconditionDigest: digest,
-    producerAdmissionClass: 'advisory', producerId: 'local.test', proofBindingDigest: digest, proofPlanId: 'proofkit.self-hosting.witness-plan',
+    producerAdmissionClass: 'advisory', producerId: 'local.test', proofBindingDigest: digest, proofNodeDigest: nodeDigest('proofkit.go-test'), proofPlanId: 'proofkit.self-hosting.witness-plan',
     provenanceRef: 'artifacts/test/provenance.json', receiptId: 'receipt.test.one', receiptKind: 'proofkit.go-test', runnerClass: 'local',
     runnerIdentity: 'local.test', sourceRevision: 'test-revision', startedAt: '2026-06-22T00:00:00Z', status: 'passed', toolchainDigest: digest,
     witnessSelectorDigest: digest, witnessSelectors: ['REQ-PROOFKIT-PACKAGE-001'], ...overrides,
@@ -191,7 +200,7 @@ function receipt(overrides = {}) {
 // Child operands are produced by the public child command, exactly as the bundle input guide prescribes.
 function receiptChild(receipts) {
   const nonClaims = ['Test child report does not claim producer authenticity.'];
-  const result = run('proof-receipt-admission', {schemaVersion: 1, receiptSetId: 'proofkit.test.child-report', receipts, nonClaims});
+  const result = run('proof-receipt-admission', {schemaVersion: 2, receiptSetId: 'proofkit.test.child-report', receipts, nonClaims});
   assert.equal(result.stderr, '');
   const report = JSON.parse(result.stdout);
   return {exitCode: result.status, failures: report.diagnostics.find(row => row.key === 'failures').value, nonClaims, producers: [], receipts, report};
@@ -271,10 +280,13 @@ test('published directions are exact native structural owners with conserved pub
     assert.deepEqual(row.allowedFlags, ['--input', '--input-pointer']);
     for (const direction of ['input', 'output']) {
       const {record, definition, variant, schema: shape} = checks.get(command + '/' + direction);
-      assert.equal(record.contractId, `proofkit.${command}.${direction}.v1`);
+      // Bundle input v2 binds receipts to plan nodes; its wire stays version 1.
+      const version = command === 'spec-proof-bundle-admission' && direction === 'input' ? 2 : 1;
+      assert.equal(record.contractId, `proofkit.${command}.${direction}.v${version}`);
       assert.equal(record.schemaVersion, 1);
-      assert.equal(record.rootDefinitionRef, `proofkit.${command}.${direction}.v1.json-schema`);
+      assert.equal(record.rootDefinitionRef, `proofkit.${command}.${direction}.v${version}.json-schema`);
       assert.equal(definitionOf(`proofkit.${command}.${direction}.v1.root-shape`), undefined, 'predecessor retired');
+      if (version > 1) assert.equal(definitionOf(`proofkit.${command}.${direction}.v1.json-schema`), undefined, 'structural predecessor retired');
       assert.equal(definition.fieldTree.variants.length, 1);
       assert.equal(variant.variantId, '01-root'); assert.deepEqual(variant.when, ['default JSON mode']);
       if (direction === 'input') {

@@ -6,11 +6,19 @@ import (
 	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/witnesscommand"
 )
 
 const reportKind = "proofkit.witness-scheduler-plan"
+
+// outputSchemaVersion 2 added the proofNodeDigests diagnostic.
+const outputSchemaVersion = 2
+
+// proofNodeDigestVersion versions the canonical node record that
+// proofNodeDigest hashes; it is part of the hashed record.
+const proofNodeDigestVersion = 1
 
 var sideEffectClasses = []string{"destructive", "local_write", "network", "none", "shared_resource"}
 var sideEffectClassSet = toSet(sideEffectClasses)
@@ -73,6 +81,7 @@ type executionGroup struct {
 type CommandProjection struct {
 	EnvironmentClasses []string
 	ID                 string
+	ProofNodeDigest    string
 }
 
 type Projection struct {
@@ -85,6 +94,7 @@ type admittedInput struct {
 	NonClaims       []string
 	Policies        []policy
 	SchedulerPlanID string
+	Vocabulary      witnesscommand.Vocabulary
 }
 
 func Build(raw any) (report.Record, int, error) {
@@ -122,6 +132,10 @@ func Evaluate(raw any) (Projection, report.Record, int, error) {
 	}
 	failures := schedulerFailures(input.Commands, input.Policies, executionGroups)
 	sort.Strings(failures)
+	commands, err := commandProjections(input.Commands, policiesByCommandID, input.Vocabulary)
+	if err != nil {
+		return Projection{}, report.Record{}, 1, err
+	}
 	state := "passed"
 	if len(failures) > 0 {
 		state = "failed"
@@ -129,7 +143,7 @@ func Evaluate(raw any) (Projection, report.Record, int, error) {
 	nonClaims := append(append([]string{}, boundaryNonClaims...), input.NonClaims...)
 	sort.Strings(nonClaims)
 	record := report.Record{
-		SchemaVersion: 1,
+		SchemaVersion: outputSchemaVersion,
 		ReportKind:    reportKind,
 		ReportID:      input.SchedulerPlanID,
 		State:         state,
@@ -145,12 +159,13 @@ func Evaluate(raw any) (Projection, report.Record, int, error) {
 		Diagnostics: []report.Diagnostic{
 			{Key: "executionGroups", Value: executionGroupDiagnostics(executionGroups)},
 			{Key: "failures", Value: admit.StringSliceToAny(failures)},
+			{Key: "proofNodeDigests", Value: proofNodeDigestDiagnostics(commands)},
 		},
 		RuleResults: ruleResults(failures),
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
 	projection := Projection{
-		Commands:        commandProjections(input.Commands),
+		Commands:        commands,
 		SchedulerPlanID: input.SchedulerPlanID,
 	}
 	if state == "passed" {
@@ -159,17 +174,58 @@ func Evaluate(raw any) (Projection, report.Record, int, error) {
 	return projection, record, 1, nil
 }
 
-func commandProjections(commands []witnesscommand.Command) []CommandProjection {
+func commandProjections(commands []witnesscommand.Command, policiesByCommandID map[string]policy, vocabulary witnesscommand.Vocabulary) ([]CommandProjection, error) {
 	result := make([]CommandProjection, 0, len(commands))
 	for _, command := range commands {
+		var commandPolicy *policy
+		if value, ok := policiesByCommandID[command.ID]; ok {
+			commandPolicy = &value
+		}
+		nodeDigest, err := proofNodeDigest(command, commandPolicy, vocabulary)
+		if err != nil {
+			return nil, err
+		}
 		result = append(result, CommandProjection{
 			EnvironmentClasses: append([]string{}, command.Environment.Classes...),
 			ID:                 command.ID,
+			ProofNodeDigest:    nodeDigest,
 		})
 	}
 	sort.Slice(result, func(left int, right int) bool {
 		return result[left].ID < result[right].ID
 	})
+	return result, nil
+}
+
+// proofNodeDigest identifies the execution decision of exactly one plan node,
+// the scope a receipt is bound to. It hashes the command's canonical admitted
+// record, its policy without prose nonClaims, and the vocabulary projected
+// onto every name the command references (Vocabulary.ProjectionFor). Excluded
+// are plan and policy nonClaims, vocabulary rows the command does not
+// reference, pure admission bounds such as maxTimeoutMs (the admitted timeout
+// is in the command record) and the other members of the command's parallel
+// group (admission proves pairwise non-interference inside every group). None
+// of them can change how this command runs, so changing one node unlinks only
+// receipts recorded for that node. A missing policy hashes as null; such a
+// plan fails admission.
+func proofNodeDigest(command witnesscommand.Command, commandPolicy *policy, vocabulary witnesscommand.Vocabulary) (string, error) {
+	var policyValue any
+	if commandPolicy != nil {
+		policyValue = commandPolicy.executionValue()
+	}
+	return digest.StableJSONSHA256Ref(map[string]any{
+		"command":       command.JSONValue(),
+		"policy":        policyValue,
+		"schemaVersion": proofNodeDigestVersion,
+		"vocabulary":    vocabulary.ProjectionFor(command),
+	})
+}
+
+func proofNodeDigestDiagnostics(commands []CommandProjection) []any {
+	result := make([]any, 0, len(commands))
+	for _, command := range commands {
+		result = append(result, map[string]any{"commandId": command.ID, "proofNodeDigest": command.ProofNodeDigest})
+	}
 	return result
 }
 
@@ -234,7 +290,30 @@ func admitInput(raw any) (admittedInput, error) {
 		NonClaims:       nonClaims,
 		Policies:        policies,
 		SchedulerPlanID: schedulerPlanID,
+		Vocabulary:      vocabulary,
 	}, nil
+}
+
+// executionValue is the canonical admitted policy without its prose nonClaims.
+func (policy policy) executionValue() map[string]any {
+	var graceMs any
+	if policy.CancellationPolicy.GraceMs != nil {
+		graceMs = *policy.CancellationPolicy.GraceMs
+	}
+	return map[string]any{
+		"cacheAdmissionRefs":  admit.StringSliceToAny(policy.CacheAdmissionRefs),
+		"cancellationPolicy":  map[string]any{"graceMs": graceMs, "kind": policy.CancellationPolicy.Kind},
+		"commandId":           policy.CommandID,
+		"deterministicOutput": policy.DeterministicOutput,
+		"exclusiveLocks":      admit.StringSliceToAny(policy.ExclusiveLocks),
+		"inputSelectors":      admit.StringSliceToAny(policy.InputSelectors),
+		"outputSelectors":     admit.StringSliceToAny(policy.OutputSelectors),
+		"resourceReads":       admit.StringSliceToAny(policy.ResourceReads),
+		"resourceWrites":      admit.StringSliceToAny(policy.ResourceWrites),
+		"retryPolicy":         map[string]any{"kind": policy.RetryPolicy.Kind, "maxAttempts": policy.RetryPolicy.MaxAttempts},
+		"sideEffectClass":     policy.SideEffectClass,
+		"timeoutPolicy":       map[string]any{"kind": policy.TimeoutPolicy.Kind, "timeoutMs": policy.TimeoutPolicy.TimeoutMs},
+	}
 }
 
 func policies(raw any) ([]policy, error) {

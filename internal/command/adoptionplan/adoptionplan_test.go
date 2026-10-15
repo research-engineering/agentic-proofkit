@@ -323,3 +323,15 @@ func assertNoSemanticRequirementPayload(t *testing.T, raw any) {
 	}
 	visit(raw)
 }
+
+func TestModeGuideIsTotalOverIntentVocabulary(t *testing.T) {
+	guide := ModeGuide()
+	if len(intentMeanings) != len(IntentValues()) {
+		t.Fatalf("intent meanings %d differ from intents %d", len(intentMeanings), len(IntentValues()))
+	}
+	for _, intent := range IntentValues() {
+		if intentMeanings[intent] == "" || strings.Count(guide, "\n  "+intent+": ") != 1 {
+			t.Fatalf("mode guide lacks exactly one meaning for %s:\n%s", intent, guide)
+		}
+	}
+}

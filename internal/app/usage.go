@@ -15,7 +15,12 @@ func usageWithRenderer(renderer cliexec.Renderer) string {
 	for _, descriptor := range commandDescriptors {
 		lines = append(lines, "  "+commandUsageLine(descriptor))
 	}
+	integration, _ := commandDescriptorFor("integration-source")
 	lines = append(lines,
+		"",
+		"Start here: the agent bootstrap, then the project's next action:",
+		"  "+renderer.DisplayCommand("integration", "source")+" --tool <"+strings.Join(integration.flagValueChoices["--tool"], "|")+"> --format text",
+		"  "+renderer.DisplayCommand("next")+" --repo-root <path>",
 		"",
 		"Discover command families:",
 		"  "+renderer.DisplayCommand("help", "families"),

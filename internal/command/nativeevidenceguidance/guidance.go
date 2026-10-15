@@ -104,6 +104,17 @@ Repository-specific adapter template (implement under consumer authority):
      exact subjects. A prior success cannot certify changed input or toolchains.
      Build and check an actual current subject before submitting a checkpoint:
     {{cli}} change plan --help
+  8. To move a witness to another file, language or command, keep requirementId
+     and scenarioId. Run the new witness red, then green; replace only binding
+     rows, witnessCommands and inventory entries in the complete packet. Expect
+     the source unchanged, binding/inventory/manifest replaced and no semantic
+     diff. Project a new scheduler plan: the moved edge's old receipt goes
+     stale (and stops linking where its command changed); record the new run
+     with its command's proofNodeDigest. Receipts of unchanged commands stay
+     linked; re-check their currentness, since they stay current only if the
+     moved files are outside their declared dependency scope (change plan
+     --help, step 1). Never copy a receipt under a new digest without running
+     it. Deleting old witness files is a separate owner decision.
 
   This recipe is not a generic discovery importer, native runner, persistent
   confirmation store or claim of complete coverage. Compact proof contracts use

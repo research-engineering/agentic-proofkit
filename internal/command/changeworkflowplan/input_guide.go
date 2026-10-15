@@ -32,8 +32,13 @@ Consumer adapter steps (implement in the repository's change/check workflow):
      Read exact base/current inputs from an explicit bounded scope. Bind source
      namespace, requirement/scenario meaning, matched native witness/path/selector,
      assertion and helper inputs, command argv, environment/toolchain and receipt
-     policy. Enumerate transitive semantic dependencies; omitted inputs cannot
-     be repaired by hashing the declared subset again. Do not hash only IDs.
+     policy. Enumerate transitive semantic dependencies: every file whose change
+     can change the outcome, including modules reached only through a shared
+     import (an __init__ importing all modules puts each in every scope, so their
+     receipts go stale together: the sound default). Narrow a scope only by
+     changing that import structure or by an owner-recorded rule that a file
+     cannot affect the outcome, never to keep a receipt current. Omitted inputs
+     cannot be repaired by hashing the declared subset again. Do not hash only IDs.
   2. Build one deterministic review subject per independently reviewable scope.
      Use canonical admitted semantics for structured records and exact bytes for
      native code unless a reviewed semantic normalization is available. Keep

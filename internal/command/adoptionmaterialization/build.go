@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/repositoryinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
@@ -42,6 +43,9 @@ func BuildPlan(ctx context.Context, raw any, repositoryRoot string) (Plan, error
 		return Plan{}, err
 	}
 	if err := validateExistingArtifacts(transaction, artifacts, request.ProjectID); err != nil {
+		return Plan{}, err
+	}
+	if err := validateSourcePlanFreshness(ctx, repositoryRoot, transaction, request); err != nil {
 		return Plan{}, err
 	}
 	plan := Plan{
@@ -250,6 +254,42 @@ func validateExistingArtifacts(transaction repositorytransaction.Plan, artifacts
 		if err := admitExistingArtifact(content, item, projectID); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// validateSourcePlanFreshness admits the sourcePlan only as the adoption
+// decision the project already records (manifest sourcePlanId) or as a decision
+// made on the repository root as it is now (equal repositoryInventory). Any
+// other plan is stale: it neither continues the recorded decision nor
+// observed this repository.
+func validateSourcePlanFreshness(ctx context.Context, repositoryRoot string, transaction repositorytransaction.Plan, request Request) error {
+	for index, operation := range transaction.Operations {
+		if operation.Path != ProjectManifestPath || !operation.Before.Exists {
+			continue
+		}
+		content, ok := transaction.BeforeContent(index)
+		if !ok {
+			return fmt.Errorf("adoption materialization existing artifact bytes are unavailable")
+		}
+		raw, err := admission.DecodeJSON(bytes.NewReader(content), repositorytransaction.MaximumFileBytes)
+		if err != nil {
+			return fmt.Errorf("adoption materialization existing project manifest has incompatible ownership")
+		}
+		manifest, err := AdmitManifest(raw)
+		if err != nil {
+			return fmt.Errorf("adoption materialization existing project manifest has incompatible ownership")
+		}
+		if manifest.SourcePlanID == request.SourcePlanID {
+			return nil
+		}
+	}
+	current, err := repositoryinventory.Scan(ctx, repositoryRoot)
+	if err != nil {
+		return err
+	}
+	if current.InventoryID != request.SourceInventoryID {
+		return fmt.Errorf("adoption materialization sourcePlan is stale: it is not the sourcePlanId recorded in %s and its repositoryInventory is not the current repository root; reuse the recorded plan or run adopt plan again", ProjectManifestPath)
 	}
 	return nil
 }

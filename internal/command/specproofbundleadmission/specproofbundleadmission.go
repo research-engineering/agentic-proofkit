@@ -274,7 +274,7 @@ func validateChildWithOwner(child *childReport, label string, expectedKind strin
 	switch expectedKind {
 	case "proofkit.proof-receipt-admission":
 		receiptProjection, ownerReport, ownerExit, err = proofreceiptadmission.Evaluate(map[string]any{
-			"schemaVersion": json.Number("1"),
+			"schemaVersion": json.Number(fmt.Sprint(proofreceiptadmission.InputSchemaVersion)),
 			"receiptSetId":  reportID,
 			"receipts":      mapsToAny(child.Receipts),
 			"nonClaims":     child.NonClaims,
@@ -337,9 +337,11 @@ func linkageFailures(witnessPlan witnessschedulerplan.Projection, graph map[stri
 	failures := []string{}
 	commandIDs := map[string]struct{}{}
 	commandEnvironments := map[string][]string{}
+	commandNodeDigests := map[string]string{}
 	for _, command := range witnessPlan.Commands {
 		commandIDs[command.ID] = struct{}{}
 		commandEnvironments[command.ID] = append([]string{}, command.EnvironmentClasses...)
+		commandNodeDigests[command.ID] = command.ProofNodeDigest
 	}
 	bindingCommandIDs := map[string]struct{}{}
 	selectorCommandIDs := map[string]map[string]struct{}{}
@@ -408,6 +410,11 @@ func linkageFailures(witnessPlan witnessschedulerplan.Projection, graph map[stri
 		receiptKind := receipt.ReceiptKind
 		if receipt.ProofPlanID != witnessPlan.SchedulerPlanID {
 			failures = append(failures, "receipt "+receiptID+" proofPlanId does not match witness scheduler plan")
+		}
+		// The plan ID is caller-chosen and reusable; the receipt links only to
+		// the unchanged execution decision of its own plan node.
+		if nodeDigest, ok := commandNodeDigests[receiptKind]; !ok || receipt.ProofNodeDigest != nodeDigest {
+			failures = append(failures, "receipt "+receiptID+" proofNodeDigest does not match witness scheduler plan node "+receiptKind)
 		}
 		if _, ok := bindingCommandIDs[receiptKind]; !ok {
 			failures = append(failures, "receipt "+receiptID+" receiptKind must match a requirement binding command id")

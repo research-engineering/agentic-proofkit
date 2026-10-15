@@ -134,6 +134,41 @@ func (command Command) JSONValue() map[string]any {
 	}
 }
 
+// ProjectionFor is the vocabulary projected onto every name command
+// references: the policy rows of its environment classes and whether its
+// credential class is non-cacheable (which decides its cache admission).
+// Bare membership of its environment classes, artifact kinds and parallel
+// group carries no further fact: admission requires each referenced name to be
+// in the vocabulary, and the names themselves are in the command record. Rows
+// it does not reference and pure admission bounds such as maxTimeoutMs (its
+// admitted timeout is in its own record) are excluded: changing them cannot
+// change how this command runs.
+func (vocabulary Vocabulary) ProjectionFor(command Command) map[string]any {
+	policies := []any{}
+	for _, policy := range vocabulary.EnvironmentClassPolicies {
+		if !contains(command.Environment.Classes, policy.EnvironmentClass) {
+			continue
+		}
+		policies = append(policies, map[string]any{
+			"cachePolicies":     stringSliceToAny(policy.CachePolicies),
+			"credentialClasses": stringSliceToAny(policy.CredentialClasses),
+			"environmentClass":  policy.EnvironmentClass,
+			"networkPolicies":   stringSliceToAny(policy.NetworkPolicies),
+		})
+	}
+	credentialClasses := []any{}
+	if contains(vocabulary.CredentialClasses, command.CredentialClass) {
+		credentialClasses = append(credentialClasses, map[string]any{
+			"credentialClass": command.CredentialClass,
+			"nonCacheable":    contains(vocabulary.NonCacheableCredentialClasses, command.CredentialClass),
+		})
+	}
+	return map[string]any{
+		"credentialClasses":        credentialClasses,
+		"environmentClassPolicies": policies,
+	}
+}
+
 func (plan Plan) JSONValue() map[string]any {
 	commands := make([]any, 0, len(plan.Commands))
 	for _, command := range plan.Commands {

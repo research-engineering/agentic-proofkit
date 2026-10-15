@@ -11,13 +11,17 @@ import (
 func TestReceiptNativeStructuresRejectRehashedNestedDrift(t *testing.T) {
 	for _, command := range []string{"proof-receipt-admission", "receipt-producer-admission"} {
 		for _, direction := range []string{"input", "output"} {
-			id := "proofkit." + command + "." + direction + ".v1.json-schema"
+			id, predecessor := "proofkit."+command+"."+direction+".v1.json-schema", "proofkit."+command+"."+direction+".v1.root-shape"
+			if command == "proof-receipt-admission" && direction == "input" {
+				// Version 2 receipts record proofNodeDigest.
+				id, predecessor = "proofkit.proof-receipt-admission.input.v2.json-schema", "proofkit.proof-receipt-admission.input.v1.json-schema"
+			}
 			index := slices.IndexFunc(nativeStructures(), func(owner nativeStructure) bool { return owner.id == id })
 			if index < 0 {
 				t.Fatalf("missing owner %s", id)
 			}
 			owner := nativeStructures()[index]
-			if owner.direction != direction || !slices.Equal(owner.commands, []string{command}) || !slices.Equal(owner.predecessors, []string{"proofkit." + command + "." + direction + ".v1.root-shape"}) {
+			if owner.direction != direction || !slices.Equal(owner.commands, []string{command}) || !slices.Equal(owner.predecessors, []string{predecessor}) {
 				t.Fatal("wrong exact native binding")
 			}
 			row, err := owner.definition()

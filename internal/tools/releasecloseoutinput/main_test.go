@@ -27,6 +27,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
@@ -931,7 +932,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			mutate: func(root string) {
 				writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipts.json"), map[string]any{
 					"receiptSetId":  "proofkit.self-hosting.proof-receipts",
-					"schemaVersion": 1,
+					"schemaVersion": 2,
 					"receipts":      []any{map[string]any{"anything": true}},
 					"nonClaims":     []any{"Self-hosting receipts are local advisory evidence."},
 				})
@@ -1639,7 +1640,7 @@ func writeLocalSelfEvidence(t *testing.T, root string, execution packageartifact
 	alignProofReceiptDigests(t, root, receipt, execution)
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipts.json"), map[string]any{
 		"receiptSetId":  "proofkit.self-hosting.proof-receipts",
-		"schemaVersion": 1,
+		"schemaVersion": 2,
 		"receipts":      []any{receipt},
 		"nonClaims":     []any{"Self-hosting receipts are local advisory evidence."},
 	})
@@ -1721,7 +1722,7 @@ func writeGitHubActionsSelfEvidence(t *testing.T, root string) {
 		"nonClaims":     []any{"Self-hosting receipts remain advisory evidence."},
 		"receiptSetId":  "proofkit.self-hosting.proof-receipts",
 		"receipts":      []any{receipt},
-		"schemaVersion": 1,
+		"schemaVersion": 2,
 	})
 
 	producer := receiptProducerFixture()
@@ -1815,7 +1816,7 @@ func writeMixedSelfEvidenceIdentity(t *testing.T, root string) {
 func refreshBundleChildReports(bundle map[string]any) {
 	proofChild := bundle["receiptAdmission"].(map[string]any)
 	proofInput := map[string]any{
-		"schemaVersion": json.Number("1"), "receiptSetId": "proofkit.self-hosting.proof-receipts",
+		"schemaVersion": json.Number("2"), "receiptSetId": "proofkit.self-hosting.proof-receipts",
 		"receipts": proofChild["receipts"], "nonClaims": proofChild["nonClaims"],
 	}
 	proofReport, proofExit, proofErr := proofreceiptadmission.Build(decodedFixture(proofInput))
@@ -1999,6 +2000,7 @@ func proofReceiptFixture(execution packageartifactrecord.Record) map[string]any 
 		"producerAdmissionClass": "advisory",
 		"producerId":             "local.developer",
 		"proofBindingDigest":     testDigest("binding"),
+		"proofNodeDigest":        fixtureWitnessNodeDigest("proofkit.package-artifact"),
 		"proofPlanId":            "proofkit.self-hosting.witness-plan",
 		"provenanceRef":          "artifacts/proofkit/ci-provenance.json",
 		"receiptId":              "receipt.local.package-artifact",
@@ -2102,7 +2104,7 @@ func receiptProducerReceiptFixture() map[string]any {
 
 func specProofBundleFixture(execution packageartifactrecord.Record) map[string]any {
 	proofNonClaims := []any{"Proof receipt admission remains local advisory evidence."}
-	proofInput := map[string]any{"schemaVersion": json.Number("1"), "receiptSetId": "proofkit.self-hosting.proof-receipts", "receipts": []any{proofReceiptFixture(execution)}, "nonClaims": proofNonClaims}
+	proofInput := map[string]any{"schemaVersion": json.Number("2"), "receiptSetId": "proofkit.self-hosting.proof-receipts", "receipts": []any{proofReceiptFixture(execution)}, "nonClaims": proofNonClaims}
 	proofReport, proofExit, proofErr := proofreceiptadmission.Build(decodedFixture(proofInput))
 	if proofErr != nil || proofExit != 0 {
 		panic(fmt.Sprintf("build proof receipt fixture report: exit=%d err=%v", proofExit, proofErr))
@@ -2163,50 +2165,71 @@ func specProofBundleFixture(execution packageartifactrecord.Record) map[string]a
 			"witnessCommands": []any{map[string]any{"command": "npm run package:artifact", "commandId": "proofkit.package-artifact", "environmentClass": packageGateEnvironmentClass}},
 		},
 		"schemaVersion": 1,
-		"witnessPlan": map[string]any{
-			"commands": []any{map[string]any{
-				"argv":              []any{"npm", "run", "package:artifact"},
-				"cachePolicy":       "disabled",
-				"credentialClass":   "none",
-				"cwd":               ".",
-				"environment":       map[string]any{"allowlist": []any{}, "classes": []any{packageGateEnvironmentClass}, "inherit": "none"},
-				"exitCodePolicy":    map[string]any{"kind": "zero", "successCodes": []any{0}},
-				"expectedArtifacts": []any{map[string]any{"kind": "report", "path": "artifacts/package/npm-pack.json", "required": true}},
-				"id":                "proofkit.package-artifact",
-				"networkPolicy":     "none",
-				"parallelGroup":     "package-artifact",
-				"schemaVersion":     1,
-				"timeoutMs":         600000,
-			}},
-			"nonClaims": []any{"Witness plan does not execute commands."},
-			"policies": []any{map[string]any{
-				"cacheAdmissionRefs":  []any{},
-				"cancellationPolicy":  map[string]any{"graceMs": 5000, "kind": "cooperative"},
-				"commandId":           "proofkit.package-artifact",
-				"deterministicOutput": false,
-				"exclusiveLocks":      []any{},
-				"inputSelectors":      []any{"package.json"},
-				"nonClaims":           []any{"Fixture witness policy does not prove execution."},
-				"outputSelectors":     []any{"artifacts/package/npm-pack.json"},
-				"resourceReads":       []any{"resource.proofkit.source"},
-				"resourceWrites":      []any{"resource.proofkit.package-artifacts"},
-				"retryPolicy":         map[string]any{"kind": "none", "maxAttempts": 1},
-				"sideEffectClass":     "local_write",
-				"timeoutPolicy":       map[string]any{"kind": "bounded", "timeoutMs": 600000},
-			}},
-			"schedulerPlanId": "proofkit.self-hosting.witness-plan",
-			"schemaVersion":   1,
-			"vocabulary": map[string]any{
-				"artifactKinds":                 []any{"report"},
-				"credentialClasses":             []any{"none"},
-				"environmentClasses":            []any{packageGateEnvironmentClass},
-				"environmentClassPolicies":      []any{map[string]any{"cachePolicies": []any{"disabled"}, "credentialClasses": []any{"none"}, "environmentClass": packageGateEnvironmentClass, "networkPolicies": []any{"none"}}},
-				"maxTimeoutMs":                  600000,
-				"nonCacheableCredentialClasses": []any{},
-				"parallelGroups":                []any{"package-artifact"},
-			},
+		"witnessPlan":   fixtureWitnessPlan(),
+	}
+}
+
+// fixtureWitnessPlan is the one admitted plan the fixture receipt records.
+func fixtureWitnessPlan() map[string]any {
+	return map[string]any{
+		"commands": []any{map[string]any{
+			"argv":              []any{"npm", "run", "package:artifact"},
+			"cachePolicy":       "disabled",
+			"credentialClass":   "none",
+			"cwd":               ".",
+			"environment":       map[string]any{"allowlist": []any{}, "classes": []any{packageGateEnvironmentClass}, "inherit": "none"},
+			"exitCodePolicy":    map[string]any{"kind": "zero", "successCodes": []any{0}},
+			"expectedArtifacts": []any{map[string]any{"kind": "report", "path": "artifacts/package/npm-pack.json", "required": true}},
+			"id":                "proofkit.package-artifact",
+			"networkPolicy":     "none",
+			"parallelGroup":     "package-artifact",
+			"schemaVersion":     1,
+			"timeoutMs":         600000,
+		}},
+		"nonClaims": []any{"Witness plan does not execute commands."},
+		"policies": []any{map[string]any{
+			"cacheAdmissionRefs":  []any{},
+			"cancellationPolicy":  map[string]any{"graceMs": 5000, "kind": "cooperative"},
+			"commandId":           "proofkit.package-artifact",
+			"deterministicOutput": false,
+			"exclusiveLocks":      []any{},
+			"inputSelectors":      []any{"package.json"},
+			"nonClaims":           []any{"Fixture witness policy does not prove execution."},
+			"outputSelectors":     []any{"artifacts/package/npm-pack.json"},
+			"resourceReads":       []any{"resource.proofkit.source"},
+			"resourceWrites":      []any{"resource.proofkit.package-artifacts"},
+			"retryPolicy":         map[string]any{"kind": "none", "maxAttempts": 1},
+			"sideEffectClass":     "local_write",
+			"timeoutPolicy":       map[string]any{"kind": "bounded", "timeoutMs": 600000},
+		}},
+		"schedulerPlanId": "proofkit.self-hosting.witness-plan",
+		"schemaVersion":   1,
+		"vocabulary": map[string]any{
+			"artifactKinds":                 []any{"report"},
+			"credentialClasses":             []any{"none"},
+			"environmentClasses":            []any{packageGateEnvironmentClass},
+			"environmentClassPolicies":      []any{map[string]any{"cachePolicies": []any{"disabled"}, "credentialClasses": []any{"none"}, "environmentClass": packageGateEnvironmentClass, "networkPolicies": []any{"none"}}},
+			"maxTimeoutMs":                  600000,
+			"nonCacheableCredentialClasses": []any{},
+			"parallelGroups":                []any{"package-artifact"},
 		},
 	}
+}
+
+// fixtureWitnessNodeDigest is the node digest of commandID in
+// fixtureWitnessPlan that a fixture receipt of that kind records, so bundle
+// linkage binds the receipt to that plan node.
+func fixtureWitnessNodeDigest(commandID string) string {
+	projection, _, exitCode, err := witnessschedulerplan.Evaluate(decodedFixture(fixtureWitnessPlan()))
+	if err != nil || exitCode != 0 {
+		panic(fmt.Sprintf("admit fixture witness plan: exit=%d err=%v", exitCode, err))
+	}
+	for _, command := range projection.Commands {
+		if command.ID == commandID {
+			return command.ProofNodeDigest
+		}
+	}
+	panic("fixture witness plan has no command " + commandID)
 }
 
 func decodedFixture(value any) any {

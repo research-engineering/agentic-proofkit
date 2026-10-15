@@ -54,14 +54,17 @@ func OutputStructure() map[string]any {
 		jsonshape.Required("parallelGroup", text), jsonshape.Required("sideEffectClasses", jsonshape.Array(jsonshape.Enum(sideEffectClassSet), 0))), 1)
 	failures := jsonshape.Array(jsonshape.Object(
 		jsonshape.Required("key", jsonshape.StringGrammar(`failure\.[0-9]{3,}`)), jsonshape.Required("value", text)), 0)
+	nodes := jsonshape.Array(jsonshape.Object(
+		jsonshape.Required("commandId", text), jsonshape.Required("proofNodeDigest", jsonshape.StringGrammar(`sha256:[0-9a-f]{64}`))), 1)
 	rules := jsonshape.Tuple(
 		report.RuleStructure(jsonshape.StringLiteral("proofkit.witness-scheduler-plan.boundary"), jsonshape.StringLiteral("passed"),
 			jsonshape.StringLiteral("proofkit validates caller-provided scheduler metadata without executing commands"), jsonshape.BoundedArray(text, 0, 0)),
 		report.RuleStructure(jsonshape.StringLiteral("proofkit.witness-scheduler-plan.safety"), states,
 			jsonshape.StringLiteral("witness scheduler metadata must declare safe cache, retry, cancellation, lock, resource, and timeout policy"), failures),
 	)
-	schema := report.Structure(1, reportKind, states, summary, jsonshape.Tuple(
-		report.DiagnosticStructure("executionGroups", groups), report.DiagnosticStructure("failures", texts)), rules).JSONSchema()
-	schema["description"] = "Both passed and failed evaluations have this carrier. Native derivation owns count equality, group membership, sorted strings, sequential failure diagnostic keys, correspondence of failures to safety rule and exit status, and caller plus boundary nonClaims (duplicates are retained). Missing policies can leave a group's sideEffectClasses empty. Report identity is fixed; reportId is the admitted schedulerPlanId. This derived report does not execute or approve witnesses."
+	schema := report.Structure(outputSchemaVersion, reportKind, states, summary, jsonshape.Tuple(
+		report.DiagnosticStructure("executionGroups", groups), report.DiagnosticStructure("failures", texts),
+		report.DiagnosticStructure("proofNodeDigests", nodes)), rules).JSONSchema()
+	schema["description"] = "Both passed and failed evaluations have this carrier. Native derivation owns count equality, group membership, sorted strings, sequential failure diagnostic keys, correspondence of failures to safety rule and exit status, and caller plus boundary nonClaims (duplicates are retained). Missing policies can leave a group's sideEffectClasses empty. Report identity is fixed; reportId is the admitted schedulerPlanId. proofNodeDigests has one row per command, sorted by commandId: the SHA-256 of that node's execution decision (its canonical admitted command record, its policy without nonClaims and the vocabulary projected onto the names it references; no nonClaims, unreferenced vocabulary row, admission bound or other group member). A receipt records its command's row as proofNodeDigest. This derived report does not execute or approve witnesses."
 	return schema
 }

@@ -30,7 +30,7 @@ func sourceReportShape() jsonshape.Shape {
 			jsonshape.Required("deferredRequirementCount", count),
 			jsonshape.Required("failureCount", count),
 			jsonshape.Required("requirementCount", count),
-			jsonshape.Required("sourcePathCount", jsonshape.IntegerLiteral(3)),
+			jsonshape.Required("sourcePathCount", jsonshape.IntegerLiteral(2)),
 		),
 		jsonshape.Tuple(diagnostic(literal("failures"), texts), diagnostic(literal("sourcePaths"), texts)),
 		jsonshape.Tuple(

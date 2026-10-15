@@ -4,6 +4,7 @@ package adoptionplan
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
 	"github.com/research-engineering/agentic-proofkit/internal/command/repositoryinventory"
@@ -36,6 +37,24 @@ var boundaryNonClaims = []string{
 }
 
 var intentValues = []string{IntentAuditFromCode, IntentCodeBaseline, IntentFresh}
+
+// intentMeanings is total over intentValues; adopt plan --help renders it at
+// the route where the owner makes the source-trust decision.
+var intentMeanings = map[string]string{
+	IntentAuditFromCode: "existing code is untrusted observation for owner review.",
+	IntentCodeBaseline:  "only when the owner explicitly trusts existing behavior.",
+	IntentFresh:         "the owner states the intended behavior, e.g. a task statement.",
+}
+
+// ModeGuide explains each --mode value from the closed intent vocabulary.
+func ModeGuide() string {
+	lines := []string{"Adoption modes (--mode records the owner's source-trust decision):"}
+	for _, intent := range intentValues {
+		lines = append(lines, "  "+intent+": "+intentMeanings[intent])
+	}
+	lines = append(lines, "  No mode writes files or generates requirements.")
+	return strings.Join(lines, "\n") + "\n"
+}
 
 // IntentValues returns the closed public source-trust vocabulary in canonical
 // order. CLI adapters consume this owner rather than repeating mode literals.

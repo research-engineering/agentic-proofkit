@@ -87,7 +87,7 @@ func TestReadCatalogSourceRejectsFIFOReplacementWithoutWriter(t *testing.T) {
 	defer func() { sourceAdmissionBarrier = nil }()
 	done := make(chan error, 1)
 	go func() {
-		_, _, _, err := readCatalogSource(root, "source.json")
+		_, _, _, err := readCatalogSource(root, catalogSource{Kind: "requirement_source", Path: "source.json"})
 		done <- err
 	}()
 	select {

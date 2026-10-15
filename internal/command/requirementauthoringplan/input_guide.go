@@ -51,6 +51,9 @@ Admitted reference roles:
   is the intended grouped source after review. Preserve untouched groups and
   explicit profile/member ownership. Do not flatten or infer shared profiles.
   Every added or changed requirement needs exactly one candidateUpdates row.
+  Its non-empty ownerQuestions become the owner's ask_owner review action: if
+  the instruction already fixes the meaning, ask the owner to confirm the exact
+  candidate wording and any assumption you added; never invent an open issue.
   A shared profile, stem or premise edit can require rows for multiple members.
   Source-only layout, scenario, vocabulary, provenance and nonclaim changes need
   whole-candidate owner review; they are reported separately. A no-op is rejected.

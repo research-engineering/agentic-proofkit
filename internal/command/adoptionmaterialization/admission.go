@@ -54,7 +54,7 @@ func admitRequest(raw any) (Request, error) {
 	request := Request{
 		Binding: binding, BindingPath: bindingPath, Inventory: inventory, InventoryPath: inventoryPath,
 		NonClaims: nonClaims, ProjectID: projectID, RequestID: requestID, SourceIntent: sourceIntent,
-		SourcePlanID: sourcePlanID, Sources: sources,
+		SourceInventoryID: sourcePlan.Inventory.InventoryID, SourcePlanID: sourcePlanID, Sources: sources,
 	}
 	if err := validateClosure(request); err != nil {
 		return Request{}, err

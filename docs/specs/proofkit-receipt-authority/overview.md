@@ -23,7 +23,11 @@ obligations, and decide merge, release, rollout, and production policy.
   policy change without approving or rejecting the policy change itself.
 - `REQ-PROOFKIT-RECEIPT-004`: spec-proof bundle admission validates linkage
   across requirement bindings, witness plans, producer admission, and receipt
-  admission without executing native witnesses or approving merge.
+  admission, linking each receipt only to the admitted witness plan whose ID
+  it recorded and only while the execution-decision digest of its own plan
+  node is unchanged, without executing native witnesses or approving merge.
+  A reused plan ID with a changed node does not link that node's earlier
+  receipts; edits to other nodes or to prose do not unlink them.
 
 ## Non-Claims
 

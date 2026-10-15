@@ -50,6 +50,27 @@ before(() => {
 });
 after(() => { if (directory) rmSync(directory, {recursive: true, force: true}); });
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
+// Declared, single-purpose deltas from the frozen predecessor streams. The
+// corpus stays untouched; each delta names its rows and exact byte change.
+const declaredStreamDeltas = Object.freeze([Object.freeze({
+  id: "PILOT-D10",
+  reason: "Usage lines name the --format values a command admits instead of <mode>.",
+  rows: Object.freeze(["json-report-cli-adapter-source--help", "json-report-cli-adapter-source-h"]),
+  predecessor: "[--format <mode>]", current: "[--format <json>]", occurrences: 2,
+})]);
+const count = (text, needle) => text.split(needle).length - 1;
+// Returns the predecessor stdout implied by the declared delta, or null when the
+// current bytes do not carry exactly that delta in exactly its occurrences.
+function predecessorStdout(rowName, stdout) {
+  const delta = declaredStreamDeltas.find(item => item.rows.includes(rowName));
+  if (!delta) return stdout;
+  if (count(stdout, delta.current) !== delta.occurrences || count(stdout, delta.predecessor) !== 0) return null;
+  return stdout.split(delta.current).join(delta.predecessor);
+}
+const conservesPredecessor = (row, stdout) => {
+  const predecessor = predecessorStdout(row.name, stdout);
+  return predecessor !== null && hash(predecessor) === row.stdoutSHA256;
+};
 function invoke(row) {
   const result = spawnSync(binary, row.argv, {stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20,
     env: {...process.env, AGENTIC_PROOFKIT_LAUNCHER_PROFILE: row.launcherProfile || "path", AGENTIC_PROOFKIT_PYTHON_EXECUTABLE: row.pythonExecutable || ""}});
@@ -92,7 +113,7 @@ test("starter outputs preserve predecessor streams, launcher domains and indepen
   for (const row of baseline.observations) {
     const result = invoke(row);
     assert.equal(result.status, row.exitCode, row.name);
-    assert.equal(hash(result.stdout), row.stdoutSHA256, `${row.name}/stdout`);
+    assert.ok(conservesPredecessor(row, result.stdout), `${row.name}/stdout`);
     assert.equal(hash(result.stderr), row.stderrSHA256, `${row.name}/stderr`);
     if (row.exitCode !== 0 || row.argv.some(x => x === "-h" || x === "--help")) continue;
     const command = row.argv.find(x => names.includes(x)), value = JSON.parse(result.stdout);
@@ -170,4 +191,23 @@ test("starter schema does not launder native-only hash line-count and rendered-c
   const preset = JSON.parse(invoke(row).stdout), wrong = replace(preset, ["diagnostics", 1, "value", "suggestedCommands", 0], "different executable");
   assert.equal(validators.get("stack-preset")(wrong), true);
   assert.throws(() => presetSemantics(wrong, row), assert.AssertionError);
+});
+
+test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
+  const [delta] = declaredStreamDeltas;
+  assert.equal(declaredStreamDeltas.length, 1);
+  const rows = baseline.observations.filter(row => delta.rows.includes(row.name));
+  assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
+  const current = invoke(rows[0]).stdout;
+  assert.ok(conservesPredecessor(rows[0], current), "current stdout must carry exactly the declared delta");
+  const once = current.replace(delta.current, delta.predecessor);
+  const otherByte = current.replace("Usage:", "Usage: ");
+  for (const [name, mutated] of [["delta once", once], ["other byte", otherByte]]) {
+    assert.notEqual(mutated, current, name);
+    assert.equal(conservesPredecessor(rows[0], mutated), false, name);
+  }
+  const unlisted = baseline.observations.find(row => row.name === "stack-preset--help");
+  const unlistedCurrent = invoke(unlisted).stdout;
+  assert.ok(conservesPredecessor(unlisted, unlistedCurrent), "unlisted rows stay byte-exact");
+  assert.equal(conservesPredecessor(unlisted, unlistedCurrent + delta.current), false, "delta applied to an unlisted row");
 });

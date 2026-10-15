@@ -382,6 +382,7 @@ func admittedProjectStatusFixture(t *testing.T, state projectstatus.ProjectState
 		status.ProjectID = "pilot.project"
 		status.ManifestID = manifestID
 		status.NextAction.ActionClass = projectstatus.ActionRunRepositoryVerification
+		status.NextAction.CommandRoute = []string{"native-evidence-guidance"}
 		status.NextAction.ContextRef = manifestID
 	default:
 		t.Fatalf("unsupported fixture state %s", state)

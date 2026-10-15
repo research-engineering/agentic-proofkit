@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "f94ae5f17559bfb65bbc90ecde6ade3bcbcbbe1bdfc3f8e095f2c8935c9508c4"
+	cliContractPublicABISHA256               = "f6e889d9db255e448a68b0b51d17385b3818673ab0c0b2c9af406561977eb3d3"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -551,7 +551,7 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.deployment-evidence-admission.output.v1.json-schema":            {},
 			"proofkit.repo-profile-admission.input.v1.json-schema":                    {},
 			"proofkit.repo-profile-admission.output.v1.json-schema":                   {},
-			"proofkit.spec-proof-bundle-admission.input.v1.json-schema":               {},
+			"proofkit.spec-proof-bundle-admission.input.v2.json-schema":               {},
 			"proofkit.spec-proof-bundle-admission.output.v1.json-schema":              {},
 			"proofkit.agent-route.input.v2.json-schema":                               {},
 			"proofkit.agent-route.output.v3.json-schema":                              {},
@@ -644,7 +644,7 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.witness-plan.input.v1.json-schema":                              {},
 			"proofkit.witness-plan.output.v1.json-schema":                             {},
 			"proofkit.witness-scheduler-plan.input.v1.json-schema":                    {},
-			"proofkit.witness-scheduler-plan.output.v1.json-schema":                   {},
+			"proofkit.witness-scheduler-plan.output.v2.json-schema":                   {},
 			bindingStructureDefinition:                                                {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
 			sourceViewOutputStructureDefinition: {}, transitionInputStructureDefinition: {}, transitionOutputStructureDefinition: {},
 			authoringInputStructureDefinition: {}, authoringOutputStructureDefinition: {}, contextCatalogStructureDefinition: {},
@@ -668,7 +668,7 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.receipt-currentness-scope.output.v1.json-schema":            {},
 			"proofkit.receipt-trust-class.input.v1.json-schema":                   {},
 			"proofkit.receipt-trust-class.output.v1.json-schema":                  {},
-			"proofkit.proof-receipt-admission.input.v1.json-schema":               {},
+			"proofkit.proof-receipt-admission.input.v2.json-schema":               {},
 			"proofkit.proof-receipt-admission.output.v1.json-schema":              {},
 			"proofkit.receipt-producer-admission.input.v1.json-schema":            {},
 			"proofkit.receipt-producer-admission.output.v1.json-schema":           {},
@@ -1772,13 +1772,13 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"adopt-materialize-recover":      "agentic-proofkit adopt materialize recover --action <resume|rollback> [--color <auto|never>] [--format <json|text>] --repo-root <path> --transaction <sha256-ref>",
 		"adopt-plan":                     "agentic-proofkit adopt plan [--color <auto|never>] [--format <json|text>] --mode <audit-from-code|code-baseline|fresh> --repo-root <path> [--stack <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>]",
 		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
-		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
+		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <json|markdown>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
 		"integration-check":              "agentic-proofkit integration check [--format <json|text>] --repo-root <path> --tool <claude|codex>",
 		"integration-apply":              "agentic-proofkit integration apply [--color <auto|never>] --expect-desired-state <sha256-ref> --expect-transaction <sha256-ref> [--format <json|text>] --operation <install|remove|update> --repo-root <path> --tool <claude|codex>",
 		"integration-plan":               "agentic-proofkit integration plan [--color <auto|never>] [--format <json|text>] --operation <install|remove|update> --repo-root <path> --tool <claude|codex>",
 		"integration-recover":            "agentic-proofkit integration recover --action <resume|rollback> [--color <auto|never>] [--format <json|text>] --repo-root <path> --transaction <sha256-ref>",
 		"integration-source":             "agentic-proofkit integration source [--format <json|text>] --tool <claude|codex>",
-		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <mode>] --language <value>",
+		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <json>] --language <value>",
 		"next":                           "agentic-proofkit next [--color <auto|never>] [--format <json|text>] --repo-root <path>",
 		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host <127.0.0.1|::1>] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <graph|slice>] [--serve] [--session-mode <browse|one-shot-question>] [--session-timeout-seconds <1..7200>] --view <coverage|proof|source|spec-tree|workspace>",
 		"requirement-context-compose":    "agentic-proofkit requirement-context-compose --input <path|-> [--input-pointer <pointer>] --repo-root <path>",

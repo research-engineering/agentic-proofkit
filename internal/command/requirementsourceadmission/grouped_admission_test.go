@@ -18,7 +18,7 @@ func TestGroupedSourceFailureExposesOnlyAdmittedSummary(t *testing.T) {
 	if err != nil || result.ExitCode != 1 || result.Report.State != "failed" || len(result.Failures) != 3 {
 		t.Fatalf("policy occurrences lost: result=%#v error=%v", result, err)
 	}
-	if result.Report.SchemaVersion != 2 || result.Report.ReportID != "proofkit.test.requirements" ||
+	if result.Report.SchemaVersion != outputSchemaVersion || result.Report.ReportID != "proofkit.test.requirements" ||
 		result.Summary.RequirementCount != 1 || result.Summary.ActiveRequirementCount != 1 || result.Summary.BlockingRequirementCount != 1 {
 		t.Fatal("failed source lost admitted identity/counts")
 	}
@@ -100,5 +100,27 @@ func TestGroupedSourceProjectionReentersOwnerWithoutLoss(t *testing.T) {
 	}
 	if _, err := Evaluate(map[string]any{"schemaVersion": json.Number("1"), "requirements": []any{}}); err == nil {
 		t.Fatal("old whole source reader remains active")
+	}
+}
+
+// Pilot D16: sourcePaths lists only paths the admitted source owns and that
+// materialization writes. The overview stays a reserved owner-written path.
+func TestSourcePathsListOnlyPathsTheSourceOwns(t *testing.T) {
+	result, err := Evaluate(validSource())
+	if err != nil || result.ExitCode != 0 {
+		t.Fatalf("Evaluate() exit=%d err=%v", result.ExitCode, err)
+	}
+	paths := []any{}
+	for _, diagnostic := range result.Report.Diagnostics {
+		if diagnostic.Key == "sourcePaths" {
+			paths = diagnostic.Value.([]any)
+		}
+	}
+	want := []any{result.Source.SpecPackagePath(), result.Source.RequirementsPath()}
+	if !reflect.DeepEqual(paths, want) || result.Report.Summary["sourcePathCount"] != len(want) {
+		t.Fatalf("sourcePaths=%v count=%v, want %v", paths, result.Report.Summary["sourcePathCount"], want)
+	}
+	if result.Source.OverviewPath() != result.Source.SpecPackagePath()+"/overview.md" {
+		t.Fatalf("reserved overview path = %q", result.Source.OverviewPath())
 	}
 }
