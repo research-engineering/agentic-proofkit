@@ -7,6 +7,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentintegration"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofview"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceconversion"
 )
 
 type commandInputMode string
@@ -44,6 +45,7 @@ const (
 	commandRunnerRequirementBrowserServer    commandRunner = "requirement_browser_server"
 	commandRunnerRequirementContextCompose   commandRunner = "requirement_context_compose"
 	commandRunnerRequirementProofResolver    commandRunner = "requirement_proof_resolver"
+	commandRunnerRequirementSourceConversion commandRunner = "requirement_source_conversion"
 	commandRunnerRequirementView             commandRunner = "requirement_view"
 	commandRunnerStackPreset                 commandRunner = "stack_preset"
 	commandRunnerTestEvidenceInventory       commandRunner = "test_evidence_inventory"
@@ -166,6 +168,7 @@ var commandDescriptors = []commandDescriptor{
 	command("requirement-proof-view", commandInputRequired, flags("--empty-local-environment-policy", "--format", "--input", "--input-pointer", "--local-environment-class", "--scope"), modes("html", "json", "markdown"), ownerDirs("requirementproofview"), withRunner(commandRunnerRequirementView)),
 	command("requirement-semantic-diff", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementdiff"), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI")),
 	command("requirement-source-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementsourceadmission")),
+	command("requirement-source-conversion", commandInputRequired, flags("--baseline", "--input", "--input-pointer", "--output", "--to"), modes("json"), ownerDirs("requirementsourceconversion"), withRunner(commandRunnerRequirementSourceConversion), withSemanticAppTests("TestRequirementSourceConversionCLI"), withRequiredFlags("--to"), withFlagChoices("--to", requirementsourceconversion.TargetChoices()...), withFlagValueRequirement("--to", requirementsourceconversion.TargetGrouped, "--baseline"), withFlagPresenceAndRequiredValue("--baseline", "--to", requirementsourceconversion.TargetGrouped), withSingleOccurrenceFlags("--baseline", "--input", "--input-pointer", "--output", "--to")),
 	command("requirement-source-transition", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementsourcetransition")),
 	command("requirement-source-view", commandInputRequired, flags("--format", "--input", "--input-pointer"), modes("html", "json", "markdown"), ownerDirs("requirementsourceview"), withRunner(commandRunnerRequirementView)),
 	command("requirement-spec-tree", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementspectree")),
@@ -222,6 +225,7 @@ var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerRequirementBrowserServer:    {},
 	commandRunnerRequirementContextCompose:   {},
 	commandRunnerRequirementProofResolver:    {},
+	commandRunnerRequirementSourceConversion: {},
 	commandRunnerRequirementView:             {},
 	commandRunnerStackPreset:                 {},
 	commandRunnerTestEvidenceInventory:       {},

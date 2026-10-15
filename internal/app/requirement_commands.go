@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,25 +28,28 @@ import (
 
 var outputWriterBarrier func(stage string, outputPath string)
 
-// Presentation output never enters Git metadata or Proofkit transaction control
-// state. The writer root is the working directory, not a known repository root,
-// so a protected component is refused at any depth.
+// Caller-named --output files never enter Git metadata or Proofkit transaction
+// control state. The writer root is the working directory, not a known
+// repository root, so a protected component is refused at any depth.
 var protectedOutputComponents = []string{".git", repositorytransaction.ControlRoot}
 
-// admitPresentationOutputPath is the sole --output path predicate. Paths outside
-// the pathidentity domain are refused because their aliasing is not decided.
-func admitPresentationOutputPath(value string) (string, error) {
-	relative, err := admit.SafeRepoRelativePath(value, "requirement-spec-tree-view output")
+// admitPresentationOutputPath is the sole --output path predicate. Every
+// command that publishes through the confined output writer applies it at
+// argument admission, and the writer applies it again at its sink; label names
+// the admitted output in diagnostics. Paths outside the pathidentity domain are
+// refused because their aliasing is not decided.
+func admitPresentationOutputPath(value, label string) (string, error) {
+	relative, err := admit.SafeRepoRelativePath(value, label)
 	if err != nil {
 		return "", err
 	}
 	for _, component := range protectedOutputComponents {
 		protected, err := pathidentity.ContainsComponentEquivalent(relative, component)
 		if err != nil {
-			return "", fmt.Errorf("requirement-spec-tree-view output path identity is invalid")
+			return "", fmt.Errorf("%s path identity is invalid", label)
 		}
 		if protected {
-			return "", fmt.Errorf("requirement-spec-tree-view output must not enter repository metadata or Proofkit control state")
+			return "", fmt.Errorf("%s must not enter repository metadata or Proofkit control state", label)
 		}
 	}
 	return relative, nil
@@ -128,7 +132,7 @@ func parseRequirementViewArgs(command string, args []string) (requirementViewArg
 			if args[index+1] == "-" {
 				return requirementViewArgs{}, fmt.Errorf("--output requires a repository-relative POSIX path other than -")
 			}
-			outputPath, err := admitPresentationOutputPath(args[index+1])
+			outputPath, err := admitPresentationOutputPath(args[index+1], "requirement-spec-tree-view output")
 			if err != nil {
 				return requirementViewArgs{}, err
 			}
@@ -273,7 +277,17 @@ func writeViewText(output string, exitCode int, err error, outputPath string, st
 }
 
 func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
-	relative, err := admitPresentationOutputPath(filepath.ToSlash(nativePath))
+	return publishRepoRelativeOutputFile(nativePath, content, true)
+}
+
+// writeNewRepoRelativeOutputFile publishes only when the destination name is
+// absent at the atomic link; an existing or concurrently created file is kept.
+func writeNewRepoRelativeOutputFile(nativePath string, content []byte) error {
+	return publishRepoRelativeOutputFile(nativePath, content, false)
+}
+
+func publishRepoRelativeOutputFile(nativePath string, content []byte, replaceExisting bool) error {
+	relative, err := admitPresentationOutputPath(filepath.ToSlash(nativePath), "output")
 	if err != nil {
 		return err
 	}
@@ -295,6 +309,9 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 	outputMode := os.FileMode(0o644)
 	var priorOutput os.FileInfo
 	if info, err := parentRoot.Lstat(filepath.FromSlash(leaf)); err == nil {
+		if !replaceExisting {
+			return fmt.Errorf("output path already exists: %s", relative)
+		}
 		if info.Mode()&os.ModeSymlink != 0 {
 			return fmt.Errorf("output path must not be a symlink: %s", relative)
 		}
@@ -392,6 +409,20 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 	}
 	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
 		return err
+	}
+	if !replaceExisting {
+		// Link fails instead of replacing a name created after admission.
+		if err := parentRoot.Link(filepath.FromSlash(tempRelative), filepath.FromSlash(leaf)); err != nil {
+			if errors.Is(err, fs.ErrExist) {
+				return fmt.Errorf("output path already exists: %s", relative)
+			}
+			return err
+		}
+		cleanup = false
+		if err := parentRoot.Remove(filepath.FromSlash(tempRelative)); err != nil {
+			return fmt.Errorf("output was published at %s but its temporary link was not removed: %w", relative, err)
+		}
+		return nil
 	}
 	currentOutput, outputErr := parentRoot.Lstat(filepath.FromSlash(leaf))
 	if priorOutput == nil {

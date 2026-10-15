@@ -655,6 +655,8 @@ func malformedInputExtraArgs(command string) []string {
 		return []string{"--empty-local-environment-policy"}
 	case "requirement-proof-view":
 		return []string{"--format", "json"}
+	case "requirement-source-conversion":
+		return []string{"--to", "flat"}
 	case "requirement-source-view":
 		return []string{"--format", "json"}
 	case "requirement-spec-tree-view":

@@ -100,6 +100,7 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 		matchPrefix      bool
 		materializedOnly bool
 		stdinTrustMode   string
+		stdinFragment    string
 		apply            func(workflowsmoke.Result) workflowsmoke.Result
 	}{
 		{name: "materialization guide omitted", match: "adopt materialize plan --help", apply: replaceStdout("Usage:\n")},
@@ -112,6 +113,18 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 		{name: "capability help example changed", match: "capability-map-admission --help", apply: replaceStdoutFragment(`"dirtyState": "unknown"`, `"dirtyState": "clean"`)},
 		{name: "capability input runner drops report", match: "capability-map-admission --input -", apply: replaceStdout(`{"state":"passed"}`)},
 		{name: "capability baseline runner drops report", match: "capability-map-admission --input -", stdinTrustMode: "code_baseline", apply: replaceStdout(`{"state":"passed"}`)},
+		{name: "source conversion export stem coordinate", match: "requirement-source-conversion --input - --to flat", apply: replaceStdoutFragment(`"statementStemBytes": 16`, `"statementStemBytes": 15`)},
+		{name: "source conversion import drops the stem", match: "requirement-source-conversion --input - --to grouped --baseline ", matchPrefix: true, apply: replaceStdoutFragment(`"statementStem": "The carrier must"`, `"statementStem": ""`)},
+		{name: "source conversion missing baseline accepted", match: "requirement-source-conversion --input - --to grouped", apply: func(result workflowsmoke.Result) workflowsmoke.Result {
+			return workflowsmoke.Result{ExitCode: 0, Stdout: []byte("{}\n")}
+		}},
+		{name: "source conversion legacy source accepted", match: "requirement-source-conversion --input - --to flat", stdinFragment: `"schemaVersion":1,`, apply: func(result workflowsmoke.Result) workflowsmoke.Result {
+			return workflowsmoke.Result{ExitCode: 0, Stdout: []byte("{}\n")}
+		}},
+		{name: "source conversion divergent value refusal class", match: "requirement-source-conversion --input - --to grouped --baseline ", matchPrefix: true, stdinFragment: `"claimLevel": "blocking"`, apply: func(result workflowsmoke.Result) workflowsmoke.Result {
+			result.Stderr = []byte("requirement source conversion refused input: stale_baseline at /basisDigest\n")
+			return result
+		}},
 		{name: "integration source identity", match: "integration source --tool codex --format json", apply: replaceStdout(`{"kind":"wrong"}`)},
 		{name: "managed plan missing transaction", match: "integration plan --tool codex --operation install --repo-root ", matchPrefix: true, apply: replaceStdout(`{"kind":"proofkit.integration-plan.v1","state":"ready","transaction":null}`)},
 		{name: "managed apply identity", match: "integration apply --tool codex --operation install --repo-root ", matchPrefix: true, apply: replaceStdoutFragment(`"kind": "proofkit.integration-receipt.v1"`, `"kind": "wrong"`)},
@@ -158,6 +171,9 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 					matches = false
 				}
 				if matches && mutation.stdinTrustMode != "" && capabilityInputTrustMode(t, invocation) != mutation.stdinTrustMode {
+					matches = false
+				}
+				if matches && mutation.stdinFragment != "" && !bytes.Contains(invocation.Input, []byte(mutation.stdinFragment)) {
 					matches = false
 				}
 				if err == nil && !applied && matches {

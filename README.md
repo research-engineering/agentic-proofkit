@@ -245,6 +245,11 @@ Source admission checks the supplied record and its declared relationships.
 It does not read the referenced files, execute native checks, authenticate
 results or approve a change.
 
+To edit a grouped source as one record per requirement,
+`requirement-source-conversion --to flat` exports a complete flat document and
+`--to grouped --baseline <source>` brings value edits back while refusing
+ownership changes and stale baselines; `--help` states its format contract.
+
 ### Caller-Owned Adapters
 
 For TypeScript consumers that want a small wrapper instead of hand-written

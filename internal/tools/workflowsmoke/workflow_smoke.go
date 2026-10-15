@@ -143,6 +143,9 @@ func Verify(ctx context.Context, run Runner) error {
 	if err := verifyAdoptionInputGuides(ctx, run); err != nil {
 		return err
 	}
+	if err := verifySourceConversion(ctx, run); err != nil {
+		return err
+	}
 	return verifyIntegrations(ctx, run)
 }
 

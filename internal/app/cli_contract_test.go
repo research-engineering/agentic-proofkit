@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "63fdb434c6d08cccb3c4efe71d04ba1af1b135f5ac19f9956c6d299b1b58e8fc"
+	cliContractPublicABISHA256               = "46cca3d63350d78899a123a5733bba33da218d537d6b7a862fdd7c3b89ec5ea2"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -564,6 +564,8 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.adoption-workflow-plan.output.v1.json-schema":                   {},
 			"proofkit.pilot-admission.input.v2.json-schema":                           {},
 			"proofkit.pilot-admission.output.v1.json-schema":                          {},
+			"proofkit.requirement-source-conversion.input.v1.json-schema":             {},
+			"proofkit.requirement-source-conversion.output.v1.json-schema":            {},
 			"proofkit.gradual-adoption.input.v1.json-schema":                          {},
 			"proofkit.gradual-adoption.output.v1.json-schema":                         {},
 			"proofkit.gradual-adoption-guidance.input.v1.json-schema":                 {},
@@ -1781,6 +1783,7 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host <127.0.0.1|::1>] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <graph|slice>] [--serve] [--session-mode <browse|one-shot-question>] [--session-timeout-seconds <1..7200>] --view <coverage|proof|source|spec-tree|workspace>",
 		"requirement-context-compose":    "agentic-proofkit requirement-context-compose --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 		"requirement-proof-resolver":     "agentic-proofkit requirement-proof-resolver --input <path|-> [--input-pointer <pointer>] (--empty-local-environment-policy | --local-environment-class <id>)",
+		"requirement-source-conversion":  "agentic-proofkit requirement-source-conversion --input <path|-> [--baseline <path>] [--input-pointer <pointer>] [--output <path>] --to <flat|grouped>",
 		"repository-inventory":           "agentic-proofkit repository-inventory --repo-root <path>",
 		"stack-preset":                   "agentic-proofkit stack-preset --preset <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>",
 		"status":                         "agentic-proofkit status [--color <auto|never>] [--format <json|text>] --repo-root <path>",

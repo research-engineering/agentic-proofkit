@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "fixture.legacy.source",
+  "specPackagePath": "docs/specs/legacy",
+  "overviewPath": "docs/specs/legacy/overview.md",
+  "requirementsPath": "docs/specs/legacy/requirements.v1.json",
+  "nonClaims": ["Legacy fixtures do not execute native witnesses."],
+  "requirements": [
+    {
+      "requirementId": "REQ-LEGACY-001",
+      "ownerId": "legacy.owner",
+      "invariant": "A legacy source preserves its admitted requirement identity.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "proofBindingRefs": ["proofkit/bindings.json"],
+      "nonClaimRefs": ["NC-LEGACY-001"],
+      "nonClaims": ["This fixture does not establish execution evidence."],
+      "deferral": null,
+      "updatePolicy": {"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "legacy.owner"}
+    }
+  ]
+}

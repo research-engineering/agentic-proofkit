@@ -65,6 +65,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofsourceset"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceconversion"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
@@ -180,6 +181,20 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.requirement-source-view.output.v2.root-shape"},
 		commands:     []string{"requirement-source-view"},
 		schema:       func() (map[string]any, error) { return requirementsourceview.OutputStructure(), nil },
+	}, {
+		id: "proofkit.requirement-source-conversion.input.v1.json-schema", direction: "input", aggregateVersion: "1",
+		commands: []string{"requirement-source-conversion"},
+		variants: []nativeStructureVariant{
+			{id: "01-grouped-source", when: "--to flat", schema: func() (map[string]any, error) { return requirementsourceconversion.GroupedStructure(), nil }},
+			{id: "02-flat-document", when: "--to grouped with --baseline naming the grouped source of basisDigest", schema: func() (map[string]any, error) { return requirementsourceconversion.FlatStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.requirement-source-conversion.output.v1.json-schema", direction: "output", aggregateVersion: "1",
+		commands: []string{"requirement-source-conversion"},
+		variants: []nativeStructureVariant{
+			{id: "01-flat-document", when: "--to flat without --output", schema: func() (map[string]any, error) { return requirementsourceconversion.FlatStructure(), nil }},
+			{id: "02-grouped-source", when: "--to grouped without --output", schema: func() (map[string]any, error) { return requirementsourceconversion.GroupedStructure(), nil }},
+		},
 	}, {
 		id:           "proofkit.requirement-source-transition.input.v2.json-schema",
 		direction:    "input",

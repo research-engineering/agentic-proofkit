@@ -14,6 +14,80 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-SPEC-044", "proofkit.spec-proof-core.source-conversion-hand-authored"}: {
+			witnessPath: "internal/command/requirementsourceconversion/conversion_test.go",
+			selectors: []string{
+				"TestConversionMatchesHandAuthoredDocuments",
+				"TestExportIsIndependentOfCallerOrder",
+				"TestFlatDocumentAloneReconstructsTheCompleteModel",
+				"TestFlatFieldInventoryMatchesTheModel",
+				"TestIdenticalValuesKeepTheirDistinctOwners",
+				"TestResolvedFieldsRequireTheExclusiveTotalPartition",
+				"TestRoundTripsAreIdempotent",
+				"TestSelfHostedSourcesRoundTrip",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-044", "proofkit.spec-proof-core.source-conversion-edits"}: {
+			witnessPath: "internal/command/requirementsourceconversion/edit_test.go",
+			selectors: []string{
+				"TestImportAppliesValueEditsUnderBaselineOwnership",
+				"TestImportRefusesOwnershipChangesAndDisagreements",
+				"TestReorderedBaselineIsNotStale",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-044", "proofkit.spec-proof-core.source-conversion-refusal"}: {
+			witnessPath: "internal/command/requirementsourceconversion/refusal_test.go",
+			selectors: []string{
+				"TestFlatCoordinateRefusals",
+				"TestFlatStructureRefusals",
+				"TestFormatIdentityRefusals",
+				"TestModelRefusalsUseFlatCoordinates",
+				"TestRefusalsAreBoundedAndDeterministic",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-044", "proofkit.spec-proof-core.source-conversion-structure"}: {
+			witnessPath: "internal/command/requirementsourceconversion/structure_test.go",
+			selectors: []string{
+				"TestEmissionsConformToPublishedStructures",
+				"TestPublishedStructuresReuseTheirOwners",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-044", "proofkit.spec-proof-core.source-conversion-contract"}: {
+			witnessPath: "internal/tools/commandcontractgen/source_conversion_structure_test.go",
+			selectors: []string{
+				"TestSourceConversionVariantsCoverTheClosedTargetVocabulary",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-044", "proofkit.spec-proof-core.source-conversion-cli"}: {
+			witnessPath: "internal/app/requirement_source_conversion_command_test.go",
+			selectors: []string{
+				"TestRequirementSourceConversionCLI",
+				"TestRequirementSourceConversionOutputBound",
+				"TestRequirementSourceConversionOutputPublication",
+				"TestRequirementSourceConversionOutputRefusesProtectedNamespaces",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-044", "proofkit.spec-proof-core.source-conversion-version-edge"}: {
+			witnessPath: "internal/app/source_conversion_version_edge_test.go",
+			selectors: []string{
+				"TestSourceConversionVersionEdgeRejectsUndeclaredInventory",
+				"TestSourceConversionVersionEdgeRequiresBothDefinitions",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-044", "proofkit.spec-proof-core.source-conversion-installed-carrier"}: {
+			commandIDs:         []string{"proofkit.go-test", "proofkit.package-artifact"},
+			environmentClasses: []string{"local-go", "local-go-python"},
+			witnessPath:        "internal/tools/workflowsmoke/workflow_smoke_test.go",
+			selectors: []string{
+				"TestVerifyAcceptsApplicationCLI",
+				"TestVerifyRejectsCarrierContractMutations",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-044", "proofkit.spec-proof-core.source-conversion-schema-independent-runtime"}: {
+			commandIDs:         []string{"proofkit.boundary-contract-check"},
+			environmentClasses: []string{"local-go-node"},
+			witnessPath:        "scripts/source-conversion-structure.test.mjs",
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.integration-schema-independent-runtime"}: {
 			witnessPath: "scripts/integration-structure.test.mjs",
 			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
