@@ -710,14 +710,20 @@ func (writer readyWriter) Write(bytes []byte) (int, error) {
 
 func TestStartServerFailsClosedForNonLoopbackHosts(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.067593917059454010073799027017616832235011027418005301800769590106420738231062")
-	for _, host := range []string{"0.0.0.0", "localhost"} {
+	// Remote publication is not a server mode: unspecified, named, bracketed,
+	// padded, alternate-loopback and routable hosts fail host admission, which
+	// precedes listening; a listen error is the wrong reason.
+	for _, host := range []string{"0.0.0.0", "localhost", "::", "[::1]", "127.0.0.2", "0:0:0:0:0:0:0:1", "::ffff:127.0.0.1", "127.0.0.1 ", "192.0.2.1", "example.com"} {
 		t.Run(host, func(t *testing.T) {
-			_, err := StartServer(sourceInput(t), Options{
+			handle, err := StartServer(sourceInput(t), Options{
 				Host:    host,
 				Port:    0,
 				PortSet: true,
 				View:    "source",
 			})
+			if err == nil {
+				closeTestServer(t, handle)
+			}
 			if err == nil || !strings.Contains(err.Error(), "host must be loopback") {
 				t.Fatalf("unexpected error: %v", err)
 			}

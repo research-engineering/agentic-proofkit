@@ -642,6 +642,47 @@ products. They should be generated on demand from explicit caller-owned inputs
 unless a consumer explicitly admits a small tracked artifact with a freshness
 gate.
 
+Browser serving is local by contract. `requirement-browser-server` and `view`
+bind only the two literal loopback hosts their `--host` choices admit, the IPv4
+loopback address and `::1`; unspecified, alternate-loopback, bracketed,
+routable and named hosts are refused before listening, and requests naming
+another host authority or a foreign origin are refused. Proofkit has no remote
+publication, hosted server, deployment adapter, URL or authentication
+configuration.
+
+Remote reading of a specification is a consumer hosting concern. To show a
+view to authorized readers at a consumer-chosen domain, publish the output of
+`requirement-source-view`, `requirement-proof-view`,
+`requirement-coverage-view` or `requirement-spec-tree-view` with `--format
+html` from a consumer-owned static host behind the consumer's access gateway.
+That document is the same bytes the local server serves for the view: one
+inline script, inline styles and no external references, so rendering needs no
+network access. The consumer owns the domain, DNS, TLS, identity,
+authorization, upload, caching, revocation and rollback; Proofkit holds no
+credentials for them and cannot prove them.
+
+Every delivered byte is disclosed to every admitted reader. Approve the
+complete explicit input rather than the visible cards: client-side filters are
+not redaction, and an obscure URL, robots rules or a private source repository
+are not access control. Protect every hostname, preview route and cache that
+serves the bytes. Serve them as `text/html; charset=utf-8` with `nosniff` and a
+Content-Security-Policy that admits scripts only by the embedded script's
+SHA-256 hash, such as the header the local server sends for the same document.
+`secret-scan` can check exported bytes for secret-shaped content; it does not
+decide confidentiality. Record source, renderer and exported digests and check
+them with `rendered-artifact-freshness`. A hosted copy remains
+`presentation_only`, never canonical source. The interactive workspace,
+comparison and question handoff need the local server and are not part of a
+static copy.
+
+A Proofkit deployment adapter or authenticated hosted server is not admitted:
+either would make Proofkit the custodian of provider credentials, identity,
+sessions and exposure rollback for a read-only need the external route already
+meets. Reconsider only for a confirmed need that route cannot meet, such as
+remote interactive use, with owner decisions for those boundaries, a
+feasibility witness, and negative cases for unauthorized access and unintended
+publication before an implementation plan.
+
 Hierarchical rendering must use explicit input:
 
 ```text

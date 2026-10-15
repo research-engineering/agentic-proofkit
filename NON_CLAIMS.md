@@ -32,6 +32,10 @@ This repository state does not claim:
 - Trusted Publisher or OIDC publication proof;
 - generated HTML, Markdown, reports, lookup graphs, or agent envelopes as
   canonical repository source;
+- remote publication, hosting, authentication, access control, TLS,
+  revocation, or freshness of specification views; the browser server serves
+  only on literal loopback hosts and consumer-hosted copies are under consumer
+  control;
 - execution or verification on macOS 13 or 14: Darwin binaries declare a macOS
   13.0 Mach-O minimum, so those releases are binary-compatible by toolchain
   metadata only. Required CI executes Darwin arm64 on `macos-15` and x86_64 on
