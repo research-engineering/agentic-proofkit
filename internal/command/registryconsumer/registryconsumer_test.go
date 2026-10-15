@@ -104,6 +104,22 @@ func TestRegistryConsumerRejectsSecretLikeCallerOwnedText(t *testing.T) {
 	}
 }
 
+func TestRegistryConsumerRejectsUnsortedOrDuplicateNonClaims(t *testing.T) {
+	for name, nonClaims := range map[string][]any{
+		"duplicate": {"Registry consumer duplicate non-claim.", "Registry consumer duplicate non-claim."},
+		"unsorted":  {"Registry consumer second non-claim.", "Registry consumer first non-claim."},
+	} {
+		t.Run(name, func(t *testing.T) {
+			input := validRegistryConsumerInput(t)
+			input["input"].(map[string]any)["nonClaims"] = nonClaims
+			_, _, err := Build(input)
+			if err == nil || err.Error() != "proofkit registry-consumer nonClaims must be sorted and unique" {
+				t.Fatalf("Build() error = %v, want sorted and unique nonClaims refusal", err)
+			}
+		})
+	}
+}
+
 func TestRegistryConsumerRejectsWorkspaceInstallLock(t *testing.T) {
 	input := validRegistryConsumerInput(t)
 	proof := input["proof"].(map[string]any)

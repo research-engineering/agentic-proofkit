@@ -65,6 +65,16 @@ func TestBuildRejectsUnknownNestedPolicyFields(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsDuplicateChangedPaths(t *testing.T) {
+	input := validPlanInput()
+	input["changedPaths"] = []any{"src/app.ts", "src/app.ts"}
+
+	_, _, err := Build(input)
+	if err == nil || err.Error() != "selective gate changedPaths must be sorted and unique" {
+		t.Fatalf("Build() error = %v, want duplicate changedPaths refusal", err)
+	}
+}
+
 func TestBuildAcceptsMinimalExplicitPlanInput(t *testing.T) {
 	output, _, err := Build(validPlanInput())
 	if err != nil {

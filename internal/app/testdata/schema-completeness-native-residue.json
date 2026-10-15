@@ -1,0 +1,2833 @@
+{
+ "schemaVersion": 1,
+ "residueSetId": "proofkit.schema-completeness.native-residue.v1",
+ "capture": "Each row names a recorded native input observation (an index into schema-completeness-native-observations.json with argv), a perturbation at a JSON pointer, and the native verdict. uniqueItemsAgreement rows insert a duplicate item that the published variant refuses with uniqueItems at that pointer and native admission refuses too. residue rows apply a perturbation the published variant admits and native admission refuses; evidence is a refusal literal segment of the named owner contained in the native diagnostic or in the strings the failed report adds.",
+ "perturbations": {
+  "duplicate-item": "insert a copy of the first item at index 1",
+  "empty-array": "replace the array with []",
+  "unknown-member": "add the member x-schema-completeness-residue with value true",
+  "omit-member": "delete the member",
+  "long-string": "append 320 x characters",
+  "other-token": "append -x-schema-completeness-residue (or use x-schema-completeness-residue for an empty string)",
+  "large-number": "add 1000003"
+ },
+ "nonClaims": [
+  "Rows are witnesses that a class is native-owned on a route; they do not enumerate every native-only constraint.",
+  "The authoring probe applied every perturbation to every location of every argv observation; only the rows below are committed and re-executed."
+ ],
+ "uniqueItemsAgreement": [
+  {
+   "observation": 6,
+   "route": "adoption-checklist",
+   "pointer": "/items"
+  },
+  {
+   "observation": 6,
+   "route": "adoption-checklist",
+   "pointer": "/items/0/commandRefs"
+  },
+  {
+   "observation": 6,
+   "route": "adoption-checklist",
+   "pointer": "/items/0/evidenceRefs"
+  },
+  {
+   "observation": 6,
+   "route": "adoption-checklist",
+   "pointer": "/items/0/nonClaims"
+  },
+  {
+   "observation": 6,
+   "route": "adoption-checklist",
+   "pointer": "/items/1/nonClaims"
+  },
+  {
+   "observation": 6,
+   "route": "adoption-checklist",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 6,
+   "route": "adoption-checklist",
+   "pointer": "/requiredItemIds"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 14,
+   "route": "adoption-workflow-plan",
+   "pointer": "/workflow/nonClaims"
+  },
+  {
+   "observation": 15,
+   "route": "adoption-workflow-plan",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 21,
+   "route": "binding-partition",
+   "pointer": "/bindingSurfaces"
+  },
+  {
+   "observation": 21,
+   "route": "binding-partition",
+   "pointer": "/bindingSurfaces/0/selectorRefs"
+  },
+  {
+   "observation": 21,
+   "route": "binding-partition",
+   "pointer": "/bindingSurfaces/1/selectorRefs"
+  },
+  {
+   "observation": 21,
+   "route": "binding-partition",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 21,
+   "route": "binding-partition",
+   "pointer": "/proofRouteRefs"
+  },
+  {
+   "observation": 21,
+   "route": "binding-partition",
+   "pointer": "/routeOwners/0/selectorRefs"
+  },
+  {
+   "observation": 23,
+   "route": "branch-authority",
+   "pointer": "/branchRefs/0/nonClaims"
+  },
+  {
+   "observation": 23,
+   "route": "branch-authority",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 25,
+   "route": "capability-map-admission",
+   "pointer": "/capabilities/0/scenarioShapes/0/ownerQuestions"
+  },
+  {
+   "observation": 25,
+   "route": "capability-map-admission",
+   "pointer": "/capabilities/0/scenarioShapes/0/requiredEvidence"
+  },
+  {
+   "observation": 25,
+   "route": "capability-map-admission",
+   "pointer": "/capabilities/0/sourcePaths"
+  },
+  {
+   "observation": 25,
+   "route": "capability-map-admission",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 32,
+   "route": "completion-criteria",
+   "pointer": "/criteria"
+  },
+  {
+   "observation": 32,
+   "route": "completion-criteria",
+   "pointer": "/criteria/0/evidenceRefs"
+  },
+  {
+   "observation": 32,
+   "route": "completion-criteria",
+   "pointer": "/criteria/0/failsWhen"
+  },
+  {
+   "observation": 32,
+   "route": "completion-criteria",
+   "pointer": "/criteria/0/nonClaims"
+  },
+  {
+   "observation": 32,
+   "route": "completion-criteria",
+   "pointer": "/criteria/0/proofRefs"
+  },
+  {
+   "observation": 32,
+   "route": "completion-criteria",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 38,
+   "route": "custom-rule-boundary",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 38,
+   "route": "custom-rule-boundary",
+   "pointer": "/rules"
+  },
+  {
+   "observation": 38,
+   "route": "custom-rule-boundary",
+   "pointer": "/rules/0/affectedPathGlobs"
+  },
+  {
+   "observation": 38,
+   "route": "custom-rule-boundary",
+   "pointer": "/rules/0/inputArtifactKinds"
+  },
+  {
+   "observation": 38,
+   "route": "custom-rule-boundary",
+   "pointer": "/rules/0/inputArtifactRefs"
+  },
+  {
+   "observation": 38,
+   "route": "custom-rule-boundary",
+   "pointer": "/rules/0/nonClaims"
+  },
+  {
+   "observation": 42,
+   "route": "document-lifecycle-boundary",
+   "pointer": "/documents"
+  },
+  {
+   "observation": 42,
+   "route": "document-lifecycle-boundary",
+   "pointer": "/documents/0/forbiddenPayloads"
+  },
+  {
+   "observation": 42,
+   "route": "document-lifecycle-boundary",
+   "pointer": "/documents/0/mutationTriggers"
+  },
+  {
+   "observation": 42,
+   "route": "document-lifecycle-boundary",
+   "pointer": "/documents/0/nonClaims"
+  },
+  {
+   "observation": 42,
+   "route": "document-lifecycle-boundary",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 82,
+   "route": "pilot-admission",
+   "pointer": "/cacheScheduler/parallelGroups"
+  },
+  {
+   "observation": 82,
+   "route": "pilot-admission",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 82,
+   "route": "pilot-admission",
+   "pointer": "/profile/primaryLanguages"
+  },
+  {
+   "observation": 86,
+   "route": "proof-obligation-algebra",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 86,
+   "route": "proof-obligation-algebra",
+   "pointer": "/obligations"
+  },
+  {
+   "observation": 86,
+   "route": "proof-obligation-algebra",
+   "pointer": "/obligations/0/evidenceRefs"
+  },
+  {
+   "observation": 86,
+   "route": "proof-obligation-algebra",
+   "pointer": "/obligations/0/nonClaims"
+  },
+  {
+   "observation": 86,
+   "route": "proof-obligation-algebra",
+   "pointer": "/obligations/0/proofRouteRefs"
+  },
+  {
+   "observation": 88,
+   "route": "proof-receipt-admission",
+   "pointer": "/receipts"
+  },
+  {
+   "observation": 88,
+   "route": "proof-receipt-admission",
+   "pointer": "/receipts/0/evidenceRefs"
+  },
+  {
+   "observation": 88,
+   "route": "proof-receipt-admission",
+   "pointer": "/receipts/0/witnessSelectors"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/obligationReceipts"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/obligationReceipts/0/currentnessChecks"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/obligationReceipts/0/currentnessChecks/0/evidenceRefs"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/obligationReceipts/0/currentnessChecks/0/nonClaims"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/obligationReceipts/0/evidenceRefs"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/obligationReceipts/0/nonClaims"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/obligationReceipts/0/scopeChecks"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/obligationReceipts/0/scopeChecks/0/evidenceRefs"
+  },
+  {
+   "observation": 94,
+   "route": "receipt-currentness-scope",
+   "pointer": "/obligationReceipts/0/scopeChecks/0/nonClaims"
+  },
+  {
+   "observation": 96,
+   "route": "receipt-producer-admission",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/obligationReceipts"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/obligationReceipts/0/artifactRefs"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/obligationReceipts/0/evidenceRefs"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/obligationReceipts/0/nonClaims"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/proofClasses"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/proofClasses/0/allowedEnvironmentClasses"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/proofClasses/0/allowedReceiptKinds"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/proofClasses/0/nonClaims"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/trustClasses"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/trustClasses/0/allowedProducerAdmissionLevels"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/trustClasses/0/allowedReceiptStatuses"
+  },
+  {
+   "observation": 98,
+   "route": "receipt-trust-class",
+   "pointer": "/trustClasses/0/nonClaims"
+  },
+  {
+   "observation": 108,
+   "route": "rendered-artifact-freshness",
+   "pointer": "/artifacts"
+  },
+  {
+   "observation": 108,
+   "route": "rendered-artifact-freshness",
+   "pointer": "/artifacts/0/freshnessCheckRefs"
+  },
+  {
+   "observation": 108,
+   "route": "rendered-artifact-freshness",
+   "pointer": "/artifacts/0/nonClaims"
+  },
+  {
+   "observation": 108,
+   "route": "rendered-artifact-freshness",
+   "pointer": "/artifacts/0/sourceRefs"
+  },
+  {
+   "observation": 108,
+   "route": "rendered-artifact-freshness",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 110,
+   "route": "repo-profile-admission",
+   "pointer": "/profile/nonClaims"
+  },
+  {
+   "observation": 110,
+   "route": "repo-profile-admission",
+   "pointer": "/profile/proofs/environmentClasses"
+  },
+  {
+   "observation": 110,
+   "route": "repo-profile-admission",
+   "pointer": "/profile/proofs/proofLikePaths"
+  },
+  {
+   "observation": 110,
+   "route": "repo-profile-admission",
+   "pointer": "/profile/repository/primaryLanguages"
+  },
+  {
+   "observation": 110,
+   "route": "repo-profile-admission",
+   "pointer": "/profile/requirements/specGlobs"
+  },
+  {
+   "observation": 118,
+   "route": "requirement-browser-server",
+   "pointer": "/bindings/0/6"
+  },
+  {
+   "observation": 118,
+   "route": "requirement-browser-server",
+   "pointer": "/bindings/0/7/1"
+  },
+  {
+   "observation": 118,
+   "route": "requirement-browser-server",
+   "pointer": "/bindings/0/7/2"
+  },
+  {
+   "observation": 118,
+   "route": "requirement-browser-server",
+   "pointer": "/bindings/0/8/1"
+  },
+  {
+   "observation": 118,
+   "route": "requirement-browser-server",
+   "pointer": "/bindings/0/8/2"
+  },
+  {
+   "observation": 118,
+   "route": "requirement-browser-server",
+   "pointer": "/bindings/0/9"
+  },
+  {
+   "observation": 118,
+   "route": "requirement-browser-server",
+   "pointer": "/non_claims"
+  },
+  {
+   "observation": 118,
+   "route": "requirement-browser-server",
+   "pointer": "/surfaces/0/1"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "pointer": "/currentCompactProofContract/bindings/0/6"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "pointer": "/currentCompactProofContract/bindings/0/7/1"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "pointer": "/currentCompactProofContract/bindings/0/7/2"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "pointer": "/currentCompactProofContract/bindings/0/8/1"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "pointer": "/currentCompactProofContract/bindings/0/8/2"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "pointer": "/currentCompactProofContract/bindings/0/9"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "pointer": "/currentCompactProofContract/non_claims"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "pointer": "/currentCompactProofContract/surfaces/0/1"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "pointer": "/compactProofContract/bindings/0/6"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "pointer": "/compactProofContract/bindings/0/7/1"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "pointer": "/compactProofContract/bindings/0/7/2"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "pointer": "/compactProofContract/bindings/0/8/1"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "pointer": "/compactProofContract/bindings/0/8/2"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "pointer": "/compactProofContract/bindings/0/9"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "pointer": "/compactProofContract/non_claims"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "pointer": "/compactProofContract/surfaces/0/1"
+  },
+  {
+   "observation": 186,
+   "route": "text-policy",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 186,
+   "route": "text-policy",
+   "pointer": "/policy/binarySuffixes"
+  },
+  {
+   "observation": 201,
+   "route": "workspace-manifest-facts",
+   "pointer": "/dependencyFields"
+  },
+  {
+   "observation": 201,
+   "route": "workspace-manifest-facts",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 220,
+   "route": "requirement-proof-resolver",
+   "pointer": "/non_claims"
+  },
+  {
+   "observation": 221,
+   "route": "binding-partition",
+   "pointer": "/bindingSurfaces"
+  },
+  {
+   "observation": 221,
+   "route": "binding-partition",
+   "pointer": "/bindingSurfaces/0/selectorRefs"
+  },
+  {
+   "observation": 221,
+   "route": "binding-partition",
+   "pointer": "/bindingSurfaces/1/selectorRefs"
+  },
+  {
+   "observation": 221,
+   "route": "binding-partition",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 221,
+   "route": "binding-partition",
+   "pointer": "/proofRouteRefs"
+  },
+  {
+   "observation": 221,
+   "route": "binding-partition",
+   "pointer": "/routeOwners/0/selectorRefs"
+  },
+  {
+   "observation": 221,
+   "route": "binding-partition",
+   "pointer": "/surfaceThresholds"
+  },
+  {
+   "observation": 222,
+   "route": "completion-criteria",
+   "pointer": "/criteria"
+  },
+  {
+   "observation": 222,
+   "route": "completion-criteria",
+   "pointer": "/criteria/0/evidenceRefs"
+  },
+  {
+   "observation": 222,
+   "route": "completion-criteria",
+   "pointer": "/criteria/0/failsWhen"
+  },
+  {
+   "observation": 222,
+   "route": "completion-criteria",
+   "pointer": "/criteria/0/nonClaims"
+  },
+  {
+   "observation": 222,
+   "route": "completion-criteria",
+   "pointer": "/criteria/0/proofRefs"
+  },
+  {
+   "observation": 222,
+   "route": "completion-criteria",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 226,
+   "route": "typescript-public-api-surfaces",
+   "pointer": "/entries/0/exportConditions"
+  },
+  {
+   "observation": 230,
+   "route": "selective-gate-evidence",
+   "pointer": "/producerAdmission/environmentClasses"
+  },
+  {
+   "observation": 230,
+   "route": "selective-gate-evidence",
+   "pointer": "/producerAdmission/nonClaims"
+  },
+  {
+   "observation": 230,
+   "route": "selective-gate-evidence",
+   "pointer": "/producerAdmission/producers"
+  },
+  {
+   "observation": 230,
+   "route": "selective-gate-evidence",
+   "pointer": "/producerAdmission/producers/0/environmentClasses"
+  },
+  {
+   "observation": 230,
+   "route": "selective-gate-evidence",
+   "pointer": "/producerAdmission/producers/0/evidenceRefs"
+  },
+  {
+   "observation": 230,
+   "route": "selective-gate-evidence",
+   "pointer": "/producerAdmission/producers/0/receiptKinds"
+  },
+  {
+   "observation": 230,
+   "route": "selective-gate-evidence",
+   "pointer": "/producerAdmission/receiptKinds"
+  },
+  {
+   "observation": 230,
+   "route": "selective-gate-evidence",
+   "pointer": "/producerAdmission/receipts"
+  },
+  {
+   "observation": 230,
+   "route": "selective-gate-evidence",
+   "pointer": "/producerAdmission/receipts/0/artifactRefs"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/evidence/producerAdmission/environmentClasses"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/evidence/producerAdmission/nonClaims"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/evidence/producerAdmission/producers"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/evidence/producerAdmission/producers/0/environmentClasses"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/evidence/producerAdmission/producers/0/evidenceRefs"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/evidence/producerAdmission/producers/0/receiptKinds"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/evidence/producerAdmission/receiptKinds"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/evidence/producerAdmission/receipts"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/evidence/producerAdmission/receipts/0/artifactRefs"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/nonClaims"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/obligationReceipts"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/obligationReceipts/0/currentnessChecks"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/obligationReceipts/0/currentnessChecks/0/evidenceRefs"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/obligationReceipts/0/currentnessChecks/0/nonClaims"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/obligationReceipts/0/evidenceRefs"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/obligationReceipts/0/nonClaims"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/obligationReceipts/0/scopeChecks"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/obligationReceipts/0/scopeChecks/0/evidenceRefs"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptCurrentnessScopeAdmission/obligationReceipts/0/scopeChecks/0/nonClaims"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/nonClaims"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/obligationReceipts"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/obligationReceipts/0/artifactRefs"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/obligationReceipts/0/evidenceRefs"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/obligationReceipts/0/nonClaims"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/proofClasses"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/proofClasses/0/allowedEnvironmentClasses"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/proofClasses/0/allowedReceiptKinds"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/proofClasses/0/nonClaims"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/trustClasses"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/trustClasses/0/allowedProducerAdmissionLevels"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/trustClasses/0/allowedReceiptStatuses"
+  },
+  {
+   "observation": 231,
+   "route": "selective-gate-obligation-decision-input",
+   "pointer": "/receiptTrustClassAdmission/trustClasses/0/nonClaims"
+  },
+  {
+   "observation": 234,
+   "route": "requirement-coverage-input-compose",
+   "pointer": "/compactProofContract/bindings/0/6"
+  },
+  {
+   "observation": 234,
+   "route": "requirement-coverage-input-compose",
+   "pointer": "/compactProofContract/bindings/0/7/1"
+  },
+  {
+   "observation": 234,
+   "route": "requirement-coverage-input-compose",
+   "pointer": "/compactProofContract/bindings/0/7/2"
+  },
+  {
+   "observation": 234,
+   "route": "requirement-coverage-input-compose",
+   "pointer": "/compactProofContract/bindings/0/8/1"
+  },
+  {
+   "observation": 234,
+   "route": "requirement-coverage-input-compose",
+   "pointer": "/compactProofContract/bindings/0/8/2"
+  },
+  {
+   "observation": 234,
+   "route": "requirement-coverage-input-compose",
+   "pointer": "/compactProofContract/bindings/0/9"
+  },
+  {
+   "observation": 234,
+   "route": "requirement-coverage-input-compose",
+   "pointer": "/compactProofContract/non_claims"
+  },
+  {
+   "observation": 234,
+   "route": "requirement-coverage-input-compose",
+   "pointer": "/compactProofContract/surfaces/0/1"
+  },
+  {
+   "observation": 236,
+   "route": "requirement-coverage-view",
+   "pointer": "/compactProofContract/bindings/0/6"
+  },
+  {
+   "observation": 236,
+   "route": "requirement-coverage-view",
+   "pointer": "/compactProofContract/bindings/0/7/1"
+  },
+  {
+   "observation": 236,
+   "route": "requirement-coverage-view",
+   "pointer": "/compactProofContract/bindings/0/7/2"
+  },
+  {
+   "observation": 236,
+   "route": "requirement-coverage-view",
+   "pointer": "/compactProofContract/bindings/0/8/1"
+  },
+  {
+   "observation": 236,
+   "route": "requirement-coverage-view",
+   "pointer": "/compactProofContract/bindings/0/8/2"
+  },
+  {
+   "observation": 236,
+   "route": "requirement-coverage-view",
+   "pointer": "/compactProofContract/bindings/0/9"
+  },
+  {
+   "observation": 236,
+   "route": "requirement-coverage-view",
+   "pointer": "/compactProofContract/non_claims"
+  },
+  {
+   "observation": 236,
+   "route": "requirement-coverage-view",
+   "pointer": "/compactProofContract/surfaces/0/1"
+  },
+  {
+   "observation": 238,
+   "route": "secret-scan",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 240,
+   "route": "requirement-proof-view",
+   "pointer": "/bindings/0/6"
+  },
+  {
+   "observation": 240,
+   "route": "requirement-proof-view",
+   "pointer": "/bindings/0/7/1"
+  },
+  {
+   "observation": 240,
+   "route": "requirement-proof-view",
+   "pointer": "/bindings/0/7/2"
+  },
+  {
+   "observation": 240,
+   "route": "requirement-proof-view",
+   "pointer": "/bindings/0/8/1"
+  },
+  {
+   "observation": 240,
+   "route": "requirement-proof-view",
+   "pointer": "/bindings/0/8/2"
+  },
+  {
+   "observation": 240,
+   "route": "requirement-proof-view",
+   "pointer": "/bindings/0/9"
+  },
+  {
+   "observation": 240,
+   "route": "requirement-proof-view",
+   "pointer": "/non_claims"
+  },
+  {
+   "observation": 240,
+   "route": "requirement-proof-view",
+   "pointer": "/surfaces/0/1"
+  },
+  {
+   "observation": 252,
+   "route": "spec-proof-bundle-admission",
+   "pointer": "/mergeRequiredReceiptIds"
+  },
+  {
+   "observation": 254,
+   "route": "agent-route",
+   "pointer": "/knownChangedPaths"
+  },
+  {
+   "observation": 254,
+   "route": "agent-route",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 255,
+   "route": "agent-route",
+   "pointer": "/knownChangedPaths"
+  },
+  {
+   "observation": 258,
+   "route": "change plan",
+   "pointer": "/requiredContextRefIds"
+  },
+  {
+   "observation": 260,
+   "route": "requirement-proof-resolver",
+   "pointer": "/non_claims"
+  },
+  {
+   "observation": 260,
+   "route": "requirement-proof-resolver",
+   "pointer": "/surfaces/0/1"
+  },
+  {
+   "observation": 264,
+   "route": "pilot-admission",
+   "pointer": "/cacheScheduler/parallelGroups"
+  },
+  {
+   "observation": 264,
+   "route": "pilot-admission",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 264,
+   "route": "pilot-admission",
+   "pointer": "/profile/primaryLanguages"
+  },
+  {
+   "observation": 294,
+   "route": "requirement-browser-server",
+   "pointer": "/compactProofContract/bindings/0/6"
+  },
+  {
+   "observation": 294,
+   "route": "requirement-browser-server",
+   "pointer": "/compactProofContract/bindings/0/7/1"
+  },
+  {
+   "observation": 294,
+   "route": "requirement-browser-server",
+   "pointer": "/compactProofContract/bindings/0/7/2"
+  },
+  {
+   "observation": 294,
+   "route": "requirement-browser-server",
+   "pointer": "/compactProofContract/bindings/0/8/1"
+  },
+  {
+   "observation": 294,
+   "route": "requirement-browser-server",
+   "pointer": "/compactProofContract/bindings/0/8/2"
+  },
+  {
+   "observation": 294,
+   "route": "requirement-browser-server",
+   "pointer": "/compactProofContract/bindings/0/9"
+  },
+  {
+   "observation": 294,
+   "route": "requirement-browser-server",
+   "pointer": "/compactProofContract/non_claims"
+  },
+  {
+   "observation": 294,
+   "route": "requirement-browser-server",
+   "pointer": "/compactProofContract/surfaces/0/1"
+  },
+  {
+   "observation": 302,
+   "route": "pilot-admission",
+   "pointer": "/input/cacheScheduler/parallelGroups"
+  },
+  {
+   "observation": 302,
+   "route": "pilot-admission",
+   "pointer": "/input/nonClaims"
+  },
+  {
+   "observation": 302,
+   "route": "pilot-admission",
+   "pointer": "/input/profile/primaryLanguages"
+  },
+  {
+   "observation": 302,
+   "route": "pilot-admission",
+   "pointer": "/stackDiverseInput/cacheScheduler/parallelGroups"
+  },
+  {
+   "observation": 302,
+   "route": "pilot-admission",
+   "pointer": "/stackDiverseInput/nonClaims"
+  },
+  {
+   "observation": 302,
+   "route": "pilot-admission",
+   "pointer": "/stackDiverseInput/profile/primaryLanguages"
+  },
+  {
+   "observation": 303,
+   "route": "pilot-admission",
+   "pointer": "/input/cacheScheduler/parallelGroups"
+  },
+  {
+   "observation": 303,
+   "route": "pilot-admission",
+   "pointer": "/input/nonClaims"
+  },
+  {
+   "observation": 303,
+   "route": "pilot-admission",
+   "pointer": "/input/profile/primaryLanguages"
+  },
+  {
+   "observation": 304,
+   "route": "pilot-admission",
+   "pointer": "/stackDiverseInput/cacheScheduler/parallelGroups"
+  },
+  {
+   "observation": 304,
+   "route": "pilot-admission",
+   "pointer": "/stackDiverseInput/nonClaims"
+  },
+  {
+   "observation": 304,
+   "route": "pilot-admission",
+   "pointer": "/stackDiverseInput/profile/primaryLanguages"
+  },
+  {
+   "observation": 306,
+   "route": "adoption-contract-envelope",
+   "pointer": "/nonClaims"
+  },
+  {
+   "observation": 306,
+   "route": "adoption-contract-envelope",
+   "pointer": "/pilot/input/cacheScheduler/parallelGroups"
+  },
+  {
+   "observation": 306,
+   "route": "adoption-contract-envelope",
+   "pointer": "/pilot/input/nonClaims"
+  },
+  {
+   "observation": 306,
+   "route": "adoption-contract-envelope",
+   "pointer": "/pilot/input/profile/primaryLanguages"
+  },
+  {
+   "observation": 306,
+   "route": "adoption-contract-envelope",
+   "pointer": "/pilot/stackDiverseInput/cacheScheduler/parallelGroups"
+  },
+  {
+   "observation": 306,
+   "route": "adoption-contract-envelope",
+   "pointer": "/pilot/stackDiverseInput/nonClaims"
+  },
+  {
+   "observation": 306,
+   "route": "adoption-contract-envelope",
+   "pointer": "/pilot/stackDiverseInput/profile/primaryLanguages"
+  },
+  {
+   "observation": 307,
+   "route": "adoption-contract-envelope",
+   "pointer": "/nonClaims"
+  }
+ ],
+ "residue": [
+  {
+   "observation": 6,
+   "route": "adoption-checklist",
+   "perturbation": "other-token",
+   "pointer": "/items/0/itemId",
+   "class": "referenceClosure",
+   "owner": "adoptionchecklist.Build",
+   "evidence": "must reference a declared checklist item"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "long-string",
+   "pointer": "/gradual/input/module/moduleId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "omit-member",
+   "pointer": "/gradual/input/module/specPath",
+   "class": "bound",
+   "owner": "gradualadoption.safePath",
+   "evidence": "must be a repository-relative POSIX path"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "empty-array",
+   "pointer": "/gradual/input/module/requirementIds",
+   "class": "cardinality",
+   "owner": "gradualadoption.admitModule",
+   "evidence": "module must declare at least one requirement"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "omit-member",
+   "pointer": "/gradual/input/rollback/disableCommand",
+   "class": "cardinality",
+   "owner": "impact.nonEmptyText",
+   "evidence": "must be non-empty text"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "omit-member",
+   "pointer": "/gradual/input/module/requirementIds",
+   "class": "crossField",
+   "owner": "gradualadoption.BuildReport",
+   "evidence": "module requirementIds must match proofBinding requirementIds"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "empty-array",
+   "pointer": "/gradual/input/nativeWitnesses/vocabulary/environmentClassPolicies",
+   "class": "crossField",
+   "owner": "witnesscommand.assertEnvironmentClassPolicies",
+   "evidence": "must declare an environmentClassPolicy"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "duplicate-item",
+   "pointer": "/gradual/input/nativeWitnesses/commands",
+   "class": "duplicate",
+   "owner": "impact.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "duplicate-item",
+   "pointer": "/gradual/input/nonClaims",
+   "class": "duplicate",
+   "owner": "gradualadoption.displayCommandsFromStrings",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "long-string",
+   "pointer": "/gradual/input/nativeWitnesses/commands/0/parallelGroup",
+   "class": "enum",
+   "owner": "witnesscommand.vocabularyValue",
+   "evidence": "must be an admitted value"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "empty-array",
+   "pointer": "/gradual/input/nativeWitnesses/vocabulary/credentialClasses",
+   "class": "enum",
+   "owner": "witnesscommand.subset",
+   "evidence": "contains unsupported value(s):"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "omit-member",
+   "pointer": "/gradual/input/agentReport/routeQuestions",
+   "class": "enum",
+   "owner": "gradualadoption.admitAgentReport",
+   "evidence": "agentReport routeQuestions must include"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "empty-array",
+   "pointer": "/gradual/input/nativeWitnesses/vocabulary/environmentClassPolicies/0/credentialClasses",
+   "class": "secretTimestamp",
+   "owner": "witnesscommand.assertEnvironmentClassPolicies",
+   "evidence": "does not admit credentialClass"
+  },
+  {
+   "observation": 8,
+   "route": "adoption-contract-envelope",
+   "perturbation": "unknown-member",
+   "pointer": "/gradual/input/budget",
+   "class": "unknownField",
+   "owner": "admit.KnownKeys",
+   "evidence": "has unsupported field(s):"
+  },
+  {
+   "observation": 12,
+   "route": "adoption-doctor",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "admit.NormalizeSortedText",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 23,
+   "route": "branch-authority",
+   "perturbation": "duplicate-item",
+   "pointer": "/branchRefs",
+   "class": "duplicate",
+   "owner": "branchauthority.branchRefs",
+   "evidence": "branch authority ref ids must be unique"
+  },
+  {
+   "observation": 25,
+   "route": "capability-map-admission",
+   "perturbation": "duplicate-item",
+   "pointer": "/capabilities",
+   "class": "duplicate",
+   "owner": "capabilitymapadmission.admitCapabilities",
+   "evidence": "capability map capabilityId values must be unique"
+  },
+  {
+   "observation": 25,
+   "route": "capability-map-admission",
+   "perturbation": "duplicate-item",
+   "pointer": "/capabilities/0/scenarioShapes",
+   "class": "duplicate",
+   "owner": "capabilitymapadmission.admitScenarioShapes",
+   "evidence": ".scenarioShapes scenarioId values must be unique"
+  },
+  {
+   "observation": 34,
+   "route": "conformance-profile",
+   "perturbation": "long-string",
+   "pointer": "/manifest/contractId",
+   "class": "crossField",
+   "owner": "conformanceprofile.admitManifest",
+   "evidence": "conformance profile manifest contractId drift"
+  },
+  {
+   "observation": 34,
+   "route": "conformance-profile",
+   "perturbation": "duplicate-item",
+   "pointer": "/manifest/nonClaims",
+   "class": "duplicate",
+   "owner": "conformanceprofile.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 44,
+   "route": "evidence-graph",
+   "perturbation": "long-string",
+   "pointer": "/bindingId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 44,
+   "route": "evidence-graph",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "requirementbinding.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 46,
+   "route": "external-consumer",
+   "perturbation": "duplicate-item",
+   "pointer": "/input/nonClaims",
+   "class": "duplicate",
+   "owner": "externalconsumer.sortedText",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 46,
+   "route": "external-consumer",
+   "perturbation": "long-string",
+   "pointer": "/evidence/consumerProof/tempConsumerLocation",
+   "class": "enum",
+   "owner": "externalconsumer.admitConsumerProof",
+   "evidence": "proofkit external-consumer tempConsumerLocation must be os-temp"
+  },
+  {
+   "observation": 48,
+   "route": "gradual-adoption",
+   "perturbation": "duplicate-item",
+   "pointer": "/nativeWitnesses/vocabulary/artifactKinds",
+   "class": "duplicate",
+   "owner": "witnesscommand.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 48,
+   "route": "gradual-adoption",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "admit.NormalizeSortedText",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 48,
+   "route": "gradual-adoption",
+   "perturbation": "empty-array",
+   "pointer": "/nativeWitnesses/vocabulary/credentialClasses",
+   "class": "enum",
+   "owner": "witnesscommand.subset",
+   "evidence": "contains unsupported value(s):"
+  },
+  {
+   "observation": 48,
+   "route": "gradual-adoption",
+   "perturbation": "empty-array",
+   "pointer": "/nativeWitnesses/vocabulary/environmentClasses",
+   "class": "enum",
+   "owner": "witnesscommand.vocabularyValue",
+   "evidence": "must be an admitted value"
+  },
+  {
+   "observation": 51,
+   "route": "gradual-adoption-bootstrap",
+   "perturbation": "duplicate-item",
+   "pointer": "/nativeWitnesses/vocabulary/artifactKinds",
+   "class": "duplicate",
+   "owner": "witnesscommand.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 52,
+   "route": "gradual-adoption-bootstrap",
+   "perturbation": "duplicate-item",
+   "pointer": "/bootstrap/commands",
+   "class": "duplicate",
+   "owner": "gradualadoption.displayCommandsFromStrings",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 51,
+   "route": "gradual-adoption-bootstrap",
+   "perturbation": "empty-array",
+   "pointer": "/nativeWitnesses/vocabulary/credentialClasses",
+   "class": "enum",
+   "owner": "witnesscommand.subset",
+   "evidence": "contains unsupported value(s):"
+  },
+  {
+   "observation": 51,
+   "route": "gradual-adoption-bootstrap",
+   "perturbation": "empty-array",
+   "pointer": "/nativeWitnesses/vocabulary/environmentClasses",
+   "class": "enum",
+   "owner": "witnesscommand.vocabularyValue",
+   "evidence": "must be an admitted value"
+  },
+  {
+   "observation": 54,
+   "route": "gradual-adoption-guidance",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "gradualadoption.preserveDisplayCommands",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 55,
+   "route": "gradual-adoption-guidance",
+   "perturbation": "duplicate-item",
+   "pointer": "/input/nativeWitnesses/vocabulary/artifactKinds",
+   "class": "duplicate",
+   "owner": "witnesscommand.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 55,
+   "route": "gradual-adoption-guidance",
+   "perturbation": "empty-array",
+   "pointer": "/input/nativeWitnesses/vocabulary/credentialClasses",
+   "class": "enum",
+   "owner": "witnesscommand.subset",
+   "evidence": "contains unsupported value(s):"
+  },
+  {
+   "observation": 55,
+   "route": "gradual-adoption-guidance",
+   "perturbation": "empty-array",
+   "pointer": "/input/nativeWitnesses/vocabulary/environmentClasses",
+   "class": "enum",
+   "owner": "witnesscommand.vocabularyValue",
+   "evidence": "must be an admitted value"
+  },
+  {
+   "observation": 72,
+   "route": "migration-parity-admission",
+   "perturbation": "duplicate-item",
+   "pointer": "/parityRecords",
+   "class": "duplicate",
+   "owner": "migrationparityadmission.preserveSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 72,
+   "route": "migration-parity-admission",
+   "perturbation": "duplicate-item",
+   "pointer": "/parityRecords/0/nonClaims",
+   "class": "duplicate",
+   "owner": "admit.NormalizeSortedText",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 72,
+   "route": "migration-parity-admission",
+   "perturbation": "other-token",
+   "pointer": "/parityRecords/0/targetId",
+   "class": "referenceClosure",
+   "owner": "migrationparityadmission.evaluateParityRecord",
+   "evidence": "references unknown target:"
+  },
+  {
+   "observation": 74,
+   "route": "migration-plan",
+   "perturbation": "duplicate-item",
+   "pointer": "/retainedOwners",
+   "class": "duplicate",
+   "owner": "migrationplan.assertUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 78,
+   "route": "obligation-decision",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "admit.NormalizeSortedText",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 78,
+   "route": "obligation-decision",
+   "perturbation": "duplicate-item",
+   "pointer": "/obligations",
+   "class": "duplicate",
+   "owner": "obligationdecision.preserveSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 84,
+   "route": "producer-policy-self-proof",
+   "perturbation": "duplicate-item",
+   "pointer": "/policySurfaceRefs",
+   "class": "duplicate",
+   "owner": "producerpolicyselfproof.preserveSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 90,
+   "route": "proof-slice",
+   "perturbation": "long-string",
+   "pointer": "/bindingId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 90,
+   "route": "proof-slice",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "requirementbinding.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 92,
+   "route": "readiness-closeout",
+   "perturbation": "duplicate-item",
+   "pointer": "/inputDefinitions",
+   "class": "duplicate",
+   "owner": "readinesscloseout.assertUnique",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 100,
+   "route": "registry-consumer",
+   "perturbation": "duplicate-item",
+   "pointer": "/input/nonClaims",
+   "class": "duplicate",
+   "owner": "registryconsumer.sortedNonEmptyStrings",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 100,
+   "route": "registry-consumer",
+   "perturbation": "long-string",
+   "pointer": "/proof/tempConsumerLocation",
+   "class": "enum",
+   "owner": "registryconsumer.admitProof",
+   "evidence": "proofkit registry-consumer proof tempConsumerLocation must be os-temp"
+  },
+  {
+   "observation": 102,
+   "route": "registry-consumer-proof-input-compose",
+   "perturbation": "long-string",
+   "pointer": "/smoke/binarySmokeOutputSha256",
+   "class": "bound",
+   "owner": "registryconsumerinputcompose.sha256Text",
+   "evidence": "must be lowercase sha256 hex"
+  },
+  {
+   "observation": 102,
+   "route": "registry-consumer-proof-input-compose",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "registryconsumer.sortedNonEmptyStrings",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 104,
+   "route": "release-authority",
+   "perturbation": "long-string",
+   "pointer": "/package/publishConfigRegistry",
+   "class": "crossField",
+   "owner": "releaseauthority.enforceChannelRules",
+   "evidence": "registry_release publishConfigRegistry must match registryAuthority registryUrl"
+  },
+  {
+   "observation": 105,
+   "route": "release-authority",
+   "perturbation": "long-string",
+   "pointer": "/registryAuthority/sourceRepository/url",
+   "class": "crossField",
+   "owner": "releaseauthority.admitSourceRepository",
+   "evidence": "sourceRepository url must match owner and name"
+  },
+  {
+   "observation": 104,
+   "route": "release-authority",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "releaseauthority.sortedText",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 104,
+   "route": "release-authority",
+   "perturbation": "omit-member",
+   "pointer": "/package/publishConfigRegistry",
+   "class": "default",
+   "owner": "releaseauthority.enforceChannelRules",
+   "evidence": "registry_release channel requires publishConfigRegistry"
+  },
+  {
+   "observation": 106,
+   "route": "release-authority",
+   "perturbation": "long-string",
+   "pointer": "/package/name",
+   "class": "referenceClosure",
+   "owner": "releaseauthority.enforceTarballIdentity",
+   "evidence": "tarball_pilot rollback versionPin must reference the same package tarball filename"
+  },
+  {
+   "observation": 108,
+   "route": "rendered-artifact-freshness",
+   "perturbation": "long-string",
+   "pointer": "/artifacts/0/currentRendererVersion",
+   "class": "crossField",
+   "owner": "renderedartifactfreshness.artifactFailures",
+   "evidence": "rendered artifact renderer version drifted:"
+  },
+  {
+   "observation": 110,
+   "route": "repo-profile-admission",
+   "perturbation": "duplicate-item",
+   "pointer": "/profile/commandMatchers",
+   "class": "duplicate",
+   "owner": "repoprofileadmission.validateMatchers",
+   "evidence": "repo profile commandMatchers.id must be sorted and unique"
+  },
+  {
+   "observation": 113,
+   "route": "requirement-authoring-plan",
+   "perturbation": "long-string",
+   "pointer": "/authoringPlanId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 113,
+   "route": "requirement-authoring-plan",
+   "perturbation": "empty-array",
+   "pointer": "/candidateRequirementSource/groups/0/members",
+   "class": "bound",
+   "owner": "requirementsourcemodel.preflight",
+   "evidence": "group_member_budget_exceeded"
+  },
+  {
+   "observation": 113,
+   "route": "requirement-authoring-plan",
+   "perturbation": "empty-array",
+   "pointer": "/candidateRequirementSource/groups/0/members/0/fields/proofBindingRefs",
+   "class": "semantic",
+   "owner": "requirementauthoringplan.buildOutput",
+   "evidence": "candidate transition requires an admitted candidate source"
+  },
+  {
+   "observation": 113,
+   "route": "requirement-authoring-plan",
+   "perturbation": "duplicate-item",
+   "pointer": "/candidateRequirementSource/groups",
+   "class": "duplicate",
+   "owner": "requirementsourcemodel.normalizeDefinitions",
+   "evidence": "duplicate_id"
+  },
+  {
+   "observation": 113,
+   "route": "requirement-authoring-plan",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "admit.preserveSortedCanonical",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 113,
+   "route": "requirement-authoring-plan",
+   "perturbation": "other-token",
+   "pointer": "/authoringRefs/0/refId",
+   "class": "referenceClosure",
+   "owner": "requirementauthoringplan.admitCandidateUpdate",
+   "evidence": "] references unknown authoring ref"
+  },
+  {
+   "observation": 113,
+   "route": "requirement-authoring-plan",
+   "perturbation": "other-token",
+   "pointer": "/candidateUpdates/0/requirementId",
+   "class": "referenceClosure",
+   "owner": "requirementauthoringplan.compareCandidateSource",
+   "evidence": "candidate update must resolve in the candidate source:"
+  },
+  {
+   "observation": 115,
+   "route": "requirement-bindings",
+   "perturbation": "long-string",
+   "pointer": "/bindingId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 115,
+   "route": "requirement-bindings",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "requirementbinding.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 120,
+   "route": "requirement-browser-server",
+   "perturbation": "empty-array",
+   "pointer": "/groups/0/members",
+   "class": "bound",
+   "owner": "requirementsourcemodel.preflight",
+   "evidence": "group_member_budget_exceeded"
+  },
+  {
+   "observation": 121,
+   "route": "requirement-browser-server",
+   "perturbation": "long-string",
+   "pointer": "/treeId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 117,
+   "route": "requirement-browser-server",
+   "perturbation": "long-string",
+   "pointer": "/requirementSource/specPackagePath",
+   "class": "crossField",
+   "owner": "requirementsourceadmission.AdmitBindingRequirementLinks",
+   "evidence": "binding link disagrees with source-owned requirement fields"
+  },
+  {
+   "observation": 120,
+   "route": "requirement-browser-server",
+   "perturbation": "duplicate-item",
+   "pointer": "/groups",
+   "class": "duplicate",
+   "owner": "requirementsourcemodel.normalizeDefinitions",
+   "evidence": "duplicate_id"
+  },
+  {
+   "observation": 121,
+   "route": "requirement-browser-server",
+   "perturbation": "duplicate-item",
+   "pointer": "/nodes",
+   "class": "duplicate",
+   "owner": "requirementspectree.treeValidator.indexNodes",
+   "evidence": "topology.duplicate_node"
+  },
+  {
+   "observation": 117,
+   "route": "requirement-browser-server",
+   "perturbation": "empty-array",
+   "pointer": "/requirementSource/groups",
+   "class": "referenceClosure",
+   "owner": "requirementsourceadmission.AdmitBindingRequirementLinks",
+   "evidence": "binding link references a requirement outside admitted sources"
+  },
+  {
+   "observation": 118,
+   "route": "requirement-browser-server",
+   "perturbation": "empty-array",
+   "pointer": "/surfaces",
+   "class": "referenceClosure",
+   "owner": "compactproofcontract.assertReferentialIntegrity",
+   "evidence": "references unknown surfaceId="
+  },
+  {
+   "observation": 130,
+   "route": "requirement-context-slice",
+   "perturbation": "long-string",
+   "pointer": "/context/snapshotId",
+   "class": "bound",
+   "owner": "admit.LowercaseSHA256",
+   "evidence": "must be lowercase sha256"
+  },
+  {
+   "observation": 130,
+   "route": "requirement-context-slice",
+   "perturbation": "long-string",
+   "pointer": "/sliceId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 130,
+   "route": "requirement-context-slice",
+   "perturbation": "other-token",
+   "pointer": "/context/catalogId",
+   "class": "crossField",
+   "owner": "requirementcontext.admitSnapshotRecord",
+   "evidence": "requirement context snapshotId does not match admitted content"
+  },
+  {
+   "observation": 130,
+   "route": "requirement-context-slice",
+   "perturbation": "empty-array",
+   "pointer": "/query/requirementIds",
+   "class": "crossField",
+   "owner": "requirementcontext.admitSliceQuery",
+   "evidence": "requirement context slice requires a selector outside routing profile"
+  },
+  {
+   "observation": 130,
+   "route": "requirement-context-slice",
+   "perturbation": "duplicate-item",
+   "pointer": "/context/sources",
+   "class": "duplicate",
+   "owner": "requirementcontext.admitSourceInventory",
+   "evidence": "requirement context source paths must be unique"
+  },
+  {
+   "observation": 130,
+   "route": "requirement-context-slice",
+   "perturbation": "duplicate-item",
+   "pointer": "/query/requirementIds",
+   "class": "duplicate",
+   "owner": "requirementcontext.admittedIDs",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 130,
+   "route": "requirement-context-slice",
+   "perturbation": "other-token",
+   "pointer": "/query/requirementIds/0",
+   "class": "referenceClosure",
+   "owner": "requirementcontext.selectRequirements",
+   "evidence": "requirement context slice references unknown requirement"
+  },
+  {
+   "observation": 132,
+   "route": "requirement-coverage-input-compose",
+   "perturbation": "empty-array",
+   "pointer": "/requirementSource/groups/0/members",
+   "class": "bound",
+   "owner": "requirementsourcemodel.preflight",
+   "evidence": "group_member_budget_exceeded"
+  },
+  {
+   "observation": 132,
+   "route": "requirement-coverage-input-compose",
+   "perturbation": "long-string",
+   "pointer": "/viewInputId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 132,
+   "route": "requirement-coverage-input-compose",
+   "perturbation": "duplicate-item",
+   "pointer": "/requirementProofBinding/bindings",
+   "class": "semantic",
+   "owner": "requirementcoverageinput.admitProofAndInventory",
+   "evidence": "requirement coverage input compose requires passed requirement proof binding admission"
+  },
+  {
+   "observation": 132,
+   "route": "requirement-coverage-input-compose",
+   "perturbation": "other-token",
+   "pointer": "/selectedOwnerIds/0",
+   "class": "crossField",
+   "owner": "requirementcoverageinput.admitInput",
+   "evidence": "requirement coverage input compose selectedOwnerIds must equal coverageUniverse ownerIds"
+  },
+  {
+   "observation": 132,
+   "route": "requirement-coverage-input-compose",
+   "perturbation": "duplicate-item",
+   "pointer": "/requirementSource/groups",
+   "class": "duplicate",
+   "owner": "requirementsourcemodel.normalizeDefinitions",
+   "evidence": "duplicate_id"
+  },
+  {
+   "observation": 132,
+   "route": "requirement-coverage-input-compose",
+   "perturbation": "duplicate-item",
+   "pointer": "/selectedOwnerIds",
+   "class": "duplicate",
+   "owner": "requirementbinding.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 132,
+   "route": "requirement-coverage-input-compose",
+   "perturbation": "empty-array",
+   "pointer": "/requirementSource/groups",
+   "class": "referenceClosure",
+   "owner": "requirementsourceadmission.AdmitBindingRequirementLinks",
+   "evidence": "binding link references a requirement outside admitted sources"
+  },
+  {
+   "observation": 134,
+   "route": "requirement-coverage-view",
+   "perturbation": "empty-array",
+   "pointer": "/requirementSource/groups/0/members",
+   "class": "bound",
+   "owner": "requirementsourcemodel.preflight",
+   "evidence": "group_member_budget_exceeded"
+  },
+  {
+   "observation": 134,
+   "route": "requirement-coverage-view",
+   "perturbation": "long-string",
+   "pointer": "/viewInputId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 134,
+   "route": "requirement-coverage-view",
+   "perturbation": "long-string",
+   "pointer": "/requirementSource/specPackagePath",
+   "class": "crossField",
+   "owner": "requirementsourceadmission.AdmitBindingRequirementLinks",
+   "evidence": "binding link disagrees with source-owned requirement fields"
+  },
+  {
+   "observation": 134,
+   "route": "requirement-coverage-view",
+   "perturbation": "duplicate-item",
+   "pointer": "/coverageUniverse/ownerIds",
+   "class": "duplicate",
+   "owner": "requirementbinding.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 134,
+   "route": "requirement-coverage-view",
+   "perturbation": "duplicate-item",
+   "pointer": "/requirementSource/groups",
+   "class": "duplicate",
+   "owner": "requirementsourcemodel.normalizeDefinitions",
+   "evidence": "duplicate_id"
+  },
+  {
+   "observation": 134,
+   "route": "requirement-coverage-view",
+   "perturbation": "other-token",
+   "pointer": "/coverageUniverse/ownerIds/0",
+   "class": "referenceClosure",
+   "owner": "requirementcoverageview.requireDeclaredSurfaceOwners",
+   "evidence": "must reference coverageUniverse ownerIds"
+  },
+  {
+   "observation": 134,
+   "route": "requirement-coverage-view",
+   "perturbation": "empty-array",
+   "pointer": "/requirementSource/groups",
+   "class": "referenceClosure",
+   "owner": "requirementsourceadmission.AdmitBindingRequirementLinks",
+   "evidence": "binding link references a requirement outside admitted sources"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "perturbation": "long-string",
+   "pointer": "/currentCompactProofContract/bindings/0/2",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "perturbation": "empty-array",
+   "pointer": "/currentRequirementSources/0/groups/0/members",
+   "class": "bound",
+   "owner": "requirementsourcemodel.preflight",
+   "evidence": "group_member_budget_exceeded"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "perturbation": "duplicate-item",
+   "pointer": "/changedPathSources",
+   "class": "duplicate",
+   "owner": "changedpathset.sourceInputs",
+   "evidence": "changed path set sourceId must be unique"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "impact.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 136,
+   "route": "requirement-impact-input-compose",
+   "perturbation": "empty-array",
+   "pointer": "/currentCompactProofContract/surfaces",
+   "class": "referenceClosure",
+   "owner": "compactproofcontract.assertReferentialIntegrity",
+   "evidence": "references unknown surfaceId="
+  },
+  {
+   "observation": 140,
+   "route": "requirement-proof-source-set",
+   "perturbation": "long-string",
+   "pointer": "/sources/0/text",
+   "class": "crossField",
+   "owner": "requirementproofsourceset.Build",
+   "evidence": "sha256 drift"
+  },
+  {
+   "observation": 140,
+   "route": "requirement-proof-source-set",
+   "perturbation": "duplicate-item",
+   "pointer": "/sources",
+   "class": "duplicate",
+   "owner": "requirementproofsourceset.admitSourceTexts",
+   "evidence": "duplicate requirement proof binding source text path="
+  },
+  {
+   "observation": 140,
+   "route": "requirement-proof-source-set",
+   "perturbation": "empty-array",
+   "pointer": "/sources",
+   "class": "referenceClosure",
+   "owner": "requirementproofsourceset.Build",
+   "evidence": "text is missing for"
+  },
+  {
+   "observation": 144,
+   "route": "requirement-proof-view",
+   "perturbation": "long-string",
+   "pointer": "/bindingId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 147,
+   "route": "requirement-semantic-diff",
+   "perturbation": "long-string",
+   "pointer": "/baseContext/snapshotId",
+   "class": "bound",
+   "owner": "admit.LowercaseSHA256",
+   "evidence": "must be lowercase sha256"
+  },
+  {
+   "observation": 147,
+   "route": "requirement-semantic-diff",
+   "perturbation": "long-string",
+   "pointer": "/diffId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 147,
+   "route": "requirement-semantic-diff",
+   "perturbation": "other-token",
+   "pointer": "/baseContext/catalogId",
+   "class": "crossField",
+   "owner": "requirementcontext.admitSnapshotRecord",
+   "evidence": "requirement context snapshotId does not match admitted content"
+  },
+  {
+   "observation": 147,
+   "route": "requirement-semantic-diff",
+   "perturbation": "other-token",
+   "pointer": "/baseContext/sources/0/nodeId",
+   "class": "crossField",
+   "owner": "requirementcontext.validateProjectionSources",
+   "evidence": "requirement context requirement source node does not match the specification tree"
+  },
+  {
+   "observation": 147,
+   "route": "requirement-semantic-diff",
+   "perturbation": "duplicate-item",
+   "pointer": "/baseContext/projections/requirementSources",
+   "class": "duplicate",
+   "owner": "requirementcontext.admitSnapshotProjections",
+   "evidence": "requirement context requirement source ids must be unique"
+  },
+  {
+   "observation": 147,
+   "route": "requirement-semantic-diff",
+   "perturbation": "duplicate-item",
+   "pointer": "/baseContext/sources",
+   "class": "duplicate",
+   "owner": "requirementcontext.admitSourceInventory",
+   "evidence": "requirement context source paths must be unique"
+  },
+  {
+   "observation": 149,
+   "route": "requirement-source-admission",
+   "perturbation": "duplicate-item",
+   "pointer": "/sourceNonClaims",
+   "class": "duplicate",
+   "owner": "requirementsourcemodel.sortUnique",
+   "evidence": "duplicate_value"
+  },
+  {
+   "observation": 151,
+   "route": "requirement-source-transition",
+   "perturbation": "empty-array",
+   "pointer": "/next/groups/0/members",
+   "class": "bound",
+   "owner": "requirementsourcemodel.preflight",
+   "evidence": "group_member_budget_exceeded"
+  },
+  {
+   "observation": 151,
+   "route": "requirement-source-transition",
+   "perturbation": "long-string",
+   "pointer": "/transitionId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 151,
+   "route": "requirement-source-transition",
+   "perturbation": "duplicate-item",
+   "pointer": "/next/groups",
+   "class": "duplicate",
+   "owner": "requirementsourcemodel.normalizeDefinitions",
+   "evidence": "duplicate_id"
+  },
+  {
+   "observation": 151,
+   "route": "requirement-source-transition",
+   "perturbation": "duplicate-item",
+   "pointer": "/next/sourceNonClaims",
+   "class": "duplicate",
+   "owner": "requirementsourcemodel.sortUnique",
+   "evidence": "duplicate_value"
+  },
+  {
+   "observation": 153,
+   "route": "requirement-source-view",
+   "perturbation": "empty-array",
+   "pointer": "/groups/0/members",
+   "class": "bound",
+   "owner": "requirementsourcemodel.preflight",
+   "evidence": "group_member_budget_exceeded"
+  },
+  {
+   "observation": 153,
+   "route": "requirement-source-view",
+   "perturbation": "duplicate-item",
+   "pointer": "/groups",
+   "class": "duplicate",
+   "owner": "requirementsourcemodel.normalizeDefinitions",
+   "evidence": "duplicate_id"
+  },
+  {
+   "observation": 153,
+   "route": "requirement-source-view",
+   "perturbation": "duplicate-item",
+   "pointer": "/sourceNonClaims",
+   "class": "duplicate",
+   "owner": "requirementsourcemodel.sortUnique",
+   "evidence": "duplicate_value"
+  },
+  {
+   "observation": 155,
+   "route": "requirement-spec-tree",
+   "perturbation": "long-string",
+   "pointer": "/treeId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 155,
+   "route": "requirement-spec-tree",
+   "perturbation": "duplicate-item",
+   "pointer": "/callerAnnotations",
+   "class": "duplicate",
+   "owner": "admit.NormalizeSortedText",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 155,
+   "route": "requirement-spec-tree",
+   "perturbation": "duplicate-item",
+   "pointer": "/nodes",
+   "class": "duplicate",
+   "owner": "requirementspectree.treeValidator.indexNodes",
+   "evidence": "topology.duplicate_node"
+  },
+  {
+   "observation": 157,
+   "route": "requirement-spec-tree-view",
+   "perturbation": "long-string",
+   "pointer": "/treeId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 157,
+   "route": "requirement-spec-tree-view",
+   "perturbation": "duplicate-item",
+   "pointer": "/edges",
+   "class": "duplicate",
+   "owner": "requirementspectree.treeValidator.indexEdges",
+   "evidence": "topology.duplicate_edge"
+  },
+  {
+   "observation": 157,
+   "route": "requirement-spec-tree-view",
+   "perturbation": "duplicate-item",
+   "pointer": "/nodes",
+   "class": "duplicate",
+   "owner": "requirementspectree.treeValidator.indexNodes",
+   "evidence": "topology.duplicate_node"
+  },
+  {
+   "observation": 157,
+   "route": "requirement-spec-tree-view",
+   "perturbation": "long-string",
+   "pointer": "/nodes/1/sourceRefs/0/digestAlgorithm",
+   "class": "enum",
+   "owner": "requirementspectree.digestAlgorithm",
+   "evidence": "must be sha256"
+  },
+  {
+   "observation": 159,
+   "route": "requirement-traceability-graph",
+   "perturbation": "long-string",
+   "pointer": "/context/snapshotId",
+   "class": "bound",
+   "owner": "admit.LowercaseSHA256",
+   "evidence": "must be lowercase sha256"
+  },
+  {
+   "observation": 159,
+   "route": "requirement-traceability-graph",
+   "perturbation": "long-string",
+   "pointer": "/graphId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 159,
+   "route": "requirement-traceability-graph",
+   "perturbation": "other-token",
+   "pointer": "/context/catalogId",
+   "class": "crossField",
+   "owner": "requirementcontext.admitSnapshotRecord",
+   "evidence": "requirement context snapshotId does not match admitted content"
+  },
+  {
+   "observation": 159,
+   "route": "requirement-traceability-graph",
+   "perturbation": "other-token",
+   "pointer": "/context/sources/0/nodeId",
+   "class": "crossField",
+   "owner": "requirementcontext.validateProjectionSources",
+   "evidence": "requirement context requirement source node does not match the specification tree"
+  },
+  {
+   "observation": 159,
+   "route": "requirement-traceability-graph",
+   "perturbation": "duplicate-item",
+   "pointer": "/context/projections/requirementSources",
+   "class": "duplicate",
+   "owner": "requirementcontext.admitSnapshotProjections",
+   "evidence": "requirement context requirement source ids must be unique"
+  },
+  {
+   "observation": 159,
+   "route": "requirement-traceability-graph",
+   "perturbation": "duplicate-item",
+   "pointer": "/context/sources",
+   "class": "duplicate",
+   "owner": "requirementcontext.admitSourceInventory",
+   "evidence": "requirement context source paths must be unique"
+  },
+  {
+   "observation": 161,
+   "route": "scaffold-profile-plan",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "scaffoldprofileplan.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 163,
+   "route": "scaffold-project-structure",
+   "perturbation": "empty-array",
+   "pointer": "/bootstrap/nativeWitnesses/vocabulary/environmentClassPolicies",
+   "class": "crossField",
+   "owner": "witnesscommand.assertEnvironmentClassPolicies",
+   "evidence": "must declare an environmentClassPolicy"
+  },
+  {
+   "observation": 163,
+   "route": "scaffold-project-structure",
+   "perturbation": "duplicate-item",
+   "pointer": "/repoProfileScaffold/nonClaims",
+   "class": "duplicate",
+   "owner": "scaffoldprofileplan.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 163,
+   "route": "scaffold-project-structure",
+   "perturbation": "long-string",
+   "pointer": "/bootstrap/nativeWitnesses/commands/0/parallelGroup",
+   "class": "enum",
+   "owner": "witnesscommand.vocabularyValue",
+   "evidence": "must be an admitted value"
+  },
+  {
+   "observation": 163,
+   "route": "scaffold-project-structure",
+   "perturbation": "empty-array",
+   "pointer": "/bootstrap/nativeWitnesses/vocabulary/credentialClasses",
+   "class": "enum",
+   "owner": "witnesscommand.subset",
+   "evidence": "contains unsupported value(s):"
+  },
+  {
+   "observation": 163,
+   "route": "scaffold-project-structure",
+   "perturbation": "empty-array",
+   "pointer": "/bootstrap/nativeWitnesses/vocabulary/environmentClassPolicies/0/credentialClasses",
+   "class": "secretTimestamp",
+   "owner": "witnesscommand.assertEnvironmentClassPolicies",
+   "evidence": "does not admit credentialClass"
+  },
+  {
+   "observation": 167,
+   "route": "selective-gate-evidence",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "receiptproduceradmission.assertUnique",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 167,
+   "route": "selective-gate-evidence",
+   "perturbation": "duplicate-item",
+   "pointer": "/plan/requiredCommands",
+   "class": "duplicate",
+   "owner": "selectivegateplan.validateOutputRelations",
+   "evidence": "selective gate plan output required command keys must be unique"
+  },
+  {
+   "observation": 167,
+   "route": "selective-gate-evidence",
+   "perturbation": "empty-array",
+   "pointer": "/plan/requiredCommands",
+   "class": "referenceClosure",
+   "owner": "selectivegateplan.validateOutputRelations",
+   "evidence": "selective gate plan output scan obligation is missing its required command"
+  },
+  {
+   "observation": 169,
+   "route": "selective-gate-obligation-decision-input",
+   "perturbation": "other-token",
+   "pointer": "/evidence/receipts/0/id",
+   "class": "crossField",
+   "owner": "selectivegateevidence.ProjectObligationDecision",
+   "evidence": "selective evidence obligation projection requires explicit obligation decisions for unscoped failures:"
+  },
+  {
+   "observation": 169,
+   "route": "selective-gate-obligation-decision-input",
+   "perturbation": "duplicate-item",
+   "pointer": "/commandRoutes",
+   "class": "duplicate",
+   "owner": "selectivegateevidence.ProjectObligationDecision",
+   "evidence": "selective evidence obligation projection command route keys must be sorted and unique"
+  },
+  {
+   "observation": 169,
+   "route": "selective-gate-obligation-decision-input",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "receiptproduceradmission.assertUnique",
+   "evidence": "must be unique"
+  },
+  {
+   "observation": 169,
+   "route": "selective-gate-obligation-decision-input",
+   "perturbation": "empty-array",
+   "pointer": "/commandRoutes",
+   "class": "referenceClosure",
+   "owner": "selectivegateevidence.ProjectObligationDecision",
+   "evidence": "selective evidence obligation projection missing route for command:"
+  },
+  {
+   "observation": 169,
+   "route": "selective-gate-obligation-decision-input",
+   "perturbation": "empty-array",
+   "pointer": "/evidence/plan/requiredCommands",
+   "class": "referenceClosure",
+   "owner": "selectivegateplan.validateOutputRelations",
+   "evidence": "selective gate plan output scan obligation is missing its required command"
+  },
+  {
+   "observation": 171,
+   "route": "selective-gate-plan",
+   "perturbation": "other-token",
+   "pointer": "/scanObligation/commandId",
+   "class": "crossField",
+   "owner": "selectivegateplan.validateScanObligation",
+   "evidence": "proofkit_secret_scan requires commandId secret-scan and reason secret_scan"
+  },
+  {
+   "observation": 171,
+   "route": "selective-gate-plan",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "selectivegateplan.unique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 174,
+   "route": "spec-overview-claims",
+   "perturbation": "long-string",
+   "pointer": "/overviewPath",
+   "class": "crossField",
+   "owner": "specoverviewclaims.boundaryFailures",
+   "evidence": "overviewPath must equal specPackagePath/overview.md"
+  },
+  {
+   "observation": 174,
+   "route": "spec-overview-claims",
+   "perturbation": "duplicate-item",
+   "pointer": "/nonClaims",
+   "class": "duplicate",
+   "owner": "specoverviewclaims.preserveSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 176,
+   "route": "spec-proof-bundle-admission",
+   "perturbation": "long-string",
+   "pointer": "/requirementBindings/bindingId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 176,
+   "route": "spec-proof-bundle-admission",
+   "perturbation": "large-number",
+   "pointer": "/witnessPlan/commands/0/timeoutMs",
+   "class": "bound",
+   "owner": "witnesscommand.witnessTimeout",
+   "evidence": "witness timeoutMs must be an integer between 1 and"
+  },
+  {
+   "observation": 176,
+   "route": "spec-proof-bundle-admission",
+   "perturbation": "empty-array",
+   "pointer": "/witnessPlan/vocabulary/environmentClassPolicies",
+   "class": "crossField",
+   "owner": "witnesscommand.assertEnvironmentClassPolicies",
+   "evidence": "must declare an environmentClassPolicy"
+  },
+  {
+   "observation": 176,
+   "route": "spec-proof-bundle-admission",
+   "perturbation": "duplicate-item",
+   "pointer": "/requirementBindings/bindings/1/witnessSelectors",
+   "class": "duplicate",
+   "owner": "requirementbinding.admitWitnessSelectors",
+   "evidence": "witness selector selectors must be unique"
+  },
+  {
+   "observation": 176,
+   "route": "spec-proof-bundle-admission",
+   "perturbation": "duplicate-item",
+   "pointer": "/witnessPlan/commands",
+   "class": "duplicate",
+   "owner": "proofreceiptadmission.preserveSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 176,
+   "route": "spec-proof-bundle-admission",
+   "perturbation": "long-string",
+   "pointer": "/witnessPlan/commands/0/parallelGroup",
+   "class": "enum",
+   "owner": "witnesscommand.vocabularyValue",
+   "evidence": "must be an admitted value"
+  },
+  {
+   "observation": 176,
+   "route": "spec-proof-bundle-admission",
+   "perturbation": "empty-array",
+   "pointer": "/witnessPlan/vocabulary/credentialClasses",
+   "class": "enum",
+   "owner": "witnesscommand.subset",
+   "evidence": "contains unsupported value(s):"
+  },
+  {
+   "observation": 176,
+   "route": "spec-proof-bundle-admission",
+   "perturbation": "long-string",
+   "pointer": "/witnessPlan/commands/0/id",
+   "class": "referenceClosure",
+   "owner": "specproofbundleadmission.linkageFailures",
+   "evidence": "witness-plan command is not referenced by requirement bindings:"
+  },
+  {
+   "observation": 176,
+   "route": "spec-proof-bundle-admission",
+   "perturbation": "empty-array",
+   "pointer": "/witnessPlan/vocabulary/environmentClassPolicies/0/credentialClasses",
+   "class": "secretTimestamp",
+   "owner": "witnesscommand.assertEnvironmentClassPolicies",
+   "evidence": "does not admit credentialClass"
+  },
+  {
+   "observation": 181,
+   "route": "test-evidence-inventory",
+   "perturbation": "long-string",
+   "pointer": "/draftId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "perturbation": "empty-array",
+   "pointer": "/requirementSource/groups/0/members",
+   "class": "bound",
+   "owner": "requirementsourcemodel.preflight",
+   "evidence": "group_member_budget_exceeded"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "perturbation": "empty-array",
+   "pointer": "/compactProofContract/bindings/0/8/2",
+   "class": "cardinality",
+   "owner": "proofbindingtestinventory.project",
+   "evidence": "proof route requires at least one verify command"
+  },
+  {
+   "observation": 183,
+   "route": "test-evidence-inventory",
+   "perturbation": "long-string",
+   "pointer": "/sourceTexts/0/text",
+   "class": "crossField",
+   "owner": "testevidenceinventory.admitSourceSetInventory",
+   "evidence": "sha256 drift"
+  },
+  {
+   "observation": 183,
+   "route": "test-evidence-inventory",
+   "perturbation": "other-token",
+   "pointer": "/sources/0/0",
+   "class": "crossField",
+   "owner": "testevidenceinventory.admitSourceInventoryText",
+   "evidence": ".sourceId must match source set id"
+  },
+  {
+   "observation": 183,
+   "route": "test-evidence-inventory",
+   "perturbation": "duplicate-item",
+   "pointer": "/sourceTexts",
+   "class": "duplicate",
+   "owner": "testevidenceinventory.admitSourceTexts",
+   "evidence": "duplicate test evidence inventory source text path="
+  },
+  {
+   "observation": 183,
+   "route": "test-evidence-inventory",
+   "perturbation": "duplicate-item",
+   "pointer": "/sources",
+   "class": "duplicate",
+   "owner": "admit.preserveSortedCanonical",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 182,
+   "route": "test-evidence-inventory",
+   "perturbation": "empty-array",
+   "pointer": "/compactProofContract/surfaces",
+   "class": "referenceClosure",
+   "owner": "compactproofcontract.assertReferentialIntegrity",
+   "evidence": "references unknown surfaceId="
+  },
+  {
+   "observation": 183,
+   "route": "test-evidence-inventory",
+   "perturbation": "long-string",
+   "pointer": "/sources/0/1",
+   "class": "referenceClosure",
+   "owner": "testevidenceinventory.admitSourceSetInventory",
+   "evidence": "text is missing for"
+  },
+  {
+   "observation": 195,
+   "route": "witness-plan",
+   "perturbation": "long-string",
+   "pointer": "/requirementProofBinding/bindingId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 195,
+   "route": "witness-plan",
+   "perturbation": "duplicate-item",
+   "pointer": "/requirementProofBinding/nonClaims",
+   "class": "duplicate",
+   "owner": "requirementbinding.assertSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 197,
+   "route": "witness-scheduler-plan",
+   "perturbation": "large-number",
+   "pointer": "/commands/0/timeoutMs",
+   "class": "bound",
+   "owner": "witnesscommand.witnessTimeout",
+   "evidence": "witness timeoutMs must be an integer between 1 and"
+  },
+  {
+   "observation": 197,
+   "route": "witness-scheduler-plan",
+   "perturbation": "long-string",
+   "pointer": "/policies/0/commandId",
+   "class": "bound",
+   "owner": "admit.RuleID",
+   "evidence": "-byte stable identifier limit"
+  },
+  {
+   "observation": 197,
+   "route": "witness-scheduler-plan",
+   "perturbation": "large-number",
+   "pointer": "/policies/0/timeoutPolicy/timeoutMs",
+   "class": "crossField",
+   "owner": "witnessschedulerplan.commandPolicyFailures",
+   "evidence": "scheduler timeoutPolicy must match witness command timeoutMs:"
+  },
+  {
+   "observation": 197,
+   "route": "witness-scheduler-plan",
+   "perturbation": "empty-array",
+   "pointer": "/vocabulary/environmentClassPolicies",
+   "class": "crossField",
+   "owner": "witnesscommand.assertEnvironmentClassPolicies",
+   "evidence": "must declare an environmentClassPolicy"
+  },
+  {
+   "observation": 197,
+   "route": "witness-scheduler-plan",
+   "perturbation": "duplicate-item",
+   "pointer": "/commands",
+   "class": "duplicate",
+   "owner": "witnessschedulerplan.preserveSortedUnique",
+   "evidence": "must be sorted and unique"
+  },
+  {
+   "observation": 197,
+   "route": "witness-scheduler-plan",
+   "perturbation": "long-string",
+   "pointer": "/commands/0/parallelGroup",
+   "class": "enum",
+   "owner": "witnesscommand.vocabularyValue",
+   "evidence": "must be an admitted value"
+  },
+  {
+   "observation": 197,
+   "route": "witness-scheduler-plan",
+   "perturbation": "empty-array",
+   "pointer": "/vocabulary/credentialClasses",
+   "class": "enum",
+   "owner": "witnesscommand.subset",
+   "evidence": "contains unsupported value(s):"
+  },
+  {
+   "observation": 197,
+   "route": "witness-scheduler-plan",
+   "perturbation": "long-string",
+   "pointer": "/commands/0/id",
+   "class": "referenceClosure",
+   "owner": "witnessschedulerplan.schedulerFailures",
+   "evidence": "scheduler policy references unknown witness command:"
+  },
+  {
+   "observation": 197,
+   "route": "witness-scheduler-plan",
+   "perturbation": "empty-array",
+   "pointer": "/vocabulary/environmentClassPolicies/0/credentialClasses",
+   "class": "secretTimestamp",
+   "owner": "witnesscommand.assertEnvironmentClassPolicies",
+   "evidence": "does not admit credentialClass"
+  },
+  {
+   "observation": 201,
+   "route": "workspace-manifest-facts",
+   "perturbation": "other-token",
+   "pointer": "/dependencyFields/0",
+   "class": "unknownField",
+   "owner": "admit.KnownKeys",
+   "evidence": "has unsupported field(s):"
+  },
+  {
+   "observation": 203,
+   "route": "workspace-registry",
+   "perturbation": "long-string",
+   "pointer": "/root/scripts/0/command",
+   "class": "crossField",
+   "owner": "workspaceregistry.rootScriptPolicyRule",
+   "evidence": "command drifted"
+  },
+  {
+   "observation": 203,
+   "route": "workspace-registry",
+   "perturbation": "empty-array",
+   "pointer": "/packages/0/scripts",
+   "class": "referenceClosure",
+   "owner": "workspaceregistry.packageScriptPolicyRule",
+   "evidence": "missing required script"
+  },
+  {
+   "observation": 203,
+   "route": "workspace-registry",
+   "perturbation": "duplicate-item",
+   "pointer": "/packages",
+   "class": "duplicate",
+   "owner": "workspaceregistry.admitPackages",
+   "evidence": "workspace package name must be unique:"
+  },
+  {
+   "observation": 203,
+   "route": "workspace-registry",
+   "perturbation": "duplicate-item",
+   "pointer": "/root/scripts",
+   "class": "duplicate",
+   "owner": "workspaceregistry.admittedScripts",
+   "evidence": "name must be unique:"
+  },
+  {
+   "observation": 203,
+   "route": "workspace-registry",
+   "perturbation": "long-string",
+   "pointer": "/packages/0/name",
+   "class": "referenceClosure",
+   "owner": "workspaceregistry.knownPackageFactsRule",
+   "evidence": "package facts include unknown package:"
+  },
+  {
+   "observation": 203,
+   "route": "workspace-registry",
+   "perturbation": "empty-array",
+   "pointer": "/root/scripts",
+   "class": "referenceClosure",
+   "owner": "workspaceregistry.rootScriptPolicyRule",
+   "evidence": "root package.json missing required script"
+  }
+ ]
+}
