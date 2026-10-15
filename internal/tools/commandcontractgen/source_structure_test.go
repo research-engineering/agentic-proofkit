@@ -130,9 +130,9 @@ func TestSourceStructureRefreshUnifiesPredecessorsAndVersionsConsumers(t *testin
 	if err := admitNativeStructureConsumers(after, definitions); err != nil {
 		t.Fatal(err)
 	}
-	outputOwner, _ := nativeStructureOwner("proofkit.requirement-source-admission.output.v2.json-schema")
+	outputOwner, _ := nativeStructureOwner("proofkit.requirement-source-admission.output.v3.json-schema")
 	output := commandAt(after, "requirement-source-admission")["outputContract"].(map[string]any)
-	if output["rootDefinitionRef"] != outputOwner.id || output["contractId"] != "proofkit.requirement-source-admission.output.v2" || output["schemaVersion"] != json.Number("2") {
+	if output["rootDefinitionRef"] != outputOwner.id || output["contractId"] != "proofkit.requirement-source-admission.output.v3" || output["schemaVersion"] != json.Number("3") {
 		t.Fatal("second direction did not retain both owner updates")
 	}
 	again, err := refreshStructureSource(updated, after)
@@ -157,7 +157,11 @@ func writeSourceStructureFixture(t *testing.T) string {
 		input["rootDefinitionRef"] = owner.predecessors[i]
 		command["inputContract"] = input
 		{
-			outputOwner, _ := nativeStructureOwner("proofkit." + name + ".output.v2.json-schema")
+			// Source admission output v3 succeeds its structural v2 (D16).
+			outputOwner, _ := nativeStructureOwner(map[string]string{
+				"requirement-source-admission": "proofkit.requirement-source-admission.output.v3.json-schema",
+				"requirement-source-view":      "proofkit.requirement-source-view.output.v2.json-schema",
+			}[name])
 			contract["contractDefinitions"] = append(contract["contractDefinitions"].([]any), structuralFixtureDefinition(outputOwner.predecessors[0]))
 			output := cloneRecord(command["outputContract"].(map[string]any))
 			output["rootDefinitionRef"] = outputOwner.predecessors[0]
@@ -188,7 +192,7 @@ func TestNativeOutputOwnerRejectsDirectionAliasAndRehashedTupleDrift(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	owner, _ := nativeStructureOwner("proofkit.requirement-source-admission.output.v2.json-schema")
+	owner, _ := nativeStructureOwner("proofkit.requirement-source-admission.output.v3.json-schema")
 	for _, mutation := range []string{"wrong direction", "other command", "tuple cardinality", "integer range"} {
 		t.Run(mutation, func(t *testing.T) {
 			value, err := admission.DecodeJSON(bytes.NewReader(updated), installedclicontract.MaximumContractBytes)

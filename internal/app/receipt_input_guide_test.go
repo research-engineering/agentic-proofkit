@@ -176,11 +176,14 @@ func TestReceiptInputGuideExecutionAndBundleChain(t *testing.T) {
 			if scenario == "" {
 				t.Fatal("fixture requires an explicit bound command")
 			}
+			// The guide records the plan node the run executed under from its report.
+			schedulerReport := runAdoptionHelpCLI(t, adoptionHelpJSON(t, plan), "witness-scheduler-plan", "--input", "-")
 			packet["receiptSetId"] = "example.receipts"
 			r := receipt(packet)
 			for key, value := range map[string]any{
 				"receiptId": "example.receipt", "receiptKind": "proofkit.go-test", "proofPlanId": plan["schedulerPlanId"],
-				"sourceRevision": "synthetic-helper-source", "environmentClass": "local-go", "witnessSelectors": []any{scenario},
+				"proofNodeDigest": reportedNodeDigest(t, schedulerReport, "proofkit.go-test"),
+				"sourceRevision":  "synthetic-helper-source", "environmentClass": "local-go", "witnessSelectors": []any{scenario},
 				"runnerIdentity": "example.helper", "runnerClass": "local", "producerId": "example.local",
 				"startedAt": started, "finishedAt": finished, "status": status, "exitCode": exitCode,
 			} {
@@ -242,9 +245,28 @@ func TestReceiptInputGuideExecutionAndBundleChain(t *testing.T) {
 	}
 }
 
+// reportedNodeDigest reads commandID's row of a witness-scheduler-plan
+// report's proofNodeDigests diagnostic.
+func reportedNodeDigest(t *testing.T, report map[string]any, commandID string) string {
+	t.Helper()
+	for _, raw := range report["diagnostics"].([]any) {
+		diagnostic := raw.(map[string]any)
+		if diagnostic["key"] != "proofNodeDigests" {
+			continue
+		}
+		for _, row := range diagnostic["value"].([]any) {
+			if node := row.(map[string]any); node["commandId"] == commandID {
+				return node["proofNodeDigest"].(string)
+			}
+		}
+	}
+	t.Fatalf("scheduler report names no node digest for %s", commandID)
+	return ""
+}
+
 func checkReceiptGuideMutations(t *testing.T, packet, bundle map[string]any) {
 	t.Helper()
-	for _, field := range []string{"proofPlanId", "receiptKind", "witnessSelectors", "report", "source-receipt", "merge"} {
+	for _, field := range []string{"proofPlanId", "proofNodeDigest", "receiptKind", "witnessSelectors", "report", "source-receipt", "merge"} {
 		t.Run(field, func(t *testing.T) {
 			invalid := cloneMap(t, bundle)
 			child := invalid["receiptAdmission"].(map[string]any)
@@ -258,6 +280,8 @@ func checkReceiptGuideMutations(t *testing.T, packet, bundle map[string]any) {
 				changed := cloneMap(t, packet)
 				if field == "witnessSelectors" {
 					receipt(changed)[field] = []any{"native.path.selector"}
+				} else if field == "proofNodeDigest" {
+					receipt(changed)[field] = "sha256:" + strings.Repeat("0", 64)
 				} else {
 					receipt(changed)[field] = "example.wrong"
 				}

@@ -6,10 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
@@ -130,6 +132,7 @@ func TestBuildRejectsReceiptKindThatDoesNotCoverWitnessSelector(t *testing.T) {
 	input := validBundleInput(t)
 	receipt := validProofReceipt()
 	receipt["receiptKind"] = commandOutsideRequirement(t, input, "REQ-PROOFKIT-PACKAGE-004")
+	receipt["proofNodeDigest"] = selfHostingNodeDigest(receipt["receiptKind"].(string))
 	receipt["witnessSelectors"] = []any{"REQ-PROOFKIT-PACKAGE-004"}
 	input["receiptAdmission"] = proofReceiptChild(t, []any{receipt})
 
@@ -406,6 +409,7 @@ func validProofReceipt() map[string]any {
 		"producerAdmissionClass": "advisory",
 		"producerId":             "local.test",
 		"proofBindingDigest":     digestText(),
+		"proofNodeDigest":        selfHostingNodeDigest("proofkit.go-test"),
 		"proofPlanId":            "proofkit.self-hosting.witness-plan",
 		"provenanceRef":          "artifacts/test/provenance.json",
 		"receiptId":              "receipt.test.one",
@@ -476,7 +480,7 @@ func mustProofReceiptChild(receipts []any) map[string]any {
 func buildProofReceiptChild(receipts []any) (map[string]any, error) {
 	nonClaims := []any{"Test child report does not claim producer authenticity."}
 	record, exitCode, err := proofreceiptadmission.Build(map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"receiptSetId":  "proofkit.test.child-report",
 		"receipts":      receipts,
 		"nonClaims":     nonClaims,
@@ -523,6 +527,54 @@ func producerAdmissionChild(t *testing.T, producers []any, receipts []any, recei
 
 func digestText() string {
 	return "sha256:" + strings.Repeat("a", 64)
+}
+
+// selfHostingNodeDigest is the node digest of commandID in the admitted
+// repository plan: a fixture receipt of that kind records it as its
+// proofNodeDigest.
+func selfHostingNodeDigest(commandID string) string {
+	digest, ok := selfHostingNodeDigests()[commandID]
+	if !ok {
+		panic("repository witness plan has no command " + commandID)
+	}
+	return digest
+}
+
+var selfHostingNodeDigests = sync.OnceValue(func() map[string]string {
+	dir, err := os.Getwd()
+	for err == nil {
+		if _, statErr := os.Stat(filepath.Join(dir, "go.mod")); statErr == nil {
+			break
+		}
+		if filepath.Dir(dir) == dir {
+			panic("repository root not found")
+		}
+		dir = filepath.Dir(dir)
+	}
+	file, err := os.Open(filepath.Join(dir, "proofkit/witness-plan.json"))
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	value, err := admission.DecodeJSON(file, 8<<20)
+	if err != nil {
+		panic(err)
+	}
+	return admittedNodeDigests(value)
+})
+
+// admittedNodeDigests maps each command of an admitted witness plan to the
+// node digest a receipt of that kind records.
+func admittedNodeDigests(plan any) map[string]string {
+	projection, _, _, err := witnessschedulerplan.Evaluate(plan)
+	if err != nil {
+		panic(err)
+	}
+	digests := map[string]string{}
+	for _, command := range projection.Commands {
+		digests[command.ID] = command.ProofNodeDigest
+	}
+	return digests
 }
 
 func readRepoJSON(t *testing.T, path string) any {

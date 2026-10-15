@@ -121,6 +121,22 @@ func KnownKeys(record map[string]any, admitted []string, context string) error {
 	return fmt.Errorf("%s has unsupported field(s): %d", context, unknownCount)
 }
 
+// RuleIDTimestampExamples and RuleIDSecretExamples are identifier parts that
+// RuleID rejects inside otherwise pattern-conforming identifiers: timestamp-like
+// runs and secret-like values (sk- plus 10 token characters, as in
+// risk-assessment, GitHub tokens, token: or token= values).
+var (
+	RuleIDTimestampExamples = []string{"2026-10-12", "20261012T044113Z", "12345678"}
+	RuleIDSecretExamples    = []string{"risk-assessment", "ghp_x", "token:x"}
+)
+
+// RuleIDGrammar renders the stable identifier rule RuleID enforces, so guides
+// state the grammar from these constants instead of a copied literal.
+func RuleIDGrammar() string {
+	return fmt.Sprintf("%s, at most %d bytes, no date, time or 8-digit part (%s) and no secret-like part (%s)",
+		RuleIDPatternBody, MaxRuleIDBytes, strings.Join(RuleIDTimestampExamples, ", "), strings.Join(RuleIDSecretExamples, ", "))
+}
+
 func RuleID(raw any, context string) (string, error) {
 	value, ok := raw.(string)
 	if !ok {

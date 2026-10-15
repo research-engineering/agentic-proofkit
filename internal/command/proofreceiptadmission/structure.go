@@ -9,7 +9,7 @@ import (
 )
 
 var inputKeys = []string{"nonClaims", "receiptSetId", "receipts", "schemaVersion"}
-var receiptKeys = []string{"artifactRefs", "commandDigest", "dependencyDigest", "environmentClass", "environmentDigest", "evidenceRefs", "exitCode", "finishedAt", "lockfileDigest", "nonClaims", "preconditionDigest", "producerAdmissionClass", "producerId", "proofBindingDigest", "proofPlanId", "provenanceRef", "receiptId", "receiptKind", "runnerClass", "runnerIdentity", "sourceRevision", "startedAt", "status", "toolchainDigest", "witnessSelectorDigest", "witnessSelectors"}
+var receiptKeys = []string{"artifactRefs", "commandDigest", "dependencyDigest", "environmentClass", "environmentDigest", "evidenceRefs", "exitCode", "finishedAt", "lockfileDigest", "nonClaims", "preconditionDigest", "producerAdmissionClass", "producerId", "proofBindingDigest", "proofNodeDigest", "proofPlanId", "provenanceRef", "receiptId", "receiptKind", "runnerClass", "runnerIdentity", "sourceRevision", "startedAt", "status", "toolchainDigest", "witnessSelectorDigest", "witnessSelectors"}
 var artifactKeys = []string{"kind", "path", "sha256"}
 
 func InputStructure() map[string]any {
@@ -26,14 +26,14 @@ func InputStructure() map[string]any {
 		"evidenceRefs": jsonshape.Array(text, 1), "exitCode": jsonshape.Nullable(jsonshape.IntegerRange(0, 255)),
 		"finishedAt": timestamp, "lockfileDigest": jsonshape.Nullable(digest), "nonClaims": jsonshape.Array(text, 0),
 		"preconditionDigest": digest, "producerAdmissionClass": jsonshape.Enum(producerAdmissionClassSet),
-		"producerId": id, "proofBindingDigest": digest, "proofPlanId": id, "provenanceRef": jsonshape.Nullable(text),
+		"producerId": id, "proofBindingDigest": digest, "proofNodeDigest": digest, "proofPlanId": id, "provenanceRef": jsonshape.Nullable(text),
 		"receiptId": id, "receiptKind": id, "runnerClass": id, "runnerIdentity": id, "sourceRevision": text,
 		"startedAt": timestamp, "status": jsonshape.Enum(proofReceiptStatusSet), "toolchainDigest": digest,
 		"witnessSelectorDigest": digest, "witnessSelectors": jsonshape.Array(id, 1),
 	})
 	schema := jsonshape.RequiredObject(inputKeys, map[string]jsonshape.Shape{
 		"nonClaims": jsonshape.Array(text, 0), "receiptSetId": id, "receipts": jsonshape.Array(receipt, 1),
-		"schemaVersion": jsonshape.IntegerLiteral(1),
+		"schemaVersion": jsonshape.IntegerLiteral(InputSchemaVersion),
 	}).JSONSchema()
 	annotateInput(schema)
 	receiptSchema := schema["properties"].(map[string]any)["receipts"].(map[string]any)["items"].(map[string]any)
@@ -46,7 +46,7 @@ func InputStructure() map[string]any {
 		required = append(required, key)
 	}
 	receiptSchema["required"] = required
-	schema["description"] = "All root fields and receipt/artifact fields are required except dependencyDigest, lockfileDigest, provenanceRef and exitCode, which admit absence or explicit null. No defaults are inserted. IDs and enums are untrimmed; text trims to nonempty and paths are canonical repository-relative POSIX refs without existence checks. Native admission rejects duplicate keys, sensitive text, unsorted/duplicate text and ID lists, duplicate receipt IDs and duplicate artifact kind/path pairs. Receipts/artifacts are sorted by native admission. Timestamp grammar and calendar validity are both required; schema grammar alone is not calendar proof. schemaVersion requires literal 1; exitCode requires an Int64-decoding JSON number between 0 and 255 (including -0, excluding 1.0/1e0). JSON Schema numeric semantics do not enforce lexical spelling. Finish-before-start, status/exit/artifact/non-claim inconsistencies and merge_satisfying without provenance produce admitted failed reports, not structural input errors."
+	schema["description"] = "All root fields and receipt/artifact fields are required except dependencyDigest, lockfileDigest, provenanceRef and exitCode, which admit absence or explicit null. No defaults are inserted. IDs and enums are untrimmed; text trims to nonempty and paths are canonical repository-relative POSIX refs without existence checks. Native admission rejects duplicate keys, sensitive text, unsorted/duplicate text and ID lists, duplicate receipt IDs and duplicate artifact kind/path pairs. Receipts/artifacts are sorted by native admission. Timestamp grammar and calendar validity are both required; schema grammar alone is not calendar proof. schemaVersion requires literal 2; proofNodeDigest records the witness-scheduler-plan proofNodeDigests row of the receipt command (receiptKind) in the plan the run executed under; exitCode requires an Int64-decoding JSON number between 0 and 255 (including -0, excluding 1.0/1e0). JSON Schema numeric semantics do not enforce lexical spelling. Finish-before-start, status/exit/artifact/non-claim inconsistencies and merge_satisfying without provenance produce admitted failed reports, not structural input errors."
 	return schema
 }
 

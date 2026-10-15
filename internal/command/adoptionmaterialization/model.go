@@ -69,7 +69,10 @@ type Request struct {
 	RequestID     string
 	SourceIntent  string
 	SourcePlanID  string
-	Sources       []requirementsourceadmission.Source
+	// SourceInventoryID is the repository root observation the sourcePlan
+	// decision was made on; freshness compares it with the current root.
+	SourceInventoryID string
+	Sources           []requirementsourceadmission.Source
 }
 
 type artifact struct {

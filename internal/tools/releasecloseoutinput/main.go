@@ -1250,7 +1250,7 @@ func proofReceiptDocumentMatches(document selfEvidenceDocument[proofReceiptSetEv
 }
 
 func proofReceiptSetRecordMatches(record proofReceiptSetEvidence) bool {
-	return record.SchemaVersion == 1 &&
+	return record.SchemaVersion == proofreceiptadmission.InputSchemaVersion &&
 		record.ReceiptSetID == "proofkit.self-hosting.proof-receipts" &&
 		len(record.NonClaims) > 0 &&
 		len(record.Receipts) == 1 &&

@@ -31,7 +31,7 @@ func TestProofRoutingStructuresBindOwnersAndRejectRehashedDrift(t *testing.T) {
 		{"witness-plan", "input", "1", []func() map[string]any{witnessplan.DirectInputStructure, witnessplan.ProjectedInputStructure}},
 		{"witness-plan", "output", "1", []func() map[string]any{witnessplan.OutputStructure}},
 		{"witness-scheduler-plan", "input", "1", []func() map[string]any{witnessschedulerplan.InputStructure}},
-		{"witness-scheduler-plan", "output", "1", []func() map[string]any{witnessschedulerplan.OutputStructure}},
+		{"witness-scheduler-plan", "output", "2", []func() map[string]any{witnessschedulerplan.OutputStructure}},
 		{"selective-gate-plan", "input", "1", []func() map[string]any{selectivegateplan.InputStructure}},
 		{"selective-gate-plan", "output", "1", []func() map[string]any{selectivegateplan.EnvelopeStructure, agentenvelope.InvalidInputStructure, selectivegateplan.OutputStructure}},
 		{"selective-gate-evidence", "input", "1", []func() map[string]any{selectivegateevidence.InputStructure}},
@@ -53,9 +53,14 @@ func TestProofRoutingStructuresBindOwnersAndRejectRehashedDrift(t *testing.T) {
 	}
 	for _, row := range rows {
 		prefix := "proofkit." + row.command + "." + row.direction + ".v" + row.version
+		predecessor := prefix + ".root-shape"
+		if row.command == "witness-scheduler-plan" && row.direction == "output" {
+			// Version 2 added the proofNodeDigests diagnostic to the structural version 1.
+			predecessor = "proofkit.witness-scheduler-plan.output.v1.json-schema"
+		}
 		t.Run(prefix, func(t *testing.T) {
 			owner, ok := nativeStructureOwner(prefix + ".json-schema")
-			if !ok || owner.direction != row.direction || !slices.Equal(owner.commands, []string{row.command}) || !slices.Equal(owner.predecessors, []string{prefix + ".root-shape"}) {
+			if !ok || owner.direction != row.direction || !slices.Equal(owner.commands, []string{row.command}) || !slices.Equal(owner.predecessors, []string{predecessor}) {
 				t.Fatal("missing or incorrect exact direction owner")
 			}
 			definition, err := owner.definition()

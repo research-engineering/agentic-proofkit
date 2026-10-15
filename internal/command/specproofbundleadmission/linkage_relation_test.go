@@ -1,6 +1,7 @@
 package specproofbundleadmission
 
 import (
+	"encoding/json"
 	"slices"
 	"sort"
 	"testing"
@@ -30,6 +31,8 @@ func TestBundleReceiptEnvironmentIsBoundToItsWitnessCommand(t *testing.T) {
 				}
 			}
 			receipt, producerReceipt, producer := mergeProofReceipt(), validProducerReceipt(), validProducer()
+			// The receipt ran under the edited go-test node, so it records that node.
+			receipt["proofNodeDigest"] = admittedNodeDigests(input["witnessPlan"])["proofkit.go-test"]
 			receipt["environmentClass"] = environment
 			producerReceipt["environmentClass"] = environment
 			producer["environmentClasses"] = []any{environment}
@@ -62,7 +65,7 @@ func TestMinimumRuntimeRejectsAggregatePackageReceipt(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			input := validBundleInput(t)
 			receipt := validProofReceipt()
-			receipt["receiptKind"] = test.kind
+			receipt["receiptKind"], receipt["proofNodeDigest"] = test.kind, selfHostingNodeDigest(test.kind)
 			receipt["environmentClass"] = test.environment
 			receipt["witnessSelectors"] = []any{"proofkit.package-boundary.python-minimum-installed"}
 			// Synthetic metadata only: neither this fixture nor the aggregate
@@ -104,6 +107,9 @@ func TestBundleAccumulatesAllWitnessesOfOneScenario(t *testing.T) {
 			receipt := validProofReceipt()
 			receipt["witnessSelectors"] = []any{scenario}
 			receipt["receiptKind"] = command
+			if command != "proofkit.foreign-command" {
+				receipt["proofNodeDigest"] = selfHostingNodeDigest(command)
+			}
 			if command == "proofkit.package-artifact" {
 				receipt["environmentClass"] = "local-go-python"
 			}
@@ -120,5 +126,96 @@ func TestBundleAccumulatesAllWitnessesOfOneScenario(t *testing.T) {
 				t.Fatalf("lost witness membership: reversed=%v command=%s failures=%#v", reversed, command, record.RuleResults)
 			}
 		}
+	}
+}
+
+func planCommand(input map[string]any, commandID string) map[string]any {
+	for _, raw := range input["witnessPlan"].(map[string]any)["commands"].([]any) {
+		if command := raw.(map[string]any); command["id"] == commandID {
+			return command
+		}
+	}
+	panic("missing plan command " + commandID)
+}
+
+func planPolicy(input map[string]any, commandID string) map[string]any {
+	for _, raw := range input["witnessPlan"].(map[string]any)["policies"].([]any) {
+		if policy := raw.(map[string]any); policy["commandId"] == commandID {
+			return policy
+		}
+	}
+	panic("missing plan policy " + commandID)
+}
+
+// A receipt links only to the unchanged execution decision of its own plan
+// node: an edit to that node unlinks exactly that receipt, while edits to
+// other nodes, prose or spelling leave it linked. The plan ID is compared
+// separately and is not part of the node digest.
+func TestBundleLinkageBindsSchedulerPlanNode(t *testing.T) {
+	const ownNodeChanged = "receipt receipt.test.one proofNodeDigest does not match witness scheduler plan node proofkit.go-test"
+	for _, test := range []struct {
+		name string
+		edit func(map[string]any)
+		want []string
+	}{
+		{"recorded node", func(map[string]any) {}, nil},
+		{"same plan in another spelling", func(input map[string]any) {
+			plan := input["witnessPlan"].(map[string]any)
+			slices.Reverse(plan["commands"].([]any))
+			slices.Reverse(plan["policies"].([]any))
+			// An omitted optional list admits as the same empty list.
+			delete(plan["vocabulary"].(map[string]any), "nonCacheableCredentialClasses")
+		}, nil},
+		{"another node's command and policy changed", func(input map[string]any) {
+			planCommand(input, "proofkit.go-vet")["argv"] = []any{"go", "vet", "-all", "./..."}
+			planPolicy(input, "proofkit.go-vet")["retryPolicy"] = map[string]any{"kind": "bounded", "maxAttempts": json.Number("2")}
+		}, nil},
+		{"plan and policy prose changed", func(input map[string]any) {
+			plan := input["witnessPlan"].(map[string]any)
+			plan["nonClaims"] = append(plan["nonClaims"].([]any), "zz Edited plan prose.")
+			policy := planPolicy(input, "proofkit.go-test")
+			policy["nonClaims"] = append(policy["nonClaims"].([]any), "zz Edited policy prose.")
+		}, nil},
+		{"same plan ID with changed own command", func(input map[string]any) {
+			command := planCommand(input, "proofkit.go-test")
+			command["argv"] = append(command["argv"].([]any), "-count=1")
+		}, []string{ownNodeChanged}},
+		{"same plan ID with changed own policy", func(input map[string]any) {
+			planPolicy(input, "proofkit.go-test")["retryPolicy"] = map[string]any{"kind": "bounded", "maxAttempts": json.Number("2")}
+		}, []string{ownNodeChanged}},
+		{"same plan ID with changed own environment class row", func(input map[string]any) {
+			for _, raw := range input["witnessPlan"].(map[string]any)["vocabulary"].(map[string]any)["environmentClassPolicies"].([]any) {
+				if row := raw.(map[string]any); row["environmentClass"] == "local-go" {
+					row["cachePolicies"] = []any{"disabled", "read-only"}
+				}
+			}
+		}, []string{ownNodeChanged}},
+		{"same node under another plan ID", func(input map[string]any) {
+			input["witnessPlan"].(map[string]any)["schedulerPlanId"] = "proofkit.self-hosting.witness-plan.renamed"
+		}, []string{"receipt receipt.test.one proofPlanId does not match witness scheduler plan"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := validBundleInput(t)
+			test.edit(input)
+			record, exit, err := Build(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := []string{}
+			for _, rule := range record.RuleResults {
+				if rule.Status == "failed" {
+					got = append(got, rule.Message)
+				}
+			}
+			if len(test.want) == 0 {
+				if exit != 0 || record.State != "passed" {
+					t.Fatalf("receipt recorded under its unchanged node was unlinked: %v", got)
+				}
+				return
+			}
+			if exit != 1 || !slices.Equal(got, test.want) {
+				t.Fatalf("failures = %v, want %v", got, test.want)
+			}
+		})
 	}
 }

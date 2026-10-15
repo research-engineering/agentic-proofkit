@@ -15,12 +15,21 @@ const families = [
   ["receipt-producer-admission", "receipt-producer-native-observations.json", ["provenanceRef"]],
 ].map(([command, file, optionals]) => {
   const validators = Object.fromEntries(["input", "output"].map(direction => {
-    const definition = contract.contractDefinitions.find(row => row.definitionId === `proofkit.${command}.${direction}.v1.json-schema`);
+    const ref = contract.commands.find(row => row.command === command)[`${direction}Contract`].rootDefinitionRef;
+    const definition = contract.contractDefinitions.find(row => row.definitionId === ref);
     assert.ok(definition, `${command}/${direction}`);
     return [direction, ajv.compile(definition.fieldTree.variants[0].schema)];
   }));
-  return {command, optionals, rows: JSON.parse(readFileSync(new URL(`internal/app/testdata/${file}`, root), "utf8")), ...validators};
+  const rows = JSON.parse(readFileSync(new URL(`internal/app/testdata/${file}`, root), "utf8"));
+  return {command, optionals, rows: command === "proof-receipt-admission" ? rows.map(migrateProofReceiptObservation) : rows, ...validators};
 });
+// Receipt input version 2 declares one delta over the version 1 observations:
+// schemaVersion 2 and a recorded proofNodeDigest. The report wire is unchanged.
+function migrateProofReceiptObservation(row) {
+  assert.equal(row.input.schemaVersion, 1, row.case);
+  const input = {...row.input, schemaVersion: 2, receipts: row.input.receipts.map(receipt => ({...receipt, proofNodeDigest: "sha256:" + "0".repeat(64)}))};
+  return {...row, input};
+}
 let directory, binary;
 before(() => {
   directory = mkdtempSync(join(tmpdir(), "proofkit-receipt-admission-"));
@@ -191,7 +200,7 @@ test("receipt scalar domains cover enums, identifiers, digests and both exit end
       if (key.endsWith("Digest") && value !== null) invalid = "sha256:" + "A".repeat(64);
       if (["status", "admissionLevel", "producerAdmissionClass", "kind"].includes(key)) invalid = "foreign";
       if (["startedAt", "finishedAt"].includes(key)) invalid = "2026-06-26T10:00:00+00:00";
-      if (key === "schemaVersion") invalid = 2;
+      if (key === "schemaVersion") invalid = value + 1;
       if (invalid === undefined) continue;
       const input = structuredClone(baseline);
       at(input, path)[key] = invalid;
@@ -215,7 +224,8 @@ test("native-only canonical, privacy and relation rules remain separate from sch
   for (const family of families) {
     const input = structuredClone(family.rows[0].input);
     const encoded = JSON.stringify(input);
-    for (const token of ["1.0", "1e0"]) native(family, encoded.replace('"schemaVersion":1', `"schemaVersion":${token}`), "rejected", `version/${token}`);
+    const version = input.schemaVersion;
+    for (const token of [`${version}.0`, `${version}e0`]) native(family, encoded.replace(`"schemaVersion":${version}`, `"schemaVersion":${token}`), "rejected", `version/${token}`);
     const unknown = structuredClone(input);
     unknown.receipts[0].producerId = "producer.unknown";
     pair(family, unknown, family.command === "proof-receipt-admission" ? "passed" : "failed", "unknown-producer is not a schema error");

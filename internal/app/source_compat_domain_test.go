@@ -30,7 +30,7 @@ func TestSourceCompatibilityPublicResourceDomain(t *testing.T) {
 					t.Fatalf("accepted domain rejected: exit=%d stderr=%s", exit, stderr.String())
 				}
 				report := sourceCompatDecode(t, stdout.Bytes()).(map[string]any)
-				if report["reportKind"] != "proofkit.requirement-source-admission" || report["state"] != "passed" || report["reportId"] != "source.compatibility" || report["schemaVersion"] != json.Number("2") {
+				if report["reportKind"] != "proofkit.requirement-source-admission" || report["state"] != "passed" || report["reportId"] != "source.compatibility" || report["schemaVersion"] != json.Number("3") {
 					t.Fatal("wrong public admission result")
 				}
 			} else if exit != 1 || stdout.Len() != 0 || stderr.Len() == 0 {

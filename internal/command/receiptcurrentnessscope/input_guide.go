@@ -3,12 +3,13 @@ package receiptcurrentnessscope
 import (
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 // InputGuide explains caller-owned capture without claiming file discovery.
 func InputGuide(renderer cliexec.Renderer) string {
-	return strings.ReplaceAll(inputGuide, "{{cli}}", renderer.DisplayCommand())
+	return strings.NewReplacer("{{cli}}", renderer.DisplayCommand(), "{{ruleid}}", admit.RuleIDGrammar()).Replace(inputGuide)
 }
 
 const inputGuide = `Receipt currentness input guide:
@@ -17,10 +18,13 @@ const inputGuide = `Receipt currentness input guide:
   First retain the original receipt input and the exact subjects it recorded:
     {{cli}} proof-receipt-admission --help
   Do not substitute that admission report for the receipt. Preserve receiptId;
-  select requirementId and proofRouteRef from its admitted binding route, and
-  obligationId/owner from the consumer's obligation policy. Check the qualified
-  relation, not separate sets of IDs. This command cannot verify that mapping
-  against an external receipt or detect deliberately invented equal digests.
+  take requirementId from its admitted binding row and obligationId/owner from
+  the consumer's obligation policy. proofRouteRef names that binding route as
+  a stable ID, not a path or path#fragment; the row's scenarioId is one choice.
+  IDs follow: {{ruleid}}
+  Check the qualified relation, not separate sets of IDs. This command cannot
+  verify that mapping against an external receipt or detect deliberately
+  invented equal digests.
 
   For every dependency relevant to reuse, supply a uniquely identified
   currentnessChecks entry. Copy recordedDigest from the corresponding receipt

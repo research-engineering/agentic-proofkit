@@ -14,6 +14,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
@@ -96,6 +97,9 @@ func TestVerifyTrajectoryRejectsAcceptedNegativeControls(t *testing.T) {
 		{"python evidence linked after migration", "python evidence after migration bundle exit=0", func(t *testing.T, invocation workflowsmoke.Invocation) (workflowsmoke.Result, bool) {
 			return passedReport, routeIs(invocation, "spec-proof-bundle-admission") && inputValue(t, invocation, "/receiptAdmission/receipts/0/receiptKind") == "greeter.python-test" && !bindsCommand(t, invocation, "greeter.python-test")
 		}},
+		{"edited node linked", "edited farewell command bundle exit=0", func(t *testing.T, invocation workflowsmoke.Invocation) (workflowsmoke.Result, bool) {
+			return passedReport, routeIs(invocation, "spec-proof-bundle-admission") && plansArgument(t, invocation, "-count=1")
+		}},
 		{"stale review accepted", "stale review assessment must be refused", func(t *testing.T, invocation workflowsmoke.Invocation) (workflowsmoke.Result, bool) {
 			return passedReport, routeIs(invocation, "change plan") && inputValue(t, invocation, "/checkpoint/state") == "review_passed"
 		}},
@@ -154,6 +158,33 @@ func TestVerifyTrajectoryRejectsWrongInvalidation(t *testing.T) {
 				}
 			})
 		}},
+		// Linking by plan and command ID alone would let the farewell receipt
+		// link to an edited farewell command under the same plan ID.
+		{"bundle links receipts by plan and command ID only", "edited farewell command bundle exit=0", func(t *testing.T, invocation workflowsmoke.Invocation) (workflowsmoke.Invocation, bool) {
+			if !routeIs(invocation, "spec-proof-bundle-admission") || invocation.StdinClass != workflowsmoke.StdinBytes {
+				return invocation, false
+			}
+			return rewriteInput(t, invocation, func(record map[string]any) {
+				projection, _, _, err := witnessschedulerplan.Evaluate(record["witnessPlan"])
+				if err != nil {
+					t.Fatal(err)
+				}
+				nodeDigests := map[string]string{}
+				for _, command := range projection.Commands {
+					nodeDigests[command.ID] = command.ProofNodeDigest
+				}
+				receipts, _ := record["receiptAdmission"].(map[string]any)["receipts"].([]any)
+				for _, receipt := range receipts {
+					row := receipt.(map[string]any)
+					if nodeDigest, ok := nodeDigests[row["receiptKind"].(string)]; ok {
+						row["proofNodeDigest"] = nodeDigest
+					}
+				}
+			})
+		}},
+		// Binding receipts to the whole plan would unlink the unaffected
+		// farewell receipt as soon as the migration changes another node.
+		{"bundle binds receipts to the whole plan", "python evidence after migration", wholePlanLinkage()},
 		{"semantic diff misses requirement changes", "requirement change diff", func(t *testing.T, invocation workflowsmoke.Invocation) (workflowsmoke.Invocation, bool) {
 			if !routeIs(invocation, "requirement-semantic-diff") || invocation.StdinClass != workflowsmoke.StdinBytes {
 				return invocation, false
@@ -304,6 +335,49 @@ func rewriteChecks(t *testing.T, invocation workflowsmoke.Invocation, edit func(
 			}
 		}
 	})
+}
+
+// plansArgument reports whether a bundle's witness plan gives some command
+// the argv token argument.
+func plansArgument(t *testing.T, invocation workflowsmoke.Invocation, argument string) bool {
+	commands, _ := inputValue(t, invocation, "/witnessPlan/commands").([]any)
+	for _, command := range commands {
+		if argv, _ := command.(map[string]any)["argv"].([]any); slices.Contains(argv, any(argument)) {
+			return true
+		}
+	}
+	return false
+}
+
+// wholePlanLinkage rewrites bundle inputs as if linkage bound each receipt to
+// the whole plan it was first bundled with: bundled again with different plan
+// content, the receipt no longer carries a matching node digest.
+func wholePlanLinkage() func(*testing.T, workflowsmoke.Invocation) (workflowsmoke.Invocation, bool) {
+	var mu sync.Mutex
+	firstPlans := map[string]string{}
+	return func(t *testing.T, invocation workflowsmoke.Invocation) (workflowsmoke.Invocation, bool) {
+		if !routeIs(invocation, "spec-proof-bundle-admission") || invocation.StdinClass != workflowsmoke.StdinBytes {
+			return invocation, false
+		}
+		return rewriteInput(t, invocation, func(record map[string]any) {
+			plan, err := stablejson.Marshal(record["witnessPlan"])
+			if err != nil {
+				t.Fatal(err)
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			receipts, _ := record["receiptAdmission"].(map[string]any)["receipts"].([]any)
+			for _, receipt := range receipts {
+				row := receipt.(map[string]any)
+				receiptID := row["receiptId"].(string)
+				if first, seen := firstPlans[receiptID]; !seen {
+					firstPlans[receiptID] = string(plan)
+				} else if first != string(plan) {
+					row["proofNodeDigest"] = "sha256:" + strings.Repeat("0", 64)
+				}
+			}
+		})
+	}
 }
 
 func rewriteInput(t *testing.T, invocation workflowsmoke.Invocation, edit func(map[string]any)) (workflowsmoke.Invocation, bool) {

@@ -14,6 +14,9 @@ import (
 
 const reportKind = "proofkit.proof-receipt-admission"
 
+// InputSchemaVersion 2 added the required receipt proofNodeDigest.
+const InputSchemaVersion = 2
+
 var proofReceiptStatuses = proofvocab.ReceiptStatuses()
 var proofReceiptStatusSet = proofvocab.ReceiptStatusSet()
 
@@ -55,6 +58,7 @@ type receipt struct {
 	ProducerAdmissionClass string
 	ProducerID             string
 	ProofBindingDigest     string
+	ProofNodeDigest        string
 	ProofPlanID            string
 	ProvenanceRef          *string
 	ReceiptID              string
@@ -84,6 +88,7 @@ type ReceiptProjection struct {
 	EnvironmentClass       string
 	ProducerAdmissionClass string
 	ProducerID             string
+	ProofNodeDigest        string
 	ProofPlanID            string
 	ReceiptID              string
 	ReceiptKind            string
@@ -151,6 +156,7 @@ func projection(input admittedInput) Projection {
 			EnvironmentClass:       item.EnvironmentClass,
 			ProducerAdmissionClass: item.ProducerAdmissionClass,
 			ProducerID:             item.ProducerID,
+			ProofNodeDigest:        item.ProofNodeDigest,
 			ProofPlanID:            item.ProofPlanID,
 			ReceiptID:              item.ReceiptID,
 			ReceiptKind:            item.ReceiptKind,
@@ -169,8 +175,8 @@ func admitInput(raw any) (admittedInput, error) {
 	if err := admit.KnownKeys(record, inputKeys, "proof receipt admission input"); err != nil {
 		return admittedInput{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return admittedInput{}, fmt.Errorf("proof receipt admission schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], InputSchemaVersion) {
+		return admittedInput{}, fmt.Errorf("proof receipt admission schemaVersion must be 2; version 2 receipts record proofNodeDigest from witness-scheduler-plan")
 	}
 	receipts, err := receipts(record["receipts"])
 	if err != nil {
@@ -248,6 +254,10 @@ func admitReceipt(record map[string]any) (receipt, error) {
 		return receipt{}, err
 	}
 	proofPlanID, err := admit.RuleID(record["proofPlanId"], "proof receipt admission receipt.proofPlanId")
+	if err != nil {
+		return receipt{}, err
+	}
+	proofNodeDigest, err := digest(record["proofNodeDigest"], "proof receipt admission receipt.proofNodeDigest")
 	if err != nil {
 		return receipt{}, err
 	}
@@ -350,6 +360,7 @@ func admitReceipt(record map[string]any) (receipt, error) {
 		ProducerAdmissionClass: producerAdmissionClass,
 		ProducerID:             producerID,
 		ProofBindingDigest:     proofBindingDigest,
+		ProofNodeDigest:        proofNodeDigest,
 		ProofPlanID:            proofPlanID,
 		ProvenanceRef:          provenanceRef,
 		ReceiptID:              receiptID,

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/changeworkflowplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
@@ -184,6 +185,13 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 			lines = append(lines, "  Use only the source record for rendering; no materialization plan or apply is required.")
 		}
 	}
+	if descriptor.name == "adopt-plan" {
+		lines = append(lines, "", strings.TrimSuffix(adoptionplan.ModeGuide(), "\n"))
+	}
+	if descriptor.name == "migration-plan" {
+		lines = append(lines, "", "Moving a requirement's native witness is not infrastructure migration;",
+			"see adapter step 8 of:", "  "+renderer.DisplayCommand("native-evidence-guidance", "--help"))
+	}
 	if descriptor.name == "adopt-plan" || descriptor.name == "capability-map-admission" || descriptor.name == "stack-preset" {
 		lines = append(lines, "", "After owner review and native witness design:",
 			"  "+renderer.DisplayCommand("adopt", "materialize", "plan", "--help"),
@@ -240,7 +248,8 @@ func commandUsageLine(descriptor commandDescriptor) string {
 		case "--input-pointer":
 			segments = append(segments, "[--input-pointer <pointer>]")
 		case "--format":
-			segments = append(segments, "[--format <mode>]")
+			// Every --format value a command admits is one of its output modes.
+			segments = append(segments, "[--format <"+strings.Join(descriptor.outputModes, "|")+">]")
 		case "--repo-root":
 			segments = append(segments, optionalUsageSegment(flag+" <path>", required))
 		case "--expect-desired-state", "--expect-transaction", "--expect-observation", "--transaction":

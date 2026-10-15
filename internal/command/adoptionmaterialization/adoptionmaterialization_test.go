@@ -16,6 +16,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/repositorytransaction"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
@@ -431,6 +432,11 @@ func TestTerminalReplayClassificationPreservesDistinctOutcomes(t *testing.T) {
 
 func TestApplyDistinguishesStaleBeforeSnapshotFromDesiredState(t *testing.T) {
 	root := t.TempDir()
+	// The source plan observes docs/ so the later target edit leaves its
+	// repository root unchanged and only the before-snapshot goes stale.
+	if err := os.Mkdir(filepath.Join(root, "docs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	request := validRequest(t, root)
 	initial, err := BuildPlan(context.Background(), request, root)
 	if err != nil {
@@ -446,6 +452,120 @@ func TestApplyDistinguishesStaleBeforeSnapshotFromDesiredState(t *testing.T) {
 	receipt, exitCode, err := Apply(context.Background(), request, root, initial.Transaction.TransactionID, initial.Transaction.DesiredStateID)
 	if err != nil || exitCode != 1 || receipt.State != ReceiptStateBlocked || receipt.FailureClass != "transaction_identity_mismatch" {
 		t.Fatalf("stale-before Apply() receipt=%#v exit=%d err=%v", receipt, exitCode, err)
+	}
+}
+
+// A sourcePlan is admitted only as the decision the project manifest records
+// or as an adopt plan of the repository root as it is now (pilot defect D14).
+func TestSourcePlanMustBeRecordedOrObserveCurrentRoot(t *testing.T) {
+	root := t.TempDir()
+	request := validRequest(t, root)
+	stale := func(label string, packet map[string]any) {
+		t.Helper()
+		for _, run := range []func() error{
+			func() error { _, err := BuildPlan(context.Background(), packet, root); return err },
+			func() error {
+				_, _, err := Apply(context.Background(), packet, root, "sha256:"+strings.Repeat("1", 64), "sha256:"+strings.Repeat("2", 64))
+				return err
+			},
+		} {
+			if err := run(); err == nil || !strings.Contains(err.Error(), "sourcePlan is stale") {
+				t.Fatalf("%s error=%v, want stale sourcePlan refusal", label, err)
+			}
+		}
+	}
+	freshPlan := func() any {
+		t.Helper()
+		inventory, err := repositoryinventory.Scan(context.Background(), root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		plan, err := adoptionplan.Build(adoptionplan.IntentFresh, inventory, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return plan.JSONValue()
+	}
+
+	mustWrite(t, root, "notes.txt", []byte("written after adopt plan\n"))
+	stale("first adoption after a root change", request)
+	if _, err := os.Stat(filepath.Join(root, ".agentic-proofkit")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("stale refusal created transaction state: %v", err)
+	}
+	request = cloneRequest(t, request)
+	request["sourcePlan"] = freshPlan()
+	initial, err := BuildPlan(context.Background(), request, root)
+	if err != nil {
+		t.Fatalf("plan of the current root: %v", err)
+	}
+	if _, exitCode, err := Apply(context.Background(), request, root, initial.Transaction.TransactionID, initial.Transaction.DesiredStateID); err != nil || exitCode != 0 {
+		t.Fatalf("Apply() exit=%d err=%v", exitCode, err)
+	}
+	// The recorded decision stays admissible after the root changes.
+	mustWrite(t, root, "more-notes.txt", []byte("written after materialization\n"))
+	replan, err := BuildPlan(context.Background(), request, root)
+	if err != nil || transactionHasChanges(replan.Transaction) {
+		t.Fatalf("recorded plan replan changes=%v err=%v", err == nil && transactionHasChanges(replan.Transaction), err)
+	}
+	// A new decision on the current root replaces the recorded one.
+	decided := cloneRequest(t, request)
+	decided["sourcePlan"] = freshPlan()
+	next, err := BuildPlan(context.Background(), decided, root)
+	if err != nil {
+		t.Fatalf("new plan of the current root: %v", err)
+	}
+	if _, exitCode, err := Apply(context.Background(), decided, root, next.Transaction.TransactionID, next.Transaction.DesiredStateID); err != nil || exitCode != 0 {
+		t.Fatalf("Apply(new decision) exit=%d err=%v", exitCode, err)
+	}
+	// The superseded plan neither is recorded nor observes the current root.
+	stale("superseded plan", request)
+}
+
+// The guide names every class of root change that makes an unrecorded source
+// plan stale, and a change below the top level is not one of them.
+func TestSourcePlanFreshnessGuideNamesEveryRootChange(t *testing.T) {
+	guide := strings.Join(strings.Fields(InputGuide(cliexec.PathRenderer())), " ")
+	for _, phrase := range []string{
+		"the inventory changes when a top-level entry is added or removed",
+		repositorytransaction.ControlRoot + "/ left by a rolled-back apply",
+		"a recognized root file such as README.md, AGENTS.md, a manifest or a lockfile changes",
+	} {
+		if !strings.Contains(guide, phrase) {
+			t.Fatalf("materialization guide does not state %q", phrase)
+		}
+	}
+	edit := func(path string) func(string) {
+		return func(root string) { mustWrite(t, root, path, []byte("after\n")) }
+	}
+	for name, test := range map[string]struct {
+		change func(root string)
+		stale  bool
+	}{
+		"added top-level entry":   {edit("scratch/notes.txt"), true},
+		"removed top-level entry": {func(root string) { _ = os.Remove(filepath.Join(root, "go.sum")) }, true},
+		"control root left by a rolled-back apply": {func(root string) {
+			if err := os.Mkdir(filepath.Join(root, repositorytransaction.ControlRoot), 0o700); err != nil {
+				t.Fatal(err)
+			}
+		}, true},
+		"README.md":                {edit("README.md"), true},
+		"AGENTS.md":                {edit("AGENTS.md"), true},
+		"manifest":                 {edit("go.mod"), true},
+		"lockfile":                 {edit("go.sum"), true},
+		"file below the top level": {edit("docs/notes.md"), false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			for _, path := range []string{"AGENTS.md", "docs/notes.md", "go.mod", "go.sum"} {
+				mustWrite(t, root, path, []byte("before\n"))
+			}
+			request := validRequest(t, root)
+			test.change(root)
+			_, err := BuildPlan(context.Background(), request, root)
+			if stale := err != nil && strings.Contains(err.Error(), "sourcePlan is stale"); stale != test.stale || (!test.stale && err != nil) {
+				t.Fatalf("BuildPlan error=%v, want stale=%v", err, test.stale)
+			}
+		})
 	}
 }
 

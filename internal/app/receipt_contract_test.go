@@ -41,6 +41,9 @@ func TestReceiptCLIHistoricalWireAndTransports(t *testing.T) {
 		}
 		for _, row := range rows {
 			t.Run(family.command+"/"+row.Case, func(t *testing.T) {
+				if family.command == "proof-receipt-admission" {
+					row.Input = migrateProofReceiptObservationInput(t, row.Input)
+				}
 				path := filepath.Join(t.TempDir(), "input.json")
 				if err := os.WriteFile(path, row.Input, 0600); err != nil {
 					t.Fatal(err)
@@ -67,6 +70,30 @@ func TestReceiptCLIHistoricalWireAndTransports(t *testing.T) {
 			})
 		}
 	}
+}
+
+// migrateProofReceiptObservationInput applies the one declared input delta of
+// receipt input version 2 to a version 1 observation: schemaVersion 2 and a
+// recorded proofNodeDigest. The report wire must still equal the observation.
+func migrateProofReceiptObservationInput(t *testing.T, input json.RawMessage) json.RawMessage {
+	t.Helper()
+	value, err := admission.DecodeJSON(bytes.NewReader(input), int64(len(input)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := value.(map[string]any)
+	if record["schemaVersion"] != json.Number("1") {
+		t.Fatalf("observation is not a version 1 receipt input: %v", record["schemaVersion"])
+	}
+	record["schemaVersion"] = json.Number("2")
+	for _, receipt := range record["receipts"].([]any) {
+		receipt.(map[string]any)["proofNodeDigest"] = "sha256:" + strings.Repeat("0", 64)
+	}
+	encoded, err := stablejson.Marshal(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return encoded
 }
 
 func TestReceiptTrustCLIExactIntegerTokens(t *testing.T) {

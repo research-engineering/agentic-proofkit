@@ -415,6 +415,28 @@ func TestComposeRejectsRepositoryBoundaryAndFreshnessViolations(t *testing.T) {
 			t.Fatal("Compose accepted oversized source")
 		}
 	})
+	// Pilot D15: a missing catalog file is named with the step that creates it.
+	t.Run("missing specification tree", func(t *testing.T) {
+		root := fixtureRepository(t)
+		if err := os.Remove(filepath.Join(root, "proofkit/spec-tree.json")); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Compose(root, fixtureCatalog())
+		if err == nil || !strings.Contains(err.Error(), "requirement context spec_tree source proofkit/spec-tree.json does not exist") ||
+			!strings.Contains(err.Error(), "requirement-spec-tree") || !strings.Contains(err.Error(), "no command creates it") {
+			t.Fatalf("Compose() error = %v, want the missing tree path and its creating step", err)
+		}
+	})
+	t.Run("missing requirement source", func(t *testing.T) {
+		root := fixtureRepository(t)
+		if err := os.Remove(filepath.Join(root, "docs/specs/proofkit-spec-proof-core/requirements.v2.json")); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Compose(root, fixtureCatalog())
+		if err == nil || !strings.Contains(err.Error(), "requirement context requirement_source source docs/specs/proofkit-spec-proof-core/requirements.v2.json does not exist; adopt materialize apply writes it") {
+			t.Fatalf("Compose() error = %v, want the missing source path and its creating step", err)
+		}
+	})
 	t.Run("expected digest mismatch", func(t *testing.T) {
 		catalog := fixtureCatalog()
 		catalog["specTree"].(map[string]any)["expectedSourceDigest"] = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"

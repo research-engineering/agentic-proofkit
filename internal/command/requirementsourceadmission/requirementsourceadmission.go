@@ -12,13 +12,15 @@ import (
 )
 
 const (
-	reportKind             = "proofkit.requirement-source-admission"
-	outputSchemaVersion    = 2
+	reportKind = "proofkit.requirement-source-admission"
+	// outputSchemaVersion 3 lists only paths the source owns (D16): the
+	// overview stays an owner-written context path no command creates.
+	outputSchemaVersion    = 3
 	boundaryRuleID         = reportKind + ".boundary"
 	lifecycleRuleID        = reportKind + ".lifecycle"
 	shapeRuleID            = reportKind + ".source-shape"
 	boundaryMessage        = "proofkit admits caller-provided requirement source records without owning requirement meaning"
-	shapeMessage           = "requirement source package paths derive from the admitted overview.md and requirements.v2.json model"
+	shapeMessage           = "requirement source paths derive from the admitted specPackagePath and its requirements.v2.json"
 	lifecyclePassedMessage = "requirement source lifecycle and proof-route admission passed"
 	lifecycleFailedMessage = "requirement source lifecycle or proof-route admission failed"
 )
@@ -137,11 +139,11 @@ func Evaluate(raw any) (Result, error) {
 			"deferredRequirementCount": summary.DeferredRequirementCount,
 			"failureCount":             len(failures),
 			"requirementCount":         summary.RequirementCount,
-			"sourcePathCount":          3,
+			"sourcePathCount":          2,
 		},
 		Diagnostics: []report.Diagnostic{
 			{Key: "failures", Value: admit.StringSliceToAny(failures)},
-			{Key: "sourcePaths", Value: admit.StringSliceToAny(sortedStrings([]string{OverviewPath(summary.SpecPackagePath), RequirementsPath(summary.SpecPackagePath), summary.SpecPackagePath}))},
+			{Key: "sourcePaths", Value: admit.StringSliceToAny(sortedStrings([]string{RequirementsPath(summary.SpecPackagePath), summary.SpecPackagePath}))},
 		},
 		RuleResults: ruleResults(failures),
 		NonClaims:   admit.StringSliceToAny(nonClaims),

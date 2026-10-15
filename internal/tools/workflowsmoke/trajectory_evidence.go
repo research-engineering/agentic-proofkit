@@ -138,7 +138,9 @@ func trajectoryEnvironmentPolicy(scheduler map[string]any, class string) any {
 
 // trajectoryReceipt records one fixture observation for exactly one edge and
 // retains its subject manifest and log as consumer evidence files.
-func (t *trajectory) receipt(receiptID, status string, subjects trajectorySubjects) (map[string]any, error) {
+// It records the CLI-reported node digest of the edge's command as the plan
+// node the run executed under.
+func (t *trajectory) receipt(receiptID, status string, nodeDigests map[string]string, subjects trajectorySubjects) (map[string]any, error) {
 	logPath := "artifacts/receipts/" + receiptID + ".log"
 	manifestPath := "artifacts/receipts/" + receiptID + ".subjects.json"
 	log := []byte("fixture observation for " + subjects.Edge.CommandID + ": " + status + "\n")
@@ -169,7 +171,7 @@ func (t *trajectory) receipt(receiptID, status string, subjects trajectorySubjec
 		nonClaims = append(nonClaims, "The native witness was not run for this attempt.")
 	}
 	return map[string]any{
-		"receiptId": receiptID, "receiptKind": subjects.Edge.CommandID, "proofPlanId": trajectorySchedulerID,
+		"receiptId": receiptID, "receiptKind": subjects.Edge.CommandID, "proofPlanId": trajectorySchedulerID, "proofNodeDigest": nodeDigests[subjects.Edge.CommandID],
 		"sourceRevision": "fixture-working-tree", "proofBindingDigest": subjects.Binding, "commandDigest": subjects.Command,
 		"environmentClass": subjects.Edge.Environment, "environmentDigest": subjects.Environment,
 		"preconditionDigest": digest.SHA256TextRef("no recorded precondition blockers"),
@@ -190,7 +192,7 @@ func trajectoryReceiptInput(setID string, receipts ...map[string]any) map[string
 	}
 	sortAnyMaps(values, "receiptId")
 	return map[string]any{
-		"schemaVersion": json.Number("1"), "receiptSetId": setID, "receipts": values,
+		"schemaVersion": json.Number("2"), "receiptSetId": setID, "receipts": values,
 		"nonClaims": []any{"Fixture receipts do not authenticate a producer."},
 	}
 }

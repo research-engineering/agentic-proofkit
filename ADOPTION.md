@@ -268,7 +268,11 @@ compatibility; no automatic downgrade or control-state deletion is supported.
 New transactions prepare their complete journal in a private
 `.agentic-proofkit/transaction-residue/preparing-*` directory before publishing
 the active transaction. Interrupted unpublished preparation is retained there,
-does not block a later plan and is never automatically resumed or removed.
+does not block a later plan built from current inputs and is never
+automatically resumed or removed.
+Before the first adoption materialization, residue that adds `.agentic-proofkit/`
+to the repository root changes its inventory, so an earlier adoption source plan
+is stale; rerun `adopt plan` before `adopt materialize plan`.
 An error after active publication preserves the known journal for recovery.
 Older empty or incomplete active state may lack a recoverable transaction ID:
 do not invent an ID or delete unknown entries to bypass the failure. The explicit
@@ -351,9 +355,9 @@ human context in `overview.md` plus machine-admissible `requirements.v2.json`
 records. The overview explains context; it does not create uncited durable
 truth.
 
-The public source contract requires `schemaVersion: 2`, grouped requirement
-records, and the matching `specPackagePath/overview.md` and
-`specPackagePath/requirements.v2.json` paths. The former flat v1 source is not
+The public source contract requires `schemaVersion: 2` and grouped requirement
+records at `specPackagePath/requirements.v2.json`. `specPackagePath/overview.md`
+is the reserved path for owner-written context; no command generates it. The former flat v1 source is not
 an active public reader. Changing a version number or filename alone does not
 migrate a source, its references, or its proof bindings.
 

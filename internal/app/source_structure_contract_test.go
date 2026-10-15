@@ -19,7 +19,7 @@ import (
 )
 
 const sourceStructureDefinition = "proofkit.requirement-source.input.v2.json-schema"
-const sourceOutputStructureDefinition = "proofkit.requirement-source-admission.output.v2.json-schema"
+const sourceOutputStructureDefinition = "proofkit.requirement-source-admission.output.v3.json-schema"
 const sourceViewOutputStructureDefinition = "proofkit.requirement-source-view.output.v2.json-schema"
 const transitionInputStructureDefinition = "proofkit.requirement-source-transition.input.v2.json-schema"
 const transitionOutputStructureDefinition = "proofkit.requirement-source-transition.output.v3.json-schema"
