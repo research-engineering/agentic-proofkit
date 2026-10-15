@@ -28,8 +28,8 @@ var actionContinuations = []actionContinuation{
 func ContinuationGuide(renderer cliexec.Renderer) string {
 	lines := []string{
 		"Next-action continuation:",
-		"  The action packet is not executable and does not name its own recipe.",
-		"  Read the help named for the reported actionClass before any write:",
+		"  The action packet is never executable. Before any write, read the help",
+		"  of its commandRoute; an empty route means the owner must act:",
 	}
 	for _, item := range actionContinuations {
 		lines = append(lines, "  "+item.ActionClass+": "+item.Instruction)
@@ -38,8 +38,10 @@ func ContinuationGuide(renderer cliexec.Renderer) string {
 		}
 	}
 	lines = append(lines,
-		"  verification_required never means verified. A current receipt for one",
-		"  route does not reaffirm another; rerun status after every repository write.",
+		"  verification_required never means verified: status reads no receipts.",
+		"  Completion is the consumer's decision over a passed bundle and current",
+		"  receipts. A current receipt for one route does not reaffirm another;",
+		"  rerun status after every repository write.",
 	)
 	return strings.Join(lines, "\n") + "\n"
 }
