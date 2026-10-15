@@ -31,20 +31,36 @@ func TestNPMAbsenceBranchEntrypoint(t *testing.T) {
 	if index < 0 || len(os.Args[index+1:]) != 3 || os.Args[index+1] != "npm-absent" || os.Args[index+2] != "--error-file" {
 		os.Exit(97)
 	}
+	var ready *os.File
 	if os.Getenv("PROOFKIT_BRANCH_READY") == "1" {
-		ready := os.NewFile(3, "classifier-readiness")
+		ready = os.NewFile(3, "classifier-readiness")
 		if ready == nil {
 			os.Exit(97)
 		}
+		// Keep this descriptor until os.Exit; EOF is the independent exit witness.
 		if _, err := ready.Write([]byte{1}); err != nil {
 			os.Exit(97)
 		}
-		if err := ready.Close(); err != nil {
+		// The inherited reader exists before readiness; no later path open can
+		// lose a permit sent while this entrypoint is descheduled.
+		release := os.NewFile(6, "classifier-release")
+		if release == nil {
+			os.Exit(97)
+		}
+		if err := npmBranchMarker(release, 1); err != nil {
+			os.Exit(97)
+		}
+		if err := release.Close(); err != nil {
 			os.Exit(97)
 		}
 	}
 	os.Args = append([]string{"releasepreflight"}, os.Args[index+1:]...)
 	main()
+	if ready != nil {
+		if _, err := ready.Write([]byte{2}); err != nil {
+			os.Exit(97)
+		}
+	}
 	os.Exit(0)
 }
 
@@ -53,7 +69,9 @@ type npmBranchCase struct {
 	viewExit, existingExit int
 	publish, success       bool
 	wantLimit              string
-	readyObservationDelay  time.Duration
+	delayedChildStartup    bool
+	lateReadyObservation   bool
+	removeCleanupWait      bool
 }
 
 func testNPMAbsenceBranchExecution(t *testing.T) {
@@ -115,29 +133,58 @@ func testNPMAbsenceBranchExecution(t *testing.T) {
 			t.Fatal(err)
 		}
 		if job == "candidate" {
+			t.Run("carrier/dispatch permit queued before read", func(t *testing.T) {
+				control := newNPMBranchControl(t)
+				if err := control.release(); err != nil {
+					t.Fatal(err)
+				}
+				if err := npmBranchMarker(control.releaseReader, 1); err != nil {
+					t.Fatalf("queued dispatch permit was lost: %v", err)
+				}
+				if n, err := control.releaseReader.Read(make([]byte, 1)); n != 0 || err != io.EOF {
+					t.Fatalf("dispatch writer did not close after one permit: n=%d err=%v", n, err)
+				}
+			})
 			t.Run("carrier/stdio bound", func(t *testing.T) {
 				item := cases[0]
 				item.wantLimit = "stdio"
 				executeNPMAbsenceBranch(t, header+"printf '%17000s' x\n", body, item)
 			})
 			for _, startup := range []struct {
-				name, prefix     string
-				observationDelay time.Duration
+				name                 string
+				delayedChildStartup  bool
+				lateReadyObservation bool
 			}{
 				{name: "immediate"},
-				{name: "delayed child startup", prefix: "while (( SECONDS < 3 )); do :; done\n"},
-				{name: "delayed readiness observation", observationDelay: 1500 * time.Millisecond},
+				{name: "delayed child startup", delayedChildStartup: true},
+				{name: "delayed readiness observation", lateReadyObservation: true},
 			} {
 				t.Run("carrier/blocked entrypoint cancellation/"+startup.name, func(t *testing.T) {
 					item := cases[0]
 					item.wantLimit = "context"
-					item.readyObservationDelay = startup.observationDelay
-					result := executeNPMAbsenceBranch(t, header+startup.prefix, body, item)
+					item.delayedChildStartup = startup.delayedChildStartup
+					item.lateReadyObservation = startup.lateReadyObservation
+					result := executeNPMAbsenceBranch(t, header, body, item)
+					if result.orderingError != nil {
+						t.Fatal(result.orderingError)
+					}
 					if result.trace != "view\nabsent\ncancelled\nreaped\n" {
-						t.Fatal("cancelled carrier must wait for the classifier deadline before shell exit")
+						t.Fatalf("cancelled carrier must reap the classifier before shell exit: trace=%q exit=%d", result.trace, result.exitCode)
 					}
 				})
 			}
+			t.Run("carrier/removed cleanup wait counterexample", func(t *testing.T) {
+				item := cases[0]
+				item.wantLimit = "context"
+				item.removeCleanupWait = true
+				result := executeNPMAbsenceBranch(t, header, body, item)
+				if result.orderingError == nil || result.orderingError.Error() != "carrier cleanup did not wait for classifier exit" {
+					t.Fatalf("removed-wait rejection=%v, want live-classifier cause", result.orderingError)
+				}
+				if result.trace != "view\nabsent\ncancelled\nreaped\n" || result.exitCode != 124 {
+					t.Fatalf("removed-wait mutant changed protected trace or exit: trace=%q exit=%d", result.trace, result.exitCode)
+				}
+			})
 		}
 		for _, item := range cases {
 			t.Run(job+"/"+item.name, func(t *testing.T) {
@@ -241,6 +288,7 @@ func npmAbsenceBranchFragment(raw []byte, job string) (string, string, error) {
 type npmBranchResult struct {
 	trace, stdout, stderr string
 	exitCode              int
+	orderingError         error
 }
 
 func checkNPMAbsenceBranch(result npmBranchResult, item npmBranchCase, job string) error {
@@ -288,27 +336,28 @@ func executeNPMAbsenceBranch(t *testing.T, header, body string, item npmBranchCa
 		t.Fatal(err)
 	}
 	const childTimeout = 3 * time.Second
+	var control *npmBranchControl
 	if item.wantLimit == "context" {
-		// Fault only the fixture input: main blocks opening this FIFO until
-		// cancellation. The child's own test deadline exits it; Bash must wait.
-		if err := syscall.Mkfifo(filepath.Join(dir, "blocked-report"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		if strings.Count(body, "--error-file ./npm-view.json") != 1 {
-			t.Fatal("blocked-input fault target drift")
-		}
-		body = strings.Replace(body, "--error-file ./npm-view.json", "--error-file ./blocked-report", 1)
+		// Hold the test entrypoint before real dispatch, then release it only
+		// after cancellation. The deadline bounds faults; it is not the oracle.
+		control = newNPMBranchControl(t)
 	}
 	script := `child=
 cleanup() {
   if [[ -n "$child" ]]; then
+    if [[ "$BRANCH_CONTROL" == 1 ]]; then printf W >&5; fi
     wait "$child" 2>/dev/null || :
+    if [[ "$BRANCH_CONTROL" == 1 ]]; then
+      printf D >&5
+      IFS= read -r permit <&4
+      [[ "$permit" == finish ]] || return 97
+    fi
     printf 'reaped\n' >> trace
     child=
   fi
 }
 trap cleanup EXIT
-trap 'printf "cancelled\n" >> trace; exit 124' TERM INT
+trap 'printf "cancelled\n" >> trace; if [[ "$BRANCH_CONTROL" == 1 ]]; then printf C >&5; fi; exit 124' TERM INT
 npm() {
   case "$1" in
     view) printf 'view\n' >> trace; printf '%s' "$BRANCH_PAYLOAD"; printf 'E404 Not found diagnostic-marker\n' >&2; return "$BRANCH_VIEW_EXIT" ;;
@@ -327,8 +376,20 @@ go() {
       ;;
     npm-absent)
       printf 'absent\n' >> trace
-      "$BRANCH_BINARY" -test.run='^TestNPMAbsenceBranchEntrypoint$' -test.timeout=` + childTimeout.String() + ` -- "$@" </dev/null &
+      if [[ "$BRANCH_DELAY_START" == 1 ]]; then
+        printf T >&5
+        IFS= read -r permit <&4
+        [[ "$permit" == start ]] || return 97
+      fi
+      "$BRANCH_BINARY" -test.run='^TestNPMAbsenceBranchEntrypoint$' -test.timeout=` + childTimeout.String() + ` -- "$@" </dev/null 4<&- 5>&- &
+      if [[ "$BRANCH_CONTROL" == 1 ]]; then
+        exec 3>&- 6<&-
+        printf S >&5
+        IFS= read -r permit <&4
+        [[ "$permit" == register ]] || return 97
+      fi
       child=$!
+      if [[ "$BRANCH_CONTROL" == 1 ]]; then printf P >&5; fi
       local status=0
       wait "$child" || status=$?
       child=
@@ -345,25 +406,29 @@ REGISTRY_URL=unused
 metadata=fixture
 report=report.json
 ` + header + "for filename in fixture.tgz; do\n" + body + "\ndone\nprintf 'complete\\n' >> trace\n"
+	if item.removeCleanupWait {
+		const wait = "    wait \"$child\" 2>/dev/null || :\n"
+		if strings.Count(script, wait) != 1 {
+			t.Fatal("cleanup wait mutation target drift")
+		}
+		script = strings.Replace(script, wait, "    :\n", 1)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	deadline := time.AfterFunc(5*time.Second, cancel)
 	defer deadline.Stop()
 	cmd := exec.CommandContext(ctx, "/bin/bash", "--noprofile", "--norc", "-c", script)
 	cmd.Dir = dir
-	cmd.Env = childcoverage.Environment(t, []string{"PATH=" + dir, "HOME=" + dir, "TMPDIR=" + dir, "PROOFKIT_BRANCH_ENTRYPOINT=1", "BRANCH_BINARY=" + binary, "BRANCH_PAYLOAD=" + item.payload, fmt.Sprintf("BRANCH_VIEW_EXIT=%d", item.viewExit), fmt.Sprintf("BRANCH_EXISTING_EXIT=%d", item.existingExit)})
+	cmd.Env = childcoverage.Environment(t, []string{"PATH=" + dir, "HOME=" + dir, "TMPDIR=" + dir, "PROOFKIT_BRANCH_ENTRYPOINT=1", "BRANCH_BINARY=" + binary, "BRANCH_PAYLOAD=" + item.payload, fmt.Sprintf("BRANCH_VIEW_EXIT=%d", item.viewExit), fmt.Sprintf("BRANCH_EXISTING_EXIT=%d", item.existingExit), "BRANCH_CONTROL=0", "BRANCH_DELAY_START=0"})
 	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
 	cmd.WaitDelay = childTimeout + time.Second
-	var readyReader, readyWriter *os.File
-	if item.wantLimit == "context" {
-		readyReader, readyWriter, err = os.Pipe()
-		if err != nil {
-			t.Fatal(err)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if control != nil {
+		cmd.ExtraFiles = []*os.File{control.readyWriter, control.commandReader, control.eventWriter, control.releaseReader}
+		cmd.Env = append(cmd.Env, "PROOFKIT_BRANCH_READY=1", "BRANCH_CONTROL=1")
+		if item.delayedChildStartup {
+			cmd.Env = append(cmd.Env, "BRANCH_DELAY_START=1")
 		}
-		defer readyReader.Close()
-		defer readyWriter.Close()
-		cmd.ExtraFiles = []*os.File{readyWriter}
-		cmd.Env = append(cmd.Env, "PROOFKIT_BRANCH_READY=1")
 	}
 	var stdout, stderr npmBranchOutput
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -371,43 +436,22 @@ report=report.json
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("branch shell failed to start: %v", err)
 	}
-	var readinessError error
-	if readyReader != nil {
-		_ = readyWriter.Close()
-		ready := make(chan error, 1)
-		go func() {
-			var marker [1]byte
-			_, err := io.ReadFull(readyReader, marker[:])
-			if err == nil && marker[0] != 1 {
-				err = fmt.Errorf("invalid classifier readiness marker")
+	var orderingError error
+	if control != nil {
+		control.closeChildEnds()
+		orderingError = control.run(item, func() error {
+			if !deadline.Stop() {
+				return fmt.Errorf("classifier startup watchdog elapsed")
 			}
-			if item.readyObservationDelay != 0 {
-				time.Sleep(item.readyObservationDelay)
-			}
-			ready <- err
-		}()
-		select {
-		case readinessError = <-ready:
-			if readinessError == nil {
-				if deadline.Stop() {
-					cancel()
-				} else {
-					readinessError = fmt.Errorf("classifier startup watchdog elapsed")
-				}
-			}
-			if readinessError != nil {
-				cancel()
-			}
-		case <-ctx.Done():
-			_ = readyReader.Close()
-			readinessError = errors.Join(fmt.Errorf("classifier startup watchdog elapsed"), <-ready)
+			cancel()
+			return nil
+		})
+		if orderingError != nil && !control.finished {
+			cancel()
+			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		}
-		_ = readyReader.Close()
 	}
 	err = cmd.Wait()
-	if readinessError != nil {
-		t.Fatalf("classifier did not reach the operation boundary: %v", readinessError)
-	}
 	if cmd.ProcessState == nil {
 		t.Fatal("branch shell did not start and finish")
 	}
@@ -438,7 +482,7 @@ report=report.json
 	if err != nil || len(content) > 4096 {
 		t.Fatal("branch trace exceeds its bound")
 	}
-	return npmBranchResult{string(content), stdout.String(), stderr.String(), cmd.ProcessState.ExitCode()}
+	return npmBranchResult{trace: string(content), stdout: stdout.String(), stderr: stderr.String(), exitCode: cmd.ProcessState.ExitCode(), orderingError: orderingError}
 }
 
 type npmBranchOutput struct {

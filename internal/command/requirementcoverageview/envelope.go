@@ -8,6 +8,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
+const coverageEnvelopeTokenBudget = 2400
+
 func agentEnvelope(view map[string]any, renderer cliexec.Renderer) map[string]any {
 	state := stringValue(view["state"])
 	failures := stringArray(view["failures"])
@@ -55,7 +57,7 @@ func agentEnvelope(view map[string]any, renderer cliexec.Renderer) map[string]an
 			"maxContextRefs":  5,
 			"maxOmittedItems": 0,
 			"maxReceiptRefs":  0,
-			"maxTokenBudget":  2400,
+			"maxTokenBudget":  coverageEnvelopeTokenBudget,
 			"nonClaim":        "Bounds describe emitted guidance only and do not prove tokenizer-specific coverage.",
 			"omittedCount":    max(0, len(failures)-len(blockers)),
 		},

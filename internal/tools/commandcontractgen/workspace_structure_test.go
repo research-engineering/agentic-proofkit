@@ -45,9 +45,12 @@ func TestWorkspaceStructuresBindExactOwnersAndRejectRehashedDrift(t *testing.T) 
 					if len(variants) != 2 {
 						t.Fatal("missing explicit planning/envelope output alternatives")
 					}
-					envelope, err := agentEnvelopeRootStructure()
-					if err != nil || !equalPublishedSchema(variants[0].(map[string]any)["schema"], envelope) {
-						t.Fatal("agent envelope differs from shared owner")
+					envelope := workspaceplanning.ChangedPlanEnvelopeStructure()
+					if family.command == "workspace-shard-partition" {
+						envelope = workspaceplanning.ShardEnvelopeStructure()
+					}
+					if !equalPublishedSchema(variants[0].(map[string]any)["schema"], envelope) {
+						t.Fatal("agent envelope differs from its producer owner")
 					}
 				} else if len(variants) != 1 {
 					t.Fatal("unexpected root alternatives")
