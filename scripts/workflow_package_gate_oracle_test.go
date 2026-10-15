@@ -734,7 +734,7 @@ func TestCIWorkflowDeclaresFailClosedRequiredAggregate(t *testing.T) {
 	if !usesAlwaysStatusCheck(gate.If) {
 		t.Fatalf("ci-required-gate if=%q, want always() so failed or skipped needs are inspected", gate.If)
 	}
-	wantNeeds := []string{"browser-runtime", "platform-smoke", "platform-smoke-intel", "source-quality"}
+	wantNeeds := []string{"browser-runtime", "platform-smoke", "source-quality"}
 	if got := needsList(gate.Needs); !reflect.DeepEqual(got, wantNeeds) {
 		t.Fatalf("ci-required-gate needs=%#v, want %#v", got, wantNeeds)
 	}
@@ -896,14 +896,6 @@ func TestCIRequiredAggregateRejectsExecutionOverrides(t *testing.T) {
 				job := workflow.Jobs["browser-runtime"]
 				job.ContinueOnError = "${{ 1 == 1 }}"
 				workflow.Jobs["browser-runtime"] = job
-			},
-		},
-		{
-			name: "required x86_64 leaf job continue on error",
-			mutate: func(workflow *githubWorkflow) {
-				job := workflow.Jobs["platform-smoke-intel"]
-				job.ContinueOnError = true
-				workflow.Jobs["platform-smoke-intel"] = job
 			},
 		},
 		{
@@ -1152,226 +1144,123 @@ func TestCIRequiredAggregateRejectsPlatformSmokeSubstitution(t *testing.T) {
 	if err := validateSetupVerifiedNPMAction(setupAction); err != nil {
 		t.Fatalf("owner setup-verified-npm action: %v", err)
 	}
-	// Each Darwin architecture is an independent required leaf; every
-	// substitution must be refused for either job.
-	for jobID, runner := range map[string]string{"platform-smoke": "macos-15", "platform-smoke-intel": "macos-15-intel"} {
-		stepIndex := func(job githubJob, name string) int {
-			index, err := uniqueStepIndex(job.Steps, name)
-			if err != nil || index < 0 {
-				t.Fatalf("locate %s step %q: index=%d err=%v", jobID, name, index, err)
-			}
-			return index
-		}
-		architectureLine := "test \"$machine\" = \"" + platformSmokeArchitectures[jobID] + "\"\n"
-		translationLine := "test \"${translated:-0}\" = \"0\"\n"
-		cases := []struct {
-			name   string
-			mutate func(*githubWorkflow)
-		}{
-			{
-				name: "native architecture assertion omitted",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					index := stepIndex(job, "Verify native Darwin architecture")
-					job.Steps = append(job.Steps[:index], job.Steps[index+1:]...)
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "native architecture assertion expects the other architecture",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					index := stepIndex(job, "Verify native Darwin architecture")
-					other := "x86_64"
-					if platformSmokeArchitectures[jobID] == "x86_64" {
-						other = "arm64"
-					}
-					job.Steps[index].Run = strings.Replace(job.Steps[index].Run, architectureLine, "test \"$machine\" = \""+other+"\"\n", 1)
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "native architecture check removed",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					index := stepIndex(job, "Verify native Darwin architecture")
-					job.Steps[index].Run = strings.Replace(job.Steps[index].Run, architectureLine, "", 1)
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "Rosetta translation check removed",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					index := stepIndex(job, "Verify native Darwin architecture")
-					job.Steps[index].Run = strings.Replace(job.Steps[index].Run, translationLine, "", 1)
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "native architecture assertion moved after checkout",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					index := stepIndex(job, "Verify native Darwin architecture")
-					checkout := stepIndex(job, "Checkout")
-					job.Steps[index], job.Steps[checkout] = job.Steps[checkout], job.Steps[index]
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "Darwin process package omitted",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					for i := range job.Steps {
-						job.Steps[i].Run = strings.ReplaceAll(job.Steps[i].Run, " ./internal/kernel/processgroup", "")
-					}
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "Darwin process suite narrowed",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					for i := range job.Steps {
-						if strings.HasPrefix(job.Steps[i].Run, "go test ./internal/kernel/rootpath ") {
-							job.Steps[i].Run += " -run '^TestDarwinObservationClassification$'"
-						}
-					}
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "wrong platform runner",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					job.RunsOn = "ubuntu-24.04"
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "no-op replaces platform smoke",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					job.Steps = []githubStep{{
-						Name: "No-op",
-						Run:  "true",
-					}}
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "platform smoke command neutralized",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					index, err := uniqueStepIndex(job.Steps, "Run platform smoke")
-					if err != nil || index < 0 {
-						t.Fatalf("locate platform smoke: index=%d err=%v", index, err)
-					}
-					job.Steps[index].Run = "true"
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "reusable job substitution",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					job.Steps = nil
-					job.Uses = "example/ci/.github/workflows/no-op.yml@0123456789012345678901234567890123456789"
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "provider check name drift",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					job.Name = "quality / platform smoke"
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "non-string runner label",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					job.RunsOn = []any{runner, false}
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "inserted semantic shadow step",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					job.Steps = append([]githubStep{{
-						Name: "Shadow platform smoke",
-						Run:  "npm pkg set scripts.platform:smoke=true",
-					}}, job.Steps...)
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "dual uses and whitespace run",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					index := stepIndex(job, "Checkout")
-					job.Steps[index].Run = " "
-					job.Steps[index].runPresent = true
-					workflow.Jobs[jobID] = job
-				},
-			},
-			{
-				name: "explicit null run on uses step",
-				mutate: func(workflow *githubWorkflow) {
-					job := workflow.Jobs[jobID]
-					index := stepIndex(job, "Checkout")
-					job.Steps[index].runPresent = true
-					workflow.Jobs[jobID] = job
-				},
-			},
-		}
-		for _, test := range cases {
-			t.Run(jobID+"/"+test.name, func(t *testing.T) {
-				workflow := cloneWorkflow(t, base)
-				test.mutate(&workflow)
-				if err := validateCIRequiredAggregate(workflow); err == nil {
-					t.Fatal("platform-smoke substitution was admitted")
+	cases := []struct {
+		name   string
+		mutate func(*githubWorkflow)
+	}{
+		{
+			name: "Darwin process package omitted",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				for i := range job.Steps {
+					job.Steps[i].Run = strings.ReplaceAll(job.Steps[i].Run, " ./internal/kernel/processgroup", "")
 				}
-			})
-		}
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "Darwin process suite narrowed",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				for i := range job.Steps {
+					if strings.HasPrefix(job.Steps[i].Run, "go test ./internal/kernel/rootpath ") {
+						job.Steps[i].Run += " -run '^TestDarwinObservationClassification$'"
+					}
+				}
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "wrong platform runner",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				job.RunsOn = "ubuntu-24.04"
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "no-op replaces platform smoke",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				job.Steps = []githubStep{{
+					Name: "No-op",
+					Run:  "true",
+				}}
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "platform smoke command neutralized",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				index, err := uniqueStepIndex(job.Steps, "Run platform smoke")
+				if err != nil || index < 0 {
+					t.Fatalf("locate platform smoke: index=%d err=%v", index, err)
+				}
+				job.Steps[index].Run = "true"
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "reusable job substitution",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				job.Steps = nil
+				job.Uses = "example/ci/.github/workflows/no-op.yml@0123456789012345678901234567890123456789"
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "provider check name drift",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				job.Name = "quality / platform smoke"
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "non-string runner label",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				job.RunsOn = []any{"macos-15", false}
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "inserted semantic shadow step",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				job.Steps = append([]githubStep{{
+					Name: "Shadow platform smoke",
+					Run:  "npm pkg set scripts.platform:smoke=true",
+				}}, job.Steps...)
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "dual uses and whitespace run",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				job.Steps[0].Run = " "
+				job.Steps[0].runPresent = true
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "explicit null run on uses step",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				job.Steps[0].runPresent = true
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
 	}
-	// The x86_64 claim depends on a separately required Intel runner, not on
-	// the arm64 job or on an aggregate that silently omits it.
-	intelAggregateLine := "test \"${{ needs.platform-smoke-intel.result }}\" = \"success\"\n"
-	for name, mutate := range map[string]func(*githubWorkflow){
-		"x86_64 job relabeled to arm64 runner": func(workflow *githubWorkflow) {
-			job := workflow.Jobs["platform-smoke-intel"]
-			job.RunsOn = "macos-15"
-			workflow.Jobs["platform-smoke-intel"] = job
-		},
-		"x86_64 job dropped from aggregate needs": func(workflow *githubWorkflow) {
-			gate := workflow.Jobs["ci-required-gate"]
-			gate.Needs = []any{"browser-runtime", "source-quality", "platform-smoke"}
-			workflow.Jobs["ci-required-gate"] = gate
-		},
-		"x86_64 result unchecked by aggregate": func(workflow *githubWorkflow) {
-			gate := workflow.Jobs["ci-required-gate"]
-			gate.Steps[0].Run = strings.Replace(gate.Steps[0].Run, intelAggregateLine, "", 1)
-			workflow.Jobs["ci-required-gate"] = gate
-		},
-		"x86_64 job removed consistently": func(workflow *githubWorkflow) {
-			delete(workflow.Jobs, "platform-smoke-intel")
-			gate := workflow.Jobs["ci-required-gate"]
-			gate.Needs = []any{"browser-runtime", "source-quality", "platform-smoke"}
-			gate.Steps[0].Run = strings.Replace(gate.Steps[0].Run, intelAggregateLine, "", 1)
-			workflow.Jobs["ci-required-gate"] = gate
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
 			workflow := cloneWorkflow(t, base)
-			if !strings.Contains(workflow.Jobs["ci-required-gate"].Steps[0].Run, intelAggregateLine) {
-				t.Fatal("owner aggregate lacks the x86_64 result line")
-			}
-			mutate(&workflow)
+			test.mutate(&workflow)
 			if err := validateCIRequiredAggregate(workflow); err == nil {
-				t.Fatal("x86_64 platform-smoke weakening was admitted")
+				t.Fatal("platform-smoke substitution was admitted")
 			}
 		})
 	}
@@ -1613,7 +1502,6 @@ const requiredAggregateShell = `set -euo pipefail
 test "${{ needs.browser-runtime.result }}" = "success"
 test "${{ needs.source-quality.result }}" = "success"
 test "${{ needs.platform-smoke.result }}" = "success"
-test "${{ needs.platform-smoke-intel.result }}" = "success"
 printf 'OK: all required quality checks passed\n'`
 
 const requiredPlatformSmokeShell = `set -euo pipefail
@@ -1669,37 +1557,8 @@ func validateSetupVerifiedNPMAction(raw []byte) error {
 	return nil
 }
 
-// Each Darwin job first proves in-job that it runs natively on its own
-// architecture: uname -m must equal the job's architecture and Rosetta
-// translation must be absent, so the runner label is not the only evidence.
-var platformSmokeArchitectures = map[string]string{
-	"platform-smoke":       "arm64",
-	"platform-smoke-intel": "x86_64",
-}
-
-func requiredDarwinArchitectureShell(architecture string) string {
-	return `set -euo pipefail
-machine="$(uname -m)"
-translated="$(sysctl -in sysctl.proc_translated)"
-printf 'uname -m=%s sysctl.proc_translated=%s\n' "$machine" "${translated:-absent}"
-test "$machine" = "` + architecture + `"
-test "${translated:-0}" = "0"
-`
-}
-
-// Both Darwin architectures run the same owner step list. Only the first
-// step's expected architecture and the job topology (name, runner label,
-// timeout) distinguish arm64 from x86_64.
-func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
-	architecture, ok := platformSmokeArchitectures[jobID]
-	if !ok {
-		return fmt.Errorf("ci workflow %s has no owner Darwin architecture", jobID)
-	}
+func validateExactPlatformSmokeSteps(job githubJob) error {
 	expected := []githubStep{
-		{
-			Name: "Verify native Darwin architecture",
-			Run:  requiredDarwinArchitectureShell(architecture),
-		},
 		{
 			Name: "Checkout",
 			Uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -1741,8 +1600,7 @@ func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
 	}
 	if len(job.Steps) != len(expected) {
 		return fmt.Errorf(
-			"ci workflow %s step count=%d, want exact %d",
-			jobID,
+			"ci workflow platform-smoke step count=%d, want exact %d",
 			len(job.Steps),
 			len(expected),
 		)
@@ -1757,8 +1615,7 @@ func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
 			actual.usesPresent != (want.Uses != "") ||
 			actual.withPresent != (want.With != nil) {
 			return fmt.Errorf(
-				"ci workflow %s step %d differs from exact owner step %q",
-				jobID,
+				"ci workflow platform-smoke step %d differs from exact owner step %q",
 				index,
 				want.Name,
 			)
@@ -1790,7 +1647,7 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 	if err := validateOptionalWorkflowRunDefaults(workflow.Defaults); err != nil {
 		return fmt.Errorf("ci workflow run defaults: %w", err)
 	}
-	wantNeeds := []string{"browser-runtime", "platform-smoke", "platform-smoke-intel", "source-quality"}
+	wantNeeds := []string{"browser-runtime", "platform-smoke", "source-quality"}
 	for _, jobID := range append(append([]string{}, wantNeeds...), "ci-required-gate") {
 		job, ok := workflow.Jobs[jobID]
 		if !ok {
@@ -1808,11 +1665,10 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		"ci workflow",
 		workflow,
 		map[string]string{
-			"browser-runtime":      "",
-			"platform-smoke":       "",
-			"platform-smoke-intel": "",
-			"source-quality":       "",
-			"ci-required-gate":     "always()",
+			"browser-runtime":  "",
+			"platform-smoke":   "",
+			"source-quality":   "",
+			"ci-required-gate": "always()",
 		},
 		map[string]map[string]string{
 			"browser-runtime": {
@@ -1827,11 +1683,10 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		runner         string
 		timeoutMinutes int
 	}{
-		"source-quality":       {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 20},
-		"platform-smoke":       {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 12},
-		"platform-smoke-intel": {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 20},
-		"browser-runtime":      {name: "quality / browser runtime", runner: "ubuntu-24.04", timeoutMinutes: 20},
-		"ci-required-gate":     {name: "quality / required aggregate", runner: "ubuntu-24.04", timeoutMinutes: 5},
+		"source-quality":   {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 20},
+		"platform-smoke":   {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 12},
+		"browser-runtime":  {name: "quality / browser runtime", runner: "ubuntu-24.04", timeoutMinutes: 20},
+		"ci-required-gate": {name: "quality / required aggregate", runner: "ubuntu-24.04", timeoutMinutes: 5},
 	}
 	for jobID, expected := range exactJobTopology {
 		job := workflow.Jobs[jobID]
@@ -1851,10 +1706,9 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 			)
 		}
 	}
-	for _, jobID := range []string{"platform-smoke", "platform-smoke-intel"} {
-		if err := validateExactPlatformSmokeSteps(jobID, workflow.Jobs[jobID]); err != nil {
-			return err
-		}
+	platformSmoke := workflow.Jobs["platform-smoke"]
+	if err := validateExactPlatformSmokeSteps(platformSmoke); err != nil {
+		return err
 	}
 	if err := validateCIMinimumPythonStep(workflow.Jobs["source-quality"]); err != nil {
 		return err

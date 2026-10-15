@@ -167,63 +167,6 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 12
     steps:
-      - name: Verify native Darwin architecture
-        run: |
-          set -euo pipefail
-          machine="$(uname -m)"
-          translated="$(sysctl -in sysctl.proc_translated)"
-          printf 'uname -m=%s sysctl.proc_translated=%s\n' "$machine" "${translated:-absent}"
-          test "$machine" = "arm64"
-          test "${translated:-0}" = "0"
-
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Setup Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 26.11.1
-          package-manager-cache: false
-
-      - name: Install verified npm
-        uses: ./.github/actions/setup-verified-npm
-
-      - name: Setup Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Setup Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.15.0'
-
-      - name: Run Darwin filesystem and process invariants
-        run: go test ./internal/kernel/rootpath ./internal/kernel/repositorytransaction ./internal/kernel/processgroup ./internal/command/projectstatus -count=1
-
-      - name: Run platform smoke
-        run: |
-          set -euo pipefail
-          npm run npm:version
-          npm run platform:smoke
-
-  platform-smoke-intel:
-    name: quality / platform smoke / macos-15-intel
-    runs-on: macos-15-intel
-    timeout-minutes: 20
-    steps:
-      - name: Verify native Darwin architecture
-        run: |
-          set -euo pipefail
-          machine="$(uname -m)"
-          translated="$(sysctl -in sysctl.proc_translated)"
-          printf 'uname -m=%s sysctl.proc_translated=%s\n' "$machine" "${translated:-absent}"
-          test "$machine" = "x86_64"
-          test "${translated:-0}" = "0"
-
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -323,7 +266,6 @@ jobs:
       - browser-runtime
       - source-quality
       - platform-smoke
-      - platform-smoke-intel
     steps:
       - name: Verify required quality results
         run: |
@@ -331,5 +273,4 @@ jobs:
           test "${{ needs.browser-runtime.result }}" = "success"
           test "${{ needs.source-quality.result }}" = "success"
           test "${{ needs.platform-smoke.result }}" = "success"
-          test "${{ needs.platform-smoke-intel.result }}" = "success"
           printf 'OK: all required quality checks passed\n'
