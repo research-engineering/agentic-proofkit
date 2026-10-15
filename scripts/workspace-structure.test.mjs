@@ -85,6 +85,29 @@ test("all predecessor observations preserve exact exit stderr and stdout bytes",
   }
 });
 
+test("published workspace envelope variants reject independent nested corruption", () => {
+  const mutations = [
+    ["action item", value => {value.actionPlan[0] = 0;}],
+    ["action field", value => {delete value.actionPlan[0].instruction;}],
+    ["unknown action field", value => {value.actionPlan[0].unexpected = true;}],
+    ["empty bounds", value => {value.bounds = {};}],
+    ["missing bound", value => {delete value.bounds.maxActionItems;}],
+    ["declared token budget", value => {value.bounds.maxTokenBudget = 0;}],
+    ["empty cost contract", value => {value.costContract = {};}],
+    ["source state type", value => {value.sourceReport.state = 0;}],
+    ["context item", value => {value.contextRefs[0] = 0;}],
+    ["route question field", value => {delete value.routeQuestions[0].question;}],
+  ];
+  for (const command of [changed, shard]) {
+    const output = native(command, seed(command), ["--agent-envelope"]).output;
+    for (const [label, mutate] of mutations) {
+      const corrupted = structuredClone(output);
+      mutate(corrupted);
+      assert.equal(families[command].output(corrupted), false, `${command}/${label}`);
+    }
+  }
+});
+
 test("shard resource limits reject before expansion while preserving wire version one", () => {
   for (const shardTotal of [1, 1024]) {
     const input = {schemaVersion: 1, packages: [], roots: [], shardTotal};
