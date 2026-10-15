@@ -2,6 +2,8 @@ package workspaceplanning
 
 import "github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
 
+const workspaceEnvelopeTokenBudget = 2500
+
 type omissionSeed struct {
 	ID          string
 	Count       int
@@ -71,7 +73,7 @@ func BuildChangedPackagePlanEnvelope(plan map[string]any) map[string]any {
 			"maxContextRefs":  3,
 			"maxOmittedItems": len(omitted),
 			"maxReceiptRefs":  0,
-			"maxTokenBudget":  2500,
+			"maxTokenBudget":  workspaceEnvelopeTokenBudget,
 			"nonClaim":        "Workspace planning envelope bounds do not prove package graph freshness, command adequacy, or merge satisfaction.",
 			"omittedCount":    omittedCount(omitted),
 		},
@@ -165,7 +167,7 @@ func BuildShardPartitionEnvelope(partition map[string]any) map[string]any {
 			"maxContextRefs":  4,
 			"maxOmittedItems": len(omitted),
 			"maxReceiptRefs":  0,
-			"maxTokenBudget":  2500,
+			"maxTokenBudget":  workspaceEnvelopeTokenBudget,
 			"nonClaim":        "Workspace shard envelope bounds do not prove dependency graph freshness, runner capacity, command success, or merge satisfaction.",
 			"omittedCount":    omittedCount(omitted),
 		},
