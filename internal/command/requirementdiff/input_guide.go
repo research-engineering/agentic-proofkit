@@ -13,9 +13,9 @@ func InputGuide(renderer cliexec.Renderer) string {
 }
 
 const inputGuide = `Requirement semantic diff input guide:
-  The diff compares admitted requirement and scenario fields of two retained
-  contexts. It is not a text or Git diff and does not read files, decide proof
-  freshness, execute witnesses or approve a change. Capture each context with:
+  The diff compares admitted requirement fields of two retained contexts. It
+  is not a text or Git diff and does not read files, decide proof freshness,
+  execute witnesses or approve a change. Capture each context with:
     {{cli}} requirement-context-compose --help
   Retain baseContext before the change and currentContext after it as the
   complete compose stdout objects; never edit, merge or rebuild either one.
@@ -36,12 +36,10 @@ Diff template (required null operands deliberately reject admission):
 ` + "```" + `
 
   {{cli}} requirement-semantic-diff --input <diff-input>
-  Each change names entityKind, entityId, changeClass and jsonPointer. A
-  scenario-body edit appears as scenario entries under
-  /requirementSources/<sourceId>/scenarios/<scenarioId> and as its member
-  requirements' sourceReviewDigest change. changeCount 0 means no compared
-  requirement or scenario field changed; binding, witness, test and command
-  edits are outside this comparison. Compare their proof fragments with
+  Each change names entityId, changeClass and jsonPointer. A scenario-body edit
+  appears as its member requirements' sourceReviewDigest change. changeCount 0
+  means no compared requirement field changed; binding, witness, test and
+  command edits are outside this comparison. Compare their proof fragments with
   requirement-context-slice and re-check retained receipt subjects with
   receipt-currentness-scope before reusing earlier execution evidence.
 `

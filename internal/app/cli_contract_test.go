@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "385ac70caa7397e108b46de1fd515d41c7f93544b4862791e1b745df4f60d5ee"
+	cliContractPublicABISHA256               = "22977a04d80bcbc7140d191ff16073fbaa49a6e0cf38cabffefa67298058b0a1"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -656,7 +656,7 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.requirement-context-slice.input.v2.json-schema":             {},
 			"proofkit.requirement-context-slice.output.v2.json-schema":            {},
 			"proofkit.requirement-semantic-diff.input.v3.json-schema":             {},
-			"proofkit.requirement-semantic-diff.output.v4.json-schema":            {},
+			"proofkit.requirement-semantic-diff.output.v3.json-schema":            {},
 			"proofkit.requirement-traceability-graph.input.v3.json-schema":        {},
 			"proofkit.requirement-traceability-graph.output.v1.json-schema":       {},
 			"proofkit.transaction-inspect-residue.output.v1.json-schema":          {},
