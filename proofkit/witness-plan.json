@@ -2042,6 +2042,7 @@
         "scripts/release-classification-structure.test.mjs",
         "scripts/report-admission-structure.test.mjs",
         "scripts/scaffold-doctor-structure.test.mjs",
+        "scripts/schema-completeness.test.mjs",
         "scripts/schema-definitions.mjs",
         "scripts/schema-definitions.test.mjs",
         "scripts/selective-proof-fixtures.mjs",
