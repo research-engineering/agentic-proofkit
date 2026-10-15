@@ -234,6 +234,47 @@ func TestInstalledPythonCarrierRejectsContractReplacementRemovalAndSymlink(t *te
 	})
 }
 
+// The local consumer proof must install the admitted wheel bytes, not reread an
+// artifacts/pypi file replaced after admission.
+func TestVerifyLocalPythonConsumerInstallsAdmittedBytesAfterArtifactReplacement(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Fatal("Windows wheels are not supported")
+	}
+	repositoryRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture installedWheelFixture
+	withWorkingDirectory(t, repositoryRoot, func() { fixture = prepareInstalledWheelFixture(t, repositoryRoot) })
+	target, err := currentTarget()
+	if err != nil {
+		t.Fatal(err)
+	}
+	admitted, err := os.ReadFile(fixture.wheelPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	filename := filepath.Base(fixture.wheelPath)
+	work := t.TempDir()
+	for path, content := range map[string][]byte{
+		sourceCLIContractPath:                        fixture.contract,
+		target.BinaryPath:                            fixture.binary,
+		filepath.Join("artifacts", "pypi", filename): []byte("replaced after admission"),
+	} {
+		if err := os.MkdirAll(filepath.Join(work, filepath.Dir(path)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(work, path), content, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Chdir(work)
+	records := map[string]wheelRecord{target.PlatformSuffix: {Filename: filename}}
+	if err := verifyLocalPythonConsumer(records, map[string][]byte{target.PlatformSuffix: admitted}); err != nil {
+		t.Fatalf("verifyLocalPythonConsumer did not install the admitted wheel bytes: %v", err)
+	}
+}
+
 func TestPythonVerificationEnvironmentRemovesAmbientImportControls(t *testing.T) {
 	environment := pythonVerificationEnvironment([]string{
 		"PATH=/usr/bin",

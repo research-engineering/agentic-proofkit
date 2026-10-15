@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
@@ -360,7 +360,7 @@ func closePackageRoots(packages map[string]packageSnapshot) {
 }
 
 func newScanCache(repoRoot string, maxBytes int64) *scanCache {
-	root, err := openScanRoot(repoRoot)
+	root, err := rootpath.OpenDirectoryRoot(repoRoot)
 	return &scanCache{
 		root:          root,
 		repoRoot:      repoRoot,
@@ -369,19 +369,6 @@ func newScanCache(repoRoot string, maxBytes int64) *scanCache {
 		files:         map[string]admittedFileSnapshot{},
 		sourceExports: map[string]sourceExportSnapshot{},
 	}
-}
-
-func openScanRoot(name string) (*os.Root, error) {
-	// Reject static non-directories before OpenRoot can block on a FIFO. This
-	// preflight does not make initial pathname acquisition atomic under mutation.
-	info, err := os.Stat(name)
-	if err != nil {
-		return nil, err
-	}
-	if !info.IsDir() {
-		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOTDIR}
-	}
-	return os.OpenRoot(name)
 }
 
 func directoryOnlyPath(name string) string {

@@ -14,6 +14,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
@@ -35,7 +36,7 @@ func Compose(repoRoot string, raw any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	root, err := os.OpenRoot(repoRoot)
+	root, err := rootpath.OpenDirectoryRoot(repoRoot)
 	if err != nil {
 		return nil, fmt.Errorf("open repository root: %w", err)
 	}
@@ -265,12 +266,19 @@ func admitCatalogEntry(raw any, kind, defaultRef string) (catalogSource, error) 
 	return catalogSource{ExpectedDigest: expected, Kind: kind, NodeID: nodeID, Path: path, SourceRef: sourceRef}, nil
 }
 
+// sourceAdmissionBarrier lets tests replace a source between path and handle
+// admission; it is nil outside tests.
+var sourceAdmissionBarrier func(path string)
+
 func readCatalogSource(root *os.Root, path string) (any, []byte, string, error) {
 	info, err := root.Lstat(path)
 	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 		return nil, nil, "", fmt.Errorf("requirement context source must be a regular non-symlink file")
 	}
-	file, err := root.Open(path)
+	if sourceAdmissionBarrier != nil {
+		sourceAdmissionBarrier(path)
+	}
+	file, err := openCatalogSourceFile(root, path)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("open requirement context source")
 	}

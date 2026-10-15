@@ -616,3 +616,79 @@ func decodeInput(t *testing.T, value map[string]any) any {
 	}
 	return decoded
 }
+
+func TestBuildAgentEnvelopeProjectsPrefixRelatedRecordsByExactIdentity(t *testing.T) {
+	candidate := func(id string, owner string, label string, blockedPreconditions []any) map[string]any {
+		return map[string]any{
+			"admissionState": "advisory", "affectedPaths": []any{label + "/path.ts"}, "blockedPreconditions": blockedPreconditions,
+			"boundaryId": id, "candidateOwner": owner, "contractWitnessRefs": []any{}, "nativeWitnessRefs": []any{},
+			"nonClaims": []any{"Candidate boundaries are advisory."}, "observedFacts": []any{label + " fact."},
+			"ownerQuestions": []any{label + " question?"}, "proofBindingRefs": []any{}, "requirementRefs": []any{"REQ-CONSUMER-001"},
+			"uncertainties": []any{label + " uncertainty."},
+		}
+	}
+	route := func(id string, owner string, label string, proofBindingPaths []any) map[string]any {
+		return map[string]any{
+			"commands": []any{"go test ./" + label}, "nativeWitnessRefs": []any{label + "_test.go"}, "nonClaims": []any{"Owner route evidence is caller-provided."},
+			"owner": owner, "proofBindingPaths": proofBindingPaths, "routeId": id,
+			"specPaths": []any{"docs/specs/" + label + ".json"}, "touchedRuleIds": []any{"REQ-CONSUMER-001"},
+		}
+	}
+	input := baseInput()
+	input["modernization"] = map[string]any{"candidateBoundaries": []any{
+		candidate("consumer.example", "consumer.parent", "parent", []any{}),
+		candidate("consumer.example.child", "consumer.child", "child", []any{"child precondition"}),
+		candidate("consumer.unrelated", "consumer.unrelated", "unrelated", []any{}),
+	}}
+	input["ownerRoutes"] = []any{
+		route("consumer.example.route", "consumer.example-route", "example-route", []any{}),
+		route("consumer.route", "consumer.parent", "parent", []any{"proofkit/parent.json"}),
+		route("consumer.route.child", "consumer.child", "child", []any{}),
+	}
+	envelope, _, err := BuildEnvelope(decodeInput(t, input))
+	if err != nil {
+		t.Fatalf("BuildEnvelope() error=%v", err)
+	}
+	actions := envelope["actionPlan"].([]any)
+
+	routeAction := findAction(t, actions, "proofkit.adoption-doctor.consumer.route.child.missing_proof_binding")
+	routeSelectors := routeAction["selectors"].(map[string]any)
+	if routeAction["owner"] != "consumer.child" || routeAction["proofCommand"] != "go test ./child" || routeSelectors["ownerRouteId"] != "consumer.route.child" {
+		t.Fatalf("nested route action projected another route: %#v", routeAction)
+	}
+	assertStringSliceContains(t, routeAction["commandIds"], "consumer.route.child.command.001")
+	assertStringSliceContains(t, routeSelectors["specPaths"], "docs/specs/child.json")
+	if paths := routeSelectors["proofBindingPaths"].([]any); len(paths) != 0 {
+		t.Fatalf("missing-proof-binding action carries another route's bindings: %#v", paths)
+	}
+
+	for _, want := range []struct{ step, owner, label string }{
+		{"consumer.example.child.candidate-boundary-not-admitted", "consumer.child", "child"},
+		{"consumer.example.candidate-boundary-not-admitted", "consumer.parent", "parent"},
+		{"consumer.unrelated.candidate-boundary-not-admitted", "consumer.unrelated", "unrelated"},
+	} {
+		action := findAction(t, actions, "proofkit.adoption-doctor."+want.step)
+		selectors := action["selectors"].(map[string]any)
+		if action["owner"] != want.owner || selectors["candidateBoundaryId"] != strings.TrimSuffix(want.step, ".candidate-boundary-not-admitted") {
+			t.Fatalf("candidate action %s projected another candidate: %#v", want.step, action)
+		}
+		assertStringSliceContains(t, action["observedFacts"], want.label+" fact.")
+		assertStringSliceContains(t, action["ownerQuestions"], want.label+" question?")
+		assertStringSliceContains(t, selectors["affectedPaths"], want.label+"/path.ts")
+	}
+
+	blockedAction := findAction(t, actions, "proofkit.adoption-doctor.consumer.example.child.blocked-precondition")
+	blockedSelectors := blockedAction["selectors"].(map[string]any)
+	if blockedAction["owner"] != "consumer.child" || blockedSelectors["candidateBoundaryId"] != "consumer.example.child" {
+		t.Fatalf("blocked-precondition action projected another candidate: %#v", blockedAction)
+	}
+	assertStringSliceContains(t, blockedAction["ownerQuestions"], "child question?")
+	assertStringSliceContains(t, blockedAction["observedFacts"], "child fact.")
+	assertStringSliceContains(t, blockedSelectors["affectedPaths"], "child/path.ts")
+
+	extendingRouteAction := findAction(t, actions, "proofkit.adoption-doctor.consumer.example.route.missing_proof_binding")
+	extendingRouteSelectors := extendingRouteAction["selectors"].(map[string]any)
+	if _, ok := extendingRouteSelectors["candidateBoundaryId"]; ok || extendingRouteSelectors["ownerRouteId"] != "consumer.example.route" || len(extendingRouteAction["ownerQuestions"].([]any)) != 0 {
+		t.Fatalf("route extending a candidate ID projected that candidate: %#v", extendingRouteAction)
+	}
+}

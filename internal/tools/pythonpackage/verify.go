@@ -9,6 +9,7 @@ import (
 	"debug/macho"
 	"encoding/base64"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -82,64 +83,85 @@ func verifyPythonPackagesForTargets(selectedTargets []target) error {
 		}
 		recordsBySuffix[record.PlatformSuffix] = record
 	}
+	admittedWheels := map[string][]byte{}
 	for _, target := range selectedTargets {
 		record, ok := recordsBySuffix[target.PlatformSuffix]
 		if !ok {
 			return fmt.Errorf("missing python wheel for %s", target.PlatformSuffix)
 		}
-		if err := verifyWheelRecord(manifest, target, record); err != nil {
+		wheel, err := verifyWheelRecord(manifest, target, record)
+		if err != nil {
 			return err
 		}
+		admittedWheels[target.PlatformSuffix] = wheel
 	}
-	return verifyLocalPythonConsumer(recordsBySuffix)
+	return verifyLocalPythonConsumer(recordsBySuffix, admittedWheels)
 }
 
 func readPackageSet(path string) (packageSet, error) {
 	return readAdmittedJSON[packageSet](path)
 }
 
-func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) error {
+// verifyWheelRecord admits the wheel once through a bounded regular-file read;
+// its SHA-256, archive checks and later installation all use those bytes.
+func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) ([]byte, error) {
 	if record.Name != packageName || record.Version != manifest.Version {
-		return fmt.Errorf("python wheel %s package identity mismatch", record.Filename)
+		return nil, fmt.Errorf("python wheel %s package identity mismatch", record.Filename)
 	}
 	if record.Filename != wheelFilename(manifest.Version, target) {
-		return fmt.Errorf("python wheel filename mismatch for %s: %s", target.PlatformSuffix, record.Filename)
+		return nil, fmt.Errorf("python wheel filename mismatch for %s: %s", target.PlatformSuffix, record.Filename)
 	}
 	if record.PythonTag != pythonTag || record.AbiTag != abiTag || record.PlatformTag != target.PlatformTag || record.WheelTag != target.WheelTag {
-		return fmt.Errorf("python wheel tag mismatch for %s", record.Filename)
+		return nil, fmt.Errorf("python wheel tag mismatch for %s", record.Filename)
 	}
 	wheelPath := filepath.Join("artifacts", "pypi", record.Filename)
-	sha, err := fileSHA256(wheelPath)
+	wheel, err := readBoundedWheel(wheelPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if sha != record.Sha256 {
-		return fmt.Errorf("python wheel sha256 mismatch for %s", record.Filename)
+	wheelSHA := sha256.Sum256(wheel)
+	if hex.EncodeToString(wheelSHA[:]) != record.Sha256 {
+		return nil, fmt.Errorf("python wheel sha256 mismatch for %s", record.Filename)
 	}
 	binary, err := os.ReadFile(target.BinaryPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	binarySHA := sha256.Sum256(binary)
 	if record.BinarySha256 != fmt.Sprintf("%x", binarySHA[:]) {
-		return fmt.Errorf("python wheel binary sha256 mismatch for %s", record.Filename)
+		return nil, fmt.Errorf("python wheel binary sha256 mismatch for %s", record.Filename)
 	}
 	license, err := readLicenseFile()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	contract, err := artifactfile.ReadBounded(".", sourceCLIContractPath, installedclicontract.MaximumContractBytes)
 	if err != nil {
-		return fmt.Errorf("read source CLI contract: %w", err)
+		return nil, fmt.Errorf("read source CLI contract: %w", err)
 	}
-	return verifyWheelContents(wheelPath, manifest, target, record.BinarySha256, license, contract)
+	if err := verifyWheelArchive(wheelPath, wheel, manifest, target, record.BinarySha256, license, contract); err != nil {
+		return nil, err
+	}
+	return wheel, nil
+}
+
+func readBoundedWheel(path string) ([]byte, error) {
+	content, err := artifactfile.ReadBounded(filepath.Dir(path), filepath.Base(path), maximumWheelArchiveBytes)
+	if err != nil {
+		return nil, fmt.Errorf("read bounded wheel %s: %w", path, err)
+	}
+	return content, nil
 }
 
 func verifyWheelContents(path string, manifest packageJSON, target target, expectedBinarySHA256 string, expectedLicense []byte, expectedCLIContract []byte) error {
-	content, err := artifactfile.ReadBounded(filepath.Dir(path), filepath.Base(path), maximumWheelArchiveBytes)
+	content, err := readBoundedWheel(path)
 	if err != nil {
-		return fmt.Errorf("read bounded wheel %s: %w", path, err)
+		return err
 	}
+	return verifyWheelArchive(path, content, manifest, target, expectedBinarySHA256, expectedLicense, expectedCLIContract)
+}
+
+func verifyWheelArchive(path string, content []byte, manifest packageJSON, target target, expectedBinarySHA256 string, expectedLicense []byte, expectedCLIContract []byte) error {
 	reader, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
 	if err != nil {
 		return fmt.Errorf("decode wheel %s: %w", path, err)
@@ -434,7 +456,7 @@ func verifyRecord(entries map[string]*zip.File, recordPath string) error {
 	return nil
 }
 
-func verifyLocalPythonConsumer(recordsBySuffix map[string]wheelRecord) error {
+func verifyLocalPythonConsumer(recordsBySuffix map[string]wheelRecord, admittedWheels map[string][]byte) error {
 	target, err := currentTarget()
 	if err != nil {
 		return nil
@@ -442,6 +464,10 @@ func verifyLocalPythonConsumer(recordsBySuffix map[string]wheelRecord) error {
 	record, ok := recordsBySuffix[target.PlatformSuffix]
 	if !ok {
 		return fmt.Errorf("missing local platform python wheel for %s", target.PlatformSuffix)
+	}
+	wheel, ok := admittedWheels[target.PlatformSuffix]
+	if !ok {
+		return fmt.Errorf("missing admitted local platform python wheel for %s", target.PlatformSuffix)
 	}
 	python, err := exec.LookPath("python3")
 	if err != nil {
@@ -460,7 +486,7 @@ func verifyLocalPythonConsumer(recordsBySuffix map[string]wheelRecord) error {
 	if runtime.GOOS == "windows" {
 		venvPython = filepath.Join(consumer, "Scripts", "python.exe")
 	}
-	wheelPath, err := filepath.Abs(filepath.Join("artifacts", "pypi", record.Filename))
+	wheelPath, err := materializeAdmittedWheel(consumer, record.Filename, wheel)
 	if err != nil {
 		return err
 	}
@@ -475,6 +501,23 @@ func verifyLocalPythonConsumer(recordsBySuffix map[string]wheelRecord) error {
 	return verifyInstalledPythonWheel(consumer, venvPython, wheelPath, expectedContract, expectedBinary, environment)
 }
 
+// materializeAdmittedWheel writes admitted wheel bytes to a private consumer
+// path so installation cannot reread a replaced artifacts/pypi file.
+func materializeAdmittedWheel(consumer string, filename string, wheel []byte) (string, error) {
+	if filename == "" || filename != filepath.Base(filename) || filename == "." || filename == ".." {
+		return "", fmt.Errorf("python wheel filename %q must be one path element", filename)
+	}
+	directory := filepath.Join(consumer, "admitted-wheel")
+	if err := os.Mkdir(directory, 0o700); err != nil {
+		return "", fmt.Errorf("create admitted wheel directory: %w", err)
+	}
+	path := filepath.Join(directory, filename)
+	if err := os.WriteFile(path, wheel, 0o600); err != nil {
+		return "", fmt.Errorf("materialize admitted wheel: %w", err)
+	}
+	return path, nil
+}
+
 func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath string, expectedContract []byte, expectedBinary []byte, environment []string) error {
 	environment = pythonVerificationEnvironment(environment, nil)
 	if err := installPythonWheel(venvPython, wheelPath, environment); err != nil {
@@ -487,7 +530,7 @@ func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath st
 	if _, err := verifyInstalledPythonCarrier(consumer, environment, renderer, expectedContract, expectedBinary); err != nil {
 		return err
 	}
-	output, err := runCommandWithEnvironment("", environment, venvPython, "-m", "agentic_proofkit", "--help")
+	output, err := runCLIWithEnvironment("", environment, venvPython, "-m", "agentic_proofkit", "--help")
 	if err != nil {
 		return fmt.Errorf("python module CLI smoke failed: %w\n%s", err, output)
 	}
@@ -498,7 +541,7 @@ func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath st
 	if runtime.GOOS == "windows" {
 		binPath = filepath.Join(consumer, "Scripts", "agentic-proofkit.exe")
 	}
-	output, err = runCommandWithEnvironment("", environment, binPath, "--help")
+	output, err = runCLIWithEnvironment("", environment, binPath, "--help")
 	if err != nil {
 		return fmt.Errorf("python console script smoke failed: %w\n%s", err, output)
 	}
@@ -546,7 +589,7 @@ func verifyInstalledPythonPresetContinuation(consumer string, venvPython string,
 		string(executableOutput) != pythonExecutable+"\n" {
 		return fmt.Errorf("installed Python wheel interpreter identity must be one absolute newline-terminated path, got %q", executableOutput)
 	}
-	output, err := runCommandWithEnvironment("", environment, pythonExecutable, "-m", "agentic_proofkit", "stack-preset", "--preset", "agentic_runtime_repo")
+	output, err := runCLIWithEnvironment("", environment, pythonExecutable, "-m", "agentic_proofkit", "stack-preset", "--preset", "agentic_runtime_repo")
 	if err != nil {
 		return fmt.Errorf("installed Python wheel stack preset failed with npm absent from PATH: %w\n%s", err, output)
 	}
@@ -1162,14 +1205,10 @@ func maximumWheelEntryBytes(name string) int64 {
 	return maximumWheelTextEntryBytes
 }
 
+// runCommandWithEnvironment returns stdout followed by stderr; it suits tools
+// such as python -m venv and pip whose diagnostics may use either channel.
 func runCommandWithEnvironment(dir string, environment []string, name string, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), pythonPackageProcessTimeout)
-	defer cancel()
-	result, err := workflowsmoke.RunProcess(ctx, workflowsmoke.ProcessCarrier{
-		Directory:   dir,
-		Environment: environment,
-		Executable:  name,
-	}, workflowsmoke.Invocation{Args: args, StdinClass: workflowsmoke.StdinBytes})
+	result, err := runProcessWithEnvironment(dir, environment, name, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1180,11 +1219,39 @@ func runCommandWithEnvironment(dir string, environment []string, name string, ar
 	return output, nil
 }
 
+// runCLIWithEnvironment observes an installed Proofkit CLI invocation. As in
+// workflowsmoke, success requires exit 0 and empty stderr, and only stdout is
+// returned, so a result on the wrong channel cannot satisfy stdout parsers.
+func runCLIWithEnvironment(dir string, environment []string, name string, args ...string) ([]byte, error) {
+	result, err := runProcessWithEnvironment(dir, environment, name, args...)
+	if err != nil {
+		return nil, err
+	}
+	output := append(append([]byte(nil), result.Stdout...), result.Stderr...)
+	if result.ExitCode != 0 {
+		return output, fmt.Errorf("process exited with code %d", result.ExitCode)
+	}
+	if len(result.Stderr) != 0 {
+		return output, fmt.Errorf("process exited 0 with %d stderr bytes; CLI results must use stdout only", len(result.Stderr))
+	}
+	return result.Stdout, nil
+}
+
+func runProcessWithEnvironment(dir string, environment []string, name string, args ...string) (workflowsmoke.Result, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), pythonPackageProcessTimeout)
+	defer cancel()
+	return workflowsmoke.RunProcess(ctx, workflowsmoke.ProcessCarrier{
+		Directory:   dir,
+		Environment: environment,
+		Executable:  name,
+	}, workflowsmoke.Invocation{Args: args, StdinClass: workflowsmoke.StdinBytes})
+}
+
 func runArgvWithEnvironment(dir string, environment []string, argv []string) ([]byte, error) {
 	if len(argv) == 0 {
 		return nil, fmt.Errorf("run argv requires at least one token")
 	}
-	return runCommandWithEnvironment(dir, environment, argv[0], argv[1:]...)
+	return runCLIWithEnvironment(dir, environment, argv[0], argv[1:]...)
 }
 
 func contains(values []string, candidate string) bool {

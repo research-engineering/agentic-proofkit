@@ -33,6 +33,37 @@ before(() => {
 });
 after(() => {if (directory) rmSync(directory, {recursive: true, force: true});});
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+// Declared, single-purpose deltas from the frozen predecessor streams. The
+// corpus stays untouched; each delta names its row and exact semantic change.
+const declaredStreamDeltas = Object.freeze([Object.freeze({
+  id: 'F01',
+  reason: 'AGENTS.md and CONTRIBUTING.md are not packed files, so external-consumer no longer requires them.',
+  command: external, row: 'pack-empty-files',
+  removedRequiredFiles: Object.freeze(['AGENTS.md', 'CONTRIBUTING.md']),
+})]);
+const missingPackedFile = 'npm pack metadata missing required packed file: ';
+const failureRuleID = index => `proofkit.${external}.failure.${String(index + 1).padStart(3, '0')}`;
+// Returns the predecessor stdout implied by the declared delta, or null when the
+// current bytes do not carry exactly that delta: contiguous missing-file failures
+// without the removed files, which the predecessor listed in byte order.
+function predecessorStdout(row, stdout) {
+  const delta = declaredStreamDeltas.find(item => item.command === row.command && item.row === row.name);
+  if (!delta) return stdout;
+  let record;
+  try { record = JSON.parse(stdout); } catch { return null; }
+  if (JSON.stringify(record, null, 2) + '\n' !== stdout) return null;
+  const failures = record.ruleResults;
+  if (!failures.every((item, index) => item.ruleId === failureRuleID(index) && item.message.startsWith(missingPackedFile))) return null;
+  const messages = failures.map(item => item.message);
+  const removed = delta.removedRequiredFiles.map(file => missingPackedFile + file);
+  if (removed.some(message => messages.includes(message))) return null;
+  record.ruleResults = [...removed, ...messages].sort().map((message, index) => ({diagnostics: [], message, ruleId: failureRuleID(index), status: 'failed'}));
+  return JSON.stringify(record, null, 2) + '\n';
+}
+const conservesPredecessor = (row, stdout) => {
+  const predecessor = predecessorStdout(row, stdout);
+  return predecessor !== null && hash(predecessor) === row.stdoutSHA256;
+};
 function invoke(command, input, argv = [command, '--input', '-']) {
   const result = spawnSync(binary, argv, {input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
   return assertCLITransport(result);
@@ -49,7 +80,7 @@ test('consumer structures conserve72actual predecessor streams and process class
   for (const row of baseline.observations) {
     const result = invoke(row.command, row.input, row.argv);
     assert.equal(result.status, row.exitCode, row.command + '/' + row.name);
-    assert.equal(hash(result.stdout), row.stdoutSHA256, row.command + '/' + row.name + '/stdout');
+    assert.ok(conservesPredecessor(row, result.stdout), row.command + '/' + row.name + '/stdout');
     assert.equal(hash(result.stderr), row.stderrSHA256, row.command + '/' + row.name + '/stderr');
     if (!row.report) continue;
     const input = row.name === 'pointer' ? JSON.parse(row.input).payload : JSON.parse(row.input), record = JSON.parse(result.stdout);
@@ -59,6 +90,32 @@ test('consumer structures conserve72actual predecessor streams and process class
     const source = input.input ?? input;
     assert.equal(record.reportId ?? record.compositionId, row.command === composer ? source.compositionId : source.pilotId ?? source.consumerId);
   }
+});
+
+test('the F01 stream delta is exact and limited to its row', () => {
+  const [delta] = declaredStreamDeltas;
+  assert.equal(declaredStreamDeltas.length, 1);
+  const row = baseline.observations.find(item => item.command === delta.command && item.name === delta.row);
+  const current = invoke(row.command, row.input, row.argv).stdout;
+  assert.notEqual(hash(current), row.stdoutSHA256, 'the declared delta must still be needed');
+  assert.ok(conservesPredecessor(row, current), 'current stdout must carry exactly the declared delta');
+  const record = JSON.parse(current);
+  const withRemoved = structuredClone(record);
+  withRemoved.ruleResults.unshift({diagnostics: [], message: missingPackedFile + 'AGENTS.md', ruleId: failureRuleID(0), status: 'failed'});
+  withRemoved.ruleResults.forEach((item, index) => { item.ruleId = failureRuleID(index); });
+  const withoutOther = structuredClone(record);
+  withoutOther.ruleResults = withoutOther.ruleResults.filter(item => item.message !== missingPackedFile + 'LICENSE');
+  withoutOther.ruleResults.forEach((item, index) => { item.ruleId = failureRuleID(index); });
+  const otherByte = current.replace('"state": "failed"', '"state": "failed" ');
+  for (const [name, mutated] of [['removed file still required', JSON.stringify(withRemoved, null, 2) + '\n'],
+    ['another required file dropped', JSON.stringify(withoutOther, null, 2) + '\n'], ['other byte', otherByte]]) {
+    assert.notEqual(mutated, current, name);
+    assert.equal(conservesPredecessor(row, mutated), false, name);
+  }
+  const unlisted = baseline.observations.find(item => item.command === external && item.name !== delta.row && item.exitCode === 1 && item.report);
+  const unlistedCurrent = invoke(unlisted.command, unlisted.input, unlisted.argv).stdout;
+  assert.ok(conservesPredecessor(unlisted, unlistedCurrent), 'unlisted rows stay byte-exact');
+  assert.equal(conservesPredecessor({...unlisted, name: delta.row}, unlistedCurrent), false, 'delta applied to an unlisted row');
 });
 
 test('consumer projections retain independently asserted declarations and absent proof shapes', () => {

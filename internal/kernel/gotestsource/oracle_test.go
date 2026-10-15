@@ -95,25 +95,31 @@ func TestWitness(t *testing.T) { assertWitness(t) }
 	}
 }
 
-func TestHasFailureCapableAssertionCandidateAlignsArgumentsAfterUnnamedParameters(t *testing.T) {
-	source := `package fixture
-import "testing"
-func assertWitness(string, t *testing.T) { t.Fatal("failed") }
-func TestWitness(t *testing.T) { assertWitness("context", t) }
-`
-	file, err := parser.ParseFile(token.NewFileSet(), "fixture_test.go", source, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	functions := map[string]*ast.FuncDecl{}
-	for _, declaration := range file.Decls {
-		function, ok := declaration.(*ast.FuncDecl)
-		if ok {
-			functions[function.Name.Name] = function
-		}
-	}
-	if !HasFailureCapableAssertionCandidate(functions["TestWitness"], functions) {
-		t.Fatal("unnamed helper parameter shifted testing.T argument propagation")
+// Fixtures are type-valid Go: a Go parameter list cannot mix named and unnamed
+// parameters, so alignment is observable only through named (including blank)
+// parameters.
+func TestHasFailureCapableAssertionCandidateAlignsArgumentsAcrossParameterNames(t *testing.T) {
+	for name, helper := range map[string]string{
+		"grouped names":        "func assertWitness(_, t *testing.T) { t.Fatal(\"failed\") }\nfunc TestWitness(t *testing.T) { assertWitness(nil, t) }",
+		"blank leading string": "func assertWitness(_ string, t *testing.T) { t.Fatal(\"failed\") }\nfunc TestWitness(t *testing.T) { assertWitness(\"context\", t) }",
+	} {
+		t.Run(name, func(t *testing.T) {
+			source := "package fixture\nimport \"testing\"\n" + helper + "\n"
+			file, err := parser.ParseFile(token.NewFileSet(), "fixture_test.go", source, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			functions := map[string]*ast.FuncDecl{}
+			for _, declaration := range file.Decls {
+				function, ok := declaration.(*ast.FuncDecl)
+				if ok {
+					functions[function.Name.Name] = function
+				}
+			}
+			if !HasFailureCapableAssertionCandidate(functions["TestWitness"], functions) {
+				t.Fatal("helper parameter names shifted testing.T argument propagation")
+			}
+		})
 	}
 }
 

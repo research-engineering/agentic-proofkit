@@ -42,8 +42,16 @@ func markdown(view map[string]any) string {
 			"- Proof state: "+markdownfmt.Text(stringValue(requirement["proofState"])),
 			"- Tests: "+markdownfmt.CodeListOrNone(stringArray(requirement["testIds"])),
 			"- Commands: "+markdownfmt.CodeListOrNone(stringArray(requirement["commandIds"])),
-			"- Witnesses: "+markdownfmt.CodeListOrNone(stringArray(requirement["witnessRefs"])),
-			"- Witness selectors: "+markdownfmt.CodeListOrNone(stringArray(requirement["witnessSelectors"])),
+		)
+		if routes, compact := requirement["declaredWitnessRoutes"]; compact {
+			lines = append(lines, "- Declared witness routes: "+declaredWitnessRoutesMarkdown(anyArray(routes)))
+		} else {
+			lines = append(lines,
+				"- Witnesses: "+markdownfmt.CodeListOrNone(stringArray(requirement["witnessRefs"])),
+				"- Witness selectors: "+markdownfmt.CodeListOrNone(stringArray(requirement["witnessSelectors"])),
+			)
+		}
+		lines = append(lines,
 			"- Source-local non-claim refs: "+markdownfmt.CodeListOrNone(stringArray(requirement["nonClaimRefs"])),
 			"- External non-claim refs: "+markdownfmt.CodeListOrNone(stringArray(requirement["externalNonClaimRefs"])),
 			"",
@@ -199,18 +207,25 @@ func html(view map[string]any) string {
 	})
 }
 func requirementBody(requirement map[string]any) browserdoc.Fragment {
-	return browserdoc.Concat(
-		browserdoc.DefinitionList(
-			browserdoc.Definition("Shared premises", browserdoc.ListOrNone(stringArray(requirement["sharedPremises"]), false)),
-			browserdoc.Definition("Owner", browserdoc.Text(stringValue(requirement["ownerId"]))),
-			browserdoc.Definition("Coverage state", browserdoc.Text(stringValue(requirement["coverageState"]))),
-			browserdoc.Definition("Evidence class", browserdoc.Text(stringValue(requirement["evidenceClass"]))),
-			browserdoc.Definition("Proof state", browserdoc.Text(stringValue(requirement["proofState"]))),
-			browserdoc.Definition("Tests", browserdoc.ListOrNone(stringArray(requirement["testIds"]), true)),
-			browserdoc.Definition("Commands", browserdoc.ListOrNone(stringArray(requirement["commandIds"]), true)),
+	definitions := []browserdoc.DefinitionItem{
+		browserdoc.Definition("Shared premises", browserdoc.ListOrNone(stringArray(requirement["sharedPremises"]), false)),
+		browserdoc.Definition("Owner", browserdoc.Text(stringValue(requirement["ownerId"]))),
+		browserdoc.Definition("Coverage state", browserdoc.Text(stringValue(requirement["coverageState"]))),
+		browserdoc.Definition("Evidence class", browserdoc.Text(stringValue(requirement["evidenceClass"]))),
+		browserdoc.Definition("Proof state", browserdoc.Text(stringValue(requirement["proofState"]))),
+		browserdoc.Definition("Tests", browserdoc.ListOrNone(stringArray(requirement["testIds"]), true)),
+		browserdoc.Definition("Commands", browserdoc.ListOrNone(stringArray(requirement["commandIds"]), true)),
+	}
+	if routes, compact := requirement["declaredWitnessRoutes"]; compact {
+		definitions = append(definitions, browserdoc.Definition("Declared witness routes", declaredWitnessRoutesHTML(anyArray(routes))))
+	} else {
+		definitions = append(definitions,
 			browserdoc.Definition("Witness refs", browserdoc.ListOrNone(stringArray(requirement["witnessRefs"]), true)),
 			browserdoc.Definition("Witness selectors", browserdoc.ListOrNone(stringArray(requirement["witnessSelectors"]), true)),
-		),
+		)
+	}
+	return browserdoc.Concat(
+		browserdoc.DefinitionList(definitions...),
 		browserdoc.Details("Test evidence, scenarios, failures, and non-claims",
 			browserdoc.Heading(3, "Test evidence"),
 			testsHTML(anyArray(requirement["tests"])),
@@ -263,6 +278,14 @@ func scenariosHTML(scenarios []any) browserdoc.Fragment {
 	parts := []browserdoc.Fragment{}
 	for _, raw := range scenarios {
 		item := raw.(map[string]any)
+		if routes, compact := item["declaredWitnessRoutes"]; compact {
+			parts = append(parts, browserdoc.Section(stringValue(item["scenarioId"]), browserdoc.DefinitionList(
+				browserdoc.Definition("Declared witness routes", declaredWitnessRoutesHTML(anyArray(routes))),
+				browserdoc.Definition("Verify commands", browserdoc.ListOrNone(stringArray(item["verifyCommands"]), true)),
+				browserdoc.Definition("Environments", browserdoc.ListOrNone(stringArray(item["environmentClasses"]), false)),
+			)))
+			continue
+		}
 		parts = append(parts, browserdoc.Section(stringValue(item["scenarioId"]), browserdoc.DefinitionList(
 			browserdoc.Definition("Witness", browserdoc.Text(stringValue(item["witnessId"]))),
 			browserdoc.Definition("Witness kind", browserdoc.Text(stringValue(item["witnessKind"]))),
@@ -272,6 +295,31 @@ func scenariosHTML(scenarios []any) browserdoc.Fragment {
 		)))
 	}
 	return browserdoc.Concat(parts...)
+}
+
+// Compact rows carry declared witness routes instead of the structured
+// witness fields; render each route's role and selector in route order.
+func declaredWitnessRoutesMarkdown(routes []any) string {
+	if len(routes) == 0 {
+		return "none"
+	}
+	parts := make([]string, 0, len(routes))
+	for _, raw := range routes {
+		route := raw.(map[string]any)
+		parts = append(parts, markdownfmt.Text(stringValue(route["role"]))+" "+markdownfmt.CodeSpan(stringValue(route["selector"])))
+	}
+	return strings.Join(parts, ", ")
+}
+func declaredWitnessRoutesHTML(routes []any) browserdoc.Fragment {
+	if len(routes) == 0 {
+		return browserdoc.Text("none")
+	}
+	items := make([]browserdoc.DefinitionItem, 0, len(routes))
+	for _, raw := range routes {
+		route := raw.(map[string]any)
+		items = append(items, browserdoc.Definition(stringValue(route["role"]), browserdoc.Code(stringValue(route["selector"]))))
+	}
+	return browserdoc.DefinitionList(items...)
 }
 func ownerHierarchy(requirements []any) []browserdoc.HierarchyItem {
 	counts := map[string]int{}

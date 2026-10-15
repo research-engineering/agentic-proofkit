@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestSHA512IntegrityRequiresCanonical64ByteEncoding(t *testing.T) {
@@ -602,5 +603,32 @@ func TestStructuredSelectorSourcePathRejectsDrift(t *testing.T) {
 	}
 	if err := StructuredSelectorSourcePath("service/tests/auth_test.py::bad anchor", "service/tests/auth_test.py", "selector"); err == nil || !strings.Contains(err.Error(), "must be stable rule identifier text") {
 		t.Fatalf("expected invalid selector anchor rejection, got %v", err)
+	}
+}
+
+// REQ-PROOFKIT-QUALITY-027: at most 512 caller-derived scalars, followed only
+// when truncated by the fixed 25-scalar marker; total at most 537 scalars.
+func TestRedactDiagnosticValueBoundsCallerScalarsAndTotalProjection(t *testing.T) {
+	t.Parallel()
+
+	const marker = "...<truncated-diagnostic>"
+	if utf8.RuneCountInString(marker) != 25 {
+		t.Fatalf("truncation marker has %d scalars, want 25", utf8.RuneCountInString(marker))
+	}
+	for _, scalar := range []string{"x", "\U0001F600"} {
+		for _, count := range []int{511, 512, 513, 4096} {
+			value := strings.Repeat(scalar, count)
+			got := RedactDiagnosticValue(value)
+			if total := utf8.RuneCountInString(got); total > 537 {
+				t.Fatalf("RedactDiagnosticValue(%d x %q) has %d scalars, want at most 537", count, scalar, total)
+			}
+			want := value
+			if count > 512 {
+				want = strings.Repeat(scalar, 512) + marker
+			}
+			if got != want {
+				t.Fatalf("RedactDiagnosticValue(%d x %q) = %d scalars, want %d", count, scalar, utf8.RuneCountInString(got), utf8.RuneCountInString(want))
+			}
+		}
 	}
 }

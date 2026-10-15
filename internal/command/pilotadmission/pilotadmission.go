@@ -597,7 +597,11 @@ func admitInfrastructureBudget(raw any, failures *[]string) (admittedInfrastruct
 		}
 		customRules = append(customRules, rule)
 	}
-	assertSortedUniqueOrFail(customRuleIDs(customRules), "custom rule ruleId", failures)
+	// Sort a copy: the adjacent-duplicate check needs sorted IDs, while the
+	// customRules diagnostics keep caller order.
+	sortedRuleIDs := customRuleIDs(customRules)
+	sort.Strings(sortedRuleIDs)
+	assertSortedUniqueOrFail(sortedRuleIDs, "custom rule ruleId", failures)
 	budget := admittedInfrastructureBudget{
 		CopiedVerifierFileCount:    nonNegativeInteger(record["copiedVerifierFileCount"], "copiedVerifierFileCount", failures, 0),
 		CustomRuleCount:            nonNegativeInteger(record["customRuleCount"], "customRuleCount", failures, 0),

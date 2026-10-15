@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -616,4 +617,47 @@ func mustNPMRegistryEvidenceSource(t *testing.T, mode string) string {
 		t.Fatalf("unknown npm registry publication mode %q", mode)
 	}
 	return value
+}
+
+func TestPyPIRegistryEvidenceRejectsDuplicateWheelSubstitution(t *testing.T) {
+	template := completePyPIRegistrySet().Packages[0]
+	local := &pythonPackageSet{PackageName: "agentic-proofkit", PackageVersion: "1.2.3"}
+	registryRecords := []pythonWheelRecord{}
+	for _, suffix := range []string{"any", "macosx_13_0_arm64", "manylinux_2_17_x86_64", "manylinux_2_17_aarch64"} {
+		record := template
+		record.Filename = "agentic_proofkit-1.2.3-py3-none-" + suffix + ".whl"
+		record.PlatformSuffix = suffix
+		registryRecords = append(registryRecords, record)
+		record.PackageType, record.URL = "", ""
+		local.Packages = append(local.Packages, record)
+	}
+	manifest := packageJSON{Name: "agentic-proofkit", Version: "1.2.3"}
+	admit := func(records []pythonWheelRecord) (*pypiRegistrySet, error) {
+		registry := completePyPIRegistrySet()
+		registry.Packages = records
+		raw, err := json.Marshal(registry)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(t.TempDir(), "pypi-registry.json")
+		writeFile(t, path, string(raw))
+		return optionalPyPIRegistrySet(path)
+	}
+
+	complete, err := admit([]pythonWheelRecord{registryRecords[3], registryRecords[1], registryRecords[0], registryRecords[2]})
+	if err != nil {
+		t.Fatalf("optionalPyPIRegistrySet(complete) error=%v", err)
+	}
+	if err := requirePyPIRegistryMatchesLocal(complete, local, manifest); err != nil {
+		t.Fatalf("requirePyPIRegistryMatchesLocal(complete) error=%v, want match", err)
+	}
+
+	substituted := []pythonWheelRecord{registryRecords[0], registryRecords[1], registryRecords[2], registryRecords[1]}
+	registry, err := admit(substituted)
+	if err == nil {
+		err = requirePyPIRegistryMatchesLocal(registry, local, manifest)
+	}
+	if err == nil || !strings.Contains(err.Error(), "duplicate wheel filename "+registryRecords[1].Filename) {
+		t.Fatalf("duplicate registry wheel substituted for %s: error=%v", registryRecords[3].Filename, err)
+	}
 }

@@ -3,7 +3,6 @@ package adoptiondoctor
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/adoptionmode"
@@ -173,8 +172,11 @@ func actionForGap(input Input, item gap) map[string]any {
 }
 
 func routeForGap(routes []ownerRoute, item gap) (ownerRoute, bool) {
+	if item.RouteID == "" {
+		return ownerRoute{}, false
+	}
 	for _, route := range routes {
-		if strings.HasPrefix(item.GapID, route.RouteID+".") {
+		if route.RouteID == item.RouteID {
 			return route, true
 		}
 	}
@@ -182,8 +184,11 @@ func routeForGap(routes []ownerRoute, item gap) (ownerRoute, bool) {
 }
 
 func candidateForGap(candidates []candidateBoundary, item gap) (candidateBoundary, bool) {
+	if item.CandidateBoundaryID == "" {
+		return candidateBoundary{}, false
+	}
 	for _, candidate := range candidates {
-		if strings.HasPrefix(item.GapID, candidate.BoundaryID+".") {
+		if candidate.BoundaryID == item.CandidateBoundaryID {
 			return candidate, true
 		}
 	}

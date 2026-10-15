@@ -630,6 +630,13 @@ func optionalPythonPackageSet(path string) (*pythonPackageSet, error) {
 	sort.Slice(out.Packages, func(left int, right int) bool {
 		return out.Packages[left].Filename < out.Packages[right].Filename
 	})
+	// Equal counts plus per-record lookup prove set closure only when registry
+	// filenames are unique; a repeated wheel must not stand in for a missing one.
+	for index := 1; index < len(out.Packages); index++ {
+		if out.Packages[index].Filename == out.Packages[index-1].Filename {
+			return nil, fmt.Errorf("%s contains duplicate wheel filename %s", path, out.Packages[index].Filename)
+		}
+	}
 	return &out, nil
 }
 
@@ -683,6 +690,13 @@ func optionalPyPIRegistrySet(path string) (*pypiRegistrySet, error) {
 	sort.Slice(out.Packages, func(left int, right int) bool {
 		return out.Packages[left].Filename < out.Packages[right].Filename
 	})
+	// Equal counts plus per-record lookup prove set closure only when registry
+	// filenames are unique; a repeated wheel must not stand in for a missing one.
+	for index := 1; index < len(out.Packages); index++ {
+		if out.Packages[index].Filename == out.Packages[index-1].Filename {
+			return nil, fmt.Errorf("%s contains duplicate wheel filename %s", path, out.Packages[index].Filename)
+		}
+	}
 	return &out, nil
 }
 

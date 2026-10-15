@@ -352,3 +352,25 @@ func TestVerifyTypeScriptReportProjectionNondisclosure(t *testing.T) {
 		}
 	}
 }
+
+// TypeScript 7.0.2 compiles each const-enum source below; the lexical profile
+// does not admit const enums, so none may be inventoried as a phantom "enum".
+func TestCollectExportsRejectsConstEnumExports(t *testing.T) {
+	for _, source := range []string{
+		"export const enum\nE { A }\n",
+		"export const enum E { A }\n",
+		"export const\nenum E { A }\n",
+		"export const value = 1\nexport const enum\nE { A }\n",
+	} {
+		runtime, types, err := CollectExports(source)
+		if err == nil || !strings.Contains(err.Error(), "const enum") {
+			t.Fatalf("CollectExports(%q) = runtime %q types %q err %v, want const enum rejection", source, runtime, types, err)
+		}
+	}
+	runtime, types, err := CollectExports("export enum E { A }\nexport const value = 1\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStringSlice(t, runtime, []string{"E", "value"})
+	assertStringSlice(t, types, nil)
+}

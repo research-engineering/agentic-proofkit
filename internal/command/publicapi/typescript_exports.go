@@ -75,6 +75,11 @@ func (p *tsInventory) export() error {
 	case "interface":
 		return p.named(p.types)
 	case "const", "let", "var":
+		// "enum" is reserved, so "const enum" is always an enum declaration,
+		// even across a line break; the lexical profile does not admit it.
+		if kind == "const" && s.at("enum") {
+			return unsupportedTypeScriptSourceGrammar("const enum exports are not admitted")
+		}
 		return p.variables()
 	case "abstract", "async":
 		if kind == "abstract" && s.at("async") {

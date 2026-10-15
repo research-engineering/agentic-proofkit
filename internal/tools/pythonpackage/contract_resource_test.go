@@ -61,7 +61,7 @@ func TestWheelBuildAndVerifyReadSourceContractUnderMaximumContractBytes(t *testi
 			var buildErr, verifyErr error
 			withWorkingDirectory(t, root, func() {
 				entries, buildErr = wheelEntries(manifest, target, binary)
-				verifyErr = verifyWheelRecord(manifest, target, record)
+				_, verifyErr = verifyWheelRecord(manifest, target, record)
 			})
 			if extra == 1 {
 				if buildErr == nil || entries != nil {
