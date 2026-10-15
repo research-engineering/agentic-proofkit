@@ -802,6 +802,36 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath:        "internal/tools/workflowsmoke/integration_lifecycle_mutation_test.go",
 			selectors:          []string{"TestInstalledLifecycleWitnessRejectsUpdateWithoutEffects"},
 		},
+		{"REQ-PROOFKIT-WORKFLOW-020", "proofkit.agent-workflow.trajectory-cli-guides"}: {
+			commandIDs:         []string{"proofkit.go-test"},
+			environmentClasses: []string{"local-go"},
+			witnessPath:        "internal/app/trajectory_guides_test.go",
+			selectors:          []string{"TestNextActionContinuationIsTotalAndExecutable", "TestScenarioGuideBodyMaterializesWithItsBindingRow", "TestSchedulerGuideProjectsTheConnectedBinding", "TestSliceAndDiffGuidesCompareRetainedContexts", "TestTrajectoryInputGuidesAreLazyAndCarrierBound"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-020", "proofkit.agent-workflow.trajectory-continuation-owner"}: {
+			commandIDs:         []string{"proofkit.go-test"},
+			environmentClasses: []string{"local-go"},
+			witnessPath:        "internal/command/projectstatus/continuation_guide_test.go",
+			selectors:          []string{"TestActionContinuationsMatchTheCanonicalActionTable"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-020", "proofkit.agent-workflow.trajectory-installed-carriers"}: {
+			commandIDs:         []string{"proofkit.go-test", "proofkit.package-artifact"},
+			environmentClasses: []string{"local-go", "local-go-python"},
+			witnessPath:        "internal/tools/workflowsmoke/trajectory_smoke_test.go",
+			selectors:          []string{"TestVerifyProcessAcceptsSourceBuiltBinary", "TestVerifyProcessComposesWorkflowAndTrajectory"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-020", "proofkit.agent-workflow.trajectory-route-ledger"}: {
+			commandIDs:         []string{"proofkit.go-test"},
+			environmentClasses: []string{"local-go"},
+			witnessPath:        "internal/tools/workflowsmoke/trajectory_ledger_test.go",
+			selectors:          []string{"TestTrajectoryLedgerRefusesUnnamedRoutesBeforeExecution"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-020", "proofkit.agent-workflow.trajectory-whole-operation"}: {
+			commandIDs:         []string{"proofkit.go-test"},
+			environmentClasses: []string{"local-go"},
+			witnessPath:        "internal/tools/workflowsmoke/trajectory_smoke_test.go",
+			selectors:          []string{"TestVerifyTrajectoryAcceptsApplicationCLI", "TestVerifyTrajectoryRejectsAcceptedNegativeControls", "TestVerifyTrajectoryRejectsWrongInvalidation", "TestVerifyTrajectoryRequiresCLINamedRoutes"},
+		},
 		{"REQ-PROOFKIT-PACKAGE-001", "proofkit.package-boundary.root-export-and-deep-import-denial"}: {
 			witnessPath: "internal/tools/packageverify/main_test.go",
 			selectors:   []string{"TestVerifyRootPackageRejectsEachForbiddenRootEntry"},

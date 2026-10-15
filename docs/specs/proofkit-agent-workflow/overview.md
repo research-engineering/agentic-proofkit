@@ -110,6 +110,10 @@ projections remain independently owned by the spec-proof-core package.
   and installed-carrier closure obligations. A binding is not an execution
   receipt; final frozen-tree and installed-carrier integration proof requires
   actual execution against the named source and artifacts.
+- `REQ-PROOFKIT-WORKFLOW-020`: one whole-operation agent trajectory through
+  source and installed carriers, CLI-named routes only, exact facts, rejected
+  negative controls, and edge-local bidirectional invalidation and
+  reaffirmation across a cross-language witness migration.
 
 Shared stable-JSON/diagnostic hardening is owned by the supply-chain-quality
 spec. Typed local-reference closure is owned by the existing agent-envelope
@@ -143,6 +147,34 @@ journal state without assuming the current tool renderer. Desired absence
 selects journal v2, while present-only v1 identities and recovery remain stable.
 Host discovery, body loading, and approved-launcher invocation require separate
 isolated native-host observations; direct CLI execution cannot prove skill use.
+
+## Whole-Operation Trajectory
+
+`REQ-PROOFKIT-WORKFLOW-020` owns one agent-trajectory witness in
+`internal/tools/workflowsmoke`. It runs through the same `Runner` for the
+source-built binary and, via `VerifyProcess`, for the installed npm carrier
+and the host wheel's module and console-script carriers. The minimum-version
+CPython floor smoke keeps its finite carrier cases under
+`REQ-PROOFKIT-PACKAGE-006` and does not run the trajectory. One temporary two-language repository moves
+from the install bootstrap and `next` through adoption planning in all three
+trust modes, candidate design/plan/coverage inputs, reviewed materialization,
+typed scenario bodies, binding, scheduling, receipts, bundle linkage,
+currentness, coverage, semantic diff, review checkpoints and repair.
+
+A route ledger executes a route only after an earlier output of the same
+session named it as an installed-launcher command line or JSON route, so the
+required prompts are CLI-contained. `next --help` and `status --help` map each
+action class to one continuation: a help route, or an owner stop for
+`repair_project_records` and `repair_control_state`. Scheduler, context-slice,
+semantic-diff and scenario-body guides teach their input shapes.
+
+Invalidation is checked in both directions with per-edge receipt subjects: a
+requirement or scenario-body change stales only that requirement's receipt,
+a native test byte change stales only its edge, and a Python-to-Go witness
+migration keeps requirement and scenario identities while the old receipt no
+longer links or stays current. Fresh evidence for the changed edge alone
+reaffirms it. Native witnesses are never executed by the trajectory, and
+compact-proof impact composition stays outside it.
 
 ## Non-Claims
 

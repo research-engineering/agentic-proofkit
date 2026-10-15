@@ -93,8 +93,12 @@ Repository-specific adapter template (implement under consumer authority):
      Declaration coverage, actual execution, currentness, producer trust and
      merge approval are separate predicates. No step here grants those powers.
   7. For a changed requirement, test, binding, command or environment, retain
-     exact base/current records and review affected routes with:
-    {{cli}} requirement-impact-input-compose --help
+     exact base/current context captures and compare requirement meaning with:
+    {{cli}} requirement-semantic-diff --help
+     Slice each affected route's proof fragment and re-check every retained
+     receipt subject, including native test bytes, with currentness above.
+     requirement-impact-input-compose reads compact proof contracts, not this
+     v1 binding; do not author a second binding copy just to reach it.
      Confirm continued adequacy or update affected owners; never automatically
      rewrite specification meaning from a test change. Bind any confirmation to
      exact subjects. A prior success cannot certify changed input or toolchains.

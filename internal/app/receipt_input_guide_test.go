@@ -298,6 +298,7 @@ func TestNativeTraceabilityGuideIsLazyAndCarrierBound(t *testing.T) {
 		"Declaration coverage, actual execution, currentness, producer trust",
 		"sourcePlan may remain", "Neither command below reads native files",
 		"Compact proof contracts use", "do not feed them to this v1 recipe",
+		"requirement-impact-input-compose reads compact proof contracts, not this",
 	} {
 		if !strings.Contains(canonical, boundary) {
 			t.Fatalf("guide lost boundary %q", boundary)
@@ -326,7 +327,7 @@ func TestNativeTraceabilityGuideIsLazyAndCarrierBound(t *testing.T) {
 				actualLazy = append(actualLazy, line)
 			}
 		}
-		for _, command := range [][]string{{"adopt", "materialize", "plan", "--help"}, {"requirement-authoring-plan", "--help"}, {"requirement-coverage-input-compose", "--help"}, {"proof-receipt-admission", "--help"}, {"spec-proof-bundle-admission", "--help"}, {"receipt-currentness-scope", "--help"}, {"requirement-impact-input-compose", "--help"}, {"change", "plan", "--help"}} {
+		for _, command := range [][]string{{"adopt", "materialize", "plan", "--help"}, {"requirement-authoring-plan", "--help"}, {"requirement-coverage-input-compose", "--help"}, {"proof-receipt-admission", "--help"}, {"spec-proof-bundle-admission", "--help"}, {"receipt-currentness-scope", "--help"}, {"requirement-semantic-diff", "--help"}, {"change", "plan", "--help"}} {
 			expectedLazy = append(expectedLazy, "    "+renderer.DisplayCommand(command...))
 			code, output, diagnostic := executeAgentWorkflowCLI(t, command, panicReader{}, PresentationCapabilities{})
 			if code != 0 || output == "" || diagnostic != "" {

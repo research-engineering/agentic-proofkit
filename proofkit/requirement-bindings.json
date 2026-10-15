@@ -1005,6 +1005,19 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-020",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "Compact-proof impact composition, producer trust admission and merge-satisfying receipts are outside this trajectory.",
+        "Currentness precision depends on the consumer-declared per-edge subject encoding; Proofkit compares supplied digests and does not capture current bytes.",
+        "One fixture repository does not prove universal repository fit, a paired different-repository pilot result or agent token cost.",
+        "The trajectory records fixture receipts and never executes the native Python or Go witnesses, so it proves CLI admission, linkage, currentness and route closure, not native test truth."
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-042",
       "ownerId": "proofkit.spec-proof-core",
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
@@ -9155,6 +9168,113 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-020",
+      "scenarioId": "proofkit.agent-workflow.trajectory-cli-guides",
+      "witnessId": "proofkit.agent-workflow.trajectory-cli-guides-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/trajectory_guides_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNextActionContinuationIsTotalAndExecutable",
+          "command": "go test ./internal/app -run '^TestNextActionContinuationIsTotalAndExecutable$'"
+        },
+        {
+          "selector": "TestScenarioGuideBodyMaterializesWithItsBindingRow",
+          "command": "go test ./internal/app -run '^TestScenarioGuideBodyMaterializesWithItsBindingRow$'"
+        },
+        {
+          "selector": "TestSchedulerGuideProjectsTheConnectedBinding",
+          "command": "go test ./internal/app -run '^TestSchedulerGuideProjectsTheConnectedBinding$'"
+        },
+        {
+          "selector": "TestSliceAndDiffGuidesCompareRetainedContexts",
+          "command": "go test ./internal/app -run '^TestSliceAndDiffGuidesCompareRetainedContexts$'"
+        },
+        {
+          "selector": "TestTrajectoryInputGuidesAreLazyAndCarrierBound",
+          "command": "go test ./internal/app -run '^TestTrajectoryInputGuidesAreLazyAndCarrierBound$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-020",
+      "scenarioId": "proofkit.agent-workflow.trajectory-continuation-owner",
+      "witnessId": "proofkit.agent-workflow.trajectory-continuation-owner-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstatus/continuation_guide_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestActionContinuationsMatchTheCanonicalActionTable",
+          "command": "go test ./internal/command/projectstatus -run '^TestActionContinuationsMatchTheCanonicalActionTable$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-020",
+      "scenarioId": "proofkit.agent-workflow.trajectory-installed-carriers",
+      "witnessId": "proofkit.agent-workflow.trajectory-installed-carriers-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/trajectory_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyProcessAcceptsSourceBuiltBinary",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyProcessAcceptsSourceBuiltBinary$'"
+        },
+        {
+          "selector": "TestVerifyProcessComposesWorkflowAndTrajectory",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyProcessComposesWorkflowAndTrajectory$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test", "proofkit.package-artifact"],
+      "environmentClasses": ["local-go", "local-go-python"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-020",
+      "scenarioId": "proofkit.agent-workflow.trajectory-route-ledger",
+      "witnessId": "proofkit.agent-workflow.trajectory-route-ledger-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/trajectory_ledger_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestTrajectoryLedgerRefusesUnnamedRoutesBeforeExecution",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestTrajectoryLedgerRefusesUnnamedRoutesBeforeExecution$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-020",
+      "scenarioId": "proofkit.agent-workflow.trajectory-whole-operation",
+      "witnessId": "proofkit.agent-workflow.trajectory-whole-operation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/trajectory_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyTrajectoryAcceptsApplicationCLI",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyTrajectoryAcceptsApplicationCLI$'"
+        },
+        {
+          "selector": "TestVerifyTrajectoryRejectsAcceptedNegativeControls",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyTrajectoryRejectsAcceptedNegativeControls$'"
+        },
+        {
+          "selector": "TestVerifyTrajectoryRejectsWrongInvalidation",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyTrajectoryRejectsWrongInvalidation$'"
+        },
+        {
+          "selector": "TestVerifyTrajectoryRequiresCLINamedRoutes",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyTrajectoryRequiresCLINamedRoutes$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-042",
