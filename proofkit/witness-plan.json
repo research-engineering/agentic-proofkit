@@ -1225,6 +1225,7 @@
         "package-lock.json",
         "package.json",
         "proofkit/cli-contract.v2.json",
+        "scripts/cli-process.mjs",
         "scripts/compact-proof-structure.test.mjs"
       ],
       "outputSelectors": [],
@@ -1886,6 +1887,7 @@
         "package-lock.json",
         "package.json",
         "proofkit/cli-contract.v2.json",
+        "scripts/cli-process.mjs",
         "scripts/receipt-admission-structure.test.mjs",
         "scripts/receipt-structure.test.mjs"
       ],
@@ -1928,6 +1930,7 @@
         "package-lock.json",
         "package.json",
         "proofkit/cli-contract.v2.json",
+        "scripts/cli-process.mjs",
         "scripts/spec-tree-structure.test.mjs"
       ],
       "outputSelectors": [],
@@ -2017,6 +2020,8 @@
         "scripts/bootstrap-structure.test.mjs",
         "scripts/boundary-structure.test.mjs",
         "scripts/browser-server-structure.test.mjs",
+        "scripts/cli-process.mjs",
+        "scripts/cli-process.test.mjs",
         "scripts/consumer-evidence-structure.test.mjs",
         "scripts/explicit-input-structure.test.mjs",
         "scripts/generated-starter-structure.test.mjs",

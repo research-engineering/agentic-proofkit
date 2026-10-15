@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {assertCLITransport} from './cli-process.mjs';
 import {compileVariantUnion} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -134,7 +135,7 @@ test('actual navigation CLI preserves read-only states and its status-owned next
       const args = [...(descriptor.route ?? [command]), '--repo-root', repo, ...flags];
       if (input !== undefined) args.push('--input', '-');
       const result = spawnSync(binary, args, {input: input === undefined ? undefined : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
-      assert.equal(result.error, undefined); assert.equal(result.signal, null); assert.equal(result.status, expected, result.stderr);
+      assertCLITransport(result); assert.equal(result.status, expected, result.stderr);
       return result;
     }
     const repo = join(directory, 'repository'); mkdirSync(repo); writeFileSync(join(repo, 'README.md'), '# Pilot\n');

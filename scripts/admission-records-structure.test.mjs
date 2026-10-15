@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {assertCLITransport} from './cli-process.mjs';
 import {expandSharedDefinitions} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -96,7 +97,7 @@ function run(command, input, flags = []) {
   const result = spawnSync(binary, [command, '--input', '-', ...flags], {
     input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 30000, maxBuffer: 32 << 20,
   });
-  assert.equal(result.error, undefined); assert.equal(result.signal, null);
+  assertCLITransport(result);
   return result;
 }
 // Admitted inputs must satisfy the input schema; the emitted JSON must satisfy the output schema.

@@ -5,6 +5,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {assertCLITransport} from "./cli-process.mjs";
 import {compileVariantUnion} from "./schema-definitions.mjs";
 import {annotatedInventoryInput, directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, ownerInvariantRegistry, proofInventoryInput, sourceSetInput, twoSourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
 
@@ -42,13 +43,12 @@ function native(command, input, {flags = [], exit = 0, report = true, carrier = 
   } else if (carrier === "compact") args.unshift("--json-layout", "compact");
   const invoke = path => spawnSync(path, args, {input: bytes, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
-  assert.equal(result.error, undefined); assert.equal(result.signal, null);
+  assertCLITransport(result);
   for (const value of absent) assert.equal((result.stdout + result.stderr).includes(value), false, "caller value disclosed");
   if (exit === null) assert.ok([0, 1].includes(result.status), result.stderr);
   else assert.equal(result.status, exit, result.stderr);
   if (process.env.PROOFKIT_INVENTORY_BASELINE && compare) {
-    const prior = invoke(process.env.PROOFKIT_INVENTORY_BASELINE);
-    assert.equal(prior.error, undefined);
+    const prior = assertCLITransport(invoke(process.env.PROOFKIT_INVENTORY_BASELINE), "baseline");
     assert.deepEqual([result.status, result.signal, result.stdout, result.stderr], [prior.status, prior.signal, prior.stdout, prior.stderr], "undeclared native predecessor delta");
   }
   if (!report) { assert.equal(result.stdout, ""); assert.notEqual(result.stderr, ""); return; }

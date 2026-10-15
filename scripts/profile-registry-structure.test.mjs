@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {assertCLITransport} from './cli-process.mjs';
 import {expandSharedDefinitions} from './schema-definitions.mjs';
 
 // Independent oracle: expected inventories, vocabularies and fixtures are
@@ -65,7 +66,7 @@ function run(command, input, flags = []) {
   const result = spawnSync(binary, [command, '--input', '-', ...flags], {
     input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 8 << 20,
   });
-  assert.equal(result.error, undefined); assert.equal(result.signal, null);
+  assertCLITransport(result);
   return result;
 }
 // Variant selection is a public flag rule: --list, --profile and --verify select disjoint carriers.
