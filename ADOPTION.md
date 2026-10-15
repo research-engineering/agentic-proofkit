@@ -357,6 +357,20 @@ records, and the matching `specPackagePath/overview.md` and
 an active public reader. Changing a version number or filename alone does not
 migrate a source, its references, or its proof bindings.
 
+`requirement-source-conversion` is the explicit route to a flat editing copy
+and back. `--to flat` exports one resolved record per requirement together with
+the profile, group and statement-stem coordinates that own each value and the
+`basisDigest` of the canonical grouped source. `--to grouped --baseline <path>`
+imports such a document only against that same grouped source: values may
+change, while requirement identity, membership, profile ownership and stems
+must not, and a shared value must be identical in every member record. Stale
+baselines, ownership changes, disagreement and the retired flat v1 source are
+refused with a closed diagnostic code and no output. `--output <path>` publishes
+a new file only, never inside `.git` or `.agentic-proofkit`; promoting the
+reviewed grouped result over the source of record remains an explicit caller
+step. Conversion does not migrate proof bindings or keep two sources
+synchronized.
+
 Canonical field correspondence and accepted input domains are separate checks.
 The v2 source and its expanded projections each have explicit resource bounds.
 Admission of source bytes does not imply that every derived view or browser
@@ -401,6 +415,7 @@ second copy of its JSON fields:
 
 ```sh
 agentic-proofkit requirement-authoring-plan --help
+agentic-proofkit requirement-source-conversion --help
 agentic-proofkit native-evidence-guidance --help
 agentic-proofkit proof-receipt-admission --help
 agentic-proofkit spec-proof-bundle-admission --help

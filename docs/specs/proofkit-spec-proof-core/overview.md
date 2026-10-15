@@ -244,6 +244,57 @@ execution receipts, and merge policy.
   input admission, pass cooperative cancellation to native owners, restore
   previous signal handling and join their waiter without replacing owner results.
 
+- `REQ-PROOFKIT-SPEC-044`: `requirement-source-conversion` exports a grouped
+  v2 source as a complete flat v1 document and imports it back against the
+  baseline named by its digest through the single source model, preserving
+  values, ownership and references, refusing ownership changes, disagreement,
+  staleness and the retired flat v1 source, and publishing only new files
+  outside `.git` and `.agentic-proofkit` at any depth.
+
+## Source Conversion Boundary
+
+Problem: agents and reviewers often edit one resolved record per requirement,
+while the grouped source keeps shared statement stems, premises and
+profile-owned metadata once. Without an owner, a flat copy either loses that
+ownership or becomes a second source whose edits silently override the grouped
+one.
+
+Decision: the grouped source stays the only source of record. The flat document
+is a complete derived interchange format: resolved records plus the explicit
+profile, group and stem coordinates that own each value, bound by `basisDigest`
+to the canonical grouped source it came from. Export succeeds on every admitted
+source whose flat emission fits the CLI input bound. Import requires that
+baseline, reconstructs ownership only from the coordinates, requires member
+agreement for every shared value and admits value changes only. Both directions
+run through the grouped codec and model and re-admit their emission, so no
+second validator or loss acceptance exists.
+
+Preservation: a successful conversion preserves the model's resolved values,
+ownership layout and references. Canonical grouped input returns byte for byte
+through the grouped codec; input formatting, key order and absent-versus-empty
+spelling of defaulted wire members are not preserved. Ownership changes, new or
+removed requirements, member disagreement, stale baselines, unsupported
+identities and emissions beyond the CLI input bound are refused before output.
+
+Legacy flat v1: refused with `legacy_source_unsupported`. Importing it would
+need invented group identities and an unproved field mapping; no default-off v1
+reader exists.
+
+Rejected lower-cost alternatives: a resolved-only flat format with a loss flag
+cannot reconstruct ownership; flat import without a baseline makes the flat
+document a second editable source; consumer scripts duplicate the mapping
+without the model's refusals.
+
+Future adapter boundary: another representation, including a DSL, needs a
+concrete unmet need, its own versioned identity, a bounded codec with source
+coordinates, the same model, coordinate and re-admission obligations and
+independent fixtures. A grammar, plugin loading or synchronization is not part
+of this boundary.
+
+Overturn condition: reopen the flat contract if the model admits profile
+overrides, unused profiles or empty groups, and reopen the legacy decision only
+with a supported consumer that holds v1 sources and a proved bounded mapping.
+
 ## Non-Claims
 
 - This spec does not claim consumer repository adoption.
@@ -255,3 +306,5 @@ execution receipts, and merge policy.
   Markdown prose.
 - This spec does not prove overview-claim extractor completeness.
 - This spec does not discover source diffs or approve requirement deletion.
+- This spec does not migrate proof bindings or synchronize alternative source
+  representations.

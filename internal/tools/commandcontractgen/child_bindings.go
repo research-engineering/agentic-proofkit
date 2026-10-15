@@ -35,6 +35,8 @@ func nativeChildBindings() []nativeChildBinding {
 		{"requirement-impact-input-compose", "input", sourceV2DefinitionID, [][]string{{"baseRequirementSources", "*"}, {"currentRequirementSources", "*"}}, ""},
 		{"requirement-authoring-plan", "input", sourceV2DefinitionID, [][]string{{"currentRequirementSource"}, {"candidateRequirementSource"}}, ""},
 		{"requirement-authoring-plan", "output", sourceV2DefinitionID, [][]string{{"nonAuthoritativeAdmissionPreview", "requirementSourcePreview"}}, ""},
+		{"requirement-source-conversion", "input", sourceV2DefinitionID, [][]string{{}}, "01-grouped-source"},
+		{"requirement-source-conversion", "output", sourceV2DefinitionID, [][]string{{}}, "02-grouped-source"},
 		{"requirement-source-transition", "input", sourceV2DefinitionID, [][]string{{"previous"}, {"next"}}, ""},
 		{"test-evidence-inventory", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}, "03-proof-binding-derived"},
 		{"requirement-context-compose", "output", sourceV2DefinitionID, [][]string{{"projections", "requirementSources", "*"}}, ""},

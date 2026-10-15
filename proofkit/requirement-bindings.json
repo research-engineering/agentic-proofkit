@@ -1023,6 +1023,16 @@
       "nonClaims": [
         "This policy does not guarantee prompt cancellation of blocking system calls, exact counting of coalesced signals, atomic stdout after forced termination, launcher or proof-tool signal propagation, or process-group absence. Native signal witnesses do not enumerate every transaction mutation phase."
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "Conversion does not establish requirement meaning, make a flat document an editable source of record, synchronize representations, migrate proof bindings or other references, preserve input formatting, key order or bytes, import retired flat v1 sources, authenticate a baseline beyond its admitted model digest, protect non-Git version-control metadata, detect a working directory inside Git metadata, protect publication from adversarial concurrent namespace mutation by the same operating-system user, guarantee filesystem crash or fsync durability, remove parent directories created before a later failure, publish without hard-link support, execute native witnesses, or approve merge, release, rollout, or production readiness."
+      ]
     }
   ],
   "bindings": [
@@ -1148,6 +1158,211 @@
       ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "scenarioId": "proofkit.spec-proof-core.source-conversion-hand-authored",
+      "witnessId": "proofkit.requirement-source-conversion.hand-authored-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementsourceconversion/conversion_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestConversionMatchesHandAuthoredDocuments",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestConversionMatchesHandAuthoredDocuments$'"
+        },
+        {
+          "selector": "TestFlatDocumentAloneReconstructsTheCompleteModel",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestFlatDocumentAloneReconstructsTheCompleteModel$'"
+        },
+        {
+          "selector": "TestIdenticalValuesKeepTheirDistinctOwners",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestIdenticalValuesKeepTheirDistinctOwners$'"
+        },
+        {
+          "selector": "TestExportIsIndependentOfCallerOrder",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestExportIsIndependentOfCallerOrder$'"
+        },
+        {
+          "selector": "TestRoundTripsAreIdempotent",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestRoundTripsAreIdempotent$'"
+        },
+        {
+          "selector": "TestSelfHostedSourcesRoundTrip",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestSelfHostedSourcesRoundTrip$'"
+        },
+        {
+          "selector": "TestFlatFieldInventoryMatchesTheModel",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestFlatFieldInventoryMatchesTheModel$'"
+        },
+        {
+          "selector": "TestResolvedFieldsRequireTheExclusiveTotalPartition",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestResolvedFieldsRequireTheExclusiveTotalPartition$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "scenarioId": "proofkit.spec-proof-core.source-conversion-edits",
+      "witnessId": "proofkit.requirement-source-conversion.edit-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementsourceconversion/edit_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestImportAppliesValueEditsUnderBaselineOwnership",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestImportAppliesValueEditsUnderBaselineOwnership$'"
+        },
+        {
+          "selector": "TestReorderedBaselineIsNotStale",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestReorderedBaselineIsNotStale$'"
+        },
+        {
+          "selector": "TestImportRefusesOwnershipChangesAndDisagreements",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestImportRefusesOwnershipChangesAndDisagreements$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "scenarioId": "proofkit.spec-proof-core.source-conversion-refusal",
+      "witnessId": "proofkit.requirement-source-conversion.refusal-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementsourceconversion/refusal_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestFormatIdentityRefusals",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestFormatIdentityRefusals$'"
+        },
+        {
+          "selector": "TestFlatCoordinateRefusals",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestFlatCoordinateRefusals$'"
+        },
+        {
+          "selector": "TestFlatStructureRefusals",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestFlatStructureRefusals$'"
+        },
+        {
+          "selector": "TestModelRefusalsUseFlatCoordinates",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestModelRefusalsUseFlatCoordinates$'"
+        },
+        {
+          "selector": "TestRefusalsAreBoundedAndDeterministic",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestRefusalsAreBoundedAndDeterministic$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "scenarioId": "proofkit.spec-proof-core.source-conversion-structure",
+      "witnessId": "proofkit.requirement-source-conversion.structure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementsourceconversion/structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestEmissionsConformToPublishedStructures",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestEmissionsConformToPublishedStructures$'"
+        },
+        {
+          "selector": "TestPublishedStructuresReuseTheirOwners",
+          "command": "go test ./internal/command/requirementsourceconversion -run '^TestPublishedStructuresReuseTheirOwners$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "scenarioId": "proofkit.spec-proof-core.source-conversion-contract",
+      "witnessId": "proofkit.requirement-source-conversion.contract-variant-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/source_conversion_structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSourceConversionVariantsCoverTheClosedTargetVocabulary",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestSourceConversionVariantsCoverTheClosedTargetVocabulary$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "scenarioId": "proofkit.spec-proof-core.source-conversion-cli",
+      "witnessId": "proofkit.requirement-source-conversion.cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/requirement_source_conversion_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRequirementSourceConversionCLI",
+          "command": "go test ./internal/app -run '^TestRequirementSourceConversionCLI$'"
+        },
+        {
+          "selector": "TestRequirementSourceConversionOutputPublication",
+          "command": "go test ./internal/app -run '^TestRequirementSourceConversionOutputPublication$'"
+        },
+        {
+          "selector": "TestRequirementSourceConversionOutputBound",
+          "command": "go test ./internal/app -run '^TestRequirementSourceConversionOutputBound$'"
+        },
+        {
+          "selector": "TestRequirementSourceConversionOutputRefusesProtectedNamespaces",
+          "command": "go test ./internal/app -run '^TestRequirementSourceConversionOutputRefusesProtectedNamespaces$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "scenarioId": "proofkit.spec-proof-core.source-conversion-version-edge",
+      "witnessId": "proofkit.requirement-source-conversion.version-edge-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/source_conversion_version_edge_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSourceConversionVersionEdgeRejectsUndeclaredInventory",
+          "command": "go test ./internal/app -run '^TestSourceConversionVersionEdgeRejectsUndeclaredInventory$'"
+        },
+        {
+          "selector": "TestSourceConversionVersionEdgeRequiresBothDefinitions",
+          "command": "go test ./internal/app -run '^TestSourceConversionVersionEdgeRequiresBothDefinitions$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "scenarioId": "proofkit.spec-proof-core.source-conversion-installed-carrier",
+      "witnessId": "proofkit.requirement-source-conversion.installed-carrier-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/workflow_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyAcceptsApplicationCLI",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyAcceptsApplicationCLI$'"
+        },
+        {
+          "selector": "TestVerifyRejectsCarrierContractMutations",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyRejectsCarrierContractMutations$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test", "proofkit.package-artifact"],
+      "environmentClasses": ["local-go", "local-go-python"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-044",
+      "scenarioId": "proofkit.spec-proof-core.source-conversion-schema-independent-runtime",
+      "witnessId": "proofkit.requirement-source-conversion.schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/source-conversion-structure.test.mjs",
+      "commandIds": ["proofkit.boundary-contract-check"],
+      "environmentClasses": ["local-go-node"]
     },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-001",

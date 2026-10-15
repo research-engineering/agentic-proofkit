@@ -240,10 +240,13 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
+	if err := verifySourceConversionDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
+		t.Fatal(err)
+	}
 	// Materialization input replacements were already counted by the source cutover.
 	// Adoption, integration and navigation enrichment replace twelve retained output roots.
 	// Batch structural enrichment replaces the remaining retained root-shape definitions.
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 168 || len(added) != 164+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 168 || len(added) != 164+len(residueCommandAdditions)+len(sourceConversionCommandAddition.definitions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {
@@ -311,6 +314,10 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 		}
 		expectedOrder = append(expectedOrder, addition.command)
 	}
+	if _, exists := priorCommands[sourceConversionCommandAddition.command]; exists {
+		return nil, fmt.Errorf("declared added command already exists in predecessor")
+	}
+	expectedOrder = append(expectedOrder, sourceConversionCommandAddition.command)
 	slices.Sort(expectedOrder)
 	if !slices.Equal(expectedOrder, nextOrder) {
 		return nil, fmt.Errorf("public command inventory or order changed without declaration")

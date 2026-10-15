@@ -232,7 +232,7 @@ func TestPresentationOutputRefusesPathsOutsidePathIdentityDomain(t *testing.T) {
 		"visible parent":   "..\u200c/view.md",
 		"admitted maximum": strings.Repeat("d/", 63) + "view.md",
 	} {
-		_, err := admitPresentationOutputPath(output)
+		_, err := admitPresentationOutputPath(output, "requirement-spec-tree-view output")
 		if name == "admitted maximum" {
 			if err != nil {
 				t.Errorf("%s refused: %v", name, err)

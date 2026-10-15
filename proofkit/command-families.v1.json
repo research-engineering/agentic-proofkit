@@ -188,10 +188,11 @@
     {
       "familyId": "requirement-source-lifecycle",
       "label": "Requirement source lifecycle",
-      "purpose": "Author, admit, transition, and check requirement source claims.",
+      "purpose": "Author, admit, convert, transition, and check requirement source claims.",
       "commands": [
         "requirement-authoring-plan",
         "requirement-source-admission",
+        "requirement-source-conversion",
         "requirement-source-transition",
         "spec-overview-claims"
       ]

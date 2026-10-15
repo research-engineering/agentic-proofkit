@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 2,
+  "kind": "proofkit.requirement-source",
+  "sourceId": "fixture.conversion.source",
+  "specPackagePath": "docs/specs/conversion",
+  "sourceNonClaims": ["Conversion fixtures do not execute native witnesses."],
+  "sourceNonClaimRefs": ["NCL-CONV-SOURCE"],
+  "nonClaimDefinitions": [
+    {"nonClaimId":"NCL-CONV-DERIVATION","statement":"Derivation provenance does not prove requirement correctness."}
+  , {"nonClaimId":"NCL-CONV-REQUIREMENT","statement":"A declared requirement does not prove its satisfaction."}
+  , {"nonClaimId":"NCL-CONV-SCENARIO","statement":"Scenario examples are not exhaustive proof."}
+  , {"nonClaimId":"NCL-CONV-SOURCE","statement":"The conversion fixture does not prove implementation correctness."}
+  ],
+  "vocabulary": [
+    {"termId":"TERM-CONV-SERVICE","kind":"subject","label":"service","definition":"The bounded service under specification."}
+  ],
+  "derivations": [
+    {"derivationId":"DRV-CONV-001","sourceKind":"owner_decision","sourceRef":{"objectFormat":"sha1","commitOid":"0123456789abcdef0123456789abcdef01234567","path":"docs/decisions/conversion.md","sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},"selector":{"start":"0","end":"64"},"requirementIds":["REQ-CONV-001","REQ-CONV-002"],"nonClaimRefs":["NCL-CONV-DERIVATION"]}
+  ],
+  "profiles": [
+    {"profileId":"RPROF-CONV-BLOCKING","fields":{"ownerId":"conversion.owner","claimLevel":"blocking","riskClass":"high","updatePolicy":{"reviewOwnerId":"conversion.owner","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}
+  , {"profileId":"RPROF-CONV-EVIDENCE","fields":{"nonClaims":["Evidence records do not prove freshness."],"proofBindingRefs":["proofkit/requirement-bindings.json"]}}
+  ],
+  "groups": [
+    {
+      "groupId": "RGRP-CONV-DEFERRED",
+      "profileId": "",
+      "statementStem": "",
+      "sharedPremises": [],
+      "members": [
+        {"requirementId":"REQ-CONV-003","statementCompletion":"Deferred behavior remains owner-reviewed.","fields":{"nonClaims":["Deferred behavior is not yet proven."],"externalNonClaimRefs":[],"proofBindingRefs":[],"ownerId":"conversion.owner","claimLevel":"deferred","riskClass":"medium","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":{"ownerId":"conversion.owner","riskAcceptedBy":"conversion.risk","reviewCondition":"Review after the conversion pilot.","expiryRef":"conversion.expiry","mergePolicy":"conversion.merge","evidenceRefs":["docs/evidence/conversion-deferral.md"]},"updatePolicy":{"reviewOwnerId":"conversion.owner"}}}
+      ]
+    }
+  , {
+      "groupId": "RGRP-CONV-REQUESTS",
+      "profileId": "RPROF-CONV-BLOCKING",
+      "statementStem": "The service must",
+      "sharedPremises": ["The service is available."],
+      "members": [
+        {"requirementId":"REQ-CONV-001","statementCompletion":"accept requests.","fields":{"nonClaims":["Requirement admission does not execute native witnesses."],"externalNonClaimRefs":["NC-CONV-EXTERNAL"],"proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":["NCL-CONV-REQUIREMENT"],"lifecycle":{"state":"active"},"deferral":null}}
+      , {"requirementId":"REQ-CONV-002","statementCompletion":"reject malformed requests.","fields":{"nonClaims":["Requirement admission does not execute native witnesses."],"externalNonClaimRefs":["NC-CONV-EXTERNAL"],"proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":["NCL-CONV-REQUIREMENT"],"lifecycle":{"state":"active"},"deferral":null}}
+      ]
+    }
+  , {
+      "groupId": "RGRP-CONV-SUPERSEDED",
+      "profileId": "",
+      "statementStem": "",
+      "sharedPremises": [],
+      "members": [
+        {"requirementId":"REQ-CONV-004","statementCompletion":"Historical behavior is superseded.","fields":{"nonClaims":["Superseded behavior is retained for traceability."],"externalNonClaimRefs":[],"proofBindingRefs":[],"ownerId":"conversion.owner","claimLevel":"advisory","riskClass":"low","nonClaimRefs":[],"lifecycle":{"state":"superseded","replacementRequirementIds":["REQ-CONV-001"],"evidenceRefs":["docs/evidence/conversion-superseded.md"]},"deferral":null,"updatePolicy":{"reviewOwnerId":"conversion.owner","requiresImpactDeclaration":true}}}
+      ]
+    }
+  , {
+      "groupId": "RGRP-CONV-UNICODE",
+      "profileId": "RPROF-CONV-EVIDENCE",
+      "statementStem": "Le syst\u00e8me doit",
+      "sharedPremises": ["Donn\u00e9es conserv\u00e9es.","Le journal est disponible."],
+      "members": [
+        {"requirementId":"REQ-CONV-005","statementCompletion":"conserver les entr\u00e9es.","fields":{"externalNonClaimRefs":[],"ownerId":"conversion.owner","claimLevel":"advisory","riskClass":"low","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"conversion.owner"}}}
+      , {"requirementId":"REQ-CONV-006","statementCompletion":"refuser les entr\u00e9es falsifi\u00e9es.","fields":{"externalNonClaimRefs":[],"ownerId":"conversion.owner","claimLevel":"advisory","riskClass":"low","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"conversion.owner"}}}
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenarioId": "SCN-CONV-REQUEST",
+      "requirementIds": ["REQ-CONV-001"],
+      "parameters": ["surface"],
+      "preconditions": ["The ${surface} surface is available."],
+      "actionSequence": ["Submit a request.","Wait for the response."],
+      "expectedObservations": ["The request is accepted."],
+      "forbiddenObservations": ["The service drops the request."],
+      "examples": [
+        {"exampleId":"EX-CONV-REQUEST-001","values":{"surface":"primary"}}
+      , {"exampleId":"EX-CONV-REQUEST-002","values":{"surface":"secondary"}}
+      ],
+      "vocabularyRefs": ["TERM-CONV-SERVICE"],
+      "nonClaimRefs": ["NCL-CONV-SCENARIO"]
+    }
+  ]
+}

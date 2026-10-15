@@ -14,6 +14,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageinput"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceconversion"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
@@ -124,6 +125,9 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 	}
 	if descriptor.name == "capability-map-admission" {
 		lines = append(lines, "", strings.TrimSuffix(capabilitymapadmission.InputGuide, "\n"))
+	}
+	if descriptor.name == "requirement-source-conversion" {
+		lines = append(lines, "", strings.TrimSuffix(requirementsourceconversion.Guide(), "\n"))
 	}
 	if descriptor.name == "adopt-materialize-plan" {
 		lines = append(lines, "", strings.TrimSuffix(adoptionmaterialization.InputGuide(renderer), "\n"))
@@ -246,6 +250,8 @@ func commandUsageLine(descriptor commandDescriptor) string {
 			segments = append(segments, "["+flag+"]")
 		case "--output":
 			segments = append(segments, "[--output <path>]")
+		case "--baseline":
+			segments = append(segments, "[--baseline <path>]")
 		default:
 			segments = append(segments, "["+flag+"]")
 		}
