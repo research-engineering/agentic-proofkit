@@ -237,7 +237,7 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.requirement-coverage-view.output.v4.root-shape"}, commands: []string{"requirement-coverage-view"},
 		wireVersion: json.Number("4"),
 		variants: []nativeStructureVariant{
-			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return requirementcoverageview.EnvelopeStructure(), nil }},
 			{id: "02-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return requirementcoverageview.OutputStructure(), nil }},
 		},
 	}, {
@@ -412,7 +412,7 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.workspace-changed-package-plan.output.v1.root-shape"}, commands: []string{"workspace-changed-package-plan"},
 		wireVersion: json.Number("1"),
 		variants: []nativeStructureVariant{
-			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ChangedPlanEnvelopeStructure(), nil }},
 			{id: "02-plan", when: "without --agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ChangedPlanOutputStructure(), nil }},
 		},
 	}, {
@@ -424,7 +424,7 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.workspace-shard-partition.output.v1.root-shape", "proofkit.workspace-shard-partition.output.v1.json-schema"}, commands: []string{"workspace-shard-partition"},
 		wireVersion: json.Number("1"),
 		variants: []nativeStructureVariant{
-			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ShardEnvelopeStructure(), nil }},
 			{id: "02-partition", when: "without --agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ShardOutputStructure(), nil }},
 		},
 	}, {
@@ -1235,39 +1235,6 @@ func (owner nativeStructure) contractVersion(definition map[string]any) (json.Nu
 		return "", fmt.Errorf("native structure %s has no variant with wire version %s", owner.id, owner.wireVersion)
 	}
 	return nativeSchemaVersion(variants[0].(map[string]any)["schema"].(map[string]any), owner.schemaVersionField())
-}
-
-// The generic envelope owner fixes root keys and types; its nested records
-// retain their separately admitted semantics.
-func agentEnvelopeRootStructure() (map[string]any, error) {
-	output := agentenvelope.Build(agentenvelope.Input{})
-	properties := map[string]any{}
-	required := []any{}
-	for _, key := range sortedKeys(output) {
-		var field map[string]any
-		switch value := output[key].(type) {
-		case string:
-			field = map[string]any{"type": "string"}
-		case []any:
-			field = map[string]any{"type": "array"}
-		case map[string]any:
-			field = map[string]any{"type": "object"}
-		case int:
-			if key != "schemaVersion" || value != 1 {
-				return nil, fmt.Errorf("agent envelope has an unexpected integer root field")
-			}
-			field = map[string]any{"type": "integer", "const": json.Number("1")}
-		default:
-			return nil, fmt.Errorf("agent envelope has an unsupported root field")
-		}
-		properties[key] = field
-		required = append(required, key)
-	}
-	return map[string]any{
-		"$schema": "https://json-schema.org/draft/2020-12/schema",
-		"type":    "object", "additionalProperties": false,
-		"properties": properties, "required": required,
-	}, nil
 }
 
 func (owner nativeStructure) summary(version json.Number) []any {

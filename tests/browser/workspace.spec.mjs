@@ -521,16 +521,48 @@ for (const mutation of ["history", "document-open", "replace-root"]) test(`attac
   expect(attachmentStatus).toBe(200);
 });
 
-test("download response cannot certify a later failed document", async ({baseURL, browserName, page}) => {
+test("download response cannot certify a later failed document", async ({baseURL, browserName, page}, testInfo) => {
   await openWorkspace(page, baseURL);
   let failing = false;
   const statuses = [];
+  const eventLimit = 64;
+  const events = [];
+  let droppedEvents = 0;
+  let callback = {outcome: "not-started"};
+  const startedAt = performance.now();
+  const record = (phase, details = {}) => {
+    if (events.length === eventLimit) {
+      droppedEvents++;
+      return;
+    }
+    events.push({phase, elapsedMs: Math.round(performance.now() - startedAt), ...details});
+  };
+  const errorClass = (error) => {
+    const admitted = ["Error", "TypeError", "RangeError", "ReferenceError", "SyntaxError", "TimeoutError", "TargetClosedError"];
+    return admitted.includes(error?.name) ? error.name : "OtherError";
+  };
+  const pendingResponses = new Set();
   const server = createServer((request, response) => {
+    const path = request.url === "/" ? "/" : "other";
+    const status = path === "/" ? (failing ? 503 : 200) : 404;
+    record("server-request", {path, status});
+    const onFinish = () => record("server-finish", {path, status});
+    const detach = () => {
+      response.off("finish", onFinish);
+      response.off("close", onClose);
+      pendingResponses.delete(detach);
+    };
+    const onClose = () => {
+      record("server-close", {path, status});
+      detach();
+    };
+    pendingResponses.add(detach);
+    response.once("finish", onFinish);
+    response.once("close", onClose);
     if (request.url !== "/") {
       response.writeHead(404).end();
       return;
     }
-    const status = failing ? 503 : 200;
     statuses.push(status);
     response.statusCode = status;
     response.setHeader("Content-Type", "text/html");
@@ -542,11 +574,35 @@ test("download response cannot certify a later failed document", async ({baseURL
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
-  try {
-    page.once("download", () => {
-      failing = true;
-      void page.evaluate((target) => window.location.assign(target), workspaceURL).catch(() => undefined);
+  const isFixtureRequest = (request) => request.isNavigationRequest()
+    && request.frame() === page.mainFrame() && request.url() === workspaceURL;
+  const onRequest = (request) => {
+    if (isFixtureRequest(request)) record("browser-request");
+  };
+  const onResponse = (response) => {
+    if (isFixtureRequest(response.request())) record("browser-response", {status: response.status()});
+  };
+  const onRequestFailed = (request) => {
+    if (isFixtureRequest(request)) record("browser-requestfailed", {errorClass: "RequestFailure"});
+  };
+  const onDownload = () => {
+    record("browser-download");
+    failing = true;
+    callback = {outcome: "pending"};
+    record("callback-start");
+    void page.evaluate((target) => window.location.assign(target), workspaceURL).then(() => {
+      callback = {outcome: "fulfilled"};
+      record("callback-fulfilled");
+    }, (error) => {
+      callback = {outcome: "rejected", errorClass: errorClass(error)};
+      record("callback-rejected", {errorClass: callback.errorClass});
     });
+  };
+  page.on("request", onRequest);
+  page.on("response", onResponse);
+  page.on("requestfailed", onRequestFailed);
+  page.once("download", onDownload);
+  try {
     await expect(navigateWorkspace(
       page,
       workspaceURL,
@@ -561,8 +617,31 @@ test("download response cannot certify a later failed document", async ({baseURL
     if (browserName !== "webkit") expect(statuses).toEqual([200, 503]);
     if (statuses.length === 2) await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
   } finally {
-    server.closeAllConnections();
-    await new Promise((resolve) => server.close(resolve));
+    record("cleanup-start");
+    try {
+      server.closeAllConnections();
+      await new Promise((resolve) => server.close(resolve));
+      record("server-closed");
+    } finally {
+      page.off("request", onRequest);
+      page.off("response", onResponse);
+      page.off("requestfailed", onRequestFailed);
+      page.off("download", onDownload);
+      for (const detach of pendingResponses) detach();
+      await testInfo.attach("download-document-diagnostics", {
+        contentType: "application/json",
+        body: Buffer.from(JSON.stringify({
+          fixture: "download-document",
+          path: "/",
+          eventLimit,
+          events,
+          droppedEvents,
+          statuses: statuses.slice(0, eventLimit),
+          droppedStatuses: Math.max(0, statuses.length - eventLimit),
+          callback,
+        })),
+      });
+    }
   }
 });
 
