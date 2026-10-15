@@ -136,7 +136,8 @@ func TestCoverageOutputStructurePreservesBothCLIOutputModes(t *testing.T) {
 	if envelope["variantId"] != "01-agent-envelope" || report["variantId"] != "02-report" ||
 		!reflect.DeepEqual(envelope["when"], []any{"--agent-envelope"}) ||
 		!reflect.DeepEqual(report["when"], []any{"without --agent-envelope"}) ||
-		!equalPublishedSchema(report["schema"], requirementcoverageview.OutputStructure()) {
+		!equalPublishedSchema(report["schema"], requirementcoverageview.OutputStructure()) ||
+		!equalPublishedSchema(envelope["schema"], requirementcoverageview.EnvelopeStructure()) {
 		t.Fatal("coverage output variants lost their owner or invocation condition")
 	}
 	actual := agentenvelope.Build(agentenvelope.Input{})
