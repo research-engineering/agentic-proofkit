@@ -1,50 +1,216 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.15.0",
-  "version": "0.16.0",
+  "previousVersion": "0.16.0",
+  "version": "0.17.0",
   "changeClass": "breaking",
   "breakingChanges": [
     {
-      "changeId": "proofkit.native-admission.branch-version",
-      "summary": "Branch authority rejects names outside the Git branch shorthand grammar, and five package, registry, release, and consumer commands enforce full SemVer 2.0.0 after their existing field-specific text admission. Inputs previously accepted only because of incomplete local predicates now fail admission."
+      "changeId": "proofkit.python-wheel.minimum-python",
+      "summary": "Python wheels declare Requires-Python >=3.11 instead of >=3.9, so installers on Python 3.9 and 3.10 no longer select them. The required installed-wheel minimum smoke runs CPython 3.11.0 with a checksum-pinned pip 26.2.1. CLI contract identities are unchanged."
     },
     {
-      "changeId": "proofkit.conformance-profile.ambiguous-id",
-      "summary": "Conformance profile selection rejects duplicate records with the selected profileId instead of choosing whichever appears first. The full-manifest verification command continues to report duplicate IDs."
+      "changeId": "proofkit.platform.darwin-verified-support",
+      "summary": "The supported Darwin claim narrows from macOS 13 or later, the 0.16.0 support claim, to verified macOS 15 or later on arm64 and x86_64, which required CI executes on the macos-15 and macos-15-intel runners. macOS 13 and 14 are no longer supported targets: Darwin binaries still declare a macOS 13.0 minimum in their Mach-O build metadata, so they remain binary-compatible by that metadata only and are not executed or verified. CLI contract identities are unchanged."
     },
     {
-      "changeId": "proofkit.deployment-endpoint.admission",
-      "summary": "Stable endpoints using case, trailing-root-dot or IDNA-equivalent variants of a declared temporary DNS suffix, endpoints matching caller-owned local indicators across Unicode, punycode, root-dot or equivalent IPv6 spellings, and temporary endpoints with impossible RFC3339 UTC calendar values now fail admission. Local indicators that erase under IDNA normalization are rejected instead of becoming wildcards. Equivalent Unicode host spellings now receive the same local-indicator decision. An unrelated hostname ending in the same text without a DNS label boundary no longer falsely matches; announced historical leap seconds remain valid."
+      "changeId": "proofkit.path-pattern.utf8-literals",
+      "summary": "Repository-relative wildcard path patterns compare UTF-8 literal spans instead of single bytes, so a wildcard pattern whose literal part contains non-ASCII characters now matches the paths it names, which 0.16.0 did not match. Selections and verdicts that use such patterns change, including impact, requirement-impact-input-compose, selective-gate-plan, workspace-changed-package-plan, repo-profile-admission and the pilot-admission impact demonstrations. Contract identities are unchanged."
     },
     {
-      "changeId": "proofkit.typescript-public-api.exports",
-      "summary": "TypeScript public API verification preserves dollar suffixes in exported identifiers. Manifests claiming a truncated identifier now fail comparison with the source inventory. The machine contract and report narrow scanner authority to a bounded lexical inventory; semicolonless statement boundaries require a repository-owned compiler witness."
+      "changeId": "proofkit.json-admission.promoted-field-keys",
+      "summary": "Commands that decode their JSON input into typed records refuse an object key that equals a promoted embedded field only after case folding, as they already did for other declared fields, instead of binding the key to that field. This change keeps every contractId."
+    },
+    {
+      "changeId": "proofkit.typescript-public-api.token-boundaries",
+      "summary": "typescript-public-api-surfaces finds export boundaries with a bounded Go token and expression recognizer instead of newline heuristics, so semicolonless compiler-valid sources in the declared lexical profile are inventoried by tokens. Secret-shaped report-visible text is refused, and direct exported generator declarations are stated as excluded. Manifests derived from the previous classification must be regenerated. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.conformance-profile.surface-environments",
+      "summary": "conformance-profile fails a selected profile when one of its selected surfaces requires an environment class outside the profile's allowed classes, or a non-local class in a local_only profile. Profiles that passed only because surface environments were not checked now fail. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.custom-rule-boundary.catch-all-globs",
+      "summary": "custom-rule-boundary fails a rule whose affected globs include a wildcard-only pattern that matches every repository root name, such as `**/**`, as a repository-wide catch-all; 0.16.0 recognized only `*`, `**` and `**/*`. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.release-authority.tarball-identity",
+      "summary": "release-authority refuses an input that omits the registryAuthority member, and it fails a tarball_pilot release whose rollback versionPin does not name the package tarball file exactly, either as file: followed by the tarball file name or as a path whose last segment is that file name; 0.16.0 accepted any pin ending in the tarball file name. external-consumer reports both conditions as failures of its embedded release-authority input. This change keeps every contractId; the external-consumer input v2 identity comes from the integrity-encoding change."
+    },
+    {
+      "changeId": "proofkit.consumer-evidence.integrity-encoding",
+      "summary": "external-consumer, registry-consumer and registry-consumer-proof-input-compose admit an integrity value only as canonical standard base64 of exactly 64 SHA-512 bytes, keeping their existing admission-versus-failed-report behavior for that field. Contract identities: proofkit.external-consumer.input.v2, proofkit.registry-consumer.input.v2 and proofkit.registry-consumer-proof-input-compose.input.v2, each with wire schemaVersion 1; output identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.repository-transaction.canonical-path-v3",
+      "summary": "Fresh repository-transaction plans and journals use transaction schema v3 with Unicode 17 canonical caseless path identity, NFD(Fold(NFD(path))), so target paths that collide only under that identity are refused as aliases. Retained v1 and v2 plans and journals keep their historical path rules, identities and recovery; a 0.16.0 binary rejects v3 plans and journals. Recoverable directory ownership is preserved after ambiguous publication failures, and directory admission cleanup failures are reported. Contract identities: proofkit.adopt-materialize-plan.input.v3 and proofkit.adopt-materialize-apply.input.v3 with wire schemaVersion 2, and proofkit.adopt-materialize-plan.output.v2, proofkit.adopt-materialize-apply.output.v2, proofkit.adopt-materialize-recover.output.v2, proofkit.integration-plan.output.v2, proofkit.integration-apply.output.v2 and proofkit.integration-recover.output.v2 with wire schemaVersion 1."
+    },
+    {
+      "changeId": "proofkit.selective-gate-evidence.nul-command-keys",
+      "summary": "selective-gate-evidence reconstructs command keys whose command text contains NUL exactly, so for such commands the reported duplicate keys, the failure and route diagnostic text and the two content-derived envelope hashes change; admission, grouping, states and counts are unchanged. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.workspace-shard-partition.resource-budgets",
+      "summary": "workspace-shard-partition bounds the shard count before nested node admission and the aggregate expanded work and normalized UTF-8 text before materialization, refusing inputs above those budgets. Contract identities: proofkit.workspace-shard-partition.input.v2 and proofkit.workspace-shard-partition.output.v2, both with wire schemaVersion 1."
+    },
+    {
+      "changeId": "proofkit.test-evidence-inventory.report-text-admission",
+      "summary": "test-evidence-inventory refuses an emitted report whose report-visible text is secret-shaped, admits the derived normalizedInventoryId through the normalized identifier grammar before emission, rejects cross-fragment falsifier identifier collisions and closes discovery action types. Every emitted diagnostic maps to a published classification ID, including incomplete_declared_oracle_metadata and the unclassified_test_inventory_gap fallback. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.producer-policy-self-proof.exact-tuple-keys",
+      "summary": "producer-policy-self-proof keys producer trust tuples by their exact coordinates instead of a |-joined string, so valid provenance or retention paths containing | no longer cause false self-proof failures or merge distinct tuples in counts. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.release-classification.derived-text-admission",
+      "summary": "release-authority and readiness-closeout admit recognized row identifiers and statuses taken from Markdown-derived text before insertion, duplicate formatting or report and error interpolation. Inadmissible text is refused with a bounded value-free error and no report; analysis-only body, owner and completion text and ignored rows keep their previous behavior. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.bootstrap.detached-payload-admission",
+      "summary": "gradual-adoption-bootstrap and its public wrappers adoption-contract-envelope and scaffold-project-structure admit the detached bootstrap payload before it reaches reports or materialization manifests: secret-shaped scalar values, structured credential pairs and malformed object keys are refused, planned profile paths come from the admitted child result instead of a reread of caller input, and optional rollback text is redacted in passed and failed reports. Contract identities: proofkit.gradual-adoption-bootstrap.input.v2 with wire schemaVersion 1, proofkit.adoption-contract-envelope.input.v3 with wire schemaVersion 2 and proofkit.scaffold-project-structure.input.v2 with wire schemaVersion 1; output identities and wire versions are unchanged."
+    },
+    {
+      "changeId": "proofkit.bootstrap.witness-plan-routing",
+      "summary": "gradual-adoption-bootstrap, and the bootstrap routes of scaffold-project-structure and adoption-contract-envelope, route the commands and vocabulary payload to witness-plan instead of witness-scheduler-plan, keep caller command prefixes and append only the generated commands the caller did not already list. Generated guidance commands and materialization-manifest content hashes change, and a bootstrap whose caller commands include a generated command now passes instead of failing. This change keeps every contractId; the input identities named by the detached-payload change come from that change."
+    },
+    {
+      "changeId": "proofkit.cli-contract.structural-publication",
+      "summary": "The CLI contract describes every public command direction, 172 directions in 168 definitions, with structural JSON Schema, and all root-shape-only definitions are retired, so rootDefinitionRef values and definition digests change for most directions. Each variant schema references root $defs entries named shared- plus 16 hexadecimal digits: compile each variant as its own document, or expand it first, before embedding it elsewhere, and expect Ajv schemaPath values to differ from the inline form. The shipped contract grows from 985,545 bytes to about 3.5 MB and the installed contract read bound rises from 1 MiB to 8 MiB; readers with a smaller limit must raise it. Native admission remains the semantic authority. The publication itself changes no contractId or schemaVersion; the identities that change in this release are named by their entries."
+    },
+    {
+      "changeId": "proofkit.workspace-registry.root-script-allowlist",
+      "summary": "workspace-registry treats an absent or null admittedRootScriptNames as no allowlist, so root scripts are unrestricted; an explicit [] remains an empty allowlist. In 0.16.0 absent and null were admitted as [], which refused every root script. The other optional script lists keep absent equal to []. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.migration-plan.blocker-slug",
+      "summary": "migration-plan splits camelCase before lowercasing in blockerReasonSlug, so the retained-owner blockerId suffix changes from -retained-wners to -listed-in-retained-owners. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.pilot-admission.echoed-text-admission",
+      "summary": "pilot-admission checks the caller text that its report echoes, namely blocking status, stack dimension, cache expectedOutcome and invalidatedInputClass, and the compact serialization of pilotMode, before projection. Secret-shaped text, including credential pairs split across JSON structure in pilotMode, refuses the input with no report and no echo, while ordinary unknown values remain collected failures. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.scaffold-profile-plan.environment-provenance",
+      "summary": "scaffold-profile-plan records environment-class provenance from the operand that supplied the classes, so classes supplied by the caller are recorded with provenance caller_input instead of stack_preset, in its own output and in the plan that scaffold-project-structure embeds. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.requirement-spec-tree-view.protected-output",
+      "summary": "requirement-spec-tree-view --output refuses, at argument admission before stdin is read and again at the writer sink, a path with any component equivalent to .git or .agentic-proofkit under canonical caseless matching after removal of HFS+-ignorable code points, a path outside the path-identity domain (invalid UTF-8, more than 1024 bytes or more than 64 components), and a path with a component that becomes . or .. once HFS+-ignorable code points are removed. Replacing an existing file keeps its read and write bits but drops every execute bit; new files stay 0644. Flags, contract shapes and contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.requirement-source.transition-and-diff-outputs",
+      "summary": "requirement-source-transition output lists addedRequirementIds, lifecycleChangedRequirementIds and missingRequirementIds beside their counts. requirement-semantic-diff output adds scenario entries (entityKind scenario) under /requirementSources/{sourceId}/scenarios/{scenarioId} with their value shapes, and its non-claim text changes; its input stays schema v3 and output admission accepts only v4. Scenario entries count toward query.maxChanges (default 8192) together with requirement entries, so requirement-semantic-diff, and requirement-browser-server --view workspace with a diffInput, now exit 1 where they previously succeeded when scenario edits push the count past maxChanges. Closed-schema validators of the previous outputs reject the new reports. Contract identities: proofkit.requirement-source-transition.output.v3 with schemaVersion 3 and proofkit.requirement-semantic-diff.output.v4 with schemaVersion 4."
+    },
+    {
+      "changeId": "proofkit.workspace-shard-partition.root-dependencies",
+      "summary": "workspace-shard-partition fails a shard whose root's workspaceDependencies contradict that package's record, where 0.16.0 succeeded. This change keeps every contractId; the v2 shard identities come from the resource-budget change."
+    },
+    {
+      "changeId": "proofkit.pilot-admission.duplicate-custom-rule-ids",
+      "summary": "pilot-admission fails an input with duplicate custom rule IDs wherever they occur, not only when adjacent, so a list such as [a, b, a] that passed now fails. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.external-consumer.packed-files",
+      "summary": "external-consumer no longer requires AGENTS.md and CONTRIBUTING.md in the npm pack metadata, so a report that failed only for those files now passes. This change keeps every contractId; the external-consumer input v2 identity comes from the integrity-encoding change."
+    },
+    {
+      "changeId": "proofkit.adoption-doctor.exact-envelope-identity",
+      "summary": "adoption-doctor --agent-envelope actions take route and candidate data only from the record their gap names by exact ID: a route or candidate whose ID is another record's ID plus a dot-separated suffix no longer receives that record's commands, selectors, owner questions or facts, and no action carries both route and candidate selectors. Contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.proof-linkage.node-digest",
+      "summary": "witness-scheduler-plan output adds a required proofNodeDigests diagnostic: per command, the SHA-256 of that node's execution decision. proof-receipt-admission input requires receipts[].proofNodeDigest and refuses v1 receipts with a migration message. spec-proof-bundle-admission child receipts carry proofNodeDigest, and a receipt links only when both the scheduler plan ID and the node digest of its receipt kind match, so a receipt recorded under one command definition no longer links under another plan that reuses the plan ID; edits to other nodes, nonClaims prose or spelling do not unlink it. Closed-schema validators of the previous versions reject the new records. Contract identities: proofkit.witness-scheduler-plan.output.v2 with schemaVersion 2, proofkit.proof-receipt-admission.input.v2 with schemaVersion 2 and proofkit.spec-proof-bundle-admission.input.v2 with wire schemaVersion 1."
+    },
+    {
+      "changeId": "proofkit.requirement-source-admission.source-paths",
+      "summary": "requirement-source-admission sourcePaths no longer lists overview.md, which stays a reserved owner-written path. Closed-schema validators of the previous version reject the new reports. Contract identity: proofkit.requirement-source-admission.output.v3 with schemaVersion 3."
+    },
+    {
+      "changeId": "proofkit.adopt-materialize.current-source-plan",
+      "summary": "adopt materialize plan and apply accept a sourcePlan only when it is the plan recorded in proofkit/project.v1.json or an observation of the current repository root, and refuse a stale sourcePlan before any write. This change keeps every contractId; the input identities proofkit.adopt-materialize-plan.input.v3 and proofkit.adopt-materialize-apply.input.v3 come from the canonical-path change."
+    },
+    {
+      "changeId": "proofkit.project-navigation.verification-route",
+      "summary": "status and next name native-evidence-guidance as the route for verification_required instead of an empty route, so statusId and packetId values change and records with an empty verification route are refused. Contract identities are unchanged: proofkit.status.output.v1 and proofkit.next.output.v1 with wire schemaVersion 1."
     }
   ],
   "additions": [
     {
-      "changeId": "proofkit.distribution-license-closure",
-      "summary": "npm and wheel license expressions identify the MIT and bundled BSD-3-Clause code in their distribution archives; CycloneDX records the compound SPDX expression, and bundled Go module notices are retained."
+      "changeId": "proofkit.cli-contract.identity-rule",
+      "summary": "docs/proofkit-contract-map.md states when a direction's contractId changes: when its wire shape changes (the outer schemaVersion, a newly emitted record shape or a newly required input shape), or when the CLI contract or a bound requirement statement gives a record that both releases admit or emit a different meaning. Defect corrections, narrower or wider admission, changed values of behavior the previous text did not specify, human diagnostics and renderings keep the contractId, and the release change record declares them and states whether they are breaking; correcting published text that the previous release's behavior already contradicted is a defect correction. The rule applies from this release: it governs the changes made after its adoption, and contract identities set before it, in earlier releases and by the changes of this release that were merged before its adoption, are retained as set. For example, typescript-public-api-surfaces keeps proofkit.typescript-public-api-surfaces.output.v1 although a change merged before the rule altered the bound REQ-PROOFKIT-PACKAGE-002 statement. Under the rule, the structural schemas of eight inputs describe as optional the members that their previous root shapes listed as required although native admission did not require them: adoption-doctor, adoption-workflow-plan, capability-map-admission, deployment-evidence-admission, pilot-admission, requirement-browser-server, scaffold-profile-plan and workspace-registry. That correction of published text is a defect correction: it keeps their contractIds, changes no command behavior and is not breaking."
+    },
+    {
+      "changeId": "proofkit.requirement-source.conversion",
+      "summary": "Add requirement-source-conversion, with contracts proofkit.requirement-source-conversion.input.v1 and proofkit.requirement-source-conversion.output.v1. --to flat exports an admitted grouped v2 source as a complete derived flat document (kind proofkit.requirement-source-flat, schemaVersion 1) with profile and group ownership coordinates and a basisDigest; --to grouped requires --baseline and imports value edits only when the baseline's canonical digest equals basisDigest and identities, membership, profile assignment, field ownership and statement stems are unchanged. The retired flat v1 source is refused with legacy_source_unsupported. A refused decoded input or baseline document carries one closed code and a JSON pointer or structural path into the caller's document and no caller value, while argument, path, file-system and JSON decoding refusals use the shared CLI diagnostics. --output publishes a new file only, never replacing an existing name, and refuses the same paths as requirement-spec-tree-view --output."
+    },
+    {
+      "changeId": "proofkit.transaction.residue-maintenance",
+      "summary": "Add read-only transaction inspect-residue and observation-bound transaction quarantine-residue, with contracts proofkit.transaction-inspect-residue.output.v1 and proofkit.transaction-quarantine-residue.output.v1, for unidentified repository-transaction preparation residue: unknown bytes and historical receipts are preserved, known journals and ambiguous filesystem state are refused, and quarantine publishes with one same-filesystem directory rename. Fresh transaction preparation is read back in a private sibling directory and published atomically, and SIGINT or SIGTERM during transaction plan, apply, recover and residue routes cancels through the existing transaction cancellation path."
+    },
+    {
+      "changeId": "proofkit.diagnostics.positions-and-fault-lists",
+      "summary": "JSON syntax rejections of --input, and of requirement-source-conversion --baseline, end with the line, column and byte offset of the rejected byte, and a nesting-depth rejection points at the first value past the limit, except for self-check, external-consumer, registry-consumer, registry-consumer-proof-input-compose, producer-policy-self-proof, migration-parity-admission, spec-overview-claims, release-authority and readiness-closeout, whose frozen stderr is preserved. Requirement source admission reports up to eight independent faults of a rejected source on one line and counts the rest as N more; a line longer than 512 Unicode scalar values keeps its first 512 and ends with `...<truncated-diagnostic>`, so later descriptions and the N more count can be cut off. A single fault keeps its previous error identity and text, except that duplicate-identity paths now name the repeated entry. Unsupported-field diagnostics report the command-owned context and a count instead of unknown caller key names. These diagnostic changes leave exit codes and stdout unchanged."
+    },
+    {
+      "changeId": "proofkit.requirement-views.scenario-nesting-and-rendering",
+      "summary": "Source views nest a scenario under its requirement when it links to exactly one requirement and otherwise render it once in a Shared Scenarios section that every linked requirement lists by ID, as an in-page link in HTML; the workspace shows owner-declared deferral records and a deferred count, and static HTML views hide a card group whose cards a search has hidden. Compact requirement-coverage-view Markdown and HTML show declared witness routes, and Markdown code spans follow CommonMark padding while payloads containing <, > or & render as escaped text. Browser views route graph edges around unrelated cards in separated corridors, preserve search text and disclosure state, answer a terminal handoff with HTTP 410 and a stale one with 409, respect font preferences, provide skip navigation and admit only the embedded script hash in the static-page CSP."
+    },
+    {
+      "changeId": "proofkit.agent-guidance.cli-continuations",
+      "summary": "CLI help adds input guides for witness-scheduler-plan, requirement-context-slice and requirement-semantic-diff, a total next-action continuation in status and next help, the scenario body shape in requirement-source-admission help, the agent bootstrap route in root help, adoption modes in adopt plan help, enumerations and identifier grammars derived from native constants, and a witness-migration recipe that never relabels receipts. A missing context catalog file is named by kind and path with the step that creates it, native-evidence-guidance routes materialized projects to semantic diff, slice and currentness, and first adoption instructions name the carrier-correct guidance."
+    },
+    {
+      "changeId": "proofkit.native-admission.correctness-fixes",
+      "summary": "Static non-directory roots and FIFO candidates are refused instead of blocking, including requirement-context-compose and repository-inventory roots and requirement-context catalog sources; native test observations must complete, so partial, aborted, expired or failed observations are rejected; repository planning runs under cooperative shared read leases; on Darwin, when the kernel no longer reports a child process after a foreign reap, process cleanup reports lost ownership with child cleanup unverified and sends no signal, instead of signalling a process group whose ID may have been reused."
+    },
+    {
+      "changeId": "proofkit.workflow.agent-trajectory-witness",
+      "summary": "REQ-PROOFKIT-WORKFLOW-020 adds a whole agent trajectory witness that drives a fixture repository through the public CLI only, from install bootstrap to current proof, with a route ledger, negative controls and an edge-local invalidation matrix; the installed npm carrier and the host wheel's module and console-script carriers execute it, while the CPython 3.11.0 floor smoke keeps its finite carrier cases. It proves CLI admission, linkage, currentness and route closure, not native test truth."
+    },
+    {
+      "changeId": "proofkit.release-evidence.hardening",
+      "summary": "Release tooling admits npm absence only from bounded strict E404 JSON, rejects failed or incomplete Go build-info metadata instead of emitting an empty SBOM dependency inventory, bounds the root-package verifier to 128 MiB compressed, 512 MiB expanded and 4096 entries, rejects duplicate wheel filenames in PyPI registry evidence, reads each wheel once in the Python package verifier and installs a private copy of the admitted bytes in its local consumer check, requires installed-CLI help on stdout with empty stderr, and passes the workflow credential to curl on stdin instead of argv. The release guide defines the provider-bound default signing policy; independently signed annotated tags remain optional."
+    },
+    {
+      "changeId": "proofkit.browser.consumer-hosting-boundary",
+      "summary": "Remote reading of specification views is documented as a consumer hosting concern: publish the existing --format html exports from a consumer-owned static host behind a consumer-owned access gateway, use rendered-artifact-freshness for hosted copies and secret-scan as an advisory byte check. requirement-browser-server and view keep serving only literal loopback hosts."
+    },
+    {
+      "changeId": "proofkit.toolchain.runtime-and-build-updates",
+      "summary": "Release binaries are built with Go 1.27.2 instead of 1.27.1 and bundle golang.org/x/mod 0.42.0, golang.org/x/net 0.61.0, golang.org/x/sys 0.49.0, golang.org/x/text 0.43.0 and github.com/mattn/go-isatty 0.0.24; no runtime module was added or removed. The development and CI toolchain moves to npm 12.2.0, Node 26.11.1, CPython 3.15.0, Playwright 1.63.0 and axe-core 4.14.0 with pinned GitHub Actions, and the Python launcher's POSIX path imports neither subprocess nor typing."
     }
   ],
   "migration": {
     "required": true,
     "steps": [
-      "Replace caller-provided branch names that Git cannot use as branch shorthand and replace non-SemVer exact package versions before updating the CLI pin.",
-      "Remove duplicate selected profileIds and correct TypeScript public API manifests that claimed truncated dollar-suffixed names.",
-      "Review stable endpoint hostnames after IDNA lookup against declared temporary DNS suffixes and replace impossible temporary expiry timestamps with real RFC3339 UTC calendar values.",
+      "Run the Python wheel on Python 3.11 or later; Python 3.9 and 3.10 environments must keep 0.16.0 or upgrade the interpreter.",
+      "Refresh every copy of proofkit/cli-contract.v2.json and every pinned contractId that this record names, compile each variant schema as its own document or expand its shared $defs before embedding it, and raise contract read limits to at least 8 MiB.",
+      "Record proofNodeDigest from the witness-scheduler-plan v2 report in every proof receipt and re-admit receipts; v1 receipts are refused.",
+      "Rerun adopt plan after any repository root change so adopt materialize plan and apply receive a current sourcePlan. Do not downgrade to 0.16.0 while a v3 transaction plan or journal is in flight; retained v1 and v2 transactions remain recoverable.",
+      "Replace inputs that the narrowed admissions refuse: non-canonical SHA-512 integrity values, workspace shard inputs above the budgets, secret-shaped bootstrap, pilot or report-visible text, JSON keys that match a promoted typed field only after case folding, release-authority inputs without a registryAuthority member, and requirement-spec-tree-view --output paths that the protected-output rule refuses.",
+      "Correct inputs whose reports now fail: conformance profiles that select surfaces requiring unallowed environments, custom-rule-boundary rules with a wildcard-only catch-all glob such as `**/**`, tarball_pilot rollback pins that do not name the package tarball file exactly, workspace shard roots whose dependencies contradict their package records, and pilot inputs with duplicate custom rule IDs.",
+      "Set an explicit admittedRootScriptNames list in workspace-registry inputs that relied on an absent or null value to refuse root scripts.",
+      "Update consumers keyed on changed values: the migration-plan retained-owner blockerId suffix, status and next statusId or packetId values, overview.md in requirement-source-admission sourcePaths, scaffold-profile-plan environment-class provenance, adoption-doctor envelope actions, bootstrap guidance commands and materialization content hashes, selective-gate-evidence envelope hashes for NUL-bearing command keys, selections by wildcard path patterns with non-ASCII literals, external-consumer, producer-policy-self-proof and bootstrap reports that now pass, and the previous transition and semantic-diff output versions.",
+      "Raise query.maxChanges, up to 8192, or narrow requirementIds when scenario entries push a requirement-semantic-diff, or the diffInput of requirement-browser-server --view workspace, past its bound.",
       "Rerun the repository-owned native evidence and installed CLI smoke after updating the package pin; derived reports do not themselves prove native witness quality."
     ]
   },
   "platformRequirements": [
-    "Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64."
+    "Published Darwin package binaries support macOS 15 or later on arm64 and x86_64, verified by the required macos-15 (arm64) and macos-15-intel (x86_64) CI jobs; they declare a macOS 13.0 minimum in their Mach-O build metadata, but macOS 13 and 14 are not supported targets.",
+    "Published Linux package binaries and wheels target manylinux 2.17 or later on arm64 and x86_64; Linux wheel installation requires pip 20.3 or later.",
+    "Python wheels require Python 3.11 or later.",
+    "Windows is unsupported."
   ],
   "knownLimitations": [
+    "macOS 13 and 14 are binary-compatible by Mach-O metadata only; they are not executed or verified, because no hosted macOS 13 image exists and GitHub retires macos-14 on 2026-11-02.",
     "Branch authority admits caller-owned branch facts but does not query Git refs or repository protection settings.",
     "Deployment evidence admission checks declared endpoint facts but does not connect to endpoints, authenticate evidence, or prove rollout readiness.",
     "The UTC leap-second validator admits IERS-announced positive leap dates through 2016 and fails closed on unannounced future insertions until its source is updated.",
-    "The TypeScript public API scanner supports only the declared non-JSX export subset in .ts, .mts, and .cts files; it does not parse unrestricted TypeScript or prove built-module runtime exports. Semicolonless statement boundaries can misclassify local names until TYPESCRIPT-ASI-01 is closed; require a repository-owned compiler witness for such sources.",
-    "Complete nested structural contracts for unchanged public directions remain open under SCHEMA-01; native admission remains authoritative for semantic constraints."
+    "The TypeScript public API scanner supports only the declared non-JSX export subset in .ts, .mts, and .cts files; it is a bounded lexical inventory for compiler-valid sources, not a compiler or type checker, and it does not prove built-module runtime exports.",
+    "Structural schemas describe every public direction, but native admission remains authoritative and may refuse values a schema admits, and no test excludes a published schema constraint that is stricter than native admission. The source-checkout completeness manifest records native-owned constraints as a verified lower bound, and an input constraint class recorded as absent means only that no indicator of that class is reachable from the command route.",
+    "requirement-source-conversion does not make a flat document a source of record, synchronize representations, migrate proof bindings or references, preserve input formatting or bytes, import flat v1 sources or authenticate a baseline beyond its admitted model digest. --output needs hard-link support and fails closed without it, does not protect publication from adversarial concurrent namespace mutation by the same operating-system user, does not guarantee crash or fsync durability, and may leave parent directories it created after a later failure.",
+    "Protected --output paths cover Git metadata and Proofkit control state only; non-Git version-control metadata, hook files outside .git beyond execute-bit removal, and a working directory inside Git metadata are not covered.",
+    "Proof node digests bind command execution decisions, not native test truth; Proofkit does not execute native tests or compute witness digests for the consumer.",
+    "Remote publication, hosting, authentication, access control, TLS, revocation and freshness of hosted specification views are consumer responsibilities and are not claimed."
   ],
   "rollback": {
     "strategy": "previous_admitted_version"
