@@ -67,6 +67,28 @@ function rejectionCheck(command, direction, baseline, flags = []) {
   };
 }
 
+test("published coverage envelope variant rejects independent nested corruption", () => {
+  const input = native(composer, directComposeInput());
+  const output = native(view, input, {flags: ["--agent-envelope"], exit: null});
+  const mutations = [
+    ["action item", value => {value.actionPlan[0] = 0;}],
+    ["action field", value => {delete value.actionPlan[0].instruction;}],
+    ["unknown action field", value => {value.actionPlan[0].unexpected = true;}],
+    ["empty bounds", value => {value.bounds = {};}],
+    ["missing bound", value => {delete value.bounds.maxActionItems;}],
+    ["declared token budget", value => {value.bounds.maxTokenBudget = 0;}],
+    ["empty cost contract", value => {value.costContract = {};}],
+    ["source state type", value => {value.sourceReport.state = 0;}],
+    ["context item", value => {value.contextRefs[0] = 0;}],
+    ["route question field", value => {delete value.routeQuestions[0].question;}],
+  ];
+  for (const [label, mutate] of mutations) {
+    const corrupted = structuredClone(output);
+    mutate(corrupted);
+    validates(view, "output", corrupted, false, label);
+  }
+});
+
 test("ordinary and fallback report egress stay separate from safe normalized data", () => {
   for (const testId of ["test.safe", "password"]) for (const severity of ["warning", "failure"]) {
     const input = annotatedInventoryInput(); input.entries[0].testId = testId;
