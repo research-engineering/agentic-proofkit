@@ -7,6 +7,7 @@ import {join} from "node:path";
 import {isDeepStrictEqual} from "node:util";
 import test, {after, before} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {assertCLITransport} from "./cli-process.mjs";
 import {expandSharedDefinitions, forEachSubschema, resolveLocalReference} from "./schema-definitions.mjs";
 
 // SCHEMA-01 completeness oracle. The manifest is authored from the native
@@ -963,23 +964,124 @@ function observationArgv(row) {
   return row.argv.map((token) => (namesRepoRoot(token) ? repo + token.slice(repoRootToken.length) : token));
 }
 
-function runNative(argv, value) {
+function runNative(argv, value, {file = binary, timeout = 60_000} = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(binary, argv, {cwd: directory});
-    let stdout = "", stderr = "";
-    const timer = setTimeout(() => { child.kill("SIGKILL"); reject(new Error(`${argv.join(" ")} timed out`)); }, 60_000);
+    const child = spawn(file, argv, {cwd: directory});
+    let stdout = "", stderr = "", failure, stdinError;
+    const timer = setTimeout(() => {
+      failure ??= Object.assign(new Error(`${argv[0]} timed out`), {code: "ETIMEDOUT"});
+      child.kill("SIGKILL");
+    }, timeout);
     child.stdout.on("data", (chunk) => { stdout += chunk; });
     child.stderr.on("data", (chunk) => { stderr += chunk; });
-    child.on("error", reject);
-    child.on("close", (code) => {
+    child.stdin.on("error", error => { stdinError ??= error; });
+    child.on("error", error => { failure ??= error; });
+    child.on("close", (code, signal) => {
       clearTimeout(timer);
-      let json = null;
-      try { json = JSON.parse(stdout); } catch {}
-      resolve({code, json, stderr});
+      try {
+        assertCLITransport({status: code, signal, error: failure ?? stdinError}, argv[0]);
+        const json = stdout === "" ? null : JSON.parse(stdout);
+        resolve({code, signal, stdinError, stdout, json, stderr});
+      } catch (error) {
+        reject(failure ?? error);
+      }
     });
     child.stdin.end(JSON.stringify(value));
   });
 }
+
+function duplicateAdmissionRefused(native) {
+  // Native admit/compact/workflow owners use these complete-line endings.
+  // The final assertion is strict end-of-input, including trailing newlines.
+  return native.code === 1 && native.stdout === ""
+    && /^[^\r\n]+ must be (?:unique|sorted and unique|strictly sorted and unique)\n?(?![\s\S])/u.test(native.stderr);
+}
+
+const nativeOracleChild = `
+import {writeFileSync} from "node:fs";
+process.stdin.resume();
+process.stdin.on("end", () => {
+  const mode = process.argv[1];
+  const diagnostics = {
+    "unrelated-error": "open input: permission denied\\n",
+    "duplicate-word": "operational failure: duplicate cache key\\n",
+    "container-error": "items must be a sorted unique string array\\n",
+    "multiline-error": "items must be unique\\nadditional error\\n",
+    "blank-line-error": "items must be unique\\n\\n",
+    "sorted-duplicate": "items must be sorted and unique\\n",
+    "strictly-sorted-duplicate": "items must be strictly sorted and unique\\n",
+    "classified-json": "",
+  };
+  const diagnostic = diagnostics[mode] ?? "items must be unique\\n";
+  const finish = () => {
+    if (mode === "sigkill") process.kill(process.pid, "SIGKILL");
+    else if (mode === "timeout") {
+      writeFileSync(process.argv[2], "stdin consumed");
+      setInterval(() => {}, 1000);
+    } else {
+      const stdout = mode === "malformed-json" ? "{not-json}"
+        : mode === "json-null" ? "null"
+        : mode === "classified-json" ? '{"state":"invalid"}' : "";
+      const code = mode === "empty-success" ? 0
+        : ["exit2", "classified-json"].includes(mode) ? 2 : 1;
+      process.stdout.end(stdout, () => process.exit(code));
+    }
+  };
+  if (diagnostic === "") finish();
+  else process.stderr.write(diagnostic, finish);
+});
+`;
+
+const runOracleChild = (mode, args = [], options = {}) => runNative(
+  ["--input-type=module", "-e", nativeOracleChild, mode, ...args],
+  {items: ["a"], padding: "x".repeat(4096)}, {file: process.execPath, ...options},
+);
+
+test("native replay transport rejects signals timeouts and spawn failures", async () => {
+  await assert.rejects(runOracleChild("sigkill"), error => error.code === "ERR_ASSERTION" && error.message.includes("SIGKILL"));
+  const ready = join(directory, "native-oracle-timeout-ready");
+  await assert.rejects(runOracleChild("timeout", [ready], {timeout: 2000}), {code: "ETIMEDOUT"});
+  assert.equal(readFileSync(ready, "utf8"), "stdin consumed", "timeout child consumed stdin before termination");
+  await assert.rejects(runNative([], {}, {file: join(directory, "missing-native-oracle")}), {code: "ENOENT"});
+});
+
+test("native replay semantic refusal rejects unrelated outcomes and preserves classified JSON", async () => {
+  for (const [mode, code, stdout] of [
+    ["exit2", 2, ""], ["empty-success", 0, ""], ["json-null", 1, "null"],
+    ["unrelated-error", 1, ""], ["duplicate-word", 1, ""], ["container-error", 1, ""],
+    ["multiline-error", 1, ""], ["blank-line-error", 1, ""],
+  ]) {
+    const native = await runOracleChild(mode);
+    assert.equal(native.code, code, mode);
+    assert.equal(native.signal, null, mode);
+    assert.equal(native.stdinError, undefined, mode);
+    assert.equal(native.stdout, stdout, mode);
+    assert.equal(duplicateAdmissionRefused(native), false, mode);
+  }
+  await assert.rejects(runOracleChild("malformed-json"), SyntaxError);
+  const classified = await runOracleChild("classified-json");
+  assert.equal(classified.code, 2);
+  assert.equal(classified.stdout, '{"state":"invalid"}');
+  assert.deepEqual(classified.json, {state: "invalid"});
+  assert.equal(classified.stderr, "");
+  assert.equal(duplicateAdmissionRefused(classified), false);
+  for (const mode of ["duplicate", "sorted-duplicate", "strictly-sorted-duplicate"]) {
+    assert.equal(duplicateAdmissionRefused(await runOracleChild(mode)), true, mode);
+  }
+});
+
+test("native replay genuine duplicate observations retain baseline and schema witness", async () => {
+  for (const [index, pointer] of [[6, "/items"], [258, "/requiredContextRefIds"]]) {
+    const {row, base, check} = argvObservation(index);
+    assert.equal(check(base), true, `${row.route} baseline is schema-admitted`);
+    const reference = await runNative(observationArgv(row), base);
+    assert.notEqual(reference.stdout, "", `${row.route} baseline emits JSON`);
+    const mutant = perturb(base, "duplicate-item", pointer);
+    assert.equal(check(mutant), false);
+    assert.ok(check.errors.some(error => error.keyword === "uniqueItems" && error.instancePath === pointer));
+    assert.equal(duplicateAdmissionRefused(await runNative(observationArgv(row), mutant)), true, row.route);
+  }
+});
 const strings = (value, out = []) => {
   if (typeof value === "string") out.push(value);
   else if (value !== null && typeof value === "object") Object.values(value).forEach((child) => strings(child, out));
@@ -1035,7 +1137,7 @@ test("argv observations replay natively: inputs are admitted and outputs are rep
   const failures = await inParallel(replayed, async ({row, index}) => {
     const stdin = row.direction === "input" ? observationValue(row) : Object.hasOwn(row, "inputObservation") ? observationValue(observations.observations[row.inputObservation]) : row.refusedInput;
     const native = await runNative(observationArgv(row), stdin);
-    if (native.json === null) return `observation ${index} ${row.argv.join(" ")}: native emitted no JSON: ${native.stderr.slice(0, 200)}`;
+    if (native.stdout === "") return `observation ${index} ${row.argv.join(" ")}: native emitted no JSON: ${native.stderr.slice(0, 200)}`;
     if (row.direction === "output" && !isDeepStrictEqual(native.json, observationValue(row))) return `observation ${index} ${row.argv.join(" ")}: native output differs from the recorded output`;
     return null;
   });
@@ -1068,11 +1170,20 @@ test("every published uniqueItems that refuses an observed duplicate agrees with
   const committed = new Set(residue.uniqueItemsAgreement.map((item) => `${item.observation}${item.pointer}`));
   assert.deepEqual([...committed].sort(), [...expected].sort(), "committed agreement rows are exactly the uniqueItems refusals");
   assert.ok(probed > residue.uniqueItemsAgreement.length);
+  const baselines = new Map();
   const verdicts = await inParallel(residue.uniqueItemsAgreement, async (item) => {
-    const {row, base} = argvObservation(item.observation);
+    const {row, base, check} = argvObservation(item.observation);
     assert.equal(row.route, item.route);
-    const native = await runNative(observationArgv(row), perturb(base, "duplicate-item", item.pointer));
-    return native.json === null ? null : `${item.route} ${item.pointer}: native admits a duplicate the published schema refuses`;
+    assert.equal(check(base), true, `${item.route} baseline is schema-admitted`);
+    if (!baselines.has(item.observation)) baselines.set(item.observation, runNative(observationArgv(row), base));
+    const reference = await baselines.get(item.observation);
+    assert.notEqual(reference.stdout, "", `${item.route} baseline emits JSON`);
+    const mutant = perturb(base, "duplicate-item", item.pointer);
+    assert.equal(check(mutant), false);
+    assert.ok(check.errors.some(error => error.keyword === "uniqueItems" && error.instancePath === item.pointer));
+    const native = await runNative(observationArgv(row), mutant);
+    return duplicateAdmissionRefused(native) ? null
+      : `${item.route} ${item.pointer}: native did not emit a duplicate-admission refusal: exit ${native.code}, stdout bytes ${Buffer.byteLength(native.stdout)}, stderr ${native.stderr.slice(0, 200)}`;
   });
   assert.deepEqual(verdicts.filter(Boolean), []);
 });
@@ -1096,8 +1207,10 @@ test("committed native residue rows are schema-admitted, natively refused and ow
     const mutant = perturb(base, item.perturbation, item.pointer);
     if (!check(mutant)) return `${item.route} ${item.pointer} ${item.perturbation}: published schema refuses the residue perturbation`;
     const [reference, native] = [await baseline(item.observation, row, base), await runNative(observationArgv(row), mutant)];
+    assert.notEqual(reference.stdout, "", `${item.route} baseline emits JSON`);
     const known = new Set(strings(reference.json));
-    const text = native.json === null ? native.stderr : native.code === reference.code ? null : strings(native.json).filter((value) => !known.has(value)).join("\n");
+    const text = native.stdout === "" ? native.code === 1 ? native.stderr : null
+      : native.code === reference.code ? null : strings(native.json).filter((value) => !known.has(value)).join("\n");
     if (text === null) return `${item.route} ${item.pointer} ${item.perturbation}: native admits the residue perturbation`;
     return text.includes(item.evidence) ? null : `${item.route} ${item.pointer} ${item.perturbation}: native diagnostic lacks ${item.evidence}`;
   });
