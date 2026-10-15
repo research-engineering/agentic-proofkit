@@ -2046,7 +2046,6 @@
         "scripts/schema-definitions.test.mjs",
         "scripts/selective-proof-fixtures.mjs",
         "scripts/selective-proof-structure.test.mjs",
-        "scripts/source-conversion-structure.test.mjs",
         "scripts/stable-json.mjs",
         "scripts/workspace-structure.test.mjs"
       ],

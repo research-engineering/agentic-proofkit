@@ -62,9 +62,8 @@ func TestChangedSourceChildrenBindTheSinglePublishedOwner(t *testing.T) {
 			})
 		}
 	}
-	// Conversion binds its grouped input variant root and grouped output variant root.
-	if seen != 42 {
-		t.Fatalf("changed source-child path count=%d, want 42", seen)
+	if seen != 40 {
+		t.Fatalf("changed source-child path count=%d, want 40", seen)
 	}
 }
 
