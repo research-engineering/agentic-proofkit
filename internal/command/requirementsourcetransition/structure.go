@@ -29,6 +29,8 @@ func inputStructure() jsonshape.Shape {
 
 func outputStructure() jsonshape.Shape {
 	text, count := jsonshape.String(), jsonshape.IntegerMinimum(0)
+	// One admitted snapshot bounds every identity list by its member limit.
+	requirementIDs := jsonshape.Nullable(jsonshape.BoundedArray(text, 0, requirementsourcemodel.DefaultLimits().MaxMembers))
 	statuses := jsonshape.Enum(map[string]struct{}{"passed": {}, "failed": {}})
 	diagnostic := func(key, value jsonshape.Shape) jsonshape.Shape {
 		return jsonshape.Object(jsonshape.Required("key", key), jsonshape.Required("value", value))
@@ -45,7 +47,13 @@ func outputStructure() jsonshape.Shape {
 			jsonshape.Required("nextRequirementCount", count),
 			jsonshape.Required("failureCount", count),
 		),
-		jsonshape.Tuple(diagnostic(jsonshape.StringLiteral("failures"), jsonshape.Array(text, 0)), diagnostic(jsonshape.StringLiteral("sourcePaths"), jsonshape.Tuple(text, text, text, text))),
+		jsonshape.Tuple(
+			diagnostic(jsonshape.StringLiteral("failures"), jsonshape.Array(text, 0)),
+			diagnostic(jsonshape.StringLiteral("sourcePaths"), jsonshape.Tuple(text, text, text, text)),
+			diagnostic(jsonshape.StringLiteral("addedRequirementIds"), requirementIDs),
+			diagnostic(jsonshape.StringLiteral("lifecycleChangedRequirementIds"), requirementIDs),
+			diagnostic(jsonshape.StringLiteral("missingRequirementIds"), requirementIDs),
+		),
 		jsonshape.Tuple(
 			rule(boundaryRuleID, statuses, jsonshape.StringLiteral(boundaryMessage)),
 			rule(sourceRuleID, statuses, jsonshape.StringLiteral(sourceMessage)),

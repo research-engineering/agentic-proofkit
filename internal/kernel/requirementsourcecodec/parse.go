@@ -86,6 +86,14 @@ func firstInvalidUTF8(source []byte) (int64, bool) {
 }
 
 func modelDiagnostic(source []byte, locations map[string]rawLocation, wire document, err error) error {
+	if many, ok := err.(*requirementsourcemodel.ValidationErrors); ok && len(many.Errors) != 0 {
+		var problems diagnosticCollector
+		for _, validation := range many.Errors {
+			problems.add(modelDiagnostic(source, locations, wire, validation))
+		}
+		problems.omitted += many.Omitted
+		return problems.err()
+	}
 	code := requirementsourcemodel.ErrorCode(err)
 	validation, ok := err.(*requirementsourcemodel.ValidationError)
 	if !ok || code == "" {

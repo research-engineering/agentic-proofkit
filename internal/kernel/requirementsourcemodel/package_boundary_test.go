@@ -34,14 +34,14 @@ func TestRepresentationNeutralPackageBoundaryIsExact(t *testing.T) {
 		"EntityDerivation", "EntityGroup", "EntityKind", "EntityNonClaim", "EntityProfile", "EntityRequirement", "EntityScenario", "EntitySource", "EntityTerm",
 		"ErrorCode", "Example", "Field", "FieldOwner", "GitBlobRef", "Group",
 		"LayoutProjection", "Lifecycle", "LifecycleActive", "LifecycleDeprecated", "LifecycleRemoved", "LifecycleState", "LifecycleStates", "LifecycleSuperseded", "Limits",
-		"Member", "MetadataFieldID", "MetadataFields", "MetadataOwnerKind", "MetadataOwnerMember", "MetadataOwnerProfile", "Model",
+		"MaxReportedValidationErrors", "Member", "MetadataFieldID", "MetadataFields", "MetadataOwnerKind", "MetadataOwnerMember", "MetadataOwnerProfile", "Model",
 		"NonClaimDefinition", "Normalize", "NormalizeNonClaimDefinitions", "NormalizeWithLimits",
 		"ObjectFormat", "ObjectSHA1", "ObjectSHA256", "Origin", "Own", "PolicyViolation", "Profile",
 		"ReferenceDerivationNonClaim", "ReferenceDerivationRequirement", "ReferenceEdge", "ReferenceEndpoint", "ReferenceGroupMember", "ReferenceGroupProfile", "ReferenceKind", "ReferenceLifecycleReplacement", "ReferenceProjection", "ReferenceRequirementNonClaim", "ReferenceScenarioNonClaim", "ReferenceScenarioRequirement", "ReferenceScenarioVocabulary", "ReferenceSourceNonClaim",
 		"AdmitScenarioReference", "ResolveScenario", "RiskClass", "RiskCritical", "RiskHigh", "RiskLow", "RiskMedium",
 		"Scenario", "ScenarioReference", "ScenarioResolution", "ScenarioValue", "SourceClarification", "SourceCodeSnapshot", "SourceDesign", "SourceKind", "SourceOwnerDecision", "SourcePlan",
 		"TermAction", "TermKind", "TermObservable", "TermState", "TermSubject", "TermValue",
-		"UpdatePolicy", "ValidateLimits", "ValidateResolvedNonClaimScope", "ValidationError", "VocabularyTerm",
+		"UpdatePolicy", "ValidateLimits", "ValidateResolvedNonClaimScope", "ValidationError", "ValidationErrors", "VocabularyTerm",
 	}
 	sort.Strings(actualExports)
 	sort.Strings(expectedExports)

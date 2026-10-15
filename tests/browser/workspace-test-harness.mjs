@@ -26,6 +26,7 @@ export const lookupTest = test.extend({
 
 export const sourceViewTest = test.extend({
   sourceViewURL: [async ({}, use) => { await withFixture("--source", use); }, {scope: "worker"}],
+  sharedSourceViewURL: [async ({}, use) => { await withFixture("--shared-source", use); }, {scope: "worker"}],
 });
 
 export const staticViewTest = test.extend({

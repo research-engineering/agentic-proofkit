@@ -1,4 +1,5 @@
 import {expect} from "@playwright/test";
+import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
 import {capacityTest, lookupTest as test} from "./workspace-test-harness.mjs";
 import {openWorkspace} from "./workspace-navigation-harness.mjs";
 
@@ -243,4 +244,32 @@ test("deep navigation retains the selected path within 256 rows and preserves di
   await expect(page.getByRole("button", {name: "Sibling 062", exact: true})).toBeVisible();
   await expect(page.locator("#selected-scope")).toContainText("Depth 6");
   expect(await page.locator("#spec-navigation [data-navigation-node]").count()).toBeLessThanOrEqual(256);
+});
+
+test("deferred requirements show owner-declared review facts and the deferred count", async ({lookupURL, page}) => {
+  await initializeAxe(page);
+  await page.setViewportSize({width: 390, height: 900});
+  const deferral = {
+    evidenceRefs: ["roadmap.express"], expiryRef: "roadmap.2026-q4", mergePolicy: "advisory_until_implemented",
+    ownerId: "owner.a", reviewCondition: "Before the express release.", riskAcceptedBy: "owner.product",
+  };
+  // The server's deferral projection is proven natively; this proves the
+  // derived rendering of one admitted row without changing the fixture cohort.
+  await page.route("**/api/v1/requirements", async route => {
+    const response = await route.fetch();
+    const body = await response.json();
+    body.projection.requirements[0] = {...body.projection.requirements[0], claimLevel: "deferred", deferral};
+    return route.fulfill({response, json: body});
+  });
+  await openWorkspace(page, lookupURL);
+  await expect(page.getByLabel("Authority boundary")).toContainText("Requirements: 132; deferred: 0.");
+  const rows = page.locator("#workspace-content [data-requirement-id]");
+  await expect(rows.first().locator("[data-deferral] dt")).toHaveText(["Review condition", "Expiry ref", "Risk accepted by", "Merge policy"]);
+  await expect(rows.first().locator("[data-deferral] dd")).toHaveText(["Before the express release.", "roadmap.2026-q4", "owner.product", "advisory_until_implemented"]);
+  await expect(rows.nth(1).locator("[data-deferral]")).toHaveCount(0);
+  const layout = await page.evaluate(() => ({width: innerWidth, scrollWidth: document.documentElement.scrollWidth}));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.width);
+  const accessibility = await analyzeAxe(page);
+  expect(accessibility.violations).toEqual([]);
+  assertAxeTestComplete(page);
 });

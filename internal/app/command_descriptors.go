@@ -81,6 +81,9 @@ type commandDescriptor struct {
 	contractEnvelope         bool
 	semanticAppTests         []string
 	semanticOwnerDirs        []string
+	// preservesPredecessorStreams marks an owner contract that pins exact
+	// predecessor stdout/stderr bytes, so input diagnostics stay unlocated.
+	preservesPredecessorStreams bool
 }
 
 type flagValueRequirement struct {
@@ -122,7 +125,7 @@ var commandDescriptors = []commandDescriptor{
 	command("deployment-evidence-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("deploymentevidenceadmission")),
 	command("document-lifecycle-boundary", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("documentlifecycle")),
 	command("evidence-graph", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementbinding")),
-	command("external-consumer", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("externalconsumer")),
+	command("external-consumer", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("externalconsumer"), withPredecessorStreams()),
 	command("gradual-adoption", commandInputRequired, flags("--contract-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("gradualadoption"), withRunner(commandRunnerContractEnvelope), withContractEnvelope()),
 	command("gradual-adoption-bootstrap", commandInputRequired, flags("--agent-envelope", "--contract-envelope", "--input", "--input-pointer", "--materialization-manifest"), modes("json"), ownerDirs("gradualadoption"), withRunner(commandRunnerGradualAdoptionBootstrap), withAgentEnvelope(), withContractEnvelope()),
 	command("gradual-adoption-guidance", commandInputRequired, flags("--agent-envelope", "--checked-scope", "--contract-envelope", "--guidance-mode", "--input", "--input-pointer", "--touched-rule-id"), modes("json"), ownerDirs("gradualadoption"), withRunner(commandRunnerGradualAdoptionGuidance), withAgentEnvelope(), withContractEnvelope()),
@@ -134,24 +137,24 @@ var commandDescriptors = []commandDescriptor{
 	command("integration-recover", commandInputNone, flags("--action", "--color", "--format", "--repo-root", "--transaction"), modes("json", "text"), ownerDirs("agentintegration"), withRunner(commandRunnerAgentIntegrationLifecycle), withSemanticAppTests("TestIntegrationRecoverCLI"), withScopeClass(commandScopeExplicitFileSystemMutation), withRequiredFlags("--action", "--repo-root", "--transaction"), withFlagChoices("--action", "resume", "rollback"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--action", "--color", "--repo-root", "--transaction")),
 	command("integration-source", commandInputNone, flags("--format", "--tool"), modes("json", "text"), ownerDirs("agentintegration"), withRunner(commandRunnerAgentIntegration), withSemanticAppTests("TestIntegrationSourceCLI"), withRequiredFlags("--tool"), withFlagChoices("--format", "json", "text"), withFlagChoices("--tool", agentintegration.Tools()...), withSingleOccurrenceFlags("--tool")),
 	command("json-report-cli-adapter-source", commandInputNone, flags("--format", "--language"), modes("json"), ownerDirs("jsonreportcliadaptersource"), withRunner(commandRunnerJSONReportCLIAdapterSource), withRequiredFlags("--language")),
-	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission")),
+	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission"), withPredecessorStreams()),
 	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan")),
 	command("native-evidence-guidance", commandInputNone, flags("--color", "--format"), modes("json", "text"), ownerDirs("nativeevidenceguidance"), withRunner(commandRunnerAgentWorkflow), withSemanticAppTests("TestAgentWorkflowCLITruthTable"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withSingleOccurrenceFlags("--color")),
 	command("next", commandInputNone, flags("--color", "--format", "--repo-root"), modes("json", "text"), ownerDirs("projectstatus"), withRunner(commandRunnerProjectStatus), withSemanticAppTests("TestNextCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--repo-root")),
 	command("obligation-decision", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("obligationdecision"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
 	command("package-runtime-dependency-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("packageruntimedependency")),
 	command("pilot-admission", commandInputRequired, flags("--contract-envelope", "--input", "--input-pointer", "--pilot", "--stack-diverse"), modes("json"), ownerDirs("pilotadmission"), withRunner(commandRunnerPilotAdmission), withContractEnvelope(), withFlagValueRequirement("--pilot", "all", "--contract-envelope")),
-	command("producer-policy-self-proof", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("producerpolicyselfproof")),
+	command("producer-policy-self-proof", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("producerpolicyselfproof"), withPredecessorStreams()),
 	command("proof-obligation-algebra", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("proofobligationalgebra")),
 	command("proof-receipt-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("proofreceiptadmission")),
 	command("proof-slice", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementbinding")),
-	command("readiness-closeout", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("readinesscloseout")),
+	command("readiness-closeout", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("readinesscloseout"), withPredecessorStreams()),
 	command("receipt-currentness-scope", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("receiptcurrentnessscope")),
 	command("receipt-producer-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("receiptproduceradmission")),
 	command("receipt-trust-class", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("receipttrustclass")),
-	command("registry-consumer", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("registryconsumer")),
-	command("registry-consumer-proof-input-compose", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("registryconsumerinputcompose")),
-	command("release-authority", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("releaseauthority")),
+	command("registry-consumer", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("registryconsumer"), withPredecessorStreams()),
+	command("registry-consumer-proof-input-compose", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("registryconsumerinputcompose"), withPredecessorStreams()),
+	command("release-authority", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("releaseauthority"), withPredecessorStreams()),
 	command("rendered-artifact-freshness", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("renderedartifactfreshness")),
 	command("repo-profile-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("repoprofileadmission")),
 	command("repository-inventory", commandInputNone, flags("--repo-root"), modes("json"), ownerDirs("repositoryinventory"), withRunner(commandRunnerAdoptionFrontDoor), withSemanticAppTests("TestAdoptionFrontDoorCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withSingleOccurrenceFlags("--repo-root")),
@@ -180,8 +183,8 @@ var commandDescriptors = []commandDescriptor{
 	command("selective-gate-obligation-decision-input", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("selectivegateevidence"), withRunner(commandRunnerPlanning)),
 	command("selective-gate-plan", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("selectivegateplan"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
 	command("secret-scan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("secretscan")),
-	command("self-check", commandInputRequired, flags("--input"), modes("json"), ownerDirs("selfcheck"), withSemanticAppTests("TestSelfCheckRejectsDuplicateKeys")),
-	command("spec-overview-claims", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("specoverviewclaims")),
+	command("self-check", commandInputRequired, flags("--input"), modes("json"), ownerDirs("selfcheck"), withSemanticAppTests("TestSelfCheckRejectsDuplicateKeys"), withPredecessorStreams()),
+	command("spec-overview-claims", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("specoverviewclaims"), withPredecessorStreams()),
 	command("spec-proof-bundle-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("specproofbundleadmission")),
 	command("stack-preset", commandInputNone, flags("--preset"), modes("json"), ownerDirs("stackpreset"), withRunner(commandRunnerStackPreset), withSemanticAppTests("TestNoInputCommandsHaveCommandSpecificBehavior"), withRequiredFlags("--preset")),
 	command("status", commandInputNone, flags("--color", "--format", "--repo-root"), modes("json", "text"), ownerDirs("projectstatus"), withRunner(commandRunnerProjectStatus), withSemanticAppTests("TestStatusCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--repo-root")),
@@ -258,6 +261,10 @@ func command(name string, input commandInputMode, allowedFlags []string, outputM
 	for _, option := range options {
 		option(&descriptor)
 	}
+	if descriptor.preservesPredecessorStreams && descriptor.runner != commandRunnerGenericInput {
+		// Only the generic input runner consults this property.
+		panic("predecessor stream preservation requires the generic input runner: " + name)
+	}
 	if slices.Contains(descriptor.allowedFlags, "--format") {
 		descriptor.singleOccurrenceFlags = sortedUniqueStrings(append(descriptor.singleOccurrenceFlags, "--format"))
 	}
@@ -306,6 +313,12 @@ func withAgentEnvelope() commandDescriptorOption {
 func withContractEnvelope() commandDescriptorOption {
 	return func(descriptor *commandDescriptor) {
 		descriptor.contractEnvelope = true
+	}
+}
+
+func withPredecessorStreams() commandDescriptorOption {
+	return func(descriptor *commandDescriptor) {
+		descriptor.preservesPredecessorStreams = true
 	}
 }
 

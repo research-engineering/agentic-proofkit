@@ -388,6 +388,44 @@ func TestWorkspaceAdmitsMultiFieldSemanticDiffFromProducer(t *testing.T) {
 	}
 }
 
+// The workspace readmits the diff it builds, so a changed scenario with a
+// surface_id::stable_anchor identity must not prevent the workspace starting.
+func TestWorkspaceAdmitsScopedScenarioDiffFromProducer(t *testing.T) {
+	const scenarioID = "proofkit.test.surface::scenario_one"
+	scenario := func(expected string) map[string]any {
+		return map[string]any{
+			"scenarioId": scenarioID, "requirementIds": []any{"REQ-CONSUMER-001"}, "parameters": []any{},
+			"preconditions": []any{"A request is submitted."}, "actionSequence": []any{"Request a quote."},
+			"expectedObservations": []any{expected}, "forbiddenObservations": []any{}, "examples": []any{},
+			"vocabularyRefs": []any{}, "nonClaimRefs": []any{},
+		}
+	}
+	withScenario := func(contextValue map[string]any, expected string) {
+		source := contextValue["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)
+		source["scenarios"] = []any{scenario(expected)}
+		resignWorkspaceSnapshot(t, contextValue)
+	}
+	fixture := workspaceFixture(t)
+	current := fixture["context"].(map[string]any)
+	withScenario(current, "The price is 13.50.")
+	base := workspaceFixture(t)["context"].(map[string]any)
+	withScenario(base, "The price is 12.50.")
+	fixture["diffInput"] = map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.workspace.scoped", "schemaVersion": json.Number("3")}
+
+	workspace, _, err := buildWorkspace(fixture)
+	if err != nil {
+		t.Fatalf("workspace rejected a producer-owned scoped scenario diff: %v", err)
+	}
+	found := false
+	for _, raw := range workspace.Diff["changes"].([]any) {
+		change := raw.(map[string]any)
+		found = found || change["entityKind"] == "scenario" && change["entityId"] == scenarioID
+	}
+	if !found {
+		t.Fatalf("workspace diff = %#v, want the scoped scenario change", workspace.Diff)
+	}
+}
+
 func TestOneShotTerminalStateIsLinearizedAfterWinnerIsDrained(t *testing.T) {
 	handle, capability := startWorkspaceTestServer(t, workspaceFixture(t), true)
 	first := postWorkspaceHandoff(t, handle.URL, capability)

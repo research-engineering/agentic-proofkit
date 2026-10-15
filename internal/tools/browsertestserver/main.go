@@ -38,6 +38,9 @@ func main() {
 	} else if len(os.Args) == 2 && os.Args[1] == "--source" {
 		build = browserfixture.Source
 		view = "source"
+	} else if len(os.Args) == 2 && os.Args[1] == "--shared-source" {
+		build = browserfixture.SharedScenarioSource
+		view = "source"
 	} else if len(os.Args) == 2 && os.Args[1] == "--static-source" {
 		build = browserfixture.StaticSource
 		view = "source"

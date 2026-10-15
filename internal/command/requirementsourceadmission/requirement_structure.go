@@ -25,12 +25,24 @@ func NonClaimDefinitionsShape() jsonshape.Shape {
 }
 
 // ComparisonValueShape describes effective owner fields, not arbitrary JSON.
+// Its alternatives are disjoint: [] belongs to the string array only, so the
+// examples alternative requires at least one example.
 func ComparisonValueShape() jsonshape.Shape {
+	scenario := scenarioStructure()
+	examples := jsonshape.BoundedArray(structureElement(structureProperty(scenario, "examples")), 1, requirementsourcemodel.DefaultLimits().MaxExamplesPerScenario)
 	return jsonshape.OneOf(
 		jsonshape.Null(), jsonshape.String(), jsonshape.Array(jsonshape.String(), 0), requirementShape,
 		structureProperty(requirementShape, "lifecycle"), structureProperty(requirementShape, "updatePolicy"),
-		structureProperty(requirementShape, "deferral"),
+		structureProperty(requirementShape, "deferral"), scenario, examples,
 	)
+}
+
+func scenarioStructure() jsonshape.Shape {
+	source, err := requirementsourcecodec.InputShape(requirementsourcemodel.DefaultLimits())
+	if err != nil {
+		panic("invalid source structure for scenario projection")
+	}
+	return structureElement(structureProperty(source, "scenarios"))
 }
 
 func atomicRequirementStructure() jsonshape.Shape {

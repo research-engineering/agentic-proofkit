@@ -39,6 +39,30 @@ func Source() (map[string]any, error) {
 	return source, nil
 }
 
+// SharedRequirementID is the second requirement of SharedScenarioSource.
+const SharedRequirementID = "REQ-CONSUMER-002"
+
+// SharedScenarioSource adds a second requirement and one scenario linked to
+// both requirements, so the source view renders that scenario's record once in
+// its Shared Scenarios section and both requirement cards link to it.
+func SharedScenarioSource() (map[string]any, error) {
+	source, err := Source()
+	if err != nil {
+		return nil, err
+	}
+	group := source["groups"].([]any)[0].(map[string]any)
+	second := requirementSource("The system names a shared scenario once.", "medium")["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)
+	second["requirementId"] = SharedRequirementID
+	group["members"] = append(group["members"].([]any), second)
+	source["scenarios"] = append(source["scenarios"].([]any), map[string]any{
+		"scenarioId": "SCN-SHARED", "requirementIds": []any{RequirementID, SharedRequirementID}, "parameters": []any{},
+		"preconditions": []any{"Both requirement cards are available."}, "actionSequence": []any{"Follow the shared scenario link."},
+		"expectedObservations": []any{"The shared record is shown once."}, "forbiddenObservations": []any{"The shared record is copied into each card."},
+		"examples": []any{}, "vocabularyRefs": []any{"TERM-BROWSER"}, "nonClaimRefs": []any{"NCL-BROWSER"},
+	})
+	return source, nil
+}
+
 func workspace(currentRisk string, parallelTrace bool) (map[string]any, error) {
 	base, err := snapshot("The system preserves the original semantic identity.", "high")
 	if err != nil {

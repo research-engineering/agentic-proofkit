@@ -22,7 +22,7 @@ const sourceStructureDefinition = "proofkit.requirement-source.input.v2.json-sch
 const sourceOutputStructureDefinition = "proofkit.requirement-source-admission.output.v2.json-schema"
 const sourceViewOutputStructureDefinition = "proofkit.requirement-source-view.output.v2.json-schema"
 const transitionInputStructureDefinition = "proofkit.requirement-source-transition.input.v2.json-schema"
-const transitionOutputStructureDefinition = "proofkit.requirement-source-transition.output.v2.json-schema"
+const transitionOutputStructureDefinition = "proofkit.requirement-source-transition.output.v3.json-schema"
 const authoringInputStructureDefinition = "proofkit.requirement-authoring-plan.input.v2.json-schema"
 const authoringOutputStructureDefinition = "proofkit.requirement-authoring-plan.output.v3.json-schema"
 const contextCatalogStructureDefinition = "proofkit.requirement-context-compose.input.v2.json-schema"
@@ -58,7 +58,7 @@ func TestSourceSnapshotConsumerStructuralContractsMatchNativeOwners(t *testing.T
 	assertSourceStructure(t, "requirement-context-slice", "input", "proofkit.requirement-context-slice.input.v2.json-schema", requirementcontext.SliceInputStructure())
 	assertSourceStructure(t, "requirement-context-slice", "output", "proofkit.requirement-context-slice.output.v2.json-schema", requirementcontext.SliceOutputStructure())
 	assertSourceStructure(t, "requirement-semantic-diff", "input", "proofkit.requirement-semantic-diff.input.v3.json-schema", requirementdiff.InputStructure())
-	assertSourceStructure(t, "requirement-semantic-diff", "output", "proofkit.requirement-semantic-diff.output.v3.json-schema", requirementdiff.OutputStructure())
+	assertSourceStructure(t, "requirement-semantic-diff", "output", "proofkit.requirement-semantic-diff.output.v4.json-schema", requirementdiff.OutputStructure())
 	assertSourceStructure(t, "requirement-traceability-graph", "input", "proofkit.requirement-traceability-graph.input.v3.json-schema", requirementgraph.InputStructure())
 }
 

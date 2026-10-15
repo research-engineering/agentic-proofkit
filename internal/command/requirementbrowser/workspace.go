@@ -116,20 +116,31 @@ func prepareWorkspace(workspaceID string, snapshot requirementcontext.Snapshot, 
 	}
 	lookup, anchors := buildWorkspaceLookupIndex(snapshot)
 	manifest := map[string]any{
-		"authority":              "presentation_adapter",
-		"availableViews":         []any{"specifications", "coverage", "diff", "graph"},
-		"coverageAvailable":      snapshot.Coverage != nil,
-		"diffAvailable":          diff != nil,
-		"expectedDigestCoverage": snapshot.ExpectedDigestCoverage,
-		"graphAvailable":         graph != nil,
-		"nonClaims":              admit.StringSliceToAny(serverNonClaims),
-		"requirementCount":       len(lookup.Rows),
-		"lookupFacets":           map[string]any{"ownerIds": workspaceSortedSet(lookup.Owners), "lifecycleStates": workspaceSortedSet(lookup.LifecycleStates)},
-		"schemaVersion":          json.Number(fmt.Sprint(workspaceProjectionSchemaVersion)),
-		"snapshotId":             snapshot.SnapshotID,
-		"workspaceId":            workspaceID,
+		"authority":                "presentation_adapter",
+		"availableViews":           []any{"specifications", "coverage", "diff", "graph"},
+		"coverageAvailable":        snapshot.Coverage != nil,
+		"diffAvailable":            diff != nil,
+		"expectedDigestCoverage":   snapshot.ExpectedDigestCoverage,
+		"graphAvailable":           graph != nil,
+		"nonClaims":                admit.StringSliceToAny(serverNonClaims),
+		"requirementCount":         len(lookup.Rows),
+		"deferredRequirementCount": deferredRequirementCount(lookup),
+		"lookupFacets":             map[string]any{"ownerIds": workspaceSortedSet(lookup.Owners), "lifecycleStates": workspaceSortedSet(lookup.LifecycleStates)},
+		"schemaVersion":            json.Number(fmt.Sprint(workspaceProjectionSchemaVersion)),
+		"snapshotId":               snapshot.SnapshotID,
+		"workspaceId":              workspaceID,
 	}
 	return workspaceSession{Anchors: anchors, Diff: diff, Graph: graph, Manifest: manifest, Lookup: lookup, Snapshot: snapshot, SnapshotID: snapshot.SnapshotID}, document(workspaceID), nil
+}
+
+func deferredRequirementCount(lookup workspaceLookupIndex) int {
+	count := 0
+	for _, row := range lookup.Rows {
+		if row.Requirement.ClaimLevel == "deferred" {
+			count++
+		}
+	}
+	return count
 }
 
 func admitWorkspaceInputVersion(record map[string]any) error {

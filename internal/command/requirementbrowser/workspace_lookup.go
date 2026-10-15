@@ -204,8 +204,17 @@ func (index workspaceLookupIndex) matchingRequirements(query workspaceLookupQuer
 }
 
 func (row workspaceRequirement) value() map[string]any {
+	// Deferral is the source owner's existing record, not a browser lifecycle.
+	var deferral any
+	if value := row.Requirement.Deferral; value != nil {
+		deferral = map[string]any{
+			"evidenceRefs": admit.StringSliceToAny(value.EvidenceRefs), "expiryRef": value.ExpiryRef,
+			"mergePolicy": value.MergePolicy, "ownerId": value.OwnerID,
+			"reviewCondition": value.ReviewCondition, "riskAcceptedBy": value.RiskAcceptedBy,
+		}
+	}
 	return map[string]any{
-		"anchor": anchorValue(row.Anchor), "claimLevel": row.Requirement.ClaimLevel,
+		"anchor": anchorValue(row.Anchor), "claimLevel": row.Requirement.ClaimLevel, "deferral": deferral,
 		"invariant": row.Requirement.Invariant, "lifecycleState": row.Requirement.Lifecycle.State,
 		"sharedPremises":       admit.StringSliceToAny(row.Requirement.SharedPremises),
 		"nonClaimRefs":         admit.StringSliceToAny(row.Requirement.NonClaimRefs),

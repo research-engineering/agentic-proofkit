@@ -3,6 +3,7 @@ package requirementdiff
 import "sort"
 
 type changeOrderKey struct {
+	EntityKind  string
 	EntityID    string
 	JSONPointer string
 	ChangeClass string
@@ -11,6 +12,7 @@ type changeOrderKey struct {
 
 func canonicalChangeOrderKey(change map[string]any) changeOrderKey {
 	return changeOrderKey{
+		EntityKind:  change["entityKind"].(string),
 		EntityID:    change["entityId"].(string),
 		JSONPointer: change["jsonPointer"].(string),
 		ChangeClass: change["changeClass"].(string),
@@ -25,6 +27,9 @@ func sortChangesCanonical(changes []any) {
 }
 
 func changeOrderLess(left, right changeOrderKey) bool {
+	if left.EntityKind != right.EntityKind {
+		return left.EntityKind < right.EntityKind
+	}
 	if left.EntityID != right.EntityID {
 		return left.EntityID < right.EntityID
 	}

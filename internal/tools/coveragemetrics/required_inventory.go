@@ -318,6 +318,16 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
 			selectors: []string{"TestDiffNativeLimitDiagnosticsAndPrecedence", "TestDiffNumericStructureMatchesWholeOperation"},
 		},
+		{"REQ-PROOFKIT-SPEC-022", "proofkit.spec-proof-core.requirement-semantic-diff-scenario-entries"}: {
+			witnessPath: "internal/command/requirementdiff/scenario_changes_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{
+				"TestBuildReportsScenarioLevelChanges",
+				"TestBuildRepresentsChangesBetweenEmptyAndNonEmptyArrays",
+				"TestScenarioComparisonFieldsCoverEveryScenarioField",
+				"TestScopedScenarioIdentityRoundTripsThroughOutputAdmission",
+			},
+		},
 		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-canonical-contract-identity"}: {
 			witnessPath: "internal/app/canonical_path_contract_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},

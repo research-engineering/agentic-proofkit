@@ -119,3 +119,38 @@ func stringValues(values []string) []any {
 	}
 	return result
 }
+
+// ScenarioValues returns the source's canonical scenario records, the same
+// projection SourceValue serializes, in canonical scenarioId order.
+func ScenarioValues(source Source) ([]map[string]any, error) {
+	value, err := SourceValue(source)
+	if err != nil {
+		return nil, err
+	}
+	raw, _ := value["scenarios"].([]any)
+	result := make([]map[string]any, 0, len(raw))
+	for _, item := range raw {
+		scenario, ok := item.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("canonical scenario projection must be an object")
+		}
+		result = append(result, scenario)
+	}
+	return result, nil
+}
+
+// ScenarioComparisonFields is the scenario owner's exhaustive review
+// projection; canonical sets are sorted, actionSequence keeps author order.
+func ScenarioComparisonFields(scenario map[string]any) []ComparisonField {
+	return []ComparisonField{
+		{Name: "actionSequence", Class: "sequence", Value: scenario["actionSequence"]},
+		{Name: "examples", Class: "opaque", Value: scenario["examples"]},
+		{Name: "expectedObservations", Class: "set", Value: scenario["expectedObservations"]},
+		{Name: "forbiddenObservations", Class: "set", Value: scenario["forbiddenObservations"]},
+		{Name: "nonClaimRefs", Class: "set", Value: scenario["nonClaimRefs"]},
+		{Name: "parameters", Class: "set", Value: scenario["parameters"]},
+		{Name: "preconditions", Class: "set", Value: scenario["preconditions"]},
+		{Name: "requirementIds", Class: "set", Value: scenario["requirementIds"]},
+		{Name: "vocabularyRefs", Class: "set", Value: scenario["vocabularyRefs"]},
+	}
+}

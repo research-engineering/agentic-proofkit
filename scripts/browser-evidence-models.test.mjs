@@ -15,11 +15,15 @@ test("diff page classes partition changes while risk and lifecycle remain indepe
     {entityId: "REQ-D", entityKind: "requirement", changeClass: "set_changed", jsonPointer: "/requirements/REQ-D/riskClass"},
     {entityId: "REQ-A", entityKind: "source", changeClass: "scalar_changed", jsonPointer: "/requirements/REQ-A/riskClass"},
     {entityId: "REQ-A", entityKind: "requirement", changeClass: "scalar_changed", jsonPointer: "/requirements/REQ-X/riskClass"},
+    {entityId: "SCN-A", entityKind: "scenario", changeClass: "entity_added", jsonPointer: "/requirementSources/one/scenarios/SCN-A"},
+    {entityId: "SCN-A", entityKind: "scenario", changeClass: "set_membership_changed", jsonPointer: "/requirementSources/two/scenarios/SCN-A/expectedObservations"},
+    {entityId: "SCN-A", entityKind: "scenario", changeClass: "sequence_changed", jsonPointer: "/requirementSources/two/scenarios/SCN-A/actionSequence"},
   ];
   const summary = summarizeDiffPage(changes);
-  assert.deepEqual(summary, {changeCount: 8, entityCount: 4, riskChanges: 1, lifecycleChanges: 1, byClass: [["entity_added", 1], ["entity_removed", 1], ["lifecycle_transition", 1], ["scalar_changed", 4], ["set_changed", 1]]});
+  // Scenario identities are source-local, so one ID in two sources is two scenarios.
+  assert.deepEqual(summary, {changeCount: 11, requirementCount: 4, scenarioCount: 2, riskChanges: 1, lifecycleChanges: 1, byClass: [["entity_added", 2], ["entity_removed", 1], ["lifecycle_transition", 1], ["scalar_changed", 4], ["sequence_changed", 1], ["set_changed", 1], ["set_membership_changed", 1]]});
   assert.equal(summary.byClass.reduce((count, [, value]) => count + value, 0), changes.length);
-  assert.deepEqual(summarizeDiffPage([]), {changeCount: 0, entityCount: 0, riskChanges: 0, lifecycleChanges: 0, byClass: []});
+  assert.deepEqual(summarizeDiffPage([]), {changeCount: 0, requirementCount: 0, scenarioCount: 0, riskChanges: 0, lifecycleChanges: 0, byClass: []});
   assert.equal(summarizeDiffPage([{entityId: "A/~", entityKind: "requirement", changeClass: "scalar_changed", jsonPointer: "/requirements/A~1~0/riskClass"}]).riskChanges, 1);
 });
 

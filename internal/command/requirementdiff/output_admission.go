@@ -9,9 +9,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/scenarioidentity"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
+
+var entityKinds = map[string]struct{}{"requirement": {}, "scenario": {}}
 
 var changeClasses = map[string]struct{}{
 	"entity_added": {}, "entity_removed": {}, "lifecycle_transition": {},
@@ -27,8 +30,8 @@ func AdmitOutput(raw any, currentSnapshotID string) (map[string]any, error) {
 	if err := admit.KnownKeys(record, []string{"baseExpectedDigestCoverage", "baseSnapshotId", "changeCount", "changes", "currentExpectedDigestCoverage", "currentSnapshotId", "diffId", "diffKind", "nonClaims", "schemaVersion"}, "requirement semantic diff output"); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
-		return nil, fmt.Errorf("requirement semantic diff output schemaVersion must be 3")
+	if !admit.JSONNumberEquals(record["schemaVersion"], outputSchemaVersion) {
+		return nil, fmt.Errorf("requirement semantic diff output schemaVersion must be %d", outputSchemaVersion)
 	}
 	if record["diffKind"] != "proofkit.requirement-semantic-diff" || record["currentSnapshotId"] != currentSnapshotID {
 		return nil, fmt.Errorf("requirement semantic diff output identity is invalid")
@@ -76,24 +79,24 @@ func admitOutputRecord(record map[string]any) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		if change["entityKind"] != "requirement" {
-			return nil, fmt.Errorf("requirement semantic diff entityKind must be requirement")
+		entityKind, err := admit.Enum(change["entityKind"], entityKinds, "requirement semantic diff entityKind")
+		if err != nil {
+			return nil, err
 		}
-		entityID, err := admit.RuleID(change["entityId"], "requirement semantic diff entityId")
+		entityID, err := admitEntityID(entityKind, change["entityId"])
 		if err != nil {
 			return nil, err
 		}
 		pointer, err := admit.NonEmptyText(change["jsonPointer"], "requirement semantic diff jsonPointer")
-		expectedPrefix := "/requirements/" + escapePointer(entityID)
-		if err != nil || (pointer != expectedPrefix && !strings.HasPrefix(pointer, expectedPrefix+"/")) {
-			return nil, fmt.Errorf("requirement semantic diff jsonPointer must target requirements")
+		if err != nil || !pointerTargetsEntity(pointer, entityKind, entityID) {
+			return nil, fmt.Errorf("requirement semantic diff jsonPointer must target its entity")
 		}
-		order := changeOrderKey{EntityID: entityID, JSONPointer: pointer, ChangeClass: changeClass, ChangeID: changeID}
+		order := changeOrderKey{EntityKind: entityKind, EntityID: entityID, JSONPointer: pointer, ChangeClass: changeClass, ChangeID: changeID}
 		if previousOrder != nil && !changeOrderLess(*previousOrder, order) {
 			return nil, fmt.Errorf("requirement semantic diff changes must use canonical semantic order")
 		}
 		previousOrder = &order
-		identity := map[string]any{"after": change["after"], "baseSnapshotId": record["baseSnapshotId"], "baseSourceDigest": change["baseSourceDigest"], "before": change["before"], "changeClass": changeClass, "currentSnapshotId": record["currentSnapshotId"], "currentSourceDigest": change["currentSourceDigest"], "entityId": entityID, "entityKind": "requirement", "jsonPointer": pointer}
+		identity := map[string]any{"after": change["after"], "baseSnapshotId": record["baseSnapshotId"], "baseSourceDigest": change["baseSourceDigest"], "before": change["before"], "changeClass": changeClass, "currentSnapshotId": record["currentSnapshotId"], "currentSourceDigest": change["currentSourceDigest"], "entityId": entityID, "entityKind": entityKind, "jsonPointer": pointer}
 		encodedIdentity, err := stablejson.Marshal(identity)
 		if err != nil || digest.SHA256TextRef(string(encodedIdentity)) != changeID {
 			return nil, fmt.Errorf("requirement semantic diff changeId does not match change identity")
@@ -125,6 +128,31 @@ func admitOutputRecord(record map[string]any) (map[string]any, error) {
 		return nil, err
 	}
 	return canonicalCopy(record)
+}
+
+// admitEntityID applies the identity grammar of the entity's owner: rule IDs
+// for requirements, and rule IDs or surface_id::stable_anchor for scenarios.
+func admitEntityID(kind string, raw any) (string, error) {
+	const context = "requirement semantic diff entityId"
+	if kind != "scenario" {
+		return admit.RuleID(raw, context)
+	}
+	// A non-string is rejected by the grammar as the empty identity.
+	value, _ := raw.(string)
+	return scenarioidentity.AdmitSourceID(value, context)
+}
+
+// pointerTargetsEntity binds a change pointer to its entity: a requirement
+// under /requirements/<id>, a scenario under
+// /requirementSources/<sourceId>/scenarios/<id>.
+func pointerTargetsEntity(pointer, kind, entityID string) bool {
+	within := func(prefix string) bool { return pointer == prefix || strings.HasPrefix(pointer, prefix+"/") }
+	if kind == "requirement" {
+		return within(requirementPointer(entityID))
+	}
+	rest, ok := strings.CutPrefix(pointer, "/requirementSources/")
+	sourceSegment, _, _ := strings.Cut(rest, "/")
+	return ok && sourceSegment != "" && within("/requirementSources/"+sourceSegment+"/scenarios/"+escapePointer(entityID))
 }
 
 func exactNonClaims(raw any) error {

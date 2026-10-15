@@ -21,13 +21,16 @@ func AssessValueWithLimits(value any, codecLimits Limits, modelLimits requiremen
 	}
 	encoder := valueEncoder{writer: canonicalWriter{maxBytes: codecLimits.MaxRawBytes}, maxDepth: codecLimits.MaxNesting}
 	encoder.encode(value, documentShape(modelLimits), "", 1)
+	problems := encoder.unknownFields
 	if encoder.writer.err != nil {
-		return requirementsourcemodel.Assessment{}, withoutCoordinates(encoder.writer.err)
+		problems.add(encoder.writer.err)
+		return requirementsourcemodel.Assessment{}, withoutCoordinates(problems.err())
 	}
 	source := encoder.writer.buffer.Bytes()
 	decoded, err := decodeSource(source, codecLimits, modelLimits)
-	if err != nil {
-		return requirementsourcemodel.Assessment{}, withoutCoordinates(err)
+	problems.add(err)
+	if problems.failed() {
+		return requirementsourcemodel.Assessment{}, withoutCoordinates(problems.err())
 	}
 	assessment, err := requirementsourcemodel.AssessWithLimits(decoded.draft, modelLimits)
 	if err != nil {
@@ -39,6 +42,9 @@ func AssessValueWithLimits(value any, codecLimits Limits, modelLimits requiremen
 type valueEncoder struct {
 	writer   canonicalWriter
 	maxDepth int
+	// unknownFields are recoverable: the field is not serialized, so shape
+	// admission still reports the remaining independent faults.
+	unknownFields diagnosticCollector
 }
 
 // The closed grammar bounds recursive containers. No reflection, custom
@@ -120,19 +126,21 @@ func (encoder *valueEncoder) object(value map[string]any, expected *shape, path 
 	}
 	sort.Strings(keys)
 	encoder.writer.writeByte('{')
-	for index, key := range keys {
+	written := 0
+	for _, key := range keys {
 		if encoder.writer.err != nil {
 			return
 		}
 		safeKey, child := safeObjectChild(expected, key)
 		childPath := joinPointer(path, safeKey)
 		if child == nil {
-			encoder.fail("unknown_field", childPath)
-			return
+			encoder.unknownFields.add(&Error{diagnostic: Diagnostic{Code: "unknown_field", Path: childPath, CoordinateState: "unavailable"}})
+			continue
 		}
-		if index > 0 {
+		if written > 0 {
 			encoder.writer.writeByte(',')
 		}
+		written++
 		encoder.text(key, childPath)
 		encoder.writer.writeByte(':')
 		encoder.encode(value[key], child, childPath, depth+1)
@@ -157,8 +165,16 @@ func (encoder *valueEncoder) fail(code, path string) {
 }
 
 func withoutCoordinates(err error) error {
-	if typed, ok := err.(*Error); ok {
-		return &Error{diagnostic: Diagnostic{Code: typed.diagnostic.Code, Path: typed.diagnostic.Path, CoordinateState: "unavailable"}}
+	typed, ok := err.(*Error)
+	if !ok {
+		return err
 	}
-	return err
+	strip := func(diagnostic Diagnostic) Diagnostic {
+		return Diagnostic{Code: diagnostic.Code, Path: diagnostic.Path, CoordinateState: "unavailable"}
+	}
+	result := &Error{diagnostic: strip(typed.diagnostic), omitted: typed.omitted}
+	for _, diagnostic := range typed.additional {
+		result.additional = append(result.additional, strip(diagnostic))
+	}
+	return result
 }

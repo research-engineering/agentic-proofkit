@@ -111,6 +111,7 @@ article { border-top: 1px solid var(--border); min-width: 0; padding: 1rem 0 1.2
 article h3 { font-family: ui-monospace, monospace; color: var(--muted-text); font-size: .75rem; font-weight: 500; margin: 0; }
 [data-anchor-id] { font-size: 1.0625rem; line-height: 1.65; margin: .75rem 0; max-inline-size: 75ch; }
 .requirement-boundary { margin: .75rem 0; color: var(--muted-text); font-size: .8125rem; }
+.requirement-deferral { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .25rem .75rem; margin: .75rem 0; font-size: .8125rem; }
 .page-summary { font-size: .8125rem; color: var(--muted-text); }
 details.projection-boundary { margin-block: 1rem; color: var(--muted-text); font-size: .8125rem; }
 details.projection-boundary > summary { min-block-size: 2.75rem; padding-block: .625rem; }

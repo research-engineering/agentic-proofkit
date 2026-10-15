@@ -28,6 +28,31 @@ function valid(command, direction, value) {
   return matches.length === 1;
 }
 const hash = value => createHash('sha256').update(value).digest('hex');
+// Declared, single-purpose deltas from the frozen predecessor streams. The
+// corpus stays untouched; each delta names its rows and exact byte change.
+const declaredStreamDeltas = Object.freeze([Object.freeze({
+  id: 'KERNEL-02',
+  reason: 'The shared browserdoc stylesheet hides card groups without a matching record.',
+  rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
+  anchor: '.cards[hidden]{display:none}',
+  insertion: '.card-group[hidden]{display:none}',
+})]);
+const count = (text, needle) => text.split(needle).length - 1;
+// Returns the predecessor stdout implied by the declared delta, or null when the
+// current bytes do not carry exactly that delta at exactly that position.
+function predecessorStdout(rowName, stdout) {
+  const delta = declaredStreamDeltas.find(item => item.rows.includes(rowName));
+  if (!delta) return stdout;
+  const style = stdout.indexOf('<style>'), styleEnd = stdout.indexOf('</style>');
+  const at = stdout.indexOf(delta.anchor + delta.insertion);
+  if (count(stdout, '<style>') !== 1 || count(stdout, '</style>') !== 1 || count(stdout, delta.insertion) !== 1 ||
+    at < style || at + delta.anchor.length + delta.insertion.length > styleEnd) return null;
+  return stdout.slice(0, at + delta.anchor.length) + stdout.slice(at + delta.anchor.length + delta.insertion.length);
+}
+const conservesPredecessor = (row, stdout) => {
+  const predecessor = predecessorStdout(row.name, stdout);
+  return predecessor !== null && hash(predecessor) === row.stdoutSHA256;
+};
 const seed = name => JSON.parse(baseline.observations.find(row => row.name === name).input);
 let directory, binary;
 before(() => {
@@ -56,13 +81,37 @@ test('lookup contracts conserve73actual predecessor process and rendered streams
       encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
     assertCLITransport(result, row.name);
     assert.equal(result.status, row.exitCode, row.name);
-    assert.equal(hash(result.stdout), row.stdoutSHA256, row.name + '/stdout');
+    assert.ok(conservesPredecessor(row, result.stdout), row.name + '/stdout');
     assert.equal(hash(result.stderr), row.stderrSHA256, row.name + '/stderr');
     if (row.exitCode || row.format !== 'json') continue;
     const input = row.name === 'pointer' ? JSON.parse(row.input).payload : JSON.parse(row.input);
     assert.ok(valid(row.command, 'input', input), row.name + '/input');
     assert.ok(valid(row.command, 'output', JSON.parse(result.stdout)), row.name + '/output');
   }
+});
+
+test('the KERNEL-02 stream delta is exact, positioned and limited to its rows', () => {
+  const [delta] = declaredStreamDeltas;
+  assert.equal(declaredStreamDeltas.length, 1);
+  const rows = baseline.observations.filter(row => row.format === 'html');
+  assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
+  const row = rows[0];
+  const current = assertCLITransport(spawnSync(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
+    maxBuffer: 2 << 20}), row.name).stdout;
+  assert.ok(conservesPredecessor(row, current), 'current stdout must carry exactly the declared delta');
+  const rule = delta.insertion;
+  const twice = current.replace(delta.anchor + rule, delta.anchor + rule + rule);
+  const moved = current.replace(delta.anchor + rule, delta.anchor).replace('</style>', rule + '</style>');
+  const otherByte = current.replace('<main', '<main ');
+  for (const [name, mutated] of [['rule twice', twice], ['rule moved', moved], ['other byte', otherByte]]) {
+    assert.notEqual(mutated, current, name);
+    assert.equal(conservesPredecessor(row, mutated), false, name);
+  }
+  const unlisted = baseline.observations.find(item => item.format === 'json' && item.exitCode === 0);
+  const unlistedCurrent = assertCLITransport(spawnSync(binary, unlisted.argv, {input: unlisted.input, encoding: 'utf8',
+    timeout: 10000, maxBuffer: 2 << 20}), unlisted.name).stdout;
+  assert.ok(conservesPredecessor(unlisted, unlistedCurrent), 'unlisted rows stay byte-exact');
+  assert.equal(conservesPredecessor(unlisted, unlistedCurrent + delta.anchor + rule), false, 'delta applied to an unlisted row');
 });
 
 test('source index selection preserves order and composes into resolver and view', () => {

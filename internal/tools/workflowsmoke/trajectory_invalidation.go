@@ -342,8 +342,11 @@ func (t *trajectory) invalidateRequirement(state *trajectoryState) error {
 	if changes, err = t.diff("scenario change diff", base, state.context); err != nil {
 		return err
 	}
+	// The diff names the edited scenario field beside its member requirement's
+	// review digest; scenario pointers are scoped by their source.
 	if err := expect("scenario change diff", changes, map[string]any{"": []any{
 		[]any{trajectoryEmptyNameID, "scalar_changed", "/requirements/" + trajectoryEmptyNameID + "/sourceReviewDigest"},
+		[]any{trajectoryEmptyScenario, "sequence_changed", "/requirementSources/greeter.requirements/scenarios/" + trajectoryEmptyScenario + "/actionSequence"},
 	}}); err != nil {
 		return err
 	}

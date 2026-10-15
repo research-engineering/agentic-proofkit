@@ -110,7 +110,7 @@ async function initializeWorkspace() {
     const response = await fetchWorkspaceJSON("/api/v1/manifest", {headers: {"X-Proofkit-Browser-Capability": capability}, signal});
     if (signal.aborted || requestId !== activeRequestId) return;
     manifest = response;
-    authorityTextView.textContent = `Authority: ${manifest.authority}. Snapshot: ${manifest.snapshotId}. Expected-digest coverage: ${manifest.expectedDigestCoverage}.`;
+    authorityTextView.textContent = `Authority: ${manifest.authority}. Snapshot: ${manifest.snapshotId}. Expected-digest coverage: ${manifest.expectedDigestCoverage}. Requirements: ${manifest.requirementCount}; deferred: ${manifest.deferredRequirementCount}.`;
     appendTextItems(authorityNonClaimsView, manifest.nonClaims ?? []);
     reconcileRequestControls();
     navigation.start(manifest);
@@ -277,6 +277,21 @@ async function renderSpecifications(offset = 0, filters = activeFilters, history
           announceSelection();
         });
         article.append(title, invariant);
+        if (requirement.deferral) {
+          // Owner-declared deferral facts; the browser adds no lifecycle meaning.
+          const deferral = document.createElement("dl");
+          deferral.className = "requirement-deferral caller-text";
+          deferral.dataset.deferral = "";
+          deferral.setAttribute("aria-label", `Deferral for ${requirement.requirementId}`);
+          for (const [label, value] of [["Review condition", requirement.deferral.reviewCondition], ["Expiry ref", requirement.deferral.expiryRef], ["Risk accepted by", requirement.deferral.riskAcceptedBy], ["Merge policy", requirement.deferral.mergePolicy]]) {
+            const term = document.createElement("dt");
+            term.textContent = label;
+            const detail = document.createElement("dd");
+            detail.textContent = String(value);
+            deferral.append(term, detail);
+          }
+          article.append(deferral);
+        }
         if (requirement.sharedPremises?.length) {
           const premises = document.createElement("ul");
           premises.className = "shared-premises caller-text";

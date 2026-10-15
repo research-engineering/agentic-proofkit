@@ -48,6 +48,7 @@ Scenario body example (complete scenarios array for the example source):
 
   {{cli}} requirement-source-admission --input <source>
   Admission and materialization preserve the body in canonical order. A body
-  edit changes its member requirements' sourceReviewDigest, which the semantic
-  diff reports. A scenario body is not a test, binding or execution claim.
+  edit changes its member requirements' sourceReviewDigest; the semantic diff
+  reports that change and the scenario's own entries. A scenario body is not a
+  test, binding or execution claim.
 `

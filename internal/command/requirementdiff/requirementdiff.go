@@ -14,11 +14,14 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
-const maxChanges = 8192
+const (
+	maxChanges          = 8192
+	outputSchemaVersion = 4
+)
 
 var nonClaims = []string{
 	"Semantic diff is a derived comparison and does not own requirement meaning, proof freshness, merge, release, or rollout decisions.",
-	"Semantic diff compares only admitted owner-declared requirement fields and is not a textual or Git diff.",
+	"Semantic diff compares only admitted owner-declared requirement and scenario fields and is not a textual or Git diff.",
 }
 
 type query struct {
@@ -68,6 +71,12 @@ func Build(raw any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	scenarioChanges, err := compareScenarios(base, current, baseRequirements, currentRequirements, diffQuery.OwnerIDs, diffQuery.MaxChanges-len(changes))
+	if err != nil {
+		return nil, err
+	}
+	changes = append(changes, scenarioChanges...)
+	sortChangesCanonical(changes)
 	output := map[string]any{
 		"baseExpectedDigestCoverage":    base.ExpectedDigestCoverage,
 		"baseSnapshotId":                base.SnapshotID,
@@ -78,7 +87,7 @@ func Build(raw any) (map[string]any, error) {
 		"diffId":                        diffID,
 		"diffKind":                      "proofkit.requirement-semantic-diff",
 		"nonClaims":                     admit.StringSliceToAny(nonClaims),
-		"schemaVersion":                 json.Number("3"),
+		"schemaVersion":                 json.Number(fmt.Sprint(outputSchemaVersion)),
 	}
 	if err := diffOutputShape.CheckGenerated(output, "requirement semantic diff output"); err != nil {
 		return nil, err
@@ -278,26 +287,47 @@ func comparisonChangeClass(field, class string) string {
 		return "scalar_changed"
 	case "set":
 		return "set_membership_changed"
+	case "sequence":
+		return "sequence_changed"
 	default:
 		return "opaque_value_changed"
 	}
 }
 
 func changeValue(base, current requirementcontext.Snapshot, requirementID, field, changeClass string, before, after requirementRecord, beforeValue, afterValue any) (map[string]any, error) {
-	pointer := "/requirements/" + escapePointer(requirementID)
+	return entityChange(base, current, entityRef{kind: "requirement", id: requirementID, pointer: requirementPointer(requirementID)}, field, changeClass, before.Digest, after.Digest, beforeValue, afterValue)
+}
+
+type entityRef struct {
+	kind    string
+	id      string
+	pointer string
+}
+
+func requirementPointer(requirementID string) string {
+	return "/requirements/" + escapePointer(requirementID)
+}
+
+// Scenario identities are source-local, so the pointer names the source.
+func scenarioPointer(sourceID, scenarioID string) string {
+	return "/requirementSources/" + escapePointer(sourceID) + "/scenarios/" + escapePointer(scenarioID)
+}
+
+func entityChange(base, current requirementcontext.Snapshot, entity entityRef, field, changeClass, beforeDigest, afterDigest string, beforeValue, afterValue any) (map[string]any, error) {
+	pointer := entity.pointer
 	if field != "" {
 		pointer += "/" + escapePointer(field)
 	}
 	identity := map[string]any{
 		"after":               afterValue,
 		"baseSnapshotId":      base.SnapshotID,
-		"baseSourceDigest":    before.Digest,
+		"baseSourceDigest":    beforeDigest,
 		"before":              beforeValue,
 		"changeClass":         changeClass,
 		"currentSnapshotId":   current.SnapshotID,
-		"currentSourceDigest": after.Digest,
-		"entityId":            requirementID,
-		"entityKind":          "requirement",
+		"currentSourceDigest": afterDigest,
+		"entityId":            entity.id,
+		"entityKind":          entity.kind,
 		"jsonPointer":         pointer,
 	}
 	encoded, err := stablejson.Marshal(identity)
@@ -306,13 +336,13 @@ func changeValue(base, current requirementcontext.Snapshot, requirementID, field
 	}
 	return map[string]any{
 		"after":               afterValue,
-		"baseSourceDigest":    before.Digest,
+		"baseSourceDigest":    beforeDigest,
 		"before":              beforeValue,
 		"changeClass":         changeClass,
 		"changeId":            digest.SHA256TextRef(string(encoded)),
-		"currentSourceDigest": after.Digest,
-		"entityId":            requirementID,
-		"entityKind":          "requirement",
+		"currentSourceDigest": afterDigest,
+		"entityId":            entity.id,
+		"entityKind":          entity.kind,
 		"jsonPointer":         pointer,
 	}, nil
 }

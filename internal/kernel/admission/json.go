@@ -25,7 +25,7 @@ func DecodeJSON(reader io.Reader, maxBytes int64) (any, error) {
 
 func decodeJSONSource(source []byte) (any, error) {
 	if !utf8.Valid(source) {
-		return nil, errors.New("invalid JSON input: source must be valid UTF-8")
+		return nil, newSyntaxError(source, firstInvalidUTF8Offset(source), "invalid JSON input: source must be valid UTF-8", nil)
 	}
 	if err := assertUniqueObjectKeys(source); err != nil {
 		return nil, err
@@ -34,12 +34,70 @@ func decodeJSONSource(source []byte) (any, error) {
 	decoder.UseNumber()
 	var value any
 	if err := decoder.Decode(&value); err != nil {
-		return nil, fmt.Errorf("invalid JSON input: %w", err)
+		offset := len(source)
+		var syntax *json.SyntaxError
+		if errors.As(err, &syntax) && syntax.Offset > 0 && syntax.Offset <= int64(len(source)) {
+			// The standard decoder counts the rejected byte as already read.
+			offset = int(syntax.Offset - 1)
+		}
+		return nil, newSyntaxError(source, offset, fmt.Sprintf("invalid JSON input: %v", err), err)
 	}
 	if decoder.More() {
-		return nil, errors.New("invalid JSON input: multiple JSON values")
+		return nil, newSyntaxError(source, int(decoder.InputOffset()), "invalid JSON input: multiple JSON values", nil)
 	}
 	return value, nil
+}
+
+// SyntaxError rejects JSON input at a source position. Error() keeps the
+// established non-disclosing message; the position is exposed separately so
+// owners that pin exact diagnostic streams are unaffected.
+type SyntaxError struct {
+	message string
+	cause   error
+	// Offset is the 0-based byte offset of the rejected byte, or the input
+	// length when the input ended early.
+	Offset int
+	// Line is 1-based; LF, CR and CRLF each end one line.
+	Line int
+	// Column is 1-based and counts Unicode scalar values within Line, so a
+	// multi-byte UTF-8 character advances it by one.
+	Column int
+}
+
+func (err *SyntaxError) Error() string { return err.message }
+
+func (err *SyntaxError) Unwrap() error { return err.cause }
+
+func newSyntaxError(source []byte, offset int, message string, cause error) *SyntaxError {
+	offset = min(max(offset, 0), len(source))
+	line, column := 1, 1
+	for index := 0; index < offset; {
+		value, width := utf8.DecodeRune(source[index:])
+		switch {
+		case value == '\r':
+			line, column = line+1, 1
+		case value == '\n':
+			if index == 0 || source[index-1] != '\r' {
+				line++
+			}
+			column = 1
+		default:
+			column++
+		}
+		index += width
+	}
+	return &SyntaxError{message: message, cause: cause, Offset: offset, Line: line, Column: column}
+}
+
+func firstInvalidUTF8Offset(source []byte) int {
+	for offset := 0; offset < len(source); {
+		value, width := utf8.DecodeRune(source[offset:])
+		if value == utf8.RuneError && width == 1 {
+			return offset
+		}
+		offset += width
+	}
+	return len(source)
 }
 
 // DecodeTypedJSON validates JSON syntax and exact spelling of known struct keys.
@@ -185,9 +243,13 @@ func assertUniqueObjectKeys(source []byte) error {
 	}
 	scanner.skipWhitespace()
 	if scanner.index != len(scanner.source) {
-		return errors.New("invalid JSON input: multiple JSON values")
+		return scanner.fail(scanner.index, "multiple JSON values")
 	}
 	return nil
+}
+
+func (scanner *jsonKeyScanner) fail(offset int, message string) error {
+	return newSyntaxError(scanner.source, offset, "invalid JSON input: "+message, nil)
 }
 
 func (scanner *jsonKeyScanner) skipWhitespace() {
@@ -199,12 +261,12 @@ func (scanner *jsonKeyScanner) skipWhitespace() {
 func (scanner *jsonKeyScanner) parseValue() error {
 	scanner.depth++
 	defer func() { scanner.depth-- }()
-	if scanner.depth > maxJSONNestingDepth {
-		return errors.New("invalid JSON input: exceeds nesting depth limit")
-	}
 	scanner.skipWhitespace()
+	if scanner.depth > maxJSONNestingDepth {
+		return scanner.fail(scanner.index, "exceeds nesting depth limit")
+	}
 	if scanner.index >= len(scanner.source) {
-		return errors.New("invalid JSON input: unexpected end")
+		return scanner.fail(scanner.index, "unexpected end")
 	}
 	switch scanner.source[scanner.index] {
 	case '{':
@@ -224,7 +286,7 @@ func (scanner *jsonKeyScanner) parseValue() error {
 	case 'n':
 		return scanner.consumeLiteral("null")
 	default:
-		return errors.New("invalid JSON input: unexpected token")
+		return scanner.fail(scanner.index, "unexpected token")
 	}
 }
 
@@ -239,19 +301,20 @@ func (scanner *jsonKeyScanner) parseObject() error {
 	for scanner.index < len(scanner.source) {
 		scanner.skipWhitespace()
 		if scanner.index >= len(scanner.source) || scanner.source[scanner.index] != '"' {
-			return errors.New("invalid JSON input: object key must be a string")
+			return scanner.fail(scanner.index, "object key must be a string")
 		}
+		keyOffset := scanner.index
 		key, err := scanner.parseString()
 		if err != nil {
 			return err
 		}
 		if _, ok := seen[key]; ok {
-			return errors.New("invalid JSON input: duplicate object key")
+			return scanner.fail(keyOffset, "duplicate object key")
 		}
 		seen[key] = struct{}{}
 		scanner.skipWhitespace()
 		if scanner.index >= len(scanner.source) || scanner.source[scanner.index] != ':' {
-			return errors.New("invalid JSON input: object key must be followed by colon")
+			return scanner.fail(scanner.index, "object key must be followed by colon")
 		}
 		scanner.index++
 		if err := scanner.parseValue(); err != nil {
@@ -263,11 +326,11 @@ func (scanner *jsonKeyScanner) parseObject() error {
 			return nil
 		}
 		if scanner.index >= len(scanner.source) || scanner.source[scanner.index] != ',' {
-			return errors.New("invalid JSON input: object entries must be separated by comma")
+			return scanner.fail(scanner.index, "object entries must be separated by comma")
 		}
 		scanner.index++
 	}
-	return errors.New("invalid JSON input: unterminated object")
+	return scanner.fail(len(scanner.source), "unterminated object")
 }
 
 func (scanner *jsonKeyScanner) parseArray() error {
@@ -287,21 +350,22 @@ func (scanner *jsonKeyScanner) parseArray() error {
 			return nil
 		}
 		if scanner.index >= len(scanner.source) || scanner.source[scanner.index] != ',' {
-			return errors.New("invalid JSON input: array values must be separated by comma")
+			return scanner.fail(scanner.index, "array values must be separated by comma")
 		}
 		scanner.index++
 	}
-	return errors.New("invalid JSON input: unterminated array")
+	return scanner.fail(len(scanner.source), "unterminated array")
 }
 
 func (scanner *jsonKeyScanner) parseString() (string, error) {
+	start := scanner.index
 	token, err := scanner.parseStringToken()
 	if err != nil {
 		return "", err
 	}
 	var value string
 	if err := json.Unmarshal(token, &value); err != nil {
-		return "", fmt.Errorf("invalid JSON input: %w", err)
+		return "", newSyntaxError(scanner.source, start, fmt.Sprintf("invalid JSON input: %v", err), err)
 	}
 	return value, nil
 }
@@ -316,25 +380,40 @@ func (scanner *jsonKeyScanner) parseStringToken() ([]byte, error) {
 		case '"':
 			scanner.index++
 			token := scanner.source[start:scanner.index]
-			if err := validateJSONStringUnicodeEscapes(token); err != nil {
-				return nil, err
+			if escape, err := validateJSONStringUnicodeEscapes(token); err != nil {
+				return nil, scanner.fail(start+escape, strings.TrimPrefix(err.Error(), "invalid JSON input: "))
 			}
 			if !json.Valid(token) {
-				return nil, errors.New("invalid JSON input: invalid string token")
+				return nil, scanner.fail(start+rejectedStringTokenByte(token), "invalid string token")
 			}
 			return token, nil
 		default:
 			scanner.index++
 		}
 	}
-	return nil, errors.New("invalid JSON input: unterminated string")
+	return nil, scanner.fail(len(scanner.source), "unterminated string")
 }
 
-func validateJSONStringUnicodeEscapes(token []byte) error {
+// rejectedStringTokenByte returns the token-relative offset of the byte the
+// standard scanner rejects; like decodeJSONSource, it treats the scanner's
+// offset as counting that byte as already read.
+func rejectedStringTokenByte(token []byte) int {
+	var value string
+	var syntax *json.SyntaxError
+	if errors.As(json.Unmarshal(token, &value), &syntax) && syntax.Offset > 0 && syntax.Offset <= int64(len(token)) {
+		return int(syntax.Offset - 1)
+	}
+	return 0
+}
+
+// validateJSONStringUnicodeEscapes returns the token-relative offset of the
+// backslash that starts an unpaired surrogate escape.
+func validateJSONStringUnicodeEscapes(token []byte) (int, error) {
 	for index := 1; index < len(token)-1; index++ {
 		if token[index] != '\\' {
 			continue
 		}
+		escape := index
 		index++
 		if index >= len(token)-1 || token[index] != 'u' {
 			continue
@@ -347,18 +426,18 @@ func validateJSONStringUnicodeEscapes(token []byte) error {
 		switch {
 		case codePoint >= 0xd800 && codePoint <= 0xdbff:
 			if index+6 >= len(token) || token[index+1] != '\\' || token[index+2] != 'u' {
-				return errors.New("invalid JSON input: unpaired Unicode surrogate")
+				return escape, errors.New("invalid JSON input: unpaired Unicode surrogate")
 			}
 			low, ok := decodeHexQuad(token, index+3)
 			if !ok || low < 0xdc00 || low > 0xdfff {
-				return errors.New("invalid JSON input: unpaired Unicode surrogate")
+				return escape, errors.New("invalid JSON input: unpaired Unicode surrogate")
 			}
 			index += 6
 		case codePoint >= 0xdc00 && codePoint <= 0xdfff:
-			return errors.New("invalid JSON input: unpaired Unicode surrogate")
+			return escape, errors.New("invalid JSON input: unpaired Unicode surrogate")
 		}
 	}
-	return nil
+	return 0, nil
 }
 
 func decodeHexQuad(source []byte, start int) (uint16, bool) {
@@ -395,7 +474,7 @@ func (scanner *jsonKeyScanner) parseNumberLike() {
 
 func (scanner *jsonKeyScanner) consumeLiteral(literal string) error {
 	if !bytes.HasPrefix(scanner.source[scanner.index:], []byte(literal)) {
-		return errors.New("invalid JSON input: unexpected token")
+		return scanner.fail(scanner.index, "unexpected token")
 	}
 	scanner.index += len(literal)
 	return nil

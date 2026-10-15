@@ -27,13 +27,18 @@ func TestTransitionPolicyFailureHasNoFabricatedDelta(t *testing.T) {
 	input := validRequirementSourceTransitionInput(false)
 	firstRequirement(input["next"].(map[string]any))["proofBindingRefs"] = []any{}
 	record, code, err := Build(input)
-	if err != nil || code != 1 || record.SchemaVersion != 2 {
+	if err != nil || code != 1 || record.SchemaVersion != 3 {
 		t.Fatalf("Build() = %v, %d, %v", record, code, err)
 	}
 	for _, key := range []string{"addedRequirementCount", "lifecycleChangedRequirementCount", "missingRequirementCount"} {
 		value, present := record.Summary[key]
 		if !present || value != nil {
 			t.Fatalf("unperformed comparison %s = %v (present %v)", key, value, present)
+		}
+	}
+	for _, diagnostic := range record.Diagnostics[2:] {
+		if diagnostic.Value != nil {
+			t.Fatalf("unperformed comparison %s = %v", diagnostic.Key, diagnostic.Value)
 		}
 	}
 	for _, key := range []string{"previousRequirementCount", "nextRequirementCount"} {
