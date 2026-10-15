@@ -90,9 +90,12 @@ func BuildAgentEnvelope(raw any) (map[string]any, error) {
 	return agentEnvelope(result)
 }
 
+// planAuthority is shared by the plan producer and its structural projection.
+const planAuthority = "derived_non_authoritative_plan"
+
 func planValue(value projection) map[string]any {
 	plan := map[string]any{
-		"authority":             "derived_non_authoritative_plan",
+		"authority":             planAuthority,
 		"completedStageIds":     stringsValue(value.Input.CompletedStageIDs),
 		"nonClaims":             stringsValue(boundaryNonClaims),
 		"omittedContextCount":   len(value.Closure.Omitted),

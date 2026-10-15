@@ -5,6 +5,7 @@ import {tmpdir} from "node:os";
 import {dirname, join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {compileVariantUnion} from "./schema-definitions.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_PUBLIC_API_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -17,7 +18,7 @@ const validate = Object.fromEntries(["input", "output"].map(direction => {
   const id = `proofkit.${command}.${direction}.v1.json-schema`;
   const definition = contract.contractDefinitions.find(row => row.definitionId === id);
   assert.ok(definition, id);
-  return [direction, ajv.compile({oneOf: definition.fieldTree.variants.map(row => row.schema)})];
+  return [direction, compileVariantUnion(() => new Ajv2020({strict: false, allErrors: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema))];
 }));
 const seed = () => structuredClone(corpus.observations[0].input);
 const at = (object, path) => path.reduce((value, key) => value[key], object);

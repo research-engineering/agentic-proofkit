@@ -1,7 +1,6 @@
 package main
 
 import (
-	"reflect"
 	"slices"
 	"testing"
 
@@ -40,7 +39,7 @@ func TestReceiptNativeStructuresRejectRehashedNestedDrift(t *testing.T) {
 					expected = receiptproduceradmission.OutputStructure()
 				}
 			}
-			if !reflect.DeepEqual(variant["schema"], expected) {
+			if !equalPublishedSchema(variant["schema"], expected) {
 				t.Fatal("schema is not native-owned")
 			}
 			if _, err := admitDefinitions(map[string]any{"contractDefinitions": []any{row}}); err != nil {

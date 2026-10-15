@@ -68,7 +68,7 @@ func TestProofRoutingStructuresBindOwnersAndRejectRehashedDrift(t *testing.T) {
 			}
 			for i, projection := range row.projections {
 				actual := variants[i].(map[string]any)["schema"]
-				if !reflect.DeepEqual(actual, projection()) {
+				if !equalPublishedSchema(actual, projection()) {
 					t.Fatal("registered schema differs from owner")
 				}
 				before, err := canonicalJSON(projection())

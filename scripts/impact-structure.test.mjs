@@ -6,6 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {compileVariantUnion} from "./schema-definitions.mjs";
 import {composeInput, impactInput, obligation} from "./impact-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -17,8 +18,7 @@ for (const name of [impact, compose]) for (const direction of ["input", "output"
   const definition = contract.contractDefinitions.find(row => row.definitionId === ref);
   assert.equal(definition.fieldTree.kind, "structural_json_schema");
   assert.match(JSON.stringify(definition.fieldTree), /^[\x00-\x7F]*$/);
-  const ajv = new Ajv2020({strict: false, validateFormats: false});
-  validators.set(`${name}/${direction}`, ajv.compile({oneOf: definition.fieldTree.variants.map(row => row.schema)}));
+  validators.set(`${name}/${direction}`, compileVariantUnion(() => new Ajv2020({strict: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema)));
 }
 let directory, binary, subjects;
 const hash = path => createHash("sha256").update(readFileSync(path)).digest("hex");

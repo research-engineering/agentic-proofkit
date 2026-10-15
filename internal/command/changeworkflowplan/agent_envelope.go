@@ -8,14 +8,33 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
+// Envelope literals are shared with the structural projection of this producer.
+const (
+	envelopeID               = "proofkit.change-workflow-plan.agent-envelope"
+	envelopeOwner            = "consumer_repository"
+	envelopeContextNonClaim  = "Caller-declared context does not prove source truth, freshness, completeness, or authority."
+	envelopeContextPurpose   = "Admitted change-workflow context selected by least dependency closure."
+	envelopeOmissionKind     = "context_ref"
+	envelopeOmissionNonClaim = "Omitted context remains caller-owned and may require a wider or full gate."
+	envelopeOmissionID       = "proofkit.change-workflow-plan.omitted-context"
+	envelopeOmissionReason   = "candidate_not_required_by_least_dependency_closure"
+	nextActionRationale      = "The admitted checkpoint relation selects exactly one next action for the active stage."
+	nextActionStepID         = "proofkit.change-workflow-plan.next-action"
+	terminalPhase            = "terminal"
+	terminalRationale        = "The complete stage prefix and null checkpoint select the disjoint terminal workflow variant."
+	terminalStepID           = "proofkit.change-workflow-plan.workflow-complete"
+	envelopeBoundsEscalation = "Caller must inspect omitted context or resolve blocked authority and witness preconditions before mutation or verification."
+	envelopeBoundsNonClaim   = "Bounds count emitted records only and do not prove tokenizer-specific cost or semantic sufficiency."
+)
+
 func agentEnvelope(value projection) (map[string]any, error) {
 	contextRefs := make([]map[string]any, 0, len(value.Closure.Retained))
 	for _, ref := range value.Closure.Retained {
 		contextRefs = append(contextRefs, map[string]any{
 			"kind":          ref.RefKind,
-			"nonClaim":      "Caller-declared context does not prove source truth, freshness, completeness, or authority.",
-			"owner":         "consumer_repository",
-			"purpose":       "Admitted change-workflow context selected by least dependency closure.",
+			"nonClaim":      envelopeContextNonClaim,
+			"owner":         envelopeOwner,
+			"purpose":       envelopeContextPurpose,
 			"ref":           ref.ArtifactPath,
 			"refId":         ref.RefID,
 			"role":          contextRole(ref, value.Input.GoverningAuthorityRefID),
@@ -25,11 +44,11 @@ func agentEnvelope(value projection) (map[string]any, error) {
 	omitted := []map[string]any{}
 	if len(value.Closure.Omitted) > 0 {
 		omitted = append(omitted, map[string]any{
-			"kind":         "context_ref",
-			"nonClaim":     "Omitted context remains caller-owned and may require a wider or full gate.",
-			"omissionId":   "proofkit.change-workflow-plan.omitted-context",
+			"kind":         envelopeOmissionKind,
+			"nonClaim":     envelopeOmissionNonClaim,
+			"omissionId":   envelopeOmissionID,
 			"omittedCount": len(value.Closure.Omitted),
-			"reason":       "candidate_not_required_by_least_dependency_closure",
+			"reason":       envelopeOmissionReason,
 		})
 	}
 	actionPlan := []map[string]any{}
@@ -45,8 +64,8 @@ func agentEnvelope(value projection) (map[string]any, error) {
 				"owner":        prompt["ownerOrEscalationTarget"],
 				"outputKind":   value.Decision.OutputKind,
 				"phase":        value.Decision.ActiveStageID,
-				"rationale":    "The admitted checkpoint relation selects exactly one next action for the active stage.",
-				"stepId":       "proofkit.change-workflow-plan.next-action",
+				"rationale":    nextActionRationale,
+				"stepId":       nextActionStepID,
 			}
 			if value.Decision.SuccessorStateDelta != nil {
 				action["successorStateDelta"] = successorValue(*value.Decision.SuccessorStateDelta)
@@ -64,12 +83,13 @@ func agentEnvelope(value projection) (map[string]any, error) {
 			"instruction":  terminalStop,
 			"nonClaims":    []any{promptNonClaim},
 			"outputKind":   value.Decision.OutputKind,
-			"owner":        "consumer_repository",
-			"phase":        "terminal",
-			"rationale":    "The complete stage prefix and null checkpoint select the disjoint terminal workflow variant.",
-			"stepId":       "proofkit.change-workflow-plan.workflow-complete",
+			"owner":        envelopeOwner,
+			"phase":        terminalPhase,
+			"rationale":    terminalRationale,
+			"stepId":       terminalStepID,
 		})
 	}
+	routeQuestions := workflowRouteQuestions(contextRefIDs(value.Closure.Retained), governingEvidence(value.Input.GoverningAuthorityRefID))
 	sourceHash, err := stableHash(value.Plan)
 	if err != nil {
 		return nil, err
@@ -78,7 +98,7 @@ func agentEnvelope(value projection) (map[string]any, error) {
 		ActionPlan:           actionPlan,
 		BlockedPreconditions: blocked,
 		Bounds: map[string]any{
-			"escalation":                "Caller must inspect omitted context or resolve blocked authority and witness preconditions before mutation or verification.",
+			"escalation":                envelopeBoundsEscalation,
 			"fanout":                    envelopeFanout(len(omitted), len(blocked)),
 			"maxActionEvidenceRefs":     len(value.Closure.Retained),
 			"maxActionItems":            len(actionPlan),
@@ -88,23 +108,19 @@ func agentEnvelope(value projection) (map[string]any, error) {
 			"maxContextRefs":            len(contextRefs),
 			"maxOmittedItems":           len(omitted),
 			"maxReceiptRefs":            0,
-			"maxRouteQuestions":         3,
+			"maxRouteQuestions":         len(routeQuestions),
 			"maxTokenBudget":            nil,
-			"nonClaim":                  "Bounds count emitted records only and do not prove tokenizer-specific cost or semantic sufficiency.",
+			"nonClaim":                  envelopeBoundsNonClaim,
 			"omittedCount":              len(value.Closure.Omitted),
 		},
 		ClarificationQuestion: clarifications,
 		Commands:              []map[string]any{},
 		ContextRefs:           contextRefs,
-		EnvelopeID:            "proofkit.change-workflow-plan.agent-envelope",
+		EnvelopeID:            envelopeID,
 		NonClaims:             boundaryNonClaims,
 		Omitted:               omitted,
 		ReceiptRefs:           []map[string]any{},
-		RouteQuestions: []map[string]any{
-			workflowQuestion("proofkit.agent.question.what-changed", "what changed", contextRefIDs(value.Closure.Retained)),
-			workflowQuestion("proofkit.agent.question.what-proves-it", "what proves it", contextRefIDs(value.Closure.Retained)),
-			workflowQuestion("proofkit.agent.question.who-owns-it", "who owns it", governingEvidence(value.Input.GoverningAuthorityRefID)),
-		},
+		RouteQuestions:        routeQuestions,
 		SourceReport: map[string]any{
 			"artifactRef": nil,
 			"nonClaim":    "Plan identity does not authenticate caller context or prove action execution.",
@@ -219,6 +235,14 @@ func envelopeFanout(omitted int, blocked int) string {
 		return "wide_or_full_gate_required"
 	}
 	return "bounded"
+}
+
+func workflowRouteQuestions(retained []string, governing []string) []map[string]any {
+	return []map[string]any{
+		workflowQuestion("proofkit.agent.question.what-changed", "what changed", retained),
+		workflowQuestion("proofkit.agent.question.what-proves-it", "what proves it", retained),
+		workflowQuestion("proofkit.agent.question.who-owns-it", "who owns it", governing),
+	}
 }
 
 func workflowQuestion(id string, question string, refs []string) map[string]any {

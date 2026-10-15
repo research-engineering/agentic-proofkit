@@ -20,6 +20,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 type wheelEntry struct {
@@ -135,7 +138,13 @@ func wheelEntries(manifest packageJSON, target target, binary []byte) ([]wheelEn
 	}
 	entries := make([]wheelEntry, 0, len(sourceFiles)+6)
 	for _, source := range sourceFiles {
-		content, err := os.ReadFile(source.path)
+		var content []byte
+		var err error
+		if source.path == sourceCLIContractPath {
+			content, err = artifactfile.ReadBounded(".", sourceCLIContractPath, installedclicontract.MaximumContractBytes)
+		} else {
+			content, err = os.ReadFile(source.path)
+		}
 		if err != nil {
 			return nil, err
 		}

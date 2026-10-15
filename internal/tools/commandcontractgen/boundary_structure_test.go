@@ -60,7 +60,7 @@ func TestBoundaryNativeStructuresRejectRehashedNestedDrift(t *testing.T) {
 				}
 				variant := row["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
 				expected := projection()
-				if !reflect.DeepEqual(variant["schema"], expected) {
+				if !equalPublishedSchema(variant["schema"], expected) {
 					t.Fatal("schema differs from its native owner")
 				}
 				if _, err := admitDefinitions(map[string]any{"contractDefinitions": []any{row}}); err != nil {

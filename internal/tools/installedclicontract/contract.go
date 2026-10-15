@@ -15,7 +15,12 @@ import (
 )
 
 const (
-	MaximumContractBytes = 4 << 20
+	// MaximumContractBytes is the byte bound of every dedicated reader of the
+	// CLI machine contract in the non-test Go code, and commandcontractgen
+	// refuses to read or publish a larger contract. Generic package-entry scans
+	// are outside this bound. It is growth headroom above the published size,
+	// not a target.
+	MaximumContractBytes = 8 << 20
 	MaximumCommands      = 512
 	MaximumPresetIDs     = 128
 	maximumHelpBytes     = 256 << 10

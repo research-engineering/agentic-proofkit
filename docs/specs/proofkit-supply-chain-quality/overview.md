@@ -38,9 +38,9 @@ vulnerability absence, or consumer rollout safety by itself.
   admitted native-closure witness. The separate pilot-admission route declares
   its contract-envelope stack-diverse alias and rejects repeated or mixed
   `--pilot` and `--stack-diverse` selectors instead of applying last-write-wins
-  routing. Nested fields, leaf types, cardinality,
-  nullability, and cross-field semantics remain native-command concerns rather
-  than machine-contract claims.
+  routing. Published structural schemas describe nested fields, leaf types,
+  cardinality, and nullability; cross-field semantics, canonicalization, and
+  completeness parity remain native-command concerns.
 - `REQ-PROOFKIT-QUALITY-005`: CodeQL workflow source is admitted as an
   independent semantic security analysis signal for Go source; advisory
   analysis remains read-only, provider publication is isolated and disabled on

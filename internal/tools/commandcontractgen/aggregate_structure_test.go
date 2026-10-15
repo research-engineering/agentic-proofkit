@@ -57,7 +57,7 @@ func TestAggregateStructureSeparatesContractIdentityFromWireHeaders(t *testing.T
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(variant["schema"], original) || !reflect.DeepEqual(variant["allowedFields"], fields) ||
+		if !equalPublishedSchema(variant["schema"], original) || !reflect.DeepEqual(variant["allowedFields"], fields) ||
 			!reflect.DeepEqual(variant["requiredFields"], fields) {
 			t.Fatal("aggregate changed a payload or its exact root fields")
 		}
@@ -134,7 +134,7 @@ func TestAggregateSemanticIdentityPreservesVariantHeaders(t *testing.T) {
 	}
 	for i, raw := range definition["fieldTree"].(map[string]any)["variants"].([]any) {
 		original, err := owner.variants[i].schema()
-		if err != nil || !reflect.DeepEqual(raw.(map[string]any)["schema"], original) {
+		if err != nil || !equalPublishedSchema(raw.(map[string]any)["schema"], original) {
 			t.Fatal("semantic identity modified a variant header or shape")
 		}
 	}

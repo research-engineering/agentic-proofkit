@@ -15,6 +15,17 @@ import (
 // The wire version stays 1; the delegated bootstrap safety boundary changes.
 const InputContractID = "proofkit.scaffold-project-structure.input.v2"
 
+const reportKind = "proofkit.project-structure-scaffold"
+
+// The scaffold always routes these caller-owned workflow inputs, in refId
+// order, for the new_repository scenario; each ref uses its kind as refId.
+var workflowInputKinds = []string{"gradual_adoption_bootstrap", "gradual_adoption_guidance", "repo_profile_scaffold", "requirement_bindings", "witness_plan"}
+
+var workflowInputNonClaims = []string{
+	"Adoption workflow input does not prove file materialization or native witness execution.",
+	"Adoption workflow input is starter routing only.",
+}
+
 var scaffoldNonClaims = []string{
 	"Project-structure scaffold reports do not execute native witnesses.",
 	"Project-structure scaffold reports do not own final module specifications or final repository profile policy.",
@@ -66,7 +77,7 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 	if !ok {
 		return Result{}, fmt.Errorf("project structure scaffold input must be an object")
 	}
-	if err := admit.KnownKeys(input, []string{"bootstrap", "nonClaims", "paths", "repoProfileScaffold", "scaffoldId", "schemaVersion", "workflow"}, "project structure scaffold input"); err != nil {
+	if err := admit.KnownKeys(input, inputKeys, "project structure scaffold input"); err != nil {
 		return Result{}, err
 	}
 	if !admit.JSONNumberEquals(input["schemaVersion"], 1) {
@@ -151,7 +162,7 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 	}
 	record := report.Record{
 		SchemaVersion: 1,
-		ReportKind:    "proofkit.project-structure-scaffold",
+		ReportKind:    reportKind,
 		ReportID:      scaffoldID,
 		State:         state,
 		Summary: map[string]any{
@@ -214,21 +225,20 @@ func adoptionWorkflowInput(bootstrapInput map[string]any, repoProfilePlan map[st
 	if err != nil {
 		return nil, err
 	}
-	nonClaims, err := admit.MergeNonClaims([]string{
-		"Adoption workflow input does not prove file materialization or native witness execution.",
-		"Adoption workflow input is starter routing only.",
-	}, workflowNonClaims, "project structure scaffold workflow")
+	nonClaims, err := admit.MergeNonClaims(workflowInputNonClaims, workflowNonClaims, "project structure scaffold workflow")
 	if err != nil {
 		return nil, err
 	}
+	refPaths := map[string]string{
+		"gradual_adoption_bootstrap": paths.bootstrapInputPath, "gradual_adoption_guidance": adoptionGuidancePath,
+		"repo_profile_scaffold": paths.repoProfileScaffoldInputPath, "requirement_bindings": proofBindingPath, "witness_plan": witnessPlanInputPath,
+	}
+	inputRefs := make([]any, 0, len(workflowInputKinds))
+	for _, kind := range workflowInputKinds {
+		inputRefs = append(inputRefs, map[string]any{"inputKind": kind, "path": refPaths[kind], "refId": kind})
+	}
 	input := map[string]any{
-		"inputRefs": []any{
-			map[string]any{"inputKind": "gradual_adoption_bootstrap", "path": paths.bootstrapInputPath, "refId": "gradual_adoption_bootstrap"},
-			map[string]any{"inputKind": "gradual_adoption_guidance", "path": adoptionGuidancePath, "refId": "gradual_adoption_guidance"},
-			map[string]any{"inputKind": "repo_profile_scaffold", "path": paths.repoProfileScaffoldInputPath, "refId": "repo_profile_scaffold"},
-			map[string]any{"inputKind": "requirement_bindings", "path": proofBindingPath, "refId": "requirement_bindings"},
-			map[string]any{"inputKind": "witness_plan", "path": witnessPlanInputPath, "refId": "witness_plan"},
-		},
+		"inputRefs":     inputRefs,
 		"nonClaims":     admit.StringSliceToAny(nonClaims),
 		"scenario":      "new_repository",
 		"schemaVersion": json.Number("1"),

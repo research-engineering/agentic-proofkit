@@ -21,6 +21,7 @@ func TestSchemaPropertyNamesAreNotPackageReferences(t *testing.T) {
 		{"properties": map[string]any{"records": map[string]any{"items": map[string]any{"properties": map[string]any{"witnessSelectors": map[string]any{"type": "array"}}}}}},
 		{"anyOf": []any{map[string]any{"properties": map[string]any{"sourcePath": map[string]any{"type": "string"}}}, map[string]any{"type": "null"}}},
 		{"prefixItems": []any{map[string]any{"properties": map[string]any{"ref": map[string]any{"type": "string"}}}}},
+		{"dependentRequired": map[string]any{"findingRefs": []any{"subjectDigest", "subjectRefId"}, "subjectRefId": []any{"subjectDigest"}}},
 	} {
 		if err := checkSchemaReferenceFixture(t, schema, nil); err != nil {
 			t.Fatal(err)
@@ -36,6 +37,10 @@ func TestSchemaDefinitionsAndReferencesAreResourceBound(t *testing.T) {
 		{"$defs": map[string]any{"percent%name": true}, "$ref": "#/$defs/percent%25name"},
 		{"$defs": map[string]any{"self": map[string]any{"$ref": "#/$defs/self"}}, "$ref": "#/$defs/self"},
 		{"$defs": map[string]any{"inner": map[string]any{"$id": "urn:proofkit:inner", "$defs": map[string]any{"own": true}, "$ref": "#/$defs/own"}}},
+		// Every draft 2020-12 applicator carries schema scope, so a shared
+		// definition may be referenced from any subschema position.
+		{"$defs": map[string]any{"shared-0123456789abcdef": map[string]any{"type": "string"}}, "patternProperties": map[string]any{"^a": map[string]any{"$ref": "#/$defs/shared-0123456789abcdef"}},
+			"dependentSchemas": map[string]any{"a": map[string]any{"$ref": "#/$defs/shared-0123456789abcdef"}}, "unevaluatedItems": map[string]any{"$ref": "#/$defs/shared-0123456789abcdef"}},
 	} {
 		if err := checkSchemaReferenceFixture(t, schema, nil); err != nil {
 			t.Fatal(err)
@@ -74,6 +79,11 @@ func TestSchemaReferenceInventoryCannotHideRealReferences(t *testing.T) {
 		{"schema-ref", map[string]any{"$ref": "missing.json"}, nil, "unclassified reference-bearing field"},
 		{"property-schema-ref", map[string]any{"properties": map[string]any{"safe": map[string]any{"$ref": "missing.json"}}}, nil, "unclassified reference-bearing field"},
 		{"prefix-item-schema-ref", map[string]any{"prefixItems": []any{map[string]any{"$ref": "missing.json"}}}, nil, "unclassified reference-bearing field"},
+		{"pattern-property-schema-ref", map[string]any{"patternProperties": map[string]any{"^a": map[string]any{"$ref": "missing.json"}}}, nil, "unclassified reference-bearing field"},
+		{"dependent-required-path", map[string]any{"dependentRequired": map[string]any{"sourcePath": "missing.json"}}, nil, "dependentRequired declaration must list property names"},
+		{"dependent-required-object", map[string]any{"dependentRequired": map[string]any{"sourcePath": []any{map[string]any{"path": "missing.json"}}}}, nil, "dependentRequired declaration must list property names"},
+		{"malformed-dependent-required", map[string]any{"dependentRequired": []any{"sourcePath"}}, nil, "dependentRequired must be an object"},
+		{"metadata-dependent-required", map[string]any{"metadata": map[string]any{"dependentRequired": map[string]any{"sourcePath": []any{"x"}}}}, nil, "unclassified reference-bearing field"},
 		{"metadata-path", map[string]any{"properties": map[string]any{"safe": map[string]any{"documentationPath": "missing.md"}}}, nil, "unclassified reference-bearing field"},
 		{"malformed-properties", map[string]any{"properties": []any{}}, nil, "properties must be an object"},
 		{"instance-in-properties", map[string]any{"properties": map[string]any{"sourcePath": "missing.json"}}, nil, "property declaration must be"},

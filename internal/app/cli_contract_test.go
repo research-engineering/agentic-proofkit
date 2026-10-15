@@ -19,12 +19,14 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/schemadefs"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 const (
-	cliContractPublicABISHA256               = "12d95600ab5e491c713809ed5ffc28cf1ed80bc94ad6755e5f694d160dbc4d08"
+	cliContractPublicABISHA256               = "4035958876c37ee5bd3ce03299fd58a966c0d6ab1a09ae37f1b8be2dd8a0db84"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -308,8 +310,7 @@ func TestCLIContractRootShapeVariantInventoryIsClosedAndModeComplete(t *testing.
 		},
 		"conformance-profile output": {
 			"--list",
-			"--profile <id> --format json",
-			"--profile <id> without --format (defaults json)",
+			"--profile <id> with --format json or without --format (defaults json)",
 			"--verify",
 		},
 		"pilot-admission input": {
@@ -405,9 +406,9 @@ func TestCLIContractRootShapeVariantInventoryIsClosedAndModeComplete(t *testing.
 func TestCLIConditionModelClosesAdoptionOutputRoutes(t *testing.T) {
 	contract := readCLIContract(t)
 	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
-	definition := definitions["proofkit.adoption-contract-envelope.output.v1.root-shape"]
+	definition := definitions["proofkit.adoption-contract-envelope.output.v1.json-schema"]
 	if definition == nil {
-		t.Fatal("adoption output root-shape definition is missing")
+		t.Fatal("adoption output structural definition is missing")
 	}
 	fieldTree := definition["fieldTree"].(map[string]any)
 	if fieldTree["conditionModel"] != "cli_flag_conjunction_v1" {
@@ -535,12 +536,46 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 	}
 	if structural {
 		if _, admitted := map[string]struct{}{
+			"proofkit.conformance-profile.input.v2.json-schema":                       {},
+			"proofkit.conformance-profile.output.v2.json-schema":                      {},
+			"proofkit.migration-plan.input.v1.json-schema":                            {},
+			"proofkit.migration-plan.output.v1.json-schema":                           {},
+			"proofkit.workspace-registry.input.v1.json-schema":                        {},
+			"proofkit.workspace-registry.output.v1.json-schema":                       {},
+			"proofkit.requirement-browser-server.input.v4.json-schema":                {},
+			"proofkit.requirement-browser-server.output.v2.json-schema":               {},
+			"proofkit.view.output.v2.json-schema":                                     {},
+			"proofkit.capability-map-admission.input.v1.json-schema":                  {},
+			"proofkit.capability-map-admission.output.v1.json-schema":                 {},
+			"proofkit.deployment-evidence-admission.input.v1.json-schema":             {},
+			"proofkit.deployment-evidence-admission.output.v1.json-schema":            {},
+			"proofkit.repo-profile-admission.input.v1.json-schema":                    {},
+			"proofkit.repo-profile-admission.output.v1.json-schema":                   {},
+			"proofkit.spec-proof-bundle-admission.input.v1.json-schema":               {},
+			"proofkit.spec-proof-bundle-admission.output.v1.json-schema":              {},
+			"proofkit.agent-route.input.v2.json-schema":                               {},
+			"proofkit.agent-route.output.v3.json-schema":                              {},
+			"proofkit.change-workflow-plan.input.v1.json-schema":                      {},
+			"proofkit.change-workflow-plan.output.v1.json-schema":                     {},
+			"proofkit.native-evidence-guidance.output.v1.json-schema":                 {},
+			"proofkit.adoption-contract-envelope.input.v3.json-schema":                {},
+			"proofkit.adoption-contract-envelope.output.v1.json-schema":               {},
+			"proofkit.adoption-workflow-plan.input.v1.json-schema":                    {},
+			"proofkit.adoption-workflow-plan.output.v1.json-schema":                   {},
+			"proofkit.pilot-admission.input.v2.json-schema":                           {},
+			"proofkit.pilot-admission.output.v1.json-schema":                          {},
 			"proofkit.gradual-adoption.input.v1.json-schema":                          {},
 			"proofkit.gradual-adoption.output.v1.json-schema":                         {},
 			"proofkit.gradual-adoption-guidance.input.v1.json-schema":                 {},
 			"proofkit.gradual-adoption-guidance.output.v1.json-schema":                {},
 			"proofkit.gradual-adoption-bootstrap.input.v2.json-schema":                {},
 			"proofkit.gradual-adoption-bootstrap.output.v1.json-schema":               {},
+			"proofkit.adoption-doctor.input.v1.json-schema":                           {},
+			"proofkit.adoption-doctor.output.v1.json-schema":                          {},
+			"proofkit.scaffold-project-structure.input.v2.json-schema":                {},
+			"proofkit.scaffold-project-structure.output.v1.json-schema":               {},
+			"proofkit.scaffold-profile-plan.input.v1.json-schema":                     {},
+			"proofkit.scaffold-profile-plan.output.v1.json-schema":                    {},
 			"proofkit.status.output.v1.json-schema":                                   {},
 			"proofkit.next.output.v1.json-schema":                                     {},
 			"proofkit.integration-source.output.v1.json-schema":                       {},
@@ -1924,7 +1959,7 @@ func readCLIContract(t *testing.T) cliContract {
 		t.Fatalf("open CLI contract: %v", err)
 	}
 	defer file.Close()
-	contract, err := admission.DecodeTypedJSON[cliContract](file, 16<<20)
+	contract, err := admission.DecodeTypedJSON[cliContract](file, installedclicontract.MaximumContractBytes)
 	if err != nil {
 		t.Fatalf("decode CLI contract: %v", err)
 	}
@@ -1938,7 +1973,7 @@ func assertCLIContractSchema(t *testing.T) {
 		t.Fatalf("open CLI contract: %v", err)
 	}
 	defer file.Close()
-	record, err := admission.DecodeTypedJSON[map[string]json.RawMessage](file, 16<<20)
+	record, err := admission.DecodeTypedJSON[map[string]json.RawMessage](file, installedclicontract.MaximumContractBytes)
 	if err != nil {
 		t.Fatalf("decode raw CLI contract: %v", err)
 	}
@@ -2688,6 +2723,21 @@ func commandOwnedContractProjection(t *testing.T, value any) any {
 		delete(record, key)
 	}
 	return record
+}
+
+// expandedPublishedSchema inlines the subtrees a published variant schema
+// shares through $defs, yielding the native owner schema it was published from.
+func expandedPublishedSchema(t *testing.T, value any) any {
+	t.Helper()
+	schema, ok := value.(map[string]any)
+	if !ok {
+		t.Fatalf("published variant schema is %T, not an object", value)
+	}
+	expanded, err := schemadefs.Expand(schema)
+	if err != nil {
+		t.Fatalf("expand published variant schema: %v", err)
+	}
+	return expanded
 }
 
 func canonicalJSONValue(t *testing.T, value any) any {

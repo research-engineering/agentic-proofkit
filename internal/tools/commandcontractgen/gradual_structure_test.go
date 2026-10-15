@@ -10,6 +10,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 func TestGradualStructureOwnersConserveSemanticAndWireIdentity(t *testing.T) {
@@ -49,7 +50,7 @@ func TestBootstrapAggregateConsumerIdentityCannotUseFallbackGuard(t *testing.T) 
 		t.Fatal(err)
 	}
 	for _, mutation := range []string{"positive", "retired identity", "wrong wire version"} {
-		value, err := admission.DecodeJSON(bytes.NewReader(source), maxContractBytes)
+		value, err := admission.DecodeJSON(bytes.NewReader(source), installedclicontract.MaximumContractBytes)
 		if err != nil {
 			t.Fatal(err)
 		}

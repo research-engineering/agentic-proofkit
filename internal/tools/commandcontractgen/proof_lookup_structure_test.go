@@ -45,7 +45,7 @@ func TestProofLookupStructuresPreserveVersionsAndOwnerIsolation(t *testing.T) {
 				field = "schema_version"
 			}
 			wire, wireErr := nativeSchemaVersion(want, field)
-			if !reflect.DeepEqual(variant["schema"], want) || wireErr != nil || wire != row.wires[i] {
+			if !equalPublishedSchema(variant["schema"], want) || wireErr != nil || wire != row.wires[i] {
 				t.Fatalf("%s/%d native structure or wire drift", row.id, i)
 			}
 			want["properties"].(map[string]any)["foreign"] = true

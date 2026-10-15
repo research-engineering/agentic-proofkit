@@ -36,7 +36,7 @@ func TestIntegrationStructuresBindFiveOutputDirections(t *testing.T) {
 			t.Fatalf("wire or semantic identity drift: %s %s %v", id, version, err)
 		}
 		schema := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)["schema"]
-		if !reflect.DeepEqual(schema, row.build()) {
+		if !equalPublishedSchema(schema, row.build()) {
 			t.Fatalf("schema not command-owner-derived: %s", id)
 		}
 		for _, mutation := range []string{"open", "required", "version"} {

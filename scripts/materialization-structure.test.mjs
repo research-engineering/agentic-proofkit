@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {compileVariantUnion} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_MATERIALIZATION_CONTRACT || new URL('proofkit/cli-contract.v2.json', root)));
@@ -16,8 +17,7 @@ const checks = new Map(directions.map(([command, direction]) => {
   const ref = contract.commands.find(row => row.command === command)[direction + 'Contract'].rootDefinitionRef;
   const definition = contract.contractDefinitions.find(row => row.definitionId === ref);
   assert.equal(definition.fieldTree.kind, 'structural_json_schema');
-  return [command + '/' + direction, new Ajv2020({strict: false, validateFormats: false})
-    .compile({oneOf: definition.fieldTree.variants.map(row => row.schema)})];
+  return [command + '/' + direction, compileVariantUnion(() => new Ajv2020({strict: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema))];
 }));
 let directory, binary, rootCount = 0;
 before(() => {

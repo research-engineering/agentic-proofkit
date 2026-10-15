@@ -13,6 +13,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcecodec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 func TestSourceStructureHasOneCodecOwnerAndExplicitWireVersion(t *testing.T) {
@@ -26,7 +27,7 @@ func TestSourceStructureHasOneCodecOwnerAndExplicitWireVersion(t *testing.T) {
 	}
 	variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
 	schema, err := requirementsourcecodec.InputStructure(requirementsourcemodel.DefaultLimits())
-	if err != nil || !reflect.DeepEqual(variant["schema"], schema) {
+	if err != nil || !equalPublishedSchema(variant["schema"], schema) {
 		t.Fatal("source schema differs from codec")
 	}
 	if !reflect.DeepEqual(variant["requiredFields"], []any{"groups", "kind", "schemaVersion", "sourceId", "sourceNonClaims", "specPackagePath"}) {
@@ -100,7 +101,7 @@ func TestSourceStructureRefreshUnifiesPredecessorsAndVersionsConsumers(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err := admission.DecodeJSON(bytes.NewReader(updated), maxContractBytes)
+	decoded, err := admission.DecodeJSON(bytes.NewReader(updated), installedclicontract.MaximumContractBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +191,7 @@ func TestNativeOutputOwnerRejectsDirectionAliasAndRehashedTupleDrift(t *testing.
 	owner, _ := nativeStructureOwner("proofkit.requirement-source-admission.output.v2.json-schema")
 	for _, mutation := range []string{"wrong direction", "other command", "tuple cardinality", "integer range"} {
 		t.Run(mutation, func(t *testing.T) {
-			value, err := admission.DecodeJSON(bytes.NewReader(updated), maxContractBytes)
+			value, err := admission.DecodeJSON(bytes.NewReader(updated), installedclicontract.MaximumContractBytes)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -24,28 +24,30 @@ func TestResidueNativeStructuresRejectRehashedDrift(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			projected := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)["schema"].(map[string]any)
-			if !reflect.DeepEqual(projected, schema()) {
+			variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
+			if !equalPublishedSchema(variant["schema"], schema()) {
 				t.Fatal("native sum or output projection was flattened")
 			}
-			branch := projected
-			if alternatives, ok := projected["oneOf"].([]any); ok {
-				if len(alternatives) != 2 {
-					t.Fatal("inspect sum lost a branch")
+			mutatePublishedSchema(t, variant, func(projected map[string]any) {
+				branch := projected
+				if alternatives, ok := projected["oneOf"].([]any); ok {
+					if len(alternatives) != 2 {
+						t.Fatal("inspect sum lost a branch")
+					}
+					branch = alternatives[1].(map[string]any)
 				}
-				branch = alternatives[1].(map[string]any)
-			}
-			properties := branch["properties"].(map[string]any)
-			switch mutation {
-			case "nullable-token":
-				properties["observationId"] = map[string]any{"type": "null"}
-			case "open-root":
-				branch["additionalProperties"] = true
-			case "changed-claim":
-				properties["nonClaims"].(map[string]any)["prefixItems"].([]any)[0].(map[string]any)["const"] = "proves no historical effects"
-			case "wrong-version":
-				properties["schemaVersion"].(map[string]any)["const"] = json.Number("2")
-			}
+				properties := branch["properties"].(map[string]any)
+				switch mutation {
+				case "nullable-token":
+					properties["observationId"] = map[string]any{"type": "null"}
+				case "open-root":
+					branch["additionalProperties"] = true
+				case "changed-claim":
+					properties["nonClaims"].(map[string]any)["prefixItems"].([]any)[0].(map[string]any)["const"] = "proves no historical effects"
+				case "wrong-version":
+					properties["schemaVersion"].(map[string]any)["const"] = json.Number("2")
+				}
+			})
 			delete(definition, "canonicalDigest")
 			encoded, err := canonicalJSON(definition)
 			if err != nil {
@@ -94,7 +96,7 @@ func TestNativeSumStructureRetainsBranchesAndRequiresOneRootIdentity(t *testing.
 				t.Fatal(err)
 			}
 			variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
-			if !reflect.DeepEqual(variant["schema"], schema) {
+			if !equalPublishedSchema(variant["schema"], schema) {
 				t.Fatal("sum was flattened")
 			}
 			version, err := nativeSchemaVersion(schema, "schemaVersion")
@@ -134,7 +136,8 @@ func TestCoverageOutputStructurePreservesBothCLIOutputModes(t *testing.T) {
 	if envelope["variantId"] != "01-agent-envelope" || report["variantId"] != "02-report" ||
 		!reflect.DeepEqual(envelope["when"], []any{"--agent-envelope"}) ||
 		!reflect.DeepEqual(report["when"], []any{"without --agent-envelope"}) ||
-		!reflect.DeepEqual(report["schema"], requirementcoverageview.OutputStructure()) {
+		!equalPublishedSchema(report["schema"], requirementcoverageview.OutputStructure()) ||
+		!equalPublishedSchema(envelope["schema"], requirementcoverageview.EnvelopeStructure()) {
 		t.Fatal("coverage output variants lost their owner or invocation condition")
 	}
 	actual := agentenvelope.Build(agentenvelope.Input{})

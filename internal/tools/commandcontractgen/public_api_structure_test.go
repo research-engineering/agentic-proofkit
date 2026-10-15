@@ -75,7 +75,7 @@ func TestPublicAPIStructuresRejectRehashedDrift(t *testing.T) {
 			}
 			variant := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
 			expected := projection()
-			if !reflect.DeepEqual(variant["schema"], expected) {
+			if !equalPublishedSchema(variant["schema"], expected) {
 				t.Fatal("registered projection differs from native owner")
 			}
 			if _, err := admitDefinitions(map[string]any{"contractDefinitions": []any{definition}}); err != nil {

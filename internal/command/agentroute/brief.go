@@ -18,7 +18,27 @@ const (
 	briefBoundaryPolicyRoutePacket = "REQ-PROOFKIT-SPEC-026"
 	maxAgentBriefBytes             = 3072
 	maxBriefBlockerItems           = 4
+	briefPacketKind                = "proofkit.agent-route.brief"
+	briefCommandRef                = "agent-route"
+	briefSchemaVersion             = 1
+	argvStateInline                = "inline"
+	argvStateDetailRequired        = "detail_required"
+
+	// Brief identities append these fixed grammars to the admitted route ID.
+	briefPacketIDSuffix             = ".agent-brief"
+	briefUnknownGoalBlockerSuffix   = ".blocker.unknown-goal"
+	briefRequiredInputBlockerInfix  = ".blocker.required-input."
+	briefObservedReportBlockerInfix = ".blocker.observed-report."
+	briefBlockerUnknownGoal         = "unknown_goal"
+	briefBlockerMissingInput        = "missing_input"
+	briefBlockerObservedReport      = "observed_report"
 )
+
+// briefOperandRoles names the caller-owned artifact operands a brief may cite.
+var briefOperandRoles = map[string]string{
+	"--input":     callerOwnedInputRole,
+	"--repo-root": "caller_owned_repo_root",
+}
 
 func AgentBrief(report map[string]any) (map[string]any, error) {
 	packet, err := projectAgentBrief(report)
@@ -68,7 +88,7 @@ func projectAgentBrief(report map[string]any) (map[string]any, error) {
 		"boundaryPolicyRefs": briefBoundaryPolicyRefs(),
 		"contextRefs":        briefContextRefs(nextCommands, reportID),
 		"detailAccess": map[string]any{
-			"commandRef":                      "agent-route",
+			"commandRef":                      briefCommandRef,
 			"launcherProfile":                 launcherProfile,
 			"outputArgs":                      briefDetailOutputArgs(),
 			"requiresOriginalLauncherContext": true,
@@ -78,10 +98,10 @@ func projectAgentBrief(report map[string]any) (map[string]any, error) {
 		},
 		"nextAction":      briefNextAction(nextCommands, reportID),
 		"omissionSummary": briefOmissionSummary(report, availableCommandCount, omittedBlockerCount),
-		"packetId":        reportID + ".agent-brief",
-		"packetKind":      "proofkit.agent-route.brief",
+		"packetId":        reportID + briefPacketIDSuffix,
+		"packetKind":      briefPacketKind,
 		"routeFamily":     stringFromMap(report, "selectedRouteFamily"),
-		"schemaVersion":   1,
+		"schemaVersion":   briefSchemaVersion,
 		"state":           stringFromMap(report, "state"),
 	}, nil
 }
@@ -103,12 +123,12 @@ func briefNextAction(commands []map[string]any, reportID string) any {
 	}
 	command := commands[0]
 	return map[string]any{
-		"actionId":   reportID + ".action." + commandRefSuffix(command),
+		"actionId":   reportID + actionIDInfix + commandRefSuffix(command),
 		"argv":       command["argv"],
-		"argvState":  "inline",
+		"argvState":  argvStateInline,
 		"commandId":  commandID(reportID, command),
 		"commandRef": stringFromMap(command, "command"),
-		"owner":      "consumer_repository",
+		"owner":      consumerOwner,
 	}
 }
 
@@ -119,13 +139,8 @@ func briefContextRefs(commands []map[string]any, reportID string) []any {
 	argv := stringsFromAny(commands[0]["argv"])
 	refs := []any{}
 	for index := 0; index < len(argv)-1; index++ {
-		role := ""
-		switch argv[index] {
-		case "--input":
-			role = "caller_owned_input"
-		case "--repo-root":
-			role = "caller_owned_repo_root"
-		default:
+		role, operand := briefOperandRoles[argv[index]]
+		if !operand {
 			continue
 		}
 		ref := argv[index+1]
@@ -142,11 +157,11 @@ func briefContextRefs(commands []map[string]any, reportID string) []any {
 func briefBlockers(report map[string]any, reportID string) ([]any, int) {
 	blockers := make([]any, 0, maxBriefBlockerItems)
 	total := 0
-	if stringFromMap(report, "state") == "blocked_unknown_goal" {
+	if stringFromMap(report, "state") == stateBlockedUnknownGoal {
 		appendBoundedBriefBlocker(&blockers, &total, func() map[string]any {
 			return map[string]any{
-				"blockerId": reportID + ".blocker.unknown-goal",
-				"kind":      "unknown_goal",
+				"blockerId": reportID + briefUnknownGoalBlockerSuffix,
+				"kind":      briefBlockerUnknownGoal,
 			}
 		})
 	}
@@ -158,8 +173,8 @@ func briefBlockers(report map[string]any, reportID string) ([]any, int) {
 		}
 		appendBoundedBriefBlocker(&blockers, &total, func() map[string]any {
 			return map[string]any{
-				"blockerId":           fmt.Sprintf("%s.blocker.required-input.%02d", reportID, index+1),
-				"kind":                "missing_input",
+				"blockerId":           fmt.Sprintf("%s%s%02d", reportID, briefRequiredInputBlockerInfix, index+1),
+				"kind":                briefBlockerMissingInput,
 				"sourceReportPointer": fmt.Sprintf("/requiredInputs/%d", index),
 				"subject":             requiredInputLabel(item),
 			}
@@ -177,8 +192,8 @@ func briefBlockers(report map[string]any, reportID string) ([]any, int) {
 		}
 		appendBoundedBriefBlocker(&blockers, &total, func() map[string]any {
 			return map[string]any{
-				"blockerId":           fmt.Sprintf("%s.blocker.observed-report.%02d", reportID, index+1),
-				"kind":                "observed_report",
+				"blockerId":           fmt.Sprintf("%s%s%02d", reportID, briefObservedReportBlockerInfix, index+1),
+				"kind":                briefBlockerObservedReport,
 				"sourceReportPointer": fmt.Sprintf("/observedReports/%d", index),
 				"state":               state,
 				"subject":             stringFromMap(item, "kind"),
@@ -198,7 +213,7 @@ func appendBoundedBriefBlocker(blockers *[]any, total *int, build func() map[str
 
 func briefOmissionSummary(report map[string]any, availableCommandCount int, omittedBlockerCount int) map[string]any {
 	alternativeCount := availableCommandCount
-	if stringFromMap(report, "state") == "routed" && alternativeCount > 0 {
+	if stringFromMap(report, "state") == stateRouted && alternativeCount > 0 {
 		alternativeCount--
 	}
 	return map[string]any{
@@ -245,5 +260,5 @@ func compactBriefAction(packet map[string]any) {
 		return
 	}
 	delete(action, "argv")
-	action["argvState"] = "detail_required"
+	action["argvState"] = argvStateDetailRequired
 }

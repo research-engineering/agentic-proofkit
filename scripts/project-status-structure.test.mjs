@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {compileVariantUnion} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_STATUS_CONTRACT || new URL('proofkit/cli-contract.v2.json', root)));
@@ -13,7 +14,7 @@ const checks = new Map(['status', 'next'].map(command => {
   const ref = contract.commands.find(row => row.command === command).outputContract.rootDefinitionRef;
   const definition = contract.contractDefinitions.find(row => row.definitionId === ref);
   assert.equal(definition.fieldTree.kind, 'structural_json_schema');
-  return [command, new Ajv2020({strict: false, validateFormats: false}).compile({oneOf: definition.fieldTree.variants.map(row => row.schema)})];
+  return [command, compileVariantUnion(() => new Ajv2020({strict: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema))];
 }));
 const claims = [
   'Project next actions are derived non-executable guidance; repository owners retain execution and policy authority.',

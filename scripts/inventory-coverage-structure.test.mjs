@@ -5,6 +5,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {compileVariantUnion} from "./schema-definitions.mjs";
 import {annotatedInventoryInput, directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, ownerInvariantRegistry, proofInventoryInput, sourceSetInput, twoSourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -15,7 +16,7 @@ for (const command of [inventory, composer, view]) for (const direction of ["inp
   const ref = contract.commands.find(row => row.command === command)[`${direction}Contract`].rootDefinitionRef;
   const definition = contract.contractDefinitions.find(row => row.definitionId === ref);
   assert.equal(definition.fieldTree.kind, "structural_json_schema");
-  validators.set(`${command}/${direction}`, new Ajv2020({strict: false, validateFormats: false}).compile({oneOf: definition.fieldTree.variants.map(row => row.schema)}));
+  validators.set(`${command}/${direction}`, compileVariantUnion(() => new Ajv2020({strict: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema)));
 }
 let directory, binary;
 before(() => {
@@ -65,6 +66,28 @@ function rejectionCheck(command, direction, baseline, flags = []) {
     if (direction === "input") native(command, changed, {flags, exit: 1, report: false});
   };
 }
+
+test("published coverage envelope variant rejects independent nested corruption", () => {
+  const input = native(composer, directComposeInput());
+  const output = native(view, input, {flags: ["--agent-envelope"], exit: null});
+  const mutations = [
+    ["action item", value => {value.actionPlan[0] = 0;}],
+    ["action field", value => {delete value.actionPlan[0].instruction;}],
+    ["unknown action field", value => {value.actionPlan[0].unexpected = true;}],
+    ["empty bounds", value => {value.bounds = {};}],
+    ["missing bound", value => {delete value.bounds.maxActionItems;}],
+    ["declared token budget", value => {value.bounds.maxTokenBudget = 0;}],
+    ["empty cost contract", value => {value.costContract = {};}],
+    ["source state type", value => {value.sourceReport.state = 0;}],
+    ["context item", value => {value.contextRefs[0] = 0;}],
+    ["route question field", value => {delete value.routeQuestions[0].question;}],
+  ];
+  for (const [label, mutate] of mutations) {
+    const corrupted = structuredClone(output);
+    mutate(corrupted);
+    validates(view, "output", corrupted, false, label);
+  }
+});
 
 test("ordinary and fallback report egress stay separate from safe normalized data", () => {
   for (const testId of ["test.safe", "password"]) for (const severity of ["warning", "failure"]) {

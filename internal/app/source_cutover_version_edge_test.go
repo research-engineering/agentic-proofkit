@@ -51,18 +51,47 @@ var sourceCutoverDirectionDeltas = []string{
 	"spec-overview-claims/input:compatibilitySummary,contractId,pathRelations,rootDefinitionDigest,rootDefinitionRef",
 	"spec-overview-claims/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"test-evidence-inventory/input:childDefinitionBindings,compatibilitySummary,contractId,projectionVariants,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"view/output:compatibilitySummary,contractId,handoffClauses",
+	"view/output:compatibilitySummary,contractId,handoffClauses,rootDefinitionDigest,rootDefinitionRef",
 }
 
 var nativeBoundaryDirectionDeltas = []string{
-	"adoption-contract-envelope/input:compatibilitySummary,contractId",
+	"adoption-contract-envelope/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
+	"adoption-contract-envelope/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"adoption-workflow-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"adoption-workflow-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"pilot-admission/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"pilot-admission/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption-bootstrap/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption-bootstrap/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption-guidance/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption-guidance/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"scaffold-project-structure/input:compatibilitySummary,contractId",
+	"scaffold-project-structure/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
+	"scaffold-project-structure/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"adoption-doctor/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"adoption-doctor/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"scaffold-profile-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"scaffold-profile-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"conformance-profile/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"conformance-profile/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"migration-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"migration-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"workspace-registry/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"workspace-registry/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"capability-map-admission/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"capability-map-admission/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"deployment-evidence-admission/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"deployment-evidence-admission/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"repo-profile-admission/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"repo-profile-admission/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"spec-proof-bundle-admission/input:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"spec-proof-bundle-admission/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"agent-route/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"agent-route/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"change-workflow-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"change-workflow-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"native-evidence-guidance/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"adopt-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"repository-inventory/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"migration-parity-admission/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
@@ -213,7 +242,8 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	}
 	// Materialization input replacements were already counted by the source cutover.
 	// Adoption, integration and navigation enrichment replace twelve retained output roots.
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 136 || len(added) != 132+len(residueCommandAdditions) {
+	// Batch structural enrichment replaces the remaining retained root-shape definitions.
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 168 || len(added) != 164+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {

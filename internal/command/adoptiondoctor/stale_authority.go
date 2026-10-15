@@ -58,7 +58,7 @@ func staleAuthorityFromAny(raw any) (staleAuthority, error) {
 	if !ok {
 		return staleAuthority{}, fmt.Errorf("adoption doctor staleAuthority must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"authoritySurfaces", "currentPackage", "forbiddenVocabulary", "retiredScopes"}, "adoption doctor staleAuthority"); err != nil {
+	if err := admit.KnownKeys(record, staleAuthorityKeys, "adoption doctor staleAuthority"); err != nil {
 		return staleAuthority{}, err
 	}
 	currentPackage, err := packageIdentityFromAny(optional(record, "currentPackage", nil))
@@ -94,7 +94,7 @@ func packageIdentityFromAny(raw any) (packageIdentity, error) {
 	if !ok {
 		return packageIdentity{}, fmt.Errorf("adoption doctor staleAuthority currentPackage must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"name", "version"}, "adoption doctor staleAuthority currentPackage"); err != nil {
+	if err := admit.KnownKeys(record, packageKeys, "adoption doctor staleAuthority currentPackage"); err != nil {
 		return packageIdentity{}, err
 	}
 	name, err := admit.NonEmptyText(record["name"], "adoption doctor staleAuthority currentPackage name")
@@ -121,7 +121,7 @@ func forbiddenVocabularyList(raw any) ([]forbiddenVocabulary, error) {
 			return nil, fmt.Errorf("adoption doctor staleAuthority forbiddenVocabulary[%d] must be an object", index)
 		}
 		context := fmt.Sprintf("adoption doctor staleAuthority forbiddenVocabulary[%d]", index)
-		if err := admit.KnownKeys(record, []string{"replacementText", "text", "vocabularyId"}, context); err != nil {
+		if err := admit.KnownKeys(record, vocabularyKeys, context); err != nil {
 			return nil, err
 		}
 		vocabularyID, err := admit.RuleID(record["vocabularyId"], context+" vocabularyId")
@@ -175,7 +175,7 @@ func authoritySurfaceFromAny(raw any, index int, forbiddenIDs map[string]struct{
 		return authoritySurface{}, fmt.Errorf("adoption doctor staleAuthority authoritySurfaces[%d] must be an object", index)
 	}
 	context := fmt.Sprintf("adoption doctor staleAuthority authoritySurfaces[%d]", index)
-	if err := admit.KnownKeys(record, []string{"authorityState", "evidenceRefs", "matchedVocabularyIds", "nonClaims", "owner", "path", "retiredScopeId", "surfaceId", "touchedRuleIds"}, context); err != nil {
+	if err := admit.KnownKeys(record, surfaceKeys, context); err != nil {
 		return authoritySurface{}, err
 	}
 	surfaceID, err := admit.RuleID(record["surfaceId"], context+" surfaceId")
@@ -253,7 +253,7 @@ func retiredScopes(raw any, forbiddenIDs map[string]struct{}) ([]retiredScope, e
 			return nil, fmt.Errorf("adoption doctor staleAuthority retiredScopes[%d] must be an object", index)
 		}
 		context := fmt.Sprintf("adoption doctor staleAuthority retiredScopes[%d]", index)
-		if err := admit.KnownKeys(record, []string{"allowedVocabularyIds", "nonClaim", "pathPrefixes", "scopeId"}, context); err != nil {
+		if err := admit.KnownKeys(record, retiredScopeKeys, context); err != nil {
 			return nil, err
 		}
 		scopeID, err := admit.RuleID(record["scopeId"], context+" scopeId")
@@ -303,10 +303,10 @@ func staleAuthorityGaps(policy staleAuthority, touched map[string]struct{}, chec
 			gaps = append(gaps, gap{
 				EvidenceRefs: evidenceRefs,
 				GapID:        surface.SurfaceID + ".stale-authority-current-vocabulary",
-				Kind:         "stale_authority_current_vocabulary",
+				Kind:         gapKindStaleCurrentVocabulary,
 				Message:      "Current authority surface contains caller-reported obsolete package or proof-owner vocabulary.",
 				Owner:        surface.Owner,
-				Phase:        "retire-stale-authority",
+				Phase:        phaseRetireStaleAuthority,
 				RuleRefs:     surface.TouchedRuleIDs,
 				Touched:      touchedSurface,
 			})
@@ -316,10 +316,10 @@ func staleAuthorityGaps(policy staleAuthority, touched map[string]struct{}, chec
 			gaps = append(gaps, gap{
 				EvidenceRefs: evidenceRefs,
 				GapID:        surface.SurfaceID + ".stale-authority-retired-scope",
-				Kind:         "stale_authority_retired_scope",
+				Kind:         gapKindStaleRetiredScope,
 				Message:      "Retired authority vocabulary is present outside an admitted historical scope.",
 				Owner:        surface.Owner,
-				Phase:        "retire-stale-authority",
+				Phase:        phaseRetireStaleAuthority,
 				RuleRefs:     surface.TouchedRuleIDs,
 				Touched:      touchedSurface,
 			})

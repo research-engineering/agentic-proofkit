@@ -89,7 +89,7 @@ func TestCompactChildBindingsHaveExactIndependentConsumers(t *testing.T) {
 		direction := commandAt(contract, row.command)[row.direction+"Contract"].(map[string]any)
 		root := definitions[direction["rootDefinitionRef"].(string)]
 		wantKind := "root_shape_only"
-		if slices.Contains([]string{"requirement-impact-input-compose", "requirement-coverage-input-compose", "requirement-coverage-view", "test-evidence-inventory", "requirement-proof-view", "requirement-proof-source-set"}, row.command) {
+		if slices.Contains([]string{"requirement-impact-input-compose", "requirement-coverage-input-compose", "requirement-coverage-view", "test-evidence-inventory", "requirement-proof-view", "requirement-proof-source-set", "requirement-browser-server"}, row.command) {
 			wantKind = "structural_json_schema"
 		}
 		if root.Content["fieldTree"].(map[string]any)["kind"] != wantKind {

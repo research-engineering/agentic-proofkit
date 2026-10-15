@@ -2,9 +2,11 @@ package workspaceregistry
 
 import (
 	"encoding/json"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsWorkspaceRegistryAndRejectsMissingScriptTarget(t *testing.T) {
@@ -137,5 +139,50 @@ func validWorkspaceRegistryInput() map[string]any {
 		},
 		"dependencyPolicy": nil,
 		"lockfilePolicy":   nil,
+	}
+}
+
+// An absent or null admittedRootScriptNames leaves root scripts unrestricted;
+// an explicit [] is an empty allowlist that refuses every root script.
+func TestAdmittedRootScriptNamesAbsenceIsNotAnEmptyAllowlist(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		allowlist  any
+		omitted    bool
+		unexpected bool
+	}{
+		{name: "omitted", omitted: true},
+		{name: "null", allowlist: nil},
+		{name: "empty", allowlist: []any{}, unexpected: true},
+		{name: "admitting", allowlist: []any{"quality"}},
+		{name: "not admitting", allowlist: []any{"other"}, unexpected: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := validWorkspaceRegistryInput()
+			policy := input["scriptPolicy"].(map[string]any)
+			if test.omitted {
+				delete(policy, "admittedRootScriptNames")
+			} else {
+				policy["admittedRootScriptNames"] = test.allowlist
+			}
+			record, exitCode, err := Build(input)
+			if err != nil {
+				t.Fatalf("Build() error=%v", err)
+			}
+			var rootScripts *report.RuleResult
+			for index := range record.RuleResults {
+				if record.RuleResults[index].RuleID == rootScriptsRuleID {
+					rootScripts = &record.RuleResults[index]
+				}
+			}
+			encoded, _ := json.Marshal(record)
+			if rootScripts == nil {
+				t.Fatalf("root script rule is absent: %s", encoded)
+			}
+			refused := strings.Contains(string(encoded), "root package.json has unexpected script quality")
+			if refused != test.unexpected || (exitCode != 0) != test.unexpected || (rootScripts.Status == "failed") != test.unexpected {
+				t.Fatalf("exit=%d status=%s unexpected=%v, want unexpected=%v: %s", exitCode, rootScripts.Status, refused, test.unexpected, encoded)
+			}
+		})
 	}
 }

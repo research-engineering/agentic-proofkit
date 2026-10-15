@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 func TestShardSemanticIdentityPreservesWireVersionAndRejectsOldIdentity(t *testing.T) {
@@ -25,7 +26,7 @@ func TestShardSemanticIdentityPreservesWireVersionAndRejectsOldIdentity(t *testi
 	for _, direction := range []string{"input", "output"} {
 		for _, mode := range []string{"unchanged", "old identity", "changed wire version", "missing owner"} {
 			t.Run(direction+"/"+mode, func(t *testing.T) {
-				value, err := admission.DecodeJSON(bytes.NewReader(updated), maxContractBytes)
+				value, err := admission.DecodeJSON(bytes.NewReader(updated), installedclicontract.MaximumContractBytes)
 				if err != nil {
 					t.Fatal(err)
 				}

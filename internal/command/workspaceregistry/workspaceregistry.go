@@ -17,6 +17,31 @@ var registryNonClaims = []string{
 	"Workspace registry admission reads only caller-provided facts and does not prove repository freshness.",
 }
 
+// Admission inventories are shared with the structural description.
+var (
+	inputKeys            = []string{"dependencyPolicy", "knownPackageNames", "lockfilePolicy", "nonClaims", "packages", "root", "schemaVersion", "scriptPolicy"}
+	rootKeys             = []string{"dependencyRefs", "name", "scripts"}
+	packageKeys          = []string{"dependencyRefs", "dirName", "name", "scripts"}
+	scriptPolicyKeys     = []string{"admittedRootScriptNames", "exactRootScripts", "requiredPackageScriptNames", "requiredRootScriptNames", "selfTargetOptionNames", "targetNamePrefixes", "targetOptionNames"}
+	dependencyPolicyKeys = []string{"internalDependencyLabel", "internalNamePrefixes", "workspaceVersion"}
+	lockfilePolicyKeys   = []string{"expectedSnippets", "lockfileText"}
+	dependencyRefKeys    = []string{"field", "name", "version"}
+	scriptKeys           = []string{"command", "name"}
+	expectedSnippetKeys  = []string{"failureMessage", "snippet"}
+)
+
+const (
+	reportKind              = "proofkit.workspace-registry"
+	knownPackageFactsRuleID = "proofkit.workspace-registry.known-package-facts"
+	rootScriptsRuleID       = "proofkit.workspace-registry.root-scripts"
+	packageScriptsRuleID    = "proofkit.workspace-registry.package-scripts"
+	scriptTargetsRuleID     = "proofkit.workspace-registry.script-targets"
+	dependenciesRuleID      = "proofkit.workspace-registry.dependencies"
+	bunLockfileRuleID       = "proofkit.workspace-registry.bun-lockfile"
+	failureDiagnosticPrefix = "failure."
+	issueMessageSuffix      = " workspace registry issue(s) found"
+)
+
 type dependencyRef struct {
 	Field   string
 	Name    string
@@ -128,8 +153,8 @@ func buildReport(input registryInput) report.Record {
 	nonClaims := append(append([]any{}, stringsToAny(registryNonClaims)...), stringsToAny(input.NonClaims)...)
 	return report.Record{
 		SchemaVersion: 1,
-		ReportKind:    "proofkit.workspace-registry",
-		ReportID:      "proofkit.workspace-registry",
+		ReportKind:    reportKind,
+		ReportID:      reportKind,
 		State:         state,
 		Summary: map[string]any{
 			"checkedItemCount":        checkedItemCount(rulesInFailureOrder),
@@ -177,7 +202,7 @@ func knownPackageFactsRule(knownPackageNames []string, packages []packageFacts) 
 	if duplicate := firstDuplicate(dirNames); duplicate != nil {
 		failures = append(failures, fmt.Sprintf("workspace package dirName must be unique: %s", *duplicate))
 	}
-	return reportRule("proofkit.workspace-registry.known-package-facts", failures, map[string]any{
+	return reportRule(knownPackageFactsRuleID, failures, map[string]any{
 		"checkedItemCount":  knownPackageNamesLength(knownPackageNames, packageNames),
 		"knownPackageCount": len(knownPackageNames),
 		"packageFactCount":  len(packageNames),
@@ -210,7 +235,7 @@ func rootScriptPolicyRule(rootScripts []scriptEntry, policy scriptPolicy) report
 			failures = append(failures, fmt.Sprintf("root package.json script %s command drifted", expected.Name))
 		}
 	}
-	return reportRule("proofkit.workspace-registry.root-scripts", failures, map[string]any{
+	return reportRule(rootScriptsRuleID, failures, map[string]any{
 		"checkedItemCount": len(rootScripts) + len(policy.RequiredRootScriptNames) + len(policy.ExactRootScripts),
 		"rootScriptCount":  len(rootScripts),
 	}, "")
@@ -226,7 +251,7 @@ func packageScriptPolicyRule(packages []packageFacts, policy scriptPolicy) repor
 			}
 		}
 	}
-	return reportRule("proofkit.workspace-registry.package-scripts", failures, map[string]any{
+	return reportRule(packageScriptsRuleID, failures, map[string]any{
 		"checkedItemCount":           len(packages) * len(policy.RequiredPackageScripts),
 		"packageCount":               len(packages),
 		"requiredPackageScriptCount": len(policy.RequiredPackageScripts),
@@ -246,7 +271,7 @@ func scriptTargetsRule(knownPackageNames []string, rootScripts []scriptEntry, pa
 		TargetNamePrefixes:    policy.TargetNamePrefixes,
 		TargetOptionNames:     policy.TargetOptionNames,
 	})
-	return reportRule("proofkit.workspace-registry.script-targets", result.Failures, map[string]any{
+	return reportRule(scriptTargetsRuleID, result.Failures, map[string]any{
 		"checkedItemCount": result.CheckedItemCount,
 		"scopeCount":       len(scopes),
 	}, "")
@@ -254,7 +279,7 @@ func scriptTargetsRule(knownPackageNames []string, rootScripts []scriptEntry, pa
 
 func dependencyPolicyRule(knownPackageNames []string, rootDependencyRefs []dependencyRef, packages []packageFacts, policy *dependencyPolicy) report.RuleResult {
 	if policy == nil {
-		return reportRule("proofkit.workspace-registry.dependencies", []string{}, map[string]any{
+		return reportRule(dependenciesRuleID, []string{}, map[string]any{
 			"checkedItemCount":        0,
 			"dependencyPolicyEnabled": false,
 		}, "skipped")
@@ -270,7 +295,7 @@ func dependencyPolicyRule(knownPackageNames []string, rootDependencyRefs []depen
 		Owners:                  owners,
 		WorkspaceVersion:        policy.WorkspaceVersion,
 	})
-	return reportRule("proofkit.workspace-registry.dependencies", result.Failures, map[string]any{
+	return reportRule(dependenciesRuleID, result.Failures, map[string]any{
 		"checkedItemCount":        result.CheckedItemCount,
 		"dependencyPolicyEnabled": true,
 	}, "")
@@ -278,7 +303,7 @@ func dependencyPolicyRule(knownPackageNames []string, rootDependencyRefs []depen
 
 func lockfilePolicyRule(rootName *string, packages []packageFacts, policy *lockfilePolicy) report.RuleResult {
 	if policy == nil {
-		return reportRule("proofkit.workspace-registry.bun-lockfile", []string{}, map[string]any{
+		return reportRule(bunLockfileRuleID, []string{}, map[string]any{
 			"checkedItemCount":      0,
 			"lockfilePolicyEnabled": false,
 		}, "skipped")
@@ -289,7 +314,7 @@ func lockfilePolicyRule(rootName *string, packages []packageFacts, policy *lockf
 		Packages:         packageRefs(packages),
 		RootName:         rootName,
 	})
-	return reportRule("proofkit.workspace-registry.bun-lockfile", result.Failures, map[string]any{
+	return reportRule(bunLockfileRuleID, result.Failures, map[string]any{
 		"checkedItemCount":      result.CheckedItemCount,
 		"lockfilePolicyEnabled": true,
 	}, "")
@@ -426,7 +451,7 @@ func reportRule(ruleID string, failures []string, diagnostics map[string]any, st
 	if admittedStatus == "skipped" {
 		message = "skipped"
 	} else if len(failures) > 0 {
-		message = fmt.Sprintf("%d workspace registry issue(s) found", len(failures))
+		message = fmt.Sprint(len(failures)) + issueMessageSuffix
 	}
 	ruleDiagnostics := append(sortedDiagnostics(diagnostics), failureDiagnostics(failures)...)
 	sortDiagnostics(ruleDiagnostics)
@@ -443,7 +468,7 @@ func admitInput(raw any) (registryInput, error) {
 	if !ok {
 		return registryInput{}, fmt.Errorf("workspace registry admission input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"dependencyPolicy", "knownPackageNames", "lockfilePolicy", "nonClaims", "packages", "root", "schemaVersion", "scriptPolicy"}, "workspace registry admission input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "workspace registry admission input"); err != nil {
 		return registryInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -496,7 +521,7 @@ func admitRoot(raw any) (rootFacts, error) {
 	if !ok {
 		return rootFacts{}, fmt.Errorf("workspace registry root must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"dependencyRefs", "name", "scripts"}, "workspace registry root"); err != nil {
+	if err := admit.KnownKeys(record, rootKeys, "workspace registry root"); err != nil {
 		return rootFacts{}, err
 	}
 	var name *string
@@ -529,7 +554,7 @@ func admitPackages(raw any) ([]packageFacts, error) {
 		if !ok {
 			return nil, fmt.Errorf("workspace package facts must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"dependencyRefs", "dirName", "name", "scripts"}, "workspace package facts"); err != nil {
+		if err := admit.KnownKeys(record, packageKeys, "workspace package facts"); err != nil {
 			return nil, err
 		}
 		name, err := nonEmptyText(record["name"], "workspace package name")
@@ -568,12 +593,19 @@ func admitScriptPolicy(raw any) (scriptPolicy, error) {
 	if !ok {
 		return scriptPolicy{}, fmt.Errorf("workspace registry scriptPolicy must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"admittedRootScriptNames", "exactRootScripts", "requiredPackageScriptNames", "requiredRootScriptNames", "selfTargetOptionNames", "targetNamePrefixes", "targetOptionNames"}, "workspace registry scriptPolicy"); err != nil {
+	if err := admit.KnownKeys(record, scriptPolicyKeys, "workspace registry scriptPolicy"); err != nil {
 		return scriptPolicy{}, err
 	}
-	admittedRootScriptNames, err := optionalSortedTextArray(record["admittedRootScriptNames"], "admitted root script name")
-	if err != nil {
-		return scriptPolicy{}, err
+	// An absent or null allowlist leaves root scripts unrestricted; only an
+	// explicit array, including [], restricts them. The other optional lists
+	// are requirements, for which absence and [] both require nothing.
+	var admittedRootScriptNames []string
+	if raw := record["admittedRootScriptNames"]; raw != nil {
+		names, err := sortedTextArray(raw, "admitted root script name", true)
+		if err != nil {
+			return scriptPolicy{}, err
+		}
+		admittedRootScriptNames = names
 	}
 	exactRootScripts, err := scriptExpectations(record["exactRootScripts"], "exact root script")
 	if err != nil {
@@ -618,7 +650,7 @@ func admitDependencyPolicy(raw any) (*dependencyPolicy, error) {
 	if !ok {
 		return nil, fmt.Errorf("workspace registry dependencyPolicy must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"internalDependencyLabel", "internalNamePrefixes", "workspaceVersion"}, "workspace registry dependencyPolicy"); err != nil {
+	if err := admit.KnownKeys(record, dependencyPolicyKeys, "workspace registry dependencyPolicy"); err != nil {
 		return nil, err
 	}
 	var label *string
@@ -648,7 +680,7 @@ func admitLockfilePolicy(raw any) (*lockfilePolicy, error) {
 	if !ok {
 		return nil, fmt.Errorf("workspace registry lockfilePolicy must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"expectedSnippets", "lockfileText"}, "workspace registry lockfilePolicy"); err != nil {
+	if err := admit.KnownKeys(record, lockfilePolicyKeys, "workspace registry lockfilePolicy"); err != nil {
 		return nil, err
 	}
 	expectedSnippets, err := expectedSnippets(record["expectedSnippets"])
@@ -676,7 +708,7 @@ func dependencyRefs(raw any, optional bool) ([]dependencyRef, error) {
 		if !ok {
 			return nil, fmt.Errorf("workspace dependency ref must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"field", "name", "version"}, "workspace dependency ref"); err != nil {
+		if err := admit.KnownKeys(record, dependencyRefKeys, "workspace dependency ref"); err != nil {
 			return nil, err
 		}
 		field, err := nonEmptyText(record["field"], "workspace dependency field")
@@ -707,7 +739,7 @@ func admittedScripts(raw any, context string) ([]scriptEntry, error) {
 		if !ok {
 			return nil, fmt.Errorf("%s must be an object", context)
 		}
-		if err := admit.KnownKeys(record, []string{"command", "name"}, context); err != nil {
+		if err := admit.KnownKeys(record, scriptKeys, context); err != nil {
 			return nil, err
 		}
 		command, err := packageScriptText(record["command"], context+" command")
@@ -756,7 +788,7 @@ func scriptExpectations(raw any, context string) ([]scriptExpectation, error) {
 		if !ok {
 			return nil, fmt.Errorf("%s must be an object", context)
 		}
-		if err := admit.KnownKeys(record, []string{"command", "name"}, context); err != nil {
+		if err := admit.KnownKeys(record, scriptKeys, context); err != nil {
 			return nil, err
 		}
 		name, err := nonEmptyText(record["name"], context+" name")
@@ -800,7 +832,7 @@ func expectedSnippets(raw any) ([]expectedSnippet, error) {
 		if !ok {
 			return nil, fmt.Errorf("workspace lockfile expected snippet must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"failureMessage", "snippet"}, "workspace lockfile expected snippet"); err != nil {
+		if err := admit.KnownKeys(record, expectedSnippetKeys, "workspace lockfile expected snippet"); err != nil {
 			return nil, err
 		}
 		message, err := admit.NonEmptyText(record["failureMessage"], "workspace lockfile expected snippet failure message")
@@ -899,7 +931,7 @@ func aggregateFailures(rules []report.RuleResult) []string {
 			continue
 		}
 		for _, diagnostic := range rule.Diagnostics {
-			if strings.HasPrefix(diagnostic.Key, "failure.") {
+			if strings.HasPrefix(diagnostic.Key, failureDiagnosticPrefix) {
 				failures = append(failures, fmt.Sprint(diagnostic.Value))
 			}
 		}
@@ -953,7 +985,7 @@ func sortDiagnostics(values []report.Diagnostic) {
 func failureDiagnostics(failures []string) []report.Diagnostic {
 	result := make([]report.Diagnostic, 0, len(failures))
 	for index, failure := range failures {
-		result = append(result, report.Diagnostic{Key: fmt.Sprintf("failure.%03d", index+1), Value: failure})
+		result = append(result, report.Diagnostic{Key: fmt.Sprintf(failureDiagnosticPrefix+"%03d", index+1), Value: failure})
 	}
 	return result
 }

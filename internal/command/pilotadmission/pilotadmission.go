@@ -10,6 +10,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/contractenv"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 const (
@@ -27,6 +28,17 @@ var stackDiversityDimensions = []string{
 }
 
 var cacheInvalidationClasses = []string{"package_version", "profile", "schema", "source"}
+
+var inputKeys = []string{"agentReportRoutes", "blockingRequirements", "cacheNegativeChecks", "cacheScheduler", "falsePositiveBudget", "impactDemo", "impactDemos", "infrastructureBudget", "metrics", "nonClaims", "packageVersionRef", "pilotId", "pilotMode", "profile", "rollback", "rolloutClaim", "schemaVersion", "stackDiversity", "timingBudget"}
+var profileKeys = []string{"commandMatcherBridge", "customRuleBoundary", "primaryLanguages", "repositoryClass", "repositoryId", "structuredWitnessCommands", "verifierCodeCopied"}
+var rollbackKeys = []string{"owner", "rollbackCommand", "versionPin"}
+
+const (
+	acceptedRuleID       = "proofkit.pilot-admission.accepted"
+	acceptedRuleMessage  = "pilot admission contract is complete and non-blocking"
+	failureRuleIDPrefix  = "proofkit.pilot-admission.failure."
+	nonBlockingPilotMode = "non_blocking"
+)
 
 type Options struct {
 	RequireStackDiverseReleaseCandidate bool
@@ -136,7 +148,7 @@ func Build(raw any, options Options) (report.Record, int, error) {
 	if !ok {
 		return report.Record{}, 1, fmt.Errorf("proofkit pilot admission input must be an object")
 	}
-	if err := admit.KnownKeys(input, []string{"agentReportRoutes", "blockingRequirements", "cacheNegativeChecks", "cacheScheduler", "falsePositiveBudget", "impactDemo", "impactDemos", "infrastructureBudget", "metrics", "nonClaims", "packageVersionRef", "pilotId", "pilotMode", "profile", "rollback", "rolloutClaim", "schemaVersion", "stackDiversity", "timingBudget"}, "proofkit pilot admission input"); err != nil {
+	if err := admit.KnownKeys(input, inputKeys, "proofkit pilot admission input"); err != nil {
 		return report.Record{}, 1, err
 	}
 	if !admit.JSONNumberEquals(input["schemaVersion"], inputSchemaVersion) {
@@ -151,7 +163,7 @@ func Build(raw any, options Options) (report.Record, int, error) {
 	if err != nil {
 		return report.Record{}, 1, err
 	}
-	if err := admit.KnownKeys(profile, []string{"commandMatcherBridge", "customRuleBoundary", "primaryLanguages", "repositoryClass", "repositoryId", "structuredWitnessCommands", "verifierCodeCopied"}, "proofkit pilot profile"); err != nil {
+	if err := admit.KnownKeys(profile, profileKeys, "proofkit pilot profile"); err != nil {
 		return report.Record{}, 1, err
 	}
 	repositoryID, err := admit.RuleID(profile["repositoryId"], "proofkit pilot repositoryId")
@@ -185,7 +197,10 @@ func Build(raw any, options Options) (report.Record, int, error) {
 	if err != nil {
 		return report.Record{}, 1, err
 	}
-	blocking := admitBlockingDisposition(blockingRaw, &failures)
+	blocking, err := admitBlockingDisposition(blockingRaw, &failures)
+	if err != nil {
+		return report.Record{}, 1, err
+	}
 	agentReportRoutes, err := admitAgentReportRoutes(input["agentReportRoutes"], &failures)
 	if err != nil {
 		return report.Record{}, 1, err
@@ -231,7 +246,17 @@ func Build(raw any, options Options) (report.Record, int, error) {
 	if err != nil {
 		return report.Record{}, 1, err
 	}
-	if input["pilotMode"] != "non_blocking" {
+	// The summary echoes the raw pilotMode JSON value, so its serialized form
+	// is admitted as report text first: a credential label and its value may
+	// sit in a key and its value. Other wrong values stay collected failures.
+	encodedPilotMode, err := stablejson.MarshalLayout(input["pilotMode"], stablejson.LayoutCompact)
+	if err != nil {
+		return report.Record{}, 1, fmt.Errorf("proofkit pilot pilotMode must be JSON-serializable")
+	}
+	if admit.ContainsSecretLikeValue(string(encodedPilotMode)) {
+		return report.Record{}, 1, fmt.Errorf("proofkit pilot pilotMode must not contain secret-like values")
+	}
+	if input["pilotMode"] != nonBlockingPilotMode {
 		failures = append(failures, "pilotMode must be non_blocking")
 	}
 	if input["rolloutClaim"] != false {
@@ -356,7 +381,7 @@ func BuildAllFromContractEnvelope(raw any) (report.Record, int, report.Record, i
 	return first, firstExitCode, stackDiverse, stackDiverseExitCode, nil
 }
 
-func admitBlockingDisposition(record map[string]any, failures *[]string) admittedBlockingDisposition {
+func admitBlockingDisposition(record map[string]any, failures *[]string) (admittedBlockingDisposition, error) {
 	addErr(failures, admit.KnownKeys(record, []string{"dispositionPolicy", "explicitlyDeferredRequirements", "requirements", "totalBlockingRequirements", "unmappedRequirements", "witnessBackedRequirements"}, "blocking disposition"))
 	if record["dispositionPolicy"] != "all_blocking_requirements_must_be_witnessed_or_explicitly_deferred" {
 		*failures = append(*failures, "blocking disposition policy must require witnessed or explicitly deferred blocking requirements")
@@ -372,7 +397,11 @@ func admitBlockingDisposition(record map[string]any, failures *[]string) admitte
 	}
 	requirements := make([]admittedBlockingRequirement, 0, len(rawRequirements))
 	for _, raw := range rawRequirements {
-		requirements = append(requirements, admitBlockingRequirement(raw, failures))
+		requirement, err := admitBlockingRequirement(raw, failures)
+		if err != nil {
+			return admittedBlockingDisposition{}, err
+		}
+		requirements = append(requirements, requirement)
 	}
 	sort.Slice(requirements, func(left int, right int) bool {
 		return requirements[left].RequirementID < requirements[right].RequirementID
@@ -414,14 +443,14 @@ func admitBlockingDisposition(record map[string]any, failures *[]string) admitte
 		Requirements:                   requirements,
 		TotalBlockingRequirements:      total,
 		WitnessBackedRequirements:      witnessed,
-	}
+	}, nil
 }
 
-func admitBlockingRequirement(raw any, failures *[]string) admittedBlockingRequirement {
+func admitBlockingRequirement(raw any, failures *[]string) (admittedBlockingRequirement, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
 		*failures = append(*failures, "blocking requirement must be an object")
-		return admittedBlockingRequirement{}
+		return admittedBlockingRequirement{}, nil
 	}
 	addErr(failures, admit.KnownKeys(record, []string{"evidence", "owner", "requirementId", "status"}, "blocking requirement"))
 	requirementID, err := nonEmptyText(record["requirementId"], "blocking requirement requirementId")
@@ -431,7 +460,10 @@ func admitBlockingRequirement(raw any, failures *[]string) admittedBlockingRequi
 	if _, err := admit.RuleID(requirementID, "blocking requirement requirementId"); err != nil {
 		*failures = append(*failures, err.Error())
 	}
-	status, _ := record["status"].(string)
+	status, err := reportVisibleText(record["status"], "blocking requirement status")
+	if err != nil {
+		return admittedBlockingRequirement{}, err
+	}
 	if status != "witness_backed" && status != "explicitly_deferred" {
 		*failures = append(*failures, "blocking requirement status must be witness_backed or explicitly_deferred")
 	}
@@ -443,7 +475,7 @@ func admitBlockingRequirement(raw any, failures *[]string) admittedBlockingRequi
 	if err != nil {
 		*failures = append(*failures, err.Error())
 	}
-	return admittedBlockingRequirement{Evidence: evidence, Owner: owner, RequirementID: requirementID, Status: status}
+	return admittedBlockingRequirement{Evidence: evidence, Owner: owner, RequirementID: requirementID, Status: status}, nil
 }
 
 func admitAgentReportRoutes(raw any, failures *[]string) ([]admittedAgentReportRoute, error) {
@@ -649,7 +681,7 @@ func admitRollback(raw any) (admittedRollback, error) {
 	if err != nil {
 		return admittedRollback{}, err
 	}
-	if err := admit.KnownKeys(record, []string{"owner", "rollbackCommand", "versionPin"}, "proofkit pilot rollback"); err != nil {
+	if err := admit.KnownKeys(record, rollbackKeys, "proofkit pilot rollback"); err != nil {
 		return admittedRollback{}, err
 	}
 	versionPin, err := nonEmptyText(record["versionPin"], "rollback versionPin")
@@ -771,7 +803,10 @@ func admitStackDiversity(raw any, failures *[]string, options Options) (*admitte
 			return nil, err
 		}
 		addErr(failures, admit.KnownKeys(dimensionRecord, []string{"baseline", "candidate", "dimension", "evidence"}, "stack diversity dimension"))
-		dimension := stringValue(dimensionRecord["dimension"])
+		dimension, err := reportVisibleText(dimensionRecord["dimension"], "stack diversity dimension")
+		if err != nil {
+			return nil, err
+		}
 		baseline, err := nonEmptyText(dimensionRecord["baseline"], "stack diversity baseline")
 		if err != nil {
 			return nil, err
@@ -840,9 +875,17 @@ func admitCacheNegativeChecks(raw any, failures *[]string, options Options) ([]a
 		if err != nil {
 			return nil, err
 		}
+		expectedOutcome, err := reportVisibleText(record["expectedOutcome"], "cache negative expectedOutcome")
+		if err != nil {
+			return nil, err
+		}
+		inputClass, err := reportVisibleText(record["invalidatedInputClass"], "cache negative invalidatedInputClass")
+		if err != nil {
+			return nil, err
+		}
 		checks = append(checks, admittedCacheNegativeCheck{
-			CheckID: checkID, Evidence: evidence, ExpectedOutcome: stringValue(record["expectedOutcome"]),
-			InvalidatedInputClass: stringValue(record["invalidatedInputClass"]), LiveOrCredentialedCacheable: false,
+			CheckID: checkID, Evidence: evidence, ExpectedOutcome: expectedOutcome,
+			InvalidatedInputClass: inputClass, LiveOrCredentialedCacheable: false,
 		})
 	}
 	sort.Slice(checks, func(left int, right int) bool {
@@ -888,16 +931,16 @@ func assertStackDiverseImpactCoverage(impactReports []map[string]any, failures *
 func ruleResults(failures []string) []report.RuleResult {
 	if len(failures) == 0 {
 		return []report.RuleResult{{
-			RuleID:      "proofkit.pilot-admission.accepted",
+			RuleID:      acceptedRuleID,
 			Status:      "passed",
-			Message:     "pilot admission contract is complete and non-blocking",
+			Message:     acceptedRuleMessage,
 			Diagnostics: []report.Diagnostic{},
 		}}
 	}
 	results := make([]report.RuleResult, 0, len(failures))
 	for index, failure := range failures {
 		results = append(results, report.RuleResult{
-			RuleID:      fmt.Sprintf("proofkit.pilot-admission.failure.%03d", index+1),
+			RuleID:      fmt.Sprintf("%s%03d", failureRuleIDPrefix, index+1),
 			Status:      "failed",
 			Message:     failure,
 			Diagnostics: []report.Diagnostic{},
@@ -999,6 +1042,18 @@ func arrayValue(raw any) []any {
 func stringValue(raw any) string {
 	value, _ := raw.(string)
 	return value
+}
+
+// reportVisibleText admits caller text that reports echo before its vocabulary
+// is checked. Like nonEmptyText fields, secret-shaped text refuses the input
+// before any report exists and is not repeated; a non-text value projects as
+// "" and an unknown word stays a collected failure.
+func reportVisibleText(raw any, context string) (string, error) {
+	value, _ := raw.(string)
+	if admit.ContainsSecretLikeValue(value) {
+		return "", fmt.Errorf("%s must not contain secret-like values", context)
+	}
+	return value, nil
 }
 
 func nonEmptyText(raw any, context string) (string, error) {

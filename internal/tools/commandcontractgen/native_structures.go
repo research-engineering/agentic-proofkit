@@ -9,24 +9,36 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionchecklist"
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptioncontract"
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptiondoctor"
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentintegration"
+	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
 	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
+	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/changedpathset"
+	"github.com/research-engineering/agentic-proofkit/internal/command/changeworkflowplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
+	"github.com/research-engineering/agentic-proofkit/internal/command/conformanceprofile"
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
+	"github.com/research-engineering/agentic-proofkit/internal/command/deploymentevidenceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
 	"github.com/research-engineering/agentic-proofkit/internal/command/externalconsumer"
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/command/migrationparityadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/migrationplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
 	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
+	"github.com/research-engineering/agentic-proofkit/internal/command/pilotadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/producerpolicyselfproof"
 	"github.com/research-engineering/agentic-proofkit/internal/command/projectstatus"
+	"github.com/research-engineering/agentic-proofkit/internal/command/projectstructure"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofbindingtestinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
@@ -39,9 +51,11 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/registryconsumerinputcompose"
 	"github.com/research-engineering/agentic-proofkit/internal/command/releaseauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/command/renderedartifactfreshness"
+	"github.com/research-engineering/agentic-proofkit/internal/command/repoprofileadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/repositoryinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageinput"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
@@ -54,11 +68,13 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
+	"github.com/research-engineering/agentic-proofkit/internal/command/scaffoldprofileplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/secretscan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateevidence"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selfcheck"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specoverviewclaims"
+	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
@@ -67,10 +83,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/workspacemanifestfacts"
 	"github.com/research-engineering/agentic-proofkit/internal/command/workspaceplanning"
+	"github.com/research-engineering/agentic-proofkit/internal/command/workspaceregistry"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcecodec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/schemadefs"
 )
 
 type nativeStructure struct {
@@ -87,11 +105,14 @@ type nativeStructure struct {
 	optionalInputVersion bool
 	jsonValueInput       bool // Unconstrained JSON input; its contract version is metadata only.
 	semanticVersion      uint // Zero follows the wire version; nonzero identifies changed semantics.
+	conditionModel       string
 }
 
 type nativeStructureVariant struct {
 	id     string
 	when   string
+	also   []string // Further disjoint CLI conditions selecting the same schema.
+	array  bool     // An array root carries no inline header; only aggregate outputs admit it.
 	schema func() (map[string]any, error)
 }
 
@@ -201,7 +222,7 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.requirement-coverage-view.output.v4.root-shape"}, commands: []string{"requirement-coverage-view"},
 		wireVersion: json.Number("4"),
 		variants: []nativeStructureVariant{
-			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return requirementcoverageview.EnvelopeStructure(), nil }},
 			{id: "02-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return requirementcoverageview.OutputStructure(), nil }},
 		},
 	}, {
@@ -376,7 +397,7 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.workspace-changed-package-plan.output.v1.root-shape"}, commands: []string{"workspace-changed-package-plan"},
 		wireVersion: json.Number("1"),
 		variants: []nativeStructureVariant{
-			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ChangedPlanEnvelopeStructure(), nil }},
 			{id: "02-plan", when: "without --agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ChangedPlanOutputStructure(), nil }},
 		},
 	}, {
@@ -388,7 +409,7 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.workspace-shard-partition.output.v1.root-shape", "proofkit.workspace-shard-partition.output.v1.json-schema"}, commands: []string{"workspace-shard-partition"},
 		wireVersion: json.Number("1"),
 		variants: []nativeStructureVariant{
-			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ShardEnvelopeStructure(), nil }},
 			{id: "02-partition", when: "without --agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ShardOutputStructure(), nil }},
 		},
 	}, {
@@ -722,7 +743,278 @@ func nativeStructures() []nativeStructure {
 			{id: "03-envelope", when: "--agent-envelope and admitted input", schema: func() (map[string]any, error) { return gradualadoption.BootstrapEnvelopeStructure(), nil }},
 			{id: "04-invalid-input-envelope", when: "--agent-envelope and refused input", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
 		},
+	}, {
+		id: "proofkit.adoption-doctor.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.adoption-doctor.input.v1.root-shape"}, commands: []string{"adoption-doctor"},
+		schema: func() (map[string]any, error) { return adoptiondoctor.InputStructure(), nil },
+	}, {
+		id: "proofkit.adoption-doctor.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.adoption-doctor.output.v1.root-shape"}, commands: []string{"adoption-doctor"},
+		variants: []nativeStructureVariant{
+			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return adoptiondoctor.EnvelopeStructure(), nil }},
+			{id: "02-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return adoptiondoctor.OutputStructure(), nil }},
+			{id: "03-invalid-input-envelope", when: "--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.scaffold-project-structure.input.v2.json-schema", direction: "input", semanticVersion: 2,
+		predecessors: []string{"proofkit.scaffold-project-structure.input.v1.root-shape"}, commands: []string{"scaffold-project-structure"},
+		schema: func() (map[string]any, error) { return projectstructure.InputStructure(), nil },
+	}, {
+		id: "proofkit.scaffold-project-structure.output.v1.json-schema", direction: "output", aggregateVersion: "1",
+		predecessors: []string{"proofkit.scaffold-project-structure.output.v1.root-shape"}, commands: []string{"scaffold-project-structure"},
+		variants: []nativeStructureVariant{
+			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return projectstructure.EnvelopeStructure(), nil }},
+			{id: "02-scaffold", when: "without --agent-envelope", schema: func() (map[string]any, error) { return projectstructure.OutputStructure(), nil }},
+			{id: "03-invalid-input-envelope", when: "--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.scaffold-profile-plan.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.scaffold-profile-plan.input.v1.root-shape"}, commands: []string{"scaffold-profile-plan"},
+		schema: func() (map[string]any, error) { return scaffoldprofileplan.InputStructure(), nil },
+	}, {
+		id: "proofkit.scaffold-profile-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.scaffold-profile-plan.output.v1.root-shape"}, commands: []string{"scaffold-profile-plan"},
+		variants: []nativeStructureVariant{
+			{id: "01-plan", when: "default JSON mode", schema: func() (map[string]any, error) { return scaffoldprofileplan.OutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.conformance-profile.input.v2.json-schema", direction: "input",
+		predecessors: []string{"proofkit.conformance-profile.input.v2.root-shape"}, commands: []string{"conformance-profile"},
+		schema: func() (map[string]any, error) { return conformanceprofile.InputStructure(), nil },
+	}, {
+		id: "proofkit.conformance-profile.output.v2.json-schema", direction: "output", aggregateVersion: "2",
+		predecessors: []string{"proofkit.conformance-profile.output.v2.root-shape"}, commands: []string{"conformance-profile"},
+		variants: []nativeStructureVariant{
+			{id: "01-list", when: "--list", schema: func() (map[string]any, error) { return conformanceprofile.ListOutputStructure(), nil }},
+			{id: "02-profile", when: "--profile <id> with --format json or without --format (defaults json)", schema: func() (map[string]any, error) { return conformanceprofile.ProfileOutputStructure(), nil }},
+			{id: "03-verify", when: "--verify", schema: func() (map[string]any, error) { return conformanceprofile.VerifyOutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.migration-plan.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.migration-plan.input.v1.root-shape"}, commands: []string{"migration-plan"},
+		schema: func() (map[string]any, error) { return migrationplan.InputStructure(), nil },
+	}, {
+		id: "proofkit.migration-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.migration-plan.output.v1.root-shape"}, commands: []string{"migration-plan"},
+		schema: func() (map[string]any, error) { return migrationplan.OutputStructure(), nil },
+	}, {
+		id: "proofkit.workspace-registry.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.workspace-registry.input.v1.root-shape"}, commands: []string{"workspace-registry"},
+		schema: func() (map[string]any, error) { return workspaceregistry.InputStructure(), nil },
+	}, {
+		id: "proofkit.workspace-registry.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.workspace-registry.output.v1.root-shape"}, commands: []string{"workspace-registry"},
+		schema: func() (map[string]any, error) { return workspaceregistry.OutputStructure(), nil },
+	}, {
+		id: "proofkit.requirement-browser-server.input.v4.json-schema", direction: "input", aggregateVersion: "4",
+		predecessors: []string{"proofkit.requirement-browser-server.input.v4.root-shape"}, commands: []string{"requirement-browser-server"},
+		variants: []nativeStructureVariant{
+			{id: "01-coverage-compact", when: "--view coverage; compact proof", schema: func() (map[string]any, error) { return requirementbrowser.CoverageInputStructure(true) }},
+			{id: "02-coverage-structured", when: "--view coverage; structured proof", schema: func() (map[string]any, error) { return requirementbrowser.CoverageInputStructure(false) }},
+			{id: "03-proof-compact", when: "--view proof; compact proof", schema: func() (map[string]any, error) { return requirementbrowser.CompactProofInputStructure(), nil }},
+			{id: "04-proof-structured", when: "--view proof; structured proof", schema: func() (map[string]any, error) { return requirementbrowser.StructuredProofInputStructure(), nil }},
+			{id: "05-source", when: "--view source", schema: requirementbrowser.SourceInputStructure},
+			{id: "06-spec-tree", when: "--view spec-tree", schema: func() (map[string]any, error) { return requirementbrowser.SpecTreeInputStructure(), nil }},
+			{id: "07-workspace", when: "--view workspace", schema: requirementbrowser.WorkspaceInputStructure},
+		},
+	}, {
+		id: "proofkit.requirement-browser-server.output.v2.json-schema", direction: "output", aggregateVersion: "2",
+		predecessors: []string{"proofkit.requirement-browser-server.output.v2.root-shape"}, commands: []string{"requirement-browser-server"},
+		variants: requirementBrowserOutputVariants(),
+	}, {
+		id: "proofkit.view.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.view.output.v1.root-shape"}, commands: []string{"view"},
+		variants: []nativeStructureVariant{
+			{id: "01-plan", when: "without --serve", schema: func() (map[string]any, error) { return requirementbrowser.PlanOutputStructure("workspace") }},
+			{id: "02-one-shot-terminal", when: "--open; --serve; --session-mode one-shot-question; state=cancelled|expired", schema: func() (map[string]any, error) { return requirementbrowser.TerminalOutputStructure(), nil }},
+			{id: "03-one-shot-submitted", when: "--open; --serve; --session-mode one-shot-question; state=submitted", schema: requirementbrowser.SubmittedOutputStructure},
+		},
+	}, {
+		id: "proofkit.capability-map-admission.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.capability-map-admission.input.v1.root-shape"}, commands: []string{"capability-map-admission"},
+		schema: func() (map[string]any, error) { return capabilitymapadmission.InputStructure(), nil },
+	}, {
+		id: "proofkit.capability-map-admission.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.capability-map-admission.output.v1.root-shape"}, commands: []string{"capability-map-admission"},
+		schema: func() (map[string]any, error) { return capabilitymapadmission.OutputStructure(), nil },
+	}, {
+		id: "proofkit.deployment-evidence-admission.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.deployment-evidence-admission.input.v1.root-shape"}, commands: []string{"deployment-evidence-admission"},
+		schema: func() (map[string]any, error) { return deploymentevidenceadmission.InputStructure(), nil },
+	}, {
+		id: "proofkit.deployment-evidence-admission.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.deployment-evidence-admission.output.v1.root-shape"}, commands: []string{"deployment-evidence-admission"},
+		schema: func() (map[string]any, error) { return deploymentevidenceadmission.OutputStructure(), nil },
+	}, {
+		id: "proofkit.repo-profile-admission.input.v1.json-schema", direction: "input", optionalInputVersion: true,
+		predecessors: []string{"proofkit.repo-profile-admission.input.v1.root-shape"}, commands: []string{"repo-profile-admission"},
+		schema: func() (map[string]any, error) { return repoprofileadmission.InputStructure(), nil },
+	}, {
+		id: "proofkit.repo-profile-admission.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.repo-profile-admission.output.v1.root-shape"}, commands: []string{"repo-profile-admission"},
+		schema: func() (map[string]any, error) { return repoprofileadmission.OutputStructure(), nil },
+	}, {
+		id: "proofkit.spec-proof-bundle-admission.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.spec-proof-bundle-admission.input.v1.root-shape"}, commands: []string{"spec-proof-bundle-admission"},
+		schema: func() (map[string]any, error) { return specproofbundleadmission.InputStructure(), nil },
+	}, {
+		id: "proofkit.spec-proof-bundle-admission.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.spec-proof-bundle-admission.output.v1.root-shape"}, commands: []string{"spec-proof-bundle-admission"},
+		schema: func() (map[string]any, error) { return specproofbundleadmission.OutputStructure(), nil },
+	}, {
+		id: "proofkit.agent-route.input.v2.json-schema", direction: "input", semanticVersion: 2,
+		predecessors: []string{"proofkit.agent-route.input.v2.root-shape"}, commands: []string{"agent-route"},
+		variants: []nativeStructureVariant{
+			{id: "01-direct", when: "default JSON mode", schema: func() (map[string]any, error) { return agentroute.InputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.agent-route.output.v3.json-schema", direction: "output", aggregateVersion: "3",
+		predecessors: []string{"proofkit.agent-route.output.v3.root-shape"}, commands: []string{"agent-route"},
+		variants: []nativeStructureVariant{
+			{id: "01-agent-brief", when: "--agent-envelope=present --agent-envelope-mode=absent|brief; admitted route input", schema: func() (map[string]any, error) { return agentroute.BriefStructure(), nil }},
+			{id: "02-agent-envelope-full", when: "--agent-envelope=present --agent-envelope-mode=full; admitted route input", schema: func() (map[string]any, error) { return agentroute.FullEnvelopeStructure(), nil }},
+			{id: "03-invalid-input-repair", when: "--agent-envelope=present; route input or input-pointer admission failed", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
+			{id: "04-routed", when: "without --agent-envelope; known goal", schema: func() (map[string]any, error) { return agentroute.RoutedReportStructure(), nil }},
+			{id: "05-unknown-goal", when: "without --agent-envelope; goal=unknown", schema: func() (map[string]any, error) { return agentroute.UnknownGoalReportStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.change-workflow-plan.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.change-workflow-plan.input.v1.root-shape"}, commands: []string{"change-workflow-plan"},
+		variants: []nativeStructureVariant{
+			{id: "01-root", when: "default JSON input", schema: func() (map[string]any, error) { return changeworkflowplan.InputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.change-workflow-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.change-workflow-plan.output.v1.root-shape"}, commands: []string{"change-workflow-plan"},
+		variants: []nativeStructureVariant{
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return changeworkflowplan.EnvelopeStructure(), nil }},
+			{id: "02-next-action", when: "without --agent-envelope; outputKind=next_action; without successorStateDelta", schema: func() (map[string]any, error) { return changeworkflowplan.NextActionOutputStructure(), nil }},
+			{id: "03-accept-stage", when: "without --agent-envelope; outputKind=next_action; successorStateDelta", schema: func() (map[string]any, error) { return changeworkflowplan.AcceptStageOutputStructure(), nil }},
+			{id: "04-workflow-complete", when: "without --agent-envelope; outputKind=workflow_complete", schema: func() (map[string]any, error) { return changeworkflowplan.WorkflowCompleteOutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.native-evidence-guidance.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.native-evidence-guidance.output.v1.root-shape"}, commands: []string{"native-evidence-guidance"},
+		schema: nativeevidenceguidance.OutputStructure,
+	}, {
+		id: "proofkit.adoption-workflow-plan.input.v1.json-schema", direction: "input", aggregateVersion: "1",
+		predecessors: []string{"proofkit.adoption-workflow-plan.input.v1.root-shape"}, commands: []string{"adoption-workflow-plan"},
+		variants: []nativeStructureVariant{
+			{id: "01-contract-envelope", when: "--contract-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.ContractInputStructure(), nil }},
+			{id: "02-direct", when: "without --contract-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.InputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.adoption-workflow-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.adoption-workflow-plan.output.v1.root-shape"}, commands: []string{"adoption-workflow-plan"},
+		variants: []nativeStructureVariant{
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.EnvelopeOutputStructure(), nil }},
+			{id: "02-workflow-plan", when: "without --agent-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.OutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.pilot-admission.input.v2.json-schema", direction: "input", aggregateVersion: "2",
+		predecessors: []string{"proofkit.pilot-admission.input.v2.root-shape"}, commands: []string{"pilot-admission"},
+		variants: []nativeStructureVariant{
+			{id: "01-contract-all", when: "--contract-envelope --pilot all", schema: func() (map[string]any, error) {
+				return pilotadmission.ContractInputStructure("input", "stackDiverseInput"), nil
+			}},
+			{id: "02-contract-first", when: "--contract-envelope --pilot first", also: []string{"--contract-envelope without --pilot (defaults first)"}, schema: func() (map[string]any, error) {
+				return pilotadmission.ContractInputStructure("input"), nil
+			}},
+			{id: "03-contract-stack-diverse", when: "--contract-envelope --pilot stack-diverse", also: []string{"--contract-envelope --stack-diverse"}, schema: func() (map[string]any, error) {
+				return pilotadmission.ContractInputStructure("stackDiverseInput"), nil
+			}},
+			// Stack-diverse requirements add failures only, so both selections share one admission domain.
+			{id: "04-direct", when: "without --contract-envelope; --pilot first", also: []string{
+				"without --contract-envelope; without --pilot (defaults first)", "without --contract-envelope; --pilot stack-diverse", "without --contract-envelope; --stack-diverse",
+			}, schema: func() (map[string]any, error) { return pilotadmission.InputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.pilot-admission.output.v1.json-schema", direction: "output", aggregateVersion: "1",
+		predecessors: []string{"proofkit.pilot-admission.output.v1.root-shape"}, commands: []string{"pilot-admission"},
+		variants: []nativeStructureVariant{
+			{id: "01-all", when: "--contract-envelope --pilot all", array: true, schema: func() (map[string]any, error) { return pilotadmission.AllOutputStructure(), nil }},
+			{id: "02-report", when: "--contract-envelope --pilot first", also: []string{
+				"--contract-envelope --pilot stack-diverse", "--contract-envelope --stack-diverse", "--contract-envelope without --pilot (defaults first)", "direct input",
+			}, schema: func() (map[string]any, error) { return pilotadmission.ReportStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.adoption-contract-envelope.input.v3.json-schema", direction: "input", aggregateVersion: "2", semanticVersion: 3,
+		predecessors: []string{"proofkit.adoption-contract-envelope.input.v2.root-shape"}, commands: []string{"adoption-contract-envelope"},
+		variants: adoptionContractInputVariants(),
+	}, {
+		id: "proofkit.adoption-contract-envelope.output.v1.json-schema", direction: "output", aggregateVersion: "1", conditionModel: "cli_flag_conjunction_v1",
+		predecessors: []string{"proofkit.adoption-contract-envelope.output.v1.root-shape"}, commands: []string{"adoption-contract-envelope"},
+		variants: adoptionContractOutputVariants(),
 	}}
+}
+
+// Each --view value renders a distinct owner-fixed plan; serving modes emit
+// one-shot packets only for the workspace view and otherwise no JSON at all.
+func requirementBrowserOutputVariants() []nativeStructureVariant {
+	variants := []nativeStructureVariant{}
+	for _, view := range requirementbrowser.ViewChoices() {
+		variants = append(variants, nativeStructureVariant{
+			id: "01-plan-" + view, when: "without --serve; --view " + view,
+			schema: func() (map[string]any, error) { return requirementbrowser.PlanOutputStructure(view) },
+		})
+	}
+	return append(variants,
+		nativeStructureVariant{id: "02-one-shot-terminal", when: "--open; --serve; --session-mode one-shot-question; --view workspace; state=cancelled|expired", schema: func() (map[string]any, error) { return requirementbrowser.TerminalOutputStructure(), nil }},
+		nativeStructureVariant{id: "03-one-shot-submitted", when: "--open; --serve; --session-mode one-shot-question; --view workspace; state=submitted", schema: requirementbrowser.SubmittedOutputStructure},
+	)
+}
+
+// Delegated admission depends on --mode, the pilot selection and each guidance
+// override; --agent-envelope and --materialization-manifest select outputs only.
+func adoptionContractInputVariants() []nativeStructureVariant {
+	variants := []nativeStructureVariant{
+		{id: "01-adoption", when: "--mode adoption", schema: func() (map[string]any, error) { return adoptioncontract.AdoptionInputStructure(), nil }},
+		{id: "02-bootstrap", when: "--mode bootstrap", schema: func() (map[string]any, error) { return adoptioncontract.BootstrapInputStructure(), nil }},
+	}
+	for mask := range 8 {
+		mode, scope, touched := mask&1 != 0, mask&2 != 0, mask&4 != 0
+		variants = append(variants, nativeStructureVariant{
+			id:   fmt.Sprintf("%02d-guidance-%03b", mask+3, mask),
+			when: fmt.Sprintf("--mode guidance; guidance-mode override=%t, checked-scope override=%t, touched-rule-id override=%t", mode, scope, touched),
+			schema: func() (map[string]any, error) {
+				return adoptioncontract.GuidanceInputStructure(mode, scope, touched), nil
+			},
+		})
+	}
+	return append(variants,
+		nativeStructureVariant{id: "11-pilot-all", when: "--mode pilot --pilot all", schema: func() (map[string]any, error) { return adoptioncontract.PilotInputStructure("all"), nil }},
+		nativeStructureVariant{id: "12-pilot-first", when: "--mode pilot --pilot first", also: []string{"--mode pilot without --pilot (defaults first)"}, schema: func() (map[string]any, error) {
+			return adoptioncontract.PilotInputStructure("first"), nil
+		}},
+		nativeStructureVariant{id: "13-pilot-stack-diverse", when: "--mode pilot --pilot stack-diverse", schema: func() (map[string]any, error) {
+			return adoptioncontract.PilotInputStructure("stack-diverse"), nil
+		}},
+		nativeStructureVariant{id: "14-workflow", when: "--mode workflow", schema: func() (map[string]any, error) { return adoptioncontract.WorkflowInputStructure(), nil }},
+	)
+}
+
+// The output conditions are the closed cli_flag_conjunction_v1 cases.
+func adoptionContractOutputVariants() []nativeStructureVariant {
+	condition := func(agent, manifest, mode, pilot string) string {
+		return "--agent-envelope=" + agent + " --materialization-manifest=" + manifest + " --mode=" + mode + " --pilot=" + pilot
+	}
+	return []nativeStructureVariant{
+		{id: "01-adoption-report", when: condition("absent", "absent", "adoption", "absent"), schema: func() (map[string]any, error) { return gradualadoption.OutputStructure(), nil }},
+		{id: "02-bootstrap", when: condition("absent", "absent", "bootstrap", "absent"), schema: func() (map[string]any, error) { return gradualadoption.BootstrapOutputStructure(), nil }},
+		{id: "03-bootstrap-agent", when: condition("present", "absent", "bootstrap", "absent"), schema: func() (map[string]any, error) { return adoptioncontract.AgentOutputStructure("bootstrap"), nil }},
+		{id: "04-bootstrap-materialization", when: condition("absent", "present", "bootstrap", "absent"), schema: func() (map[string]any, error) {
+			return gradualadoption.BootstrapMaterializationStructure(), nil
+		}},
+		{id: "05-guidance-agent", when: condition("present", "absent", "guidance", "absent"), schema: func() (map[string]any, error) { return adoptioncontract.AgentOutputStructure("guidance"), nil }},
+		{id: "06-guidance-report", when: condition("absent", "absent", "guidance", "absent"), schema: func() (map[string]any, error) { return gradualadoption.GuidanceOutputStructure(), nil }},
+		{id: "07-pilot-all", when: condition("absent", "absent", "pilot", "all"), array: true, schema: func() (map[string]any, error) { return pilotadmission.AllOutputStructure(), nil }},
+		{id: "08-pilot-first", when: condition("absent", "absent", "pilot", "absent"), also: []string{condition("absent", "absent", "pilot", "first")}, schema: func() (map[string]any, error) {
+			return pilotadmission.ReportStructure(), nil
+		}},
+		{id: "09-pilot-stack-diverse", when: condition("absent", "absent", "pilot", "stack-diverse"), schema: func() (map[string]any, error) { return pilotadmission.ReportStructure(), nil }},
+		{id: "10-workflow-agent", when: condition("present", "absent", "workflow", "absent"), schema: func() (map[string]any, error) { return adoptioncontract.AgentOutputStructure("workflow"), nil }},
+		{id: "11-workflow-plan", when: condition("absent", "absent", "workflow", "absent"), schema: func() (map[string]any, error) { return adoptionworkflow.OutputStructure(), nil }},
+	}
 }
 
 func gradualGuidanceInputVariants() []nativeStructureVariant {
@@ -760,39 +1052,93 @@ func (owner nativeStructure) definition() (map[string]any, error) {
 		variants = []nativeStructureVariant{{id: "01-root", when: "default JSON mode", schema: owner.schema}}
 	}
 	wireVariants := make([]any, 0, len(variants))
+	kinds := map[string]struct{}{}
+	owners := map[string]string{}
+	var conditionCases []rootShapeConditionCase
 	for _, variant := range variants {
 		if variant.id == "" || variant.when == "" || variant.schema == nil {
 			return nil, fmt.Errorf("native structure %s has an invalid variant", owner.id)
+		}
+		conditions := []any{}
+		for _, condition := range append([]string{variant.when}, variant.also...) {
+			if condition == "" {
+				return nil, fmt.Errorf("native structure %s has an invalid variant", owner.id)
+			}
+			if previous, duplicate := owners[condition]; duplicate {
+				return nil, fmt.Errorf("native structure %s condition %q is owned by %s and %s", owner.id, condition, previous, variant.id)
+			}
+			owners[condition] = variant.id
+			conditions = append(conditions, condition)
+			if owner.conditionModel != "" {
+				dimensions, err := parseCLIFlagCondition(condition)
+				if err != nil {
+					return nil, fmt.Errorf("native structure %s condition %q: %w", owner.id, condition, err)
+				}
+				conditionCases = append(conditionCases, rootShapeConditionCase{Dimensions: dimensions, Raw: condition, VariantID: variant.id})
+			}
 		}
 		schema, err := variant.schema()
 		if err != nil {
 			return nil, fmt.Errorf("native structure %s: %w", owner.id, err)
 		}
-		root, err := owner.root(schema)
-		if err != nil {
-			return nil, err
+		kind, allowed, required := rootKind, []any{}, any([]any{})
+		if variant.array {
+			if owner.direction != "output" || owner.aggregateVersion == "" {
+				return nil, fmt.Errorf("native structure %s array root requires an aggregate output owner", owner.id)
+			}
+			if err := validateNativeArrayRoot(schema); err != nil {
+				return nil, fmt.Errorf("native structure %s: %w", owner.id, err)
+			}
+			kind = "array"
+		} else {
+			root, err := owner.root(schema)
+			if err != nil {
+				return nil, err
+			}
+			for _, key := range sortedKeys(root["properties"].(map[string]any)) {
+				allowed = append(allowed, key)
+			}
+			required = root["required"]
 		}
-		properties := root["properties"].(map[string]any)
-		allowed := []any{}
-		for _, key := range sortedKeys(properties) {
-			allowed = append(allowed, key)
+		kinds[kind] = struct{}{}
+		// Root projections above read the native schema; only the published
+		// copy shares repeated subtrees, and Hoist proves it expands back.
+		published, err := schemadefs.Hoist(schema)
+		if err != nil {
+			return nil, fmt.Errorf("native structure %s variant %s: %w", owner.id, variant.id, err)
 		}
 		wireVariants = append(wireVariants, map[string]any{
-			"variantId": variant.id, "when": []any{variant.when}, "rootKind": rootKind,
-			"allowedFields": allowed, "requiredFields": root["required"], "schema": schema,
+			"variantId": variant.id, "when": conditions, "rootKind": kind,
+			"allowedFields": allowed, "requiredFields": required, "schema": published,
 		})
+	}
+	rootType := rootKind
+	if _, object := kinds[rootKind]; !object {
+		return nil, fmt.Errorf("native structure %s requires an object root variant", owner.id)
+	} else if len(kinds) > 1 {
+		rootType = "union"
+	}
+	fieldTree := map[string]any{
+		"kind": "structural_json_schema",
+		"nonClaims": []any{
+			"Structural JSON Schema does not replace native canonicalization, semantic admission, or numeric representation checks.",
+			"Structural JSON Schema does not replace direct public-CLI runtime witnesses for variant selection.",
+		},
+		"variants": wireVariants,
+	}
+	if owner.conditionModel != "" {
+		if owner.conditionModel != "cli_flag_conjunction_v1" || owner.id != cliFlagConditionModelDefinitionID {
+			return nil, fmt.Errorf("native structure %s condition model has no admitted native closure owner", owner.id)
+		}
+		if err := admitCLIFlagConditionCases(owner.id, conditionCases); err != nil {
+			return nil, err
+		}
+		fieldTree["conditionModel"] = owner.conditionModel
 	}
 	record := map[string]any{
 		"definitionId": owner.id, "schemaVersion": json.Number("1"),
-		"rootType": rootKind, "closed": true, "definitionRefs": []any{},
-		"fieldTree": map[string]any{
-			"kind": "structural_json_schema",
-			"nonClaims": []any{
-				"Structural JSON Schema does not replace native canonicalization, semantic admission, or numeric representation checks.",
-				"Structural JSON Schema does not replace direct public-CLI runtime witnesses for variant selection.",
-			},
-			"variants": wireVariants,
-		},
+		"rootType": rootType, "closed": true, "definitionRefs": []any{},
+		"fieldTree": fieldTree,
 	}
 	encoded, err := canonicalJSON(record)
 	if err != nil {
@@ -811,7 +1157,10 @@ func (owner nativeStructure) contractID(command string, wireVersion json.Number)
 }
 
 func (owner nativeStructure) contractVersion(definition map[string]any) (json.Number, error) {
-	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	variants, err := expandedVariants(definition)
+	if err != nil {
+		return "", err
+	}
 	if owner.jsonValueInput {
 		if len(variants) != 1 {
 			return "", fmt.Errorf("arbitrary JSON input requires one variant")
@@ -821,7 +1170,15 @@ func (owner nativeStructure) contractVersion(definition map[string]any) (json.Nu
 	}
 	if owner.aggregateVersion != "" {
 		for _, raw := range variants {
-			if _, err := owner.root(raw.(map[string]any)["schema"].(map[string]any)); err != nil {
+			variant := raw.(map[string]any)
+			schema := variant["schema"].(map[string]any)
+			if variant["rootKind"] == "array" {
+				if err := validateNativeArrayRoot(schema); err != nil {
+					return "", err
+				}
+				continue
+			}
+			if _, err := owner.root(schema); err != nil {
 				return "", err
 			}
 		}
@@ -865,39 +1222,6 @@ func (owner nativeStructure) contractVersion(definition map[string]any) (json.Nu
 	return nativeSchemaVersion(variants[0].(map[string]any)["schema"].(map[string]any), owner.schemaVersionField())
 }
 
-// The generic envelope owner fixes root keys and types; its nested records
-// retain their separately admitted semantics.
-func agentEnvelopeRootStructure() (map[string]any, error) {
-	output := agentenvelope.Build(agentenvelope.Input{})
-	properties := map[string]any{}
-	required := []any{}
-	for _, key := range sortedKeys(output) {
-		var field map[string]any
-		switch value := output[key].(type) {
-		case string:
-			field = map[string]any{"type": "string"}
-		case []any:
-			field = map[string]any{"type": "array"}
-		case map[string]any:
-			field = map[string]any{"type": "object"}
-		case int:
-			if key != "schemaVersion" || value != 1 {
-				return nil, fmt.Errorf("agent envelope has an unexpected integer root field")
-			}
-			field = map[string]any{"type": "integer", "const": json.Number("1")}
-		default:
-			return nil, fmt.Errorf("agent envelope has an unsupported root field")
-		}
-		properties[key] = field
-		required = append(required, key)
-	}
-	return map[string]any{
-		"$schema": "https://json-schema.org/draft/2020-12/schema",
-		"type":    "object", "additionalProperties": false,
-		"properties": properties, "required": required,
-	}, nil
-}
-
 func (owner nativeStructure) summary(version json.Number) []any {
 	identity := owner.schemaVersionField() + "=" + version.String()
 	if owner.outOfBandVersion != "" {
@@ -928,7 +1252,10 @@ func (owner nativeStructure) inputRootSummary(definition map[string]any) ([]stri
 		}
 		return []string{"any JSON value; no required fields or inline version header"}, nil
 	}
-	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	variants, err := expandedVariants(definition)
+	if err != nil {
+		return nil, err
+	}
 	result := make([]string, 0, len(variants))
 	for _, raw := range variants {
 		variant := raw.(map[string]any)
@@ -971,6 +1298,26 @@ func (owner nativeStructure) inputRootSummary(definition map[string]any) ([]stri
 	return result, nil
 }
 
+// Published variant schemas share repeated subtrees through $defs. Root
+// navigation reads the expanded form, which equals the native owner schema.
+func expandedVariants(definition map[string]any) ([]any, error) {
+	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	expanded := make([]any, len(variants))
+	for index, raw := range variants {
+		variant := cloneRecord(raw.(map[string]any))
+		schema, ok := variant["schema"].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("structural variant schema must be an object")
+		}
+		var err error
+		if variant["schema"], err = schemadefs.Expand(schema); err != nil {
+			return nil, err
+		}
+		expanded[index] = variant
+	}
+	return expanded, nil
+}
+
 func nativeSchemaVersion(schema map[string]any, versionField string) (json.Number, error) {
 	root, err := nativeStructureRoot(schema, versionField)
 	if err != nil {
@@ -1011,6 +1358,9 @@ func (owner nativeStructure) root(schema map[string]any) (map[string]any, error)
 		}
 		if err := validateNativeVersion(owner.aggregateVersion); err != nil {
 			return nil, err
+		}
+		if _, sum := schema["oneOf"]; sum && schema["type"] == nil {
+			return nativeAggregateSumRoot(schema)
 		}
 		return schema, validateNativeClosedObject(schema)
 	}
@@ -1078,6 +1428,51 @@ func nativeStructureRoot(schema map[string]any, versionField string) (map[string
 		}
 	}
 	return root, nil
+}
+
+// Aggregate variants own their wire headers, so an exclusive sum needs only one
+// shared closed root projection, not a common inline version.
+func nativeAggregateSumRoot(schema map[string]any) (map[string]any, error) {
+	if err := rejectUnknownKeys(schema, []string{"$schema", "oneOf"}, "native aggregate sum"); err != nil {
+		return nil, err
+	}
+	alternatives, ok := schema["oneOf"].([]any)
+	if !ok || len(alternatives) < 2 {
+		return nil, fmt.Errorf("native aggregate sum requires at least two closed object alternatives")
+	}
+	var root map[string]any
+	for _, raw := range alternatives {
+		branch, ok := raw.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("native aggregate sum alternative must be an object schema")
+		}
+		if err := validateNativeClosedObject(branch); err != nil {
+			return nil, err
+		}
+		if root == nil {
+			root = branch
+			continue
+		}
+		if !reflect.DeepEqual(root["required"], branch["required"]) ||
+			!slices.Equal(sortedKeys(root["properties"].(map[string]any)), sortedKeys(branch["properties"].(map[string]any))) {
+			return nil, fmt.Errorf("native aggregate sum alternatives must share root fields")
+		}
+	}
+	return root, nil
+}
+
+// An array root is closed by its item declaration; it has no root fields.
+func validateNativeArrayRoot(schema map[string]any) error {
+	items, declared := schema["items"]
+	if _, object := items.(map[string]any); schema["type"] != "array" || !declared || (items != false && !object) {
+		return fmt.Errorf("native array root requires a declared item domain")
+	}
+	if items == false {
+		if _, ok := schema["prefixItems"].([]any); !ok {
+			return fmt.Errorf("native closed tuple root requires prefixItems")
+		}
+	}
+	return nil
 }
 
 func nativeObjectSchemaVersion(schema map[string]any, versionField string) (json.Number, error) {

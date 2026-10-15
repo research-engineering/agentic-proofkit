@@ -40,6 +40,21 @@ var inputKinds = map[string]struct{}{
 
 var phaseOrder = []string{"profile", "bootstrap", "bind", "migrate", "plan-gates", "collect-evidence", "release"}
 
+var inputKeys = []string{"inputRefs", "nonClaims", "presetId", "scenario", "schemaVersion", "workflowId"}
+var inputRefKeys = []string{"inputKind", "path", "refId"}
+
+const (
+	contractEnvelopeSchema = "proofkit.adoption-workflow.v1"
+	planKind               = "proofkit.adoption-workflow-plan"
+	planStateReady         = "ready_for_caller_review"
+	planStateBlocked       = "blocked"
+	workflowOwner          = "consumer_repository"
+	envelopeID             = "proofkit-adoption-workflow.agent-envelope"
+	commandNonClaim        = "Workflow command refs are caller-owned routes only and do not execute commands or prove pass evidence."
+	blockerNonClaim        = "Workflow blockers are caller-review prompts and do not prove repository readiness."
+	agentCommandNonClaim   = "Agent command refs preserve argv boundaries but do not execute commands or prove pass evidence."
+)
+
 var workflowNonClaims = []string{
 	"Adoption workflow plans do not authenticate receipts or decide proof freshness.",
 	"Adoption workflow plans do not approve merge, enforcement, release, or rollout.",
@@ -135,7 +150,7 @@ func BuildEnvelopeFromContractEnvelopeWithRenderer(raw any, renderer cliexec.Ren
 }
 
 func inputFromContractEnvelope(raw any) (map[string]any, error) {
-	envelope, err := contractenv.Object(raw, "proofkit.adoption-workflow.v1", "adoption workflow", "workflow")
+	envelope, err := contractenv.Object(raw, contractEnvelopeSchema, "adoption workflow", "workflow")
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +162,7 @@ func build(raw any, renderer cliexec.Renderer) (result, error) {
 	if !ok {
 		return result{}, fmt.Errorf("adoption workflow plan input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"inputRefs", "nonClaims", "presetId", "scenario", "schemaVersion", "workflowId"}, "adoption workflow plan input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "adoption workflow plan input"); err != nil {
 		return result{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -179,10 +194,10 @@ func build(raw any, renderer cliexec.Renderer) (result, error) {
 	}
 	blockers := workflowBlockers(scenario, presetID, inputRefs)
 	phases := workflowPhases(scenario, presetID, inputRefs, renderer)
-	planState := "blocked"
+	planState := planStateBlocked
 	exitCode := 1
 	if len(blockers) == 0 {
-		planState = "ready_for_caller_review"
+		planState = planStateReady
 		exitCode = 0
 	}
 	plan := map[string]any{
@@ -190,7 +205,7 @@ func build(raw any, renderer cliexec.Renderer) (result, error) {
 		"inputRefs":     inputRefsJSON(inputRefs),
 		"nonClaims":     admit.StringSliceToAny(allNonClaims),
 		"phases":        phases,
-		"planKind":      "proofkit.adoption-workflow-plan",
+		"planKind":      planKind,
 		"planState":     planState,
 		"scenario":      scenario,
 		"schemaVersion": 1,
@@ -198,9 +213,9 @@ func build(raw any, renderer cliexec.Renderer) (result, error) {
 	}
 	rec := report.Record{
 		SchemaVersion: 1,
-		ReportKind:    "proofkit.adoption-workflow-plan",
+		ReportKind:    planKind,
 		ReportID:      workflowID,
-		State:         map[bool]string{true: "passed", false: "failed"}[planState == "ready_for_caller_review"],
+		State:         map[bool]string{true: "passed", false: "failed"}[planState == planStateReady],
 		Summary: map[string]any{
 			"blockerCount":  len(blockers),
 			"commandCount":  commandCount(phases),
@@ -225,7 +240,7 @@ func sortedInputRefs(raw any) ([]inputRef, error) {
 		if !ok {
 			return nil, fmt.Errorf("adoption workflow input ref must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"inputKind", "path", "refId"}, "adoption workflow input ref"); err != nil {
+		if err := admit.KnownKeys(record, inputRefKeys, "adoption workflow input ref"); err != nil {
 			return nil, err
 		}
 		refID, err := admit.RuleID(record["refId"], "adoption workflow input refId")
@@ -392,8 +407,8 @@ func command(commandID string, argv []string, inputRefIDs []string, renderer cli
 		"argv":        admit.StringSliceToAny(renderer.Argv(argv...)),
 		"commandId":   "proofkit.adoption-workflow.command." + commandID,
 		"inputRefIds": admit.StringSliceToAny(inputRefIDs),
-		"nonClaim":    "Workflow command refs are caller-owned routes only and do not execute commands or prove pass evidence.",
-		"owner":       "consumer_repository",
+		"nonClaim":    commandNonClaim,
+		"owner":       workflowOwner,
 	}
 }
 
@@ -409,7 +424,7 @@ func newBlocker(scenario string, reason string, requiredKinds []string) blocker 
 	sort.Strings(requiredKinds)
 	return blocker{
 		BlockerID:          "proofkit.adoption-workflow.blocker." + scenario + "." + blockerSlug(reason),
-		NonClaim:           "Workflow blockers are caller-review prompts and do not prove repository readiness.",
+		NonClaim:           blockerNonClaim,
 		Reason:             reason,
 		RequiredInputKinds: requiredKinds,
 		Scenario:           scenario,
@@ -469,8 +484,8 @@ func envelope(result result) map[string]any {
 				"argv":      admit.StringSliceToAny(argv),
 				"command":   cliexec.DisplayArgv(argv),
 				"commandId": commandID,
-				"nonClaim":  "Agent command refs preserve argv boundaries but do not execute commands or prove pass evidence.",
-				"owner":     "consumer_repository",
+				"nonClaim":  agentCommandNonClaim,
+				"owner":     workflowOwner,
 				"purpose":   fmt.Sprintf("Run the %s workflow route only after caller review.", phaseName),
 			})
 			evidenceRefs = append(evidenceRefs, anyToStrings(commandRef["inputRefIds"].([]any))...)
@@ -544,7 +559,7 @@ func envelope(result result) map[string]any {
 		"omittedCount":    0,
 	}
 	return agentenvelope.Build(agentenvelope.Input{
-		EnvelopeID:   "proofkit-adoption-workflow.agent-envelope",
+		EnvelopeID:   envelopeID,
 		SourceReport: sourceReportIdentity(result.Record),
 		Bounds:       bounds,
 		ContextRefs:  contextRefs,

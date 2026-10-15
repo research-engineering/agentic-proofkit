@@ -7,6 +7,7 @@ import {join, relative, isAbsolute} from "node:path";
 import {fileURLToPath} from "node:url";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {compileVariantUnion} from "./schema-definitions.mjs";
 import {planInput, populatedPlanInput, evidenceInput, projectionInput, boundProjectionInput, decisionInput, decisionStates} from "./selective-proof-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -18,7 +19,7 @@ for (const name of names) for (const direction of ["input", "output"]) {
   const ref = contract.commands.find(row => row.command === name)[`${direction}Contract`].rootDefinitionRef;
   const definition = contract.contractDefinitions.find(row => row.definitionId === ref);
   assert.equal(definition.fieldTree.kind, "structural_json_schema");
-  validators.set(`${name}/${direction}`, ajv.compile({oneOf: definition.fieldTree.variants.map(row => row.schema)}));
+  validators.set(`${name}/${direction}`, compileVariantUnion(() => new Ajv2020({strict: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema)));
 }
 let directory, binary, executionSubjects;
 const fileDigest = path => createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -563,7 +564,7 @@ test("boundary witness inputs include build fixture and local import operands", 
   }
   for (const path of argv.slice(2)) assert.ok(sources.has(path));
   for (const path of ["cmd", "go.mod", "go.sum", "internal", "package-lock.json", "package.json",
-    "proofkit/cli-contract.v2.json", "proofkit/witness-plan.json"]) sources.add(path);
+    "proofkit/cli-contract.v2.json", "proofkit/requirement-bindings.json", "proofkit/witness-plan.json"]) sources.add(path);
   const plan = JSON.parse(readFileSync(new URL("proofkit/witness-plan.json", root), "utf8"));
   const selectors = plan.policies.find(row => row.commandId === "proofkit.boundary-contract-check").inputSelectors;
   const missing = input => [...sources].filter(path => !input.includes(path));

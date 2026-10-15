@@ -41,7 +41,7 @@ func TestSourceCoverageOutputStructuralContractMatchesNativeOwner(t *testing.T) 
 	}
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
 	if len(variants) != 2 || variants[1].(map[string]any)["variantId"] != "02-report" ||
-		!reflect.DeepEqual(canonicalJSONValue(t, variants[1].(map[string]any)["schema"]), canonicalJSONValue(t, requirementcoverageview.OutputStructure())) {
+		!reflect.DeepEqual(canonicalJSONValue(t, expandedPublishedSchema(t, variants[1].(map[string]any)["schema"])), canonicalJSONValue(t, requirementcoverageview.OutputStructure())) {
 		t.Fatal("coverage report schema differs from its native owner")
 	}
 	commands, _, err := indexPublicABIRecords(contract["commands"], "command")
@@ -116,7 +116,7 @@ func assertNativeStructure(t *testing.T, wantedDirection, definitionID string, e
 		t.Fatal("source output structure is not shipped")
 	}
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
-	if len(variants) != 1 || !reflect.DeepEqual(canonicalJSONValue(t, variants[0].(map[string]any)["schema"]), canonicalJSONValue(t, expected)) {
+	if len(variants) != 1 || !reflect.DeepEqual(canonicalJSONValue(t, expandedPublishedSchema(t, variants[0].(map[string]any)["schema"])), canonicalJSONValue(t, expected)) {
 		t.Fatal("source output schema differs from its native owner")
 	}
 	consumers := []string{}
@@ -157,7 +157,7 @@ func TestSourceStructuralContractMatchesNativeOwnerAndConsumerIdentities(t *test
 		t.Fatal(err)
 	}
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
-	if len(variants) != 1 || !reflect.DeepEqual(canonicalJSONValue(t, variants[0].(map[string]any)["schema"]), canonicalJSONValue(t, want)) {
+	if len(variants) != 1 || !reflect.DeepEqual(canonicalJSONValue(t, expandedPublishedSchema(t, variants[0].(map[string]any)["schema"])), canonicalJSONValue(t, want)) {
 		t.Fatal("shipped source schema differs from the complete native structural projection")
 	}
 	consumers := []string{}

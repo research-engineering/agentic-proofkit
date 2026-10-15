@@ -128,7 +128,7 @@ func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) 
 	if err != nil {
 		return err
 	}
-	contract, err := os.ReadFile(sourceCLIContractPath)
+	contract, err := artifactfile.ReadBounded(".", sourceCLIContractPath, installedclicontract.MaximumContractBytes)
 	if err != nil {
 		return fmt.Errorf("read source CLI contract: %w", err)
 	}

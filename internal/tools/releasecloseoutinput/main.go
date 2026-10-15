@@ -34,6 +34,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/retainedevidence"
@@ -578,7 +579,7 @@ func selfEvidenceCriterion(root string) (criterion, error) {
 func readSelfEvidenceSnapshot(root string) (SelfEvidenceSnapshot, error) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	cliContract, err := readTypedJSON[cliContractEvidence](root, cliContractPath)
+	cliContract, err := readBoundedTypedJSON[cliContractEvidence](root, cliContractPath, installedclicontract.MaximumContractBytes)
 	if err != nil {
 		return SelfEvidenceSnapshot{}, err
 	}
@@ -1998,11 +1999,15 @@ func pathEntryExists(root string, path string) bool {
 }
 
 func readTypedJSON[T any](root string, path string) (T, error) {
+	return readBoundedTypedJSON[T](root, path, 16<<20)
+}
+
+func readBoundedTypedJSON[T any](root string, path string, maximumBytes int64) (T, error) {
 	file, err := os.Open(filepath.Join(root, filepath.FromSlash(path)))
 	if err != nil {
 		var zero T
 		return zero, err
 	}
 	defer file.Close()
-	return admission.DecodeTypedJSON[T](file, 16<<20)
+	return admission.DecodeTypedJSON[T](file, maximumBytes)
 }

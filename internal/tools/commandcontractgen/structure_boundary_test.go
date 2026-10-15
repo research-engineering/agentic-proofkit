@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 func TestNativeRegistryWholeRouteRejectsCoherentDriftBeforeWrite(t *testing.T) {
@@ -76,14 +78,14 @@ func TestContractReadBoundsActualWorkAndPreservesOneSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, size := range []int64{maxContractBytes - 1, maxContractBytes, maxContractBytes + 1, 2 * maxContractBytes} {
+	for _, size := range []int64{installedclicontract.MaximumContractBytes - 1, installedclicontract.MaximumContractBytes, installedclicontract.MaximumContractBytes + 1, 2 * installedclicontract.MaximumContractBytes} {
 		t.Run(strconv.FormatInt(size, 10), func(t *testing.T) {
 			reader := &countingContractReader{source: io.MultiReader(bytes.NewReader(prefix), &contractPadding{remaining: size - int64(len(prefix))})}
 			content, record, err := readContractInput(reader)
-			if reader.bytes != min(size, maxContractBytes+1) {
+			if reader.bytes != min(size, installedclicontract.MaximumContractBytes+1) {
 				t.Fatalf("read %d bytes for size %d", reader.bytes, size)
 			}
-			if size > maxContractBytes {
+			if size > installedclicontract.MaximumContractBytes {
 				if err == nil || !strings.Contains(err.Error(), "exceeds size limit") || content != nil || record != nil {
 					t.Fatalf("overflow admission=%v", err)
 				}
@@ -107,7 +109,7 @@ func TestOversizedContractCannotChangeGeneratedOutputs(t *testing.T) {
 	}
 	before := generatedOutputBytes(t, root)
 	path := filepath.Join(root, cliContractPath)
-	if err := os.Truncate(path, maxContractBytes+1); err != nil {
+	if err := os.Truncate(path, installedclicontract.MaximumContractBytes+1); err != nil {
 		t.Fatal(err)
 	}
 	for _, operation := range []func(string) error{refreshStructures, func(root string) error { return run(root, false) }} {

@@ -15,8 +15,16 @@ import (
 )
 
 const (
-	defaultHost = "127.0.0.1"
-	defaultPort = 0
+	defaultHost   = "127.0.0.1"
+	defaultPort   = 0
+	ephemeralPort = 0
+	maximumPort   = 65535
+
+	planAuthority          = "presentation_adapter_plan"
+	planKind               = "proofkit.requirement-browser-server-plan"
+	planSchemaVersion      = 1
+	portSelectionEphemeral = "ephemeral"
+	portSelectionFixed     = "fixed"
 )
 
 var serverNonClaims = []string{
@@ -88,23 +96,23 @@ func admitServerAddress(options Options) (Options, error) {
 }
 
 func renderedPlan(rendered renderedView, options Options) map[string]any {
-	portSelection := "fixed"
+	portSelection := portSelectionFixed
 	var plannedURL any = browserURL(options.Host, options.Port)
-	if options.Port == 0 {
-		portSelection = "ephemeral"
+	if options.Port == ephemeralPort {
+		portSelection = portSelectionEphemeral
 		plannedURL = nil
 	}
 	return map[string]any{
-		"authority":         "presentation_adapter_plan",
+		"authority":         planAuthority,
 		"host":              options.Host,
 		"htmlByteLength":    servedHTMLByteLength(rendered),
 		"nonClaims":         admit.StringSliceToAny(serverNonClaims),
-		"planKind":          "proofkit.requirement-browser-server-plan",
+		"planKind":          planKind,
 		"port":              options.Port,
 		"portSelection":     portSelection,
 		"renderedAuthority": rendered.authority,
 		"renderedViewKind":  rendered.viewKind,
-		"schemaVersion":     1,
+		"schemaVersion":     planSchemaVersion,
 		"url":               plannedURL,
 		"view":              options.View,
 	}
@@ -123,7 +131,7 @@ func render(raw any, options Options) (renderedView, error) {
 		if err != nil {
 			return renderedView{}, err
 		}
-		return renderedView{authority: "presentation_adapter", html: document, viewKind: "proofkit.requirement-workspace", workspace: &session}, nil
+		return renderedView{authority: workspaceAuthority, html: document, viewKind: workspaceViewKind, workspace: &session}, nil
 	}
 	if options.View == "source" {
 		view, html, err := requirementsourceview.BuildBrowserDocument(raw)
@@ -188,7 +196,7 @@ func admitLoopbackHost(value string) error {
 }
 
 func admitPort(value int) error {
-	if value < 0 || value > 65535 {
+	if value < 0 || value > maximumPort {
 		return fmt.Errorf("requirement browser server port must be an integer from 0 to 65535")
 	}
 	return nil

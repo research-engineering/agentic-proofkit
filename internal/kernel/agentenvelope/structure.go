@@ -5,6 +5,7 @@ import "github.com/research-engineering/agentic-proofkit/internal/kernel/jsonsha
 // Descriptors share Build's limits without copying their numeric policy.
 const (
 	MaxActionItems            = hardMaxActionItems
+	MaxActionEvidenceRefs     = hardMaxActionEvidenceRefs
 	MaxCommandRefs            = hardMaxCommandRefs
 	MaxBlockedPreconditions   = hardMaxBlockedPreconditions
 	MaxClarificationQuestions = hardMaxClarificationQuestions
@@ -21,12 +22,18 @@ type StructureParts struct {
 }
 
 func Structure(envelopeID string, parts StructureParts) jsonshape.Shape {
+	return StructureWithTokenBudget(envelopeID, parts, jsonshape.Null())
+}
+
+// StructureWithTokenBudget keeps the producer's declared token-budget shape;
+// Build copies that value from bounds without enforcing a tokenizer budget.
+func StructureWithTokenBudget(envelopeID string, parts StructureParts, tokenBudget jsonshape.Shape) jsonshape.Shape {
 	text := jsonshape.StringGrammar(`[\s\S]+`)
 	count := jsonshape.IntegerMinimum(0)
 	cost := []jsonshape.Property{
 		jsonshape.Required("affectedRequirementCount", jsonshape.Null()),
 		jsonshape.Required("escalation", text), jsonshape.Required("graphQueryCount", jsonshape.IntegerLiteral(0)),
-		jsonshape.Required("maxTokenBudget", jsonshape.Null()), jsonshape.Required("nonClaim", text),
+		jsonshape.Required("maxTokenBudget", tokenBudget), jsonshape.Required("nonClaim", text),
 		jsonshape.Required("omittedEdgesCounted", jsonshape.BooleanLiteral(true)),
 		jsonshape.Required("referenceClosurePreserved", jsonshape.Boolean()),
 		jsonshape.Required("stopReason", jsonshape.Enum(map[string]struct{}{"blocked_precondition": {}, "wide_or_full_gate_required": {}, "caller_review_required": {}})),
@@ -69,11 +76,17 @@ func SourceReportStructure(kind string, id, hash, state jsonshape.Shape) jsonsha
 // CompatibilityBoundsStructure describes the shared item-count-only bounds
 // used by these producers. Declared counts are not capped at effective limits.
 func CompatibilityBoundsStructure() jsonshape.Shape {
+	return CompatibilityBoundsWithTokenBudgetStructure(jsonshape.Null())
+}
+
+// CompatibilityBoundsWithTokenBudgetStructure changes only the declared
+// token-budget domain; item counts retain the compatibility bounds contract.
+func CompatibilityBoundsWithTokenBudgetStructure(tokenBudget jsonshape.Shape) jsonshape.Shape {
 	text := jsonshape.StringGrammar(`[\s\S]+`)
 	count := jsonshape.IntegerMinimum(0)
 	fields := []jsonshape.Property{
 		jsonshape.Required("escalation", text), jsonshape.Required("fanout", jsonshape.Enum(map[string]struct{}{"bounded": {}, "wide": {}, "full-gate": {}, "wide_or_full_gate_required": {}})),
-		jsonshape.Required("maxTokenBudget", jsonshape.Null()), jsonshape.Required("nonClaim", text),
+		jsonshape.Required("maxTokenBudget", tokenBudget), jsonshape.Required("nonClaim", text),
 		jsonshape.Optional("truncated", jsonshape.BooleanLiteral(true)),
 		jsonshape.Optional("referenceClosurePreserved", jsonshape.BooleanLiteral(false)),
 		jsonshape.Optional("prunedLocalReferenceCount", jsonshape.IntegerMinimum(1)),

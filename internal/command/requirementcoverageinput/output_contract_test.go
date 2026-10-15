@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 func TestNormalizedComposeOutputFitsPublishedClosedRoot(t *testing.T) {
@@ -21,7 +22,7 @@ func TestNormalizedComposeOutputFitsPublishedClosedRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err := admission.DecodeJSON(bytes.NewReader(content), 16<<20)
+	decoded, err := admission.DecodeJSON(bytes.NewReader(content), installedclicontract.MaximumContractBytes)
 	if err != nil {
 		t.Fatal(err)
 	}

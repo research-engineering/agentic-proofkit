@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {expandSharedDefinitions} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_GRADUAL_CONTRACT || new URL('proofkit/cli-contract.v2.json', root)));
@@ -34,8 +35,9 @@ const checks = new Map(commands.flatMap(command => ['input', 'output'].map(direc
   const record = contract.commands.find(row => row.command === command)[direction + 'Contract'];
   const definition = contract.contractDefinitions.find(row => row.definitionId === record.rootDefinitionRef);
   assert.equal(definition.fieldTree.kind, 'structural_json_schema');
+  // Ajv validates the published schema; navigation reads its shared-definition expansion.
   return [command + '/' + direction, definition.fieldTree.variants.map(row => ({
-    id: row.variantId, check: new Ajv2020({strict: false, validateFormats: false}).compile(row.schema), schema: row.schema,
+    id: row.variantId, check: new Ajv2020({strict: false, validateFormats: false}).compile(row.schema), schema: expandSharedDefinitions(row.schema),
   }))];
 })));
 let directory, binary;
@@ -670,7 +672,7 @@ test('shared witness and repair predicates retain their exact finite domains', (
   const property = (shape, key) => shape.properties[key];
   const shared = direction => {
     const ref = contract.commands.find(row => row.command === 'witness-plan')[direction + 'Contract'].rootDefinitionRef;
-    return contract.contractDefinitions.find(row => row.definitionId === ref).fieldTree.variants[0].schema;
+    return expandSharedDefinitions(contract.contractDefinitions.find(row => row.definitionId === ref).fieldTree.variants[0].schema);
   };
   const sharedInput = shared('input');
   const witnessCommand = shape => {

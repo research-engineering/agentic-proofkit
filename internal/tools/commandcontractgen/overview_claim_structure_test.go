@@ -8,6 +8,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/specoverviewclaims"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 func TestOverviewClaimStructuresPreserveCurrentIdentities(t *testing.T) {
@@ -49,7 +50,7 @@ func TestOverviewClaimRefreshRetainsStructuralSummaryAndPathRelation(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, err := admission.DecodeJSON(bytes.NewReader(updated), maxContractBytes)
+	value, err := admission.DecodeJSON(bytes.NewReader(updated), installedclicontract.MaximumContractBytes)
 	if err != nil {
 		t.Fatal(err)
 	}

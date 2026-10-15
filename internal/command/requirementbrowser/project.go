@@ -76,5 +76,5 @@ func prepareProjectWithInspector(ctx context.Context, repositoryRoot string, opt
 	if err != nil {
 		return renderedView{}, Options{}, fmt.Errorf("view could not prepare the project workspace")
 	}
-	return renderedView{authority: "presentation_adapter", html: document, viewKind: "proofkit.requirement-workspace", workspace: &session}, options, nil
+	return renderedView{authority: workspaceAuthority, html: document, viewKind: workspaceViewKind, workspace: &session}, options, nil
 }

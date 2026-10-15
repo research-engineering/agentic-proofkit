@@ -17,6 +17,25 @@ const workspaceCapabilityPlaceholder = "PROOFKIT_BROWSER_CAPABILITY_PLACEHOLDER"
 const workspaceProjectionSchemaVersion = 3
 const questionPacketSchemaVersion = 2
 
+// Question packet and workspace input vocabulary is shared by the native
+// producers and admission below and by their published structures.
+const (
+	questionHandoffKind           = "proofkit.requirement-browser-question"
+	questionStateCancelled        = "cancelled"
+	questionStateExpired          = "expired"
+	questionStateSubmitted        = "submitted"
+	questionSnapshotRole          = "current"
+	questionInstructionAuthority  = "browser_session_submission"
+	questionSourceTextAuthority   = "untrusted_context"
+	handoffContextProfile         = "review"
+	handoffQuoteContextCodePoints = 32
+	workspaceAuthority            = "presentation_adapter"
+	workspaceViewKind             = "proofkit.requirement-workspace"
+	workspaceInputSchemaVersion   = 3
+)
+
+var workspaceInputKeys = []string{"context", "diffInput", "graphInput", "schemaVersion", "workspaceId"}
+
 type workspaceAnchor struct {
 	AnchorID      string
 	JSONPointer   string
@@ -41,7 +60,7 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 	if !ok {
 		return workspaceSession{}, "", fmt.Errorf("requirement browser workspace input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"context", "diffInput", "graphInput", "schemaVersion", "workspaceId"}, "requirement browser workspace input"); err != nil {
+	if err := admit.KnownKeys(record, workspaceInputKeys, "requirement browser workspace input"); err != nil {
 		return workspaceSession{}, "", err
 	}
 	if err := admitWorkspaceInputVersion(record); err != nil {
@@ -114,7 +133,7 @@ func prepareWorkspace(workspaceID string, snapshot requirementcontext.Snapshot, 
 }
 
 func admitWorkspaceInputVersion(record map[string]any) error {
-	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+	if !admit.JSONNumberEquals(record["schemaVersion"], workspaceInputSchemaVersion) {
 		return fmt.Errorf("requirement browser workspace schemaVersion must be 3")
 	}
 	return requireWorkspaceNestedVersions(record)

@@ -6,6 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {compileVariantUnion, expandSharedDefinitions} from "./schema-definitions.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_WORKSPACE_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -25,7 +26,7 @@ const families = Object.fromEntries(names.map(command => [command, Object.fromEn
   assert.equal(binding.rootDefinitionRef, id);
   const definition = contract.contractDefinitions.find(row => row.definitionId === id);
   assert.ok(definition, id);
-  return [direction, ajv.compile({oneOf: definition.fieldTree.variants.map(row => row.schema)})];
+  return [direction, compileVariantUnion(() => new Ajv2020({strict: false, allErrors: false, validateFormats: false}), definition.fieldTree.variants.map(row => row.schema))];
 }))]));
 const seed = command => structuredClone(corpus.observations.find(row => row.command === command && row.name === "positive").input);
 const hash = text => createHash("sha256").update(text).digest("hex");
@@ -81,6 +82,29 @@ test("all predecessor observations preserve exact exit stderr and stdout bytes",
     assert.equal(result.status, row.exitCode, `${label}/exit`);
     assert.equal(result.stderr, row.stderr, `${label}/stderr`);
     assert.equal(hash(result.stdout), row.stdoutSHA256, `${label}/stdout`);
+  }
+});
+
+test("published workspace envelope variants reject independent nested corruption", () => {
+  const mutations = [
+    ["action item", value => {value.actionPlan[0] = 0;}],
+    ["action field", value => {delete value.actionPlan[0].instruction;}],
+    ["unknown action field", value => {value.actionPlan[0].unexpected = true;}],
+    ["empty bounds", value => {value.bounds = {};}],
+    ["missing bound", value => {delete value.bounds.maxActionItems;}],
+    ["declared token budget", value => {value.bounds.maxTokenBudget = 0;}],
+    ["empty cost contract", value => {value.costContract = {};}],
+    ["source state type", value => {value.sourceReport.state = 0;}],
+    ["context item", value => {value.contextRefs[0] = 0;}],
+    ["route question field", value => {delete value.routeQuestions[0].question;}],
+  ];
+  for (const command of [changed, shard]) {
+    const output = native(command, seed(command), ["--agent-envelope"]).output;
+    for (const [label, mutate] of mutations) {
+      const corrupted = structuredClone(output);
+      mutate(corrupted);
+      assert.equal(families[command].output(corrupted), false, `${command}/${label}`);
+    }
   }
 });
 
@@ -165,7 +189,7 @@ test("array elements and optional defaults are independently constrained", () =>
     }
   }
   const base = seed(changed), expected = native(changed, base).stdout;
-  const properties = contract.contractDefinitions.find(row => row.definitionId === `proofkit.${changed}.input.v1.json-schema`).fieldTree.variants[0].schema.properties;
+  const properties = expandSharedDefinitions(contract.contractDefinitions.find(row => row.definitionId === `proofkit.${changed}.input.v1.json-schema`).fieldTree.variants[0].schema).properties;
   assert.equal(properties.includeReverseDependents.default, true, "includeReverseDependents/default");
   assert.equal(properties.packagesRoot.default, "packages", "packagesRoot/default");
   for (const [key, value] of [["includeReverseDependents", true], ["packagesRoot", "packages"]]) {

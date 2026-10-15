@@ -33,7 +33,7 @@ func refreshStructures(root string) error {
 	if err != nil {
 		return err
 	}
-	value, err := admission.DecodeJSON(bytes.NewReader(updated), maxContractBytes)
+	value, err := admission.DecodeJSON(bytes.NewReader(updated), installedclicontract.MaximumContractBytes)
 	if err != nil {
 		return err
 	}
@@ -274,8 +274,16 @@ func enrichedCompatibilitySummary(owner nativeStructure, version json.Number, ra
 			} {
 				obsolete = obsolete || note == prefix+suffix
 			}
+			if legacy, owned := legacyRootShapeNotes[predecessor]; owned && note == legacy {
+				obsolete = true
+			}
+			// A nested-contract note may append the retired root-shape reference.
+			obsolete = obsolete || strings.HasPrefix(note, "nested ") && strings.HasSuffix(note, " contract plus root-shape definition "+predecessor)
 			if strings.HasPrefix(note, prefix) && !obsolete {
 				return nil, fmt.Errorf("compatibility note contains an unowned annotation suffix")
+			}
+			if strings.Contains(note, predecessor) && !obsolete {
+				return nil, fmt.Errorf("compatibility note references a retired structural definition")
 			}
 		}
 		if !obsolete {
@@ -283,6 +291,12 @@ func enrichedCompatibilitySummary(owner nativeStructure, version json.Number, ra
 		}
 	}
 	return result, nil
+}
+
+// A note written before the "root-shape-only definition <id>; ..." form is
+// retired only by the exact predecessor that owns it.
+var legacyRootShapeNotes = map[string]string{
+	"proofkit.view.output.v1.root-shape": "Root-shape-only variants; nested fields, semantic admission, host effects and complete execution remain native-owner and native-witness claims.",
 }
 
 func generatedVersionHeader(owner nativeStructure, note string) bool {

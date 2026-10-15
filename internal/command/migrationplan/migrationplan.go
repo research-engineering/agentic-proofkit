@@ -24,6 +24,63 @@ var migrationNonClaims = []string{
 	"Migration plans do not approve merge, rollout, or old-owner retirement.",
 }
 
+// Admission inventories and vocabularies are shared with the structural
+// description; they are not a second policy source.
+var (
+	inputKeys               = []string{"followUpCommands", "migrationId", "nonClaims", "parityEvidenceRefs", "retainedOwners", "retirementCandidates", "schemaVersion", "sourceProofOwners", "targetProofkitRefs"}
+	sourceOwnerKeys         = []string{"ownerId", "ownerKind", "path", "retirementPolicy"}
+	targetRefKeys           = []string{"path", "targetId", "targetKind"}
+	parityEvidenceKeys      = []string{"evidenceId", "evidenceRef", "nonClaim", "sourceOwnerId", "targetId"}
+	retirementCandidateKeys = []string{"ownerId", "reason", "removalRef"}
+	followUpCommandKeys     = []string{"command", "commandId", "nonClaim", "owner", "phase"}
+	sourceOwnerKinds        = []string{"local_script", "local_manifest", "local_doc", "local_test", "other"}
+	retirementPolicies      = []string{"candidate", "retain"}
+	targetKinds             = []string{"proofkit_input", "proofkit_report", "proofkit_profile", "proofkit_view"}
+	commandOwners           = []string{consumerRepositoryOwner}
+)
+
+const (
+	planKind                       = "proofkit.migration-plan"
+	planStateReady                 = "ready_for_caller_review"
+	planStateBlocked               = "blocked"
+	consumerRepositoryOwner        = "consumer_repository"
+	actionIDPrefix                 = "proofkit.migration-plan.action."
+	retireActionSuffixPrefix       = "retire-"
+	retirementInstructionPrefix    = "Review retirement candidate "
+	retirementInstructionSeparator = ": "
+	actionNonClaim                 = "Migration plan actions route caller-owned work only and do not approve edits, deletion, merge, rollout, or proof freshness."
+	blockerIDPrefix                = "proofkit.migration-plan.blocker."
+	blockerNonClaim                = "Migration blockers are caller-review prompts and do not prove old-owner correctness or target readiness."
+)
+
+// Every phase except retire-old-owner emits exactly one fixed instruction.
+var phaseInstructions = map[string]string{
+	"baseline":                   "Record the current caller-owned proof owners before changing proof infrastructure.",
+	"parallel-proof":             "Keep old and target proofkit surfaces side by side until caller-owned parity evidence exists.",
+	"parity-check":               "Review caller-provided parity evidence without treating parity as correctness.",
+	"post-retirement-validation": "Run caller-owned post-retirement validation after any old-owner removal.",
+}
+
+type blockerRule struct {
+	reason           string
+	requiredEvidence string
+}
+
+var (
+	retainedOwnerUnknownSource = blockerRule{"retained owner must reference a source proof owner", "sourceProofOwners.ownerId"}
+	parityUnknownSource        = blockerRule{"parity evidence must reference a source proof owner", "sourceProofOwners.ownerId"}
+	parityUnknownTarget        = blockerRule{"parity evidence must reference a target proofkit ref", "targetProofkitRefs.targetId"}
+	candidateUnknownSource     = blockerRule{"retirement candidate must reference a source proof owner", "sourceProofOwners.ownerId"}
+	candidateRetainPolicy      = blockerRule{"retirement candidate must not reference a retained source proof owner", "sourceProofOwners.retirementPolicy"}
+	candidateRetainedOwner     = blockerRule{"retirement candidate must not be listed in retainedOwners", "retainedOwners"}
+	candidateMissingParity     = blockerRule{"retirement candidate requires caller-provided parity evidence for a declared target", "parityEvidenceRefs"}
+	candidateMissingValidation = blockerRule{"retirement candidate requires post-retirement validation commands", "followUpCommands[phase=post-retirement-validation]"}
+	blockerRules               = []blockerRule{
+		retainedOwnerUnknownSource, parityUnknownSource, parityUnknownTarget, candidateUnknownSource,
+		candidateRetainPolicy, candidateRetainedOwner, candidateMissingParity, candidateMissingValidation,
+	}
+)
+
 type sourceProofOwner struct {
 	OwnerID          string
 	OwnerKind        string
@@ -93,10 +150,10 @@ func build(input input) (map[string]any, int) {
 	if len(blockers) == 0 {
 		admittedRetirementCandidates = input.RetirementCandidates
 	}
-	planState := "ready_for_caller_review"
+	planState := planStateReady
 	exitCode := 0
 	if len(blockers) > 0 {
-		planState = "blocked"
+		planState = planStateBlocked
 		exitCode = 1
 	}
 	nonClaims := sortedUniqueText(append(append([]string{}, migrationNonClaims...), input.NonClaims...), "migration plan nonClaims", false)
@@ -106,7 +163,7 @@ func build(input input) (map[string]any, int) {
 		"nonClaims":            stringsToAny(nonClaims),
 		"parityEvidenceRefs":   parityEvidenceToAny(input.ParityEvidenceRefs),
 		"phases":               phasesToAny(buildPhases(input, admittedRetirementCandidates)),
-		"planKind":             "proofkit.migration-plan",
+		"planKind":             planKind,
 		"planState":            planState,
 		"retainedOwners":       stringsToAny(input.RetainedOwners),
 		"retirementCandidates": retirementCandidatesToAny(input.RetirementCandidates),
@@ -121,7 +178,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("migration plan input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"followUpCommands", "migrationId", "nonClaims", "parityEvidenceRefs", "retainedOwners", "retirementCandidates", "schemaVersion", "sourceProofOwners", "targetProofkitRefs"}, "migration plan input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "migration plan input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -185,14 +242,14 @@ func buildPhases(input input, admittedRetirementCandidates []retirementCandidate
 func actionsForPhase(phase string, input input, admittedRetirementCandidates []retirementCandidate) []any {
 	phaseCommands := commandIDsForPhase(input.FollowUpCommands, phase)
 	if phase == "baseline" {
-		return []any{action("baseline", "Record the current caller-owned proof owners before changing proof infrastructure.", sourceOwnerPaths(input.SourceProofOwners), phaseCommands)}
+		return []any{action(phase, phaseInstructions[phase], sourceOwnerPaths(input.SourceProofOwners), phaseCommands)}
 	}
 	if phase == "parallel-proof" {
 		refs := append(sourceOwnerPaths(input.SourceProofOwners), targetRefPaths(input.TargetRefs)...)
-		return []any{action("parallel-proof", "Keep old and target proofkit surfaces side by side until caller-owned parity evidence exists.", refs, phaseCommands)}
+		return []any{action(phase, phaseInstructions[phase], refs, phaseCommands)}
 	}
 	if phase == "parity-check" {
-		return []any{action("parity-check", "Review caller-provided parity evidence without treating parity as correctness.", parityEvidencePaths(input.ParityEvidenceRefs), phaseCommands)}
+		return []any{action(phase, phaseInstructions[phase], parityEvidencePaths(input.ParityEvidenceRefs), phaseCommands)}
 	}
 	if phase == "retire-old-owner" {
 		actions := []any{}
@@ -204,25 +261,25 @@ func actionsForPhase(phase string, input input, admittedRetirementCandidates []r
 				}
 			}
 			actions = append(actions, action(
-				"retire-"+candidate.OwnerID,
-				fmt.Sprintf("Review retirement candidate %s: %s", candidate.OwnerID, candidate.Reason),
+				retireActionSuffixPrefix+candidate.OwnerID,
+				retirementInstructionPrefix+candidate.OwnerID+retirementInstructionSeparator+candidate.Reason,
 				refs,
 				phaseCommands,
 			))
 		}
 		return actions
 	}
-	return []any{action("post-retirement-validation", "Run caller-owned post-retirement validation after any old-owner removal.", targetRefPaths(input.TargetRefs), phaseCommands)}
+	return []any{action(phase, phaseInstructions[phase], targetRefPaths(input.TargetRefs), phaseCommands)}
 }
 
 func action(suffix string, instruction string, evidenceRefs []string, commandIDs []string) map[string]any {
 	return map[string]any{
-		"actionId":     "proofkit.migration-plan.action." + suffix,
+		"actionId":     actionIDPrefix + suffix,
 		"commandIds":   stringsToAny(sortedUnique(evidenceOrCommandIDs(commandIDs))),
 		"evidenceRefs": stringsToAny(sortedUnique(evidenceOrCommandIDs(evidenceRefs))),
 		"instruction":  instruction,
-		"nonClaim":     "Migration plan actions route caller-owned work only and do not approve edits, deletion, merge, rollout, or proof freshness.",
-		"owner":        "consumer_repository",
+		"nonClaim":     actionNonClaim,
+		"owner":        consumerRepositoryOwner,
 	}
 }
 
@@ -247,15 +304,15 @@ func migrationBlockers(input input) []blockerItem {
 	blockers := []blockerItem{}
 	for _, ownerID := range input.RetainedOwners {
 		if _, ok := sourceOwnerIDs[ownerID]; !ok {
-			blockers = append(blockers, blocker(ownerID, "retained owner must reference a source proof owner", []string{"sourceProofOwners.ownerId"}))
+			blockers = append(blockers, blocker(ownerID, retainedOwnerUnknownSource))
 		}
 	}
 	for _, evidence := range input.ParityEvidenceRefs {
 		if _, ok := sourceOwnerIDs[evidence.SourceOwnerID]; !ok {
-			blockers = append(blockers, blocker(evidence.SourceOwnerID, "parity evidence must reference a source proof owner", []string{"sourceProofOwners.ownerId"}))
+			blockers = append(blockers, blocker(evidence.SourceOwnerID, parityUnknownSource))
 		}
 		if _, ok := targetIDs[evidence.TargetID]; !ok {
-			blockers = append(blockers, blocker(evidence.SourceOwnerID, "parity evidence must reference a target proofkit ref", []string{"targetProofkitRefs.targetId"}))
+			blockers = append(blockers, blocker(evidence.SourceOwnerID, parityUnknownTarget))
 		}
 	}
 	validParityByOwner := map[string][]parityEvidenceRef{}
@@ -271,21 +328,21 @@ func migrationBlockers(input input) []blockerItem {
 	}
 	for _, candidate := range input.RetirementCandidates {
 		if _, ok := sourceOwnerIDs[candidate.OwnerID]; !ok {
-			blockers = append(blockers, blocker(candidate.OwnerID, "retirement candidate must reference a source proof owner", []string{"sourceProofOwners.ownerId"}))
+			blockers = append(blockers, blocker(candidate.OwnerID, candidateUnknownSource))
 			continue
 		}
 		sourceOwner := sourceOwnersByID[candidate.OwnerID]
 		if sourceOwner.RetirementPolicy == "retain" {
-			blockers = append(blockers, blocker(candidate.OwnerID, "retirement candidate must not reference a retained source proof owner", []string{"sourceProofOwners.retirementPolicy"}))
+			blockers = append(blockers, blocker(candidate.OwnerID, candidateRetainPolicy))
 		}
 		if _, ok := retainedOwnerIDs[candidate.OwnerID]; ok {
-			blockers = append(blockers, blocker(candidate.OwnerID, "retirement candidate must not be listed in retainedOwners", []string{"retainedOwners"}))
+			blockers = append(blockers, blocker(candidate.OwnerID, candidateRetainedOwner))
 		}
 		if len(validParityByOwner[candidate.OwnerID]) == 0 {
-			blockers = append(blockers, blocker(candidate.OwnerID, "retirement candidate requires caller-provided parity evidence for a declared target", []string{"parityEvidenceRefs"}))
+			blockers = append(blockers, blocker(candidate.OwnerID, candidateMissingParity))
 		}
 		if len(postRetirementCommands) == 0 {
-			blockers = append(blockers, blocker(candidate.OwnerID, "retirement candidate requires post-retirement validation commands", []string{"followUpCommands[phase=post-retirement-validation]"}))
+			blockers = append(blockers, blocker(candidate.OwnerID, candidateMissingValidation))
 		}
 	}
 	sort.Slice(blockers, func(left int, right int) bool {
@@ -294,19 +351,26 @@ func migrationBlockers(input input) []blockerItem {
 	return blockers
 }
 
-func blocker(ownerID string, reason string, requiredEvidence []string) blockerItem {
+func blocker(ownerID string, rule blockerRule) blockerItem {
 	return blockerItem{
-		BlockerID:        "proofkit.migration-plan.blocker." + ownerID + "." + blockerReasonSlug(reason),
-		NonClaim:         "Migration blockers are caller-review prompts and do not prove old-owner correctness or target readiness.",
+		BlockerID:        blockerIDPrefix + ownerID + "." + blockerReasonSlug(rule.reason),
+		NonClaim:         blockerNonClaim,
 		OwnerID:          ownerID,
-		Reason:           reason,
-		RequiredEvidence: requiredEvidence,
+		Reason:           rule.reason,
+		RequiredEvidence: []string{rule.requiredEvidence},
 	}
 }
 
+var (
+	slugWordBoundary = regexp.MustCompile(`([a-z0-9])([A-Z])`)
+	slugSeparators   = regexp.MustCompile(`[^a-z0-9]+`)
+)
+
+// A reason may name a camelCase field; its words become separate lowercase
+// slug words instead of being dropped with their capital letters.
 func blockerReasonSlug(reason string) string {
-	replaced := regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(reason, "-")
-	return strings.Trim(replaced, "-")
+	words := strings.ToLower(slugWordBoundary.ReplaceAllString(reason, "$1-$2"))
+	return strings.Trim(slugSeparators.ReplaceAllString(words, "-"), "-")
 }
 
 func sortedSourceProofOwners(raw any) ([]sourceProofOwner, error) {
@@ -320,7 +384,7 @@ func sortedSourceProofOwners(raw any) ([]sourceProofOwner, error) {
 		if !ok {
 			return nil, fmt.Errorf("migration plan source owner must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"ownerId", "ownerKind", "path", "retirementPolicy"}, "migration plan source owner"); err != nil {
+		if err := admit.KnownKeys(record, sourceOwnerKeys, "migration plan source owner"); err != nil {
 			return nil, err
 		}
 		ownerID, err := admit.RuleID(record["ownerId"], "migration plan source ownerId")
@@ -331,11 +395,11 @@ func sortedSourceProofOwners(raw any) ([]sourceProofOwner, error) {
 		if err != nil {
 			return nil, err
 		}
-		ownerKind, err := enum(record["ownerKind"], []string{"local_script", "local_manifest", "local_doc", "local_test", "other"}, "migration plan source ownerKind")
+		ownerKind, err := enum(record["ownerKind"], sourceOwnerKinds, "migration plan source ownerKind")
 		if err != nil {
 			return nil, err
 		}
-		retirementPolicy, err := enum(record["retirementPolicy"], []string{"candidate", "retain"}, "migration plan source owner retirementPolicy")
+		retirementPolicy, err := enum(record["retirementPolicy"], retirementPolicies, "migration plan source owner retirementPolicy")
 		if err != nil {
 			return nil, err
 		}
@@ -361,7 +425,7 @@ func sortedTargetRefs(raw any) ([]targetRef, error) {
 		if !ok {
 			return nil, fmt.Errorf("migration plan target ref must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"path", "targetId", "targetKind"}, "migration plan target ref"); err != nil {
+		if err := admit.KnownKeys(record, targetRefKeys, "migration plan target ref"); err != nil {
 			return nil, err
 		}
 		targetID, err := admit.RuleID(record["targetId"], "migration plan targetId")
@@ -372,7 +436,7 @@ func sortedTargetRefs(raw any) ([]targetRef, error) {
 		if err != nil {
 			return nil, err
 		}
-		targetKind, err := enum(record["targetKind"], []string{"proofkit_input", "proofkit_report", "proofkit_profile", "proofkit_view"}, "migration plan targetKind")
+		targetKind, err := enum(record["targetKind"], targetKinds, "migration plan targetKind")
 		if err != nil {
 			return nil, err
 		}
@@ -398,7 +462,7 @@ func sortedParityEvidenceRefs(raw any) ([]parityEvidenceRef, error) {
 		if !ok {
 			return nil, fmt.Errorf("migration plan parity evidence must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"evidenceId", "evidenceRef", "nonClaim", "sourceOwnerId", "targetId"}, "migration plan parity evidence"); err != nil {
+		if err := admit.KnownKeys(record, parityEvidenceKeys, "migration plan parity evidence"); err != nil {
 			return nil, err
 		}
 		evidenceID, err := admit.RuleID(record["evidenceId"], "migration plan parity evidenceId")
@@ -440,7 +504,7 @@ func sortedRetirementCandidates(raw any) ([]retirementCandidate, error) {
 		if !ok {
 			return nil, fmt.Errorf("migration plan retirement candidate must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"ownerId", "reason", "removalRef"}, "migration plan retirement candidate"); err != nil {
+		if err := admit.KnownKeys(record, retirementCandidateKeys, "migration plan retirement candidate"); err != nil {
 			return nil, err
 		}
 		ownerID, err := admit.RuleID(record["ownerId"], "migration plan retirement candidate ownerId")
@@ -474,7 +538,7 @@ func sortedFollowUpCommands(raw any) ([]followUpCommand, error) {
 		if !ok {
 			return nil, fmt.Errorf("migration plan follow-up command must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"command", "commandId", "nonClaim", "owner", "phase"}, "migration plan follow-up command"); err != nil {
+		if err := admit.KnownKeys(record, followUpCommandKeys, "migration plan follow-up command"); err != nil {
 			return nil, err
 		}
 		commandID, err := admit.RuleID(record["commandId"], "migration plan commandId")
@@ -489,7 +553,7 @@ func sortedFollowUpCommands(raw any) ([]followUpCommand, error) {
 		if err != nil {
 			return nil, err
 		}
-		owner, err := enum(record["owner"], []string{"consumer_repository"}, "migration plan command owner")
+		owner, err := enum(record["owner"], commandOwners, "migration plan command owner")
 		if err != nil {
 			return nil, err
 		}
