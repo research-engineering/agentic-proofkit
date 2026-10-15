@@ -9,13 +9,17 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/changeworkflowplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
+	"github.com/research-engineering/agentic-proofkit/internal/command/projectstatus"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageinput"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementdiff"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceconversion"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
@@ -155,6 +159,21 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 	}
 	if descriptor.name == "receipt-currentness-scope" {
 		lines = append(lines, "", strings.TrimSuffix(receiptcurrentnessscope.InputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "witness-scheduler-plan" {
+		lines = append(lines, "", strings.TrimSuffix(witnessschedulerplan.InputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "requirement-context-slice" {
+		lines = append(lines, "", strings.TrimSuffix(requirementcontext.SliceInputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "requirement-semantic-diff" {
+		lines = append(lines, "", strings.TrimSuffix(requirementdiff.InputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "requirement-source-admission" {
+		lines = append(lines, "", strings.TrimSuffix(requirementsourceadmission.ScenarioGuide(renderer), "\n"))
+	}
+	if descriptor.name == "status" || descriptor.name == "next" {
+		lines = append(lines, "", strings.TrimSuffix(projectstatus.ContinuationGuide(renderer), "\n"))
 	}
 	if pointer := adoptionGuidePointer(descriptor.name); pointer != "" {
 		lines = append(lines, "", "CLI authoring continuation:",
