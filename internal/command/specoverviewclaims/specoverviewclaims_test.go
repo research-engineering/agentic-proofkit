@@ -201,6 +201,23 @@ func TestBuildRejectsMissingClaimNonClaims(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsUnsortedOrDuplicateBoundaryNonClaims(t *testing.T) {
+	for name, nonClaims := range map[string][]any{
+		"duplicate": {"Spec overview duplicate non-claim.", "Spec overview duplicate non-claim."},
+		"unsorted":  {"Spec overview second non-claim.", "Spec overview first non-claim."},
+	} {
+		t.Run(name, func(t *testing.T) {
+			input := validBoundary()
+			input["nonClaims"] = nonClaims
+
+			_, _, err := Build(input)
+			if err == nil || err.Error() != "spec overview claim nonClaims must be sorted and unique" {
+				t.Fatalf("Build() error = %v, want sorted and unique nonClaims refusal", err)
+			}
+		})
+	}
+}
+
 func firstClaim(input map[string]any) map[string]any {
 	return input["claims"].([]any)[0].(map[string]any)
 }
