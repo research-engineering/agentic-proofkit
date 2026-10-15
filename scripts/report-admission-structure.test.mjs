@@ -6,6 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {assertCLITransport} from "./cli-process.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_REPORT_ADMISSION_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -46,8 +47,7 @@ function native(family, input, expected, label, extra = []) {
   const result = spawnSync(binary, [family.command, "--input", "-", ...extra], {
     input: typeof input === "string" ? input : JSON.stringify(input), encoding: "utf8", timeout: 10_000, maxBuffer: 8 << 20,
   });
-  assert.equal(result.error, undefined, `${label}/transport-error`);
-  assert.equal(result.signal, null, `${label}/transport-signal`);
+  assertCLITransport(result, label);
   if (expected === "rejected") {
     assert.equal(result.status, 1, label);
     assert.equal(result.stdout, "", label);

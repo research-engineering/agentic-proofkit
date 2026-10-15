@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {before, after} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {assertCLITransport} from './cli-process.mjs';
 
 const root = new URL('../', import.meta.url);
 const source = 'requirement-proof-source-set', view = 'requirement-proof-view';
@@ -38,7 +39,7 @@ after(() => {if (directory) rmSync(directory, {recursive: true, force: true});})
 function invoke(command, value, flags = []) {
   const result = spawnSync(binary, [command, '--input', '-', ...flags], {
     input: JSON.stringify(value), encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
-  assert.equal(result.error, undefined); assert.equal(result.signal, null); return result;
+  return assertCLITransport(result);
 }
 function output(command, input, flags = []) {
   const result = invoke(command, input, flags);
@@ -53,7 +54,7 @@ test('lookup contracts conserve73actual predecessor process and rendered streams
     const result = spawnSync(binary, row.argv, {input: row.carrier === 'stdin' ? row.input : undefined,
       stdio: row.carrier === 'argv-only' ? ['ignore', 'pipe', 'pipe'] : undefined,
       encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
-    assert.equal(result.error, undefined); assert.equal(result.signal, null);
+    assertCLITransport(result, row.name);
     assert.equal(result.status, row.exitCode, row.name);
     assert.equal(hash(result.stdout), row.stdoutSHA256, row.name + '/stdout');
     assert.equal(hash(result.stderr), row.stderrSHA256, row.name + '/stderr');

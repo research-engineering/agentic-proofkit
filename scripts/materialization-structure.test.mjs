@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {assertCLITransport} from './cli-process.mjs';
 import {compileVariantUnion} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -39,7 +40,7 @@ function native(command, repo, value, flags = [], executable = binary) {
   if (value !== undefined) argv.push('--input', '-');
   const result = spawnSync(executable, argv, {input: value === undefined ? undefined : JSON.stringify(value),
     encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
-  assert.equal(result.error, undefined); assert.equal(result.signal, null);
+  assertCLITransport(result);
   return result;
 }
 function validates(command, direction, value, expected = true, label = '') {

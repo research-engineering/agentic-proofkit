@@ -6,6 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
+import {assertCLITransport} from "./cli-process.mjs";
 
 const root = new URL("../", import.meta.url), producer = "producer-policy-self-proof", migration = "migration-parity-admission";
 const baseline = JSON.parse(readFileSync(new URL("internal/app/testdata/authority-guard-native-observations.json", root)));
@@ -41,7 +42,7 @@ after(() => {if (directory) rmSync(directory, {recursive: true, force: true});})
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 function invoke(command, input, argv = [command, "--input", "-"]) {
   const result = spawnSync(binary, argv, {input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
-  assert.equal(result.error, undefined); assert.equal(result.signal, null); return result;
+  return assertCLITransport(result);
 }
 const utf8Order = (a, b) => Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"));
 const normalizedText = text => text.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, "");

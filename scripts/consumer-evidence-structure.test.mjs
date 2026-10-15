@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {before, after} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
+import {assertCLITransport} from './cli-process.mjs';
 
 const root = new URL('../', import.meta.url);
 const external = 'external-consumer', registry = 'registry-consumer', composer = 'registry-consumer-proof-input-compose';
@@ -34,7 +35,7 @@ after(() => {if (directory) rmSync(directory, {recursive: true, force: true});})
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 function invoke(command, input, argv = [command, '--input', '-']) {
   const result = spawnSync(binary, argv, {input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
-  assert.equal(result.error, undefined); assert.equal(result.signal, null); return result;
+  return assertCLITransport(result);
 }
 const seed = command => JSON.parse(baseline.observations.find(x => x.command === command && x.name === 'valid').input);
 function output(command, input) {
