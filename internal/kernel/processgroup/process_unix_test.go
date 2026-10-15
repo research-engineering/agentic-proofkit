@@ -5,6 +5,7 @@ package processgroup
 import (
 	"context"
 	"errors"
+	"os"
 	"os/exec"
 	"slices"
 	"strings"
@@ -344,5 +345,26 @@ func TestRetainedRejectsCanceledAndHiddenCopiersBeforeStart(t *testing.T) {
 	command = exec.CommandContext(t.Context(), "/bin/sh", "-c", "exit 0")
 	if _, err := Start(t.Context(), command); err == nil || command.Process != nil {
 		t.Fatal("context watcher admitted")
+	}
+}
+
+// A foreign waiter can reap the retained child only outside this owner. The
+// observer must then revoke numeric targeting instead of reporting plain EIO.
+func TestRetainedForeignReapRevokesOwnership(t *testing.T) {
+	command := exec.Command("/bin/sh", "-c", "exit 0")
+	if err := configure(command); err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	pid := command.Process.Pid
+	var status syscall.WaitStatus
+	if _, err := syscall.Wait4(pid, &status, 0, nil); err != nil {
+		t.Fatal(err)
+	}
+	terminal, err := observeTerminal(pid, os.Getpid())
+	if terminal || !errors.Is(err, ErrOwnershipLost) || errors.Is(err, syscall.EIO) {
+		t.Fatalf("foreign reap: %v %v", terminal, err)
 	}
 }

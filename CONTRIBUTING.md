@@ -100,18 +100,26 @@ by the callers. No library installs a global signal handler; source entrypoints
 retain their SIGINT/SIGTERM scopes through cleanup and join.
 
 Darwin observation admits the pinned x/sys `kern.proc.pid` SPI only for these
-source tools: full-sized records, matching PID/parent/group, and SZOMB. Linux
+source tools: exactly one full-sized record, matching PID/parent/group, and
+SZOMB. A truncated record or a permission error remains an ordinary observation
+failure: the observer runs only before the sole reap, so the unreaped child
+still pins its PID and group and retained cleanup may signal them. Linux
 uses fresh `waitid(P_PID, WEXITED|WNOWAIT|WNOHANG)` records. Source-check targets
-are the configured Ubuntu 24.04 and macos-15 jobs and the native Linux wheel
-verifier profile, each requiring actual host/API qualification. A CI label,
-cross-build or one local run is not native qualification of another host.
+are the configured Ubuntu 24.04, macos-15 (arm64) and macos-15-intel (x86_64)
+jobs and the native Linux wheel verifier profile, each requiring actual
+host/API qualification. A CI label, cross-build or one local run is not native
+qualification of another host. macOS 13 and 14 are not executed: no hosted
+macOS 13 image exists, and GitHub retires `macos-14` on 2026-11-02 after failing
+brownouts (actions/runner-images#13518).
 This package is outside the CLI dependency closure on all four shipped targets;
 consumer wheel tags and platform minima are unchanged. Import or payload changes
 require a fresh closure proof, and unsupported hosts fail before child Start.
 Retained identity assumes an owned Setpgid Start and no foreign/second reap,
 auto-reap, Release, reparenting or tracing interference.
 
-ECHILD or an identity contradiction revokes authority: no numeric signal,
+ECHILD, ESRCH, a zero-length Darwin `kern.proc.pid` answer (a foreign reap;
+the x/sys single-record wrapper reports it as EIO) or an identity contradiction
+revokes authority: no numeric signal,
 reacquisition or Wait is permitted. Tools close and join owned local streams,
 report fatal ownership loss with child cleanup unverified, and stop further
 work. Permanent kernel refusal or a stuck syscall retains an outstanding join

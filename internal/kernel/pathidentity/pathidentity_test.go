@@ -76,3 +76,40 @@ func mustKey(t *testing.T, value string) string {
 	}
 	return key
 }
+
+func TestReservedComponentEquivalenceCoversPortableSpellings(t *testing.T) {
+	for value, want := range map[string]bool{
+		".git": true, ".git/hooks/pre-commit": true, ".GIT/config": true, ".Git": true,
+		"vendor/module/.git/hooks/post-checkout": true, ".g\u200cit/config": true, "\ufeff.git": true,
+		".gi\u200dt/hooks": true, ".git\u206a": true,
+		".github/workflows/ci.yml": false, ".gitignore": false, "git/hooks": false, "docs/.git-notes": false,
+		"a.git/config": false, ".g\u012bt/config": false, "a/\u200c/b": false,
+	} {
+		got, err := ContainsComponentEquivalent(value, ".git")
+		if err != nil || got != want {
+			t.Fatalf("%q: got %v %v, want %v", value, got, err, want)
+		}
+	}
+	for _, invalid := range []string{"", "/.git", "a/../.git", `.git\hooks`} {
+		if _, err := ContainsComponentEquivalent(invalid, ".git"); err == nil {
+			t.Fatalf("%q admitted", invalid)
+		}
+	}
+	for _, pair := range []struct {
+		value, reserved string
+		want            bool
+	}{
+		{".g\u200cit", ".g\u200cit", true}, {"\ufeff.git", "\ufeff.git", true},
+		{".git/config", ".g\u200cit", true}, {".github", ".g\u200cit", false},
+	} {
+		got, err := ContainsComponentEquivalent(pair.value, pair.reserved)
+		if err != nil || got != pair.want {
+			t.Fatalf("%q against reserved %q: got %v %v, want %v", pair.value, pair.reserved, got, err, pair.want)
+		}
+	}
+	for _, reserved := range []string{"", "a/b", "..", "\u200c", "\u200c\u200d", ".\u200c."} {
+		if _, err := ContainsComponentEquivalent("a", reserved); err == nil {
+			t.Fatalf("reserved %q admitted", reserved)
+		}
+	}
+}

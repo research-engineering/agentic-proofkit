@@ -78,7 +78,13 @@ execution receipts, and merge policy.
   caller-owned hierarchy through shared safe browser document fragments,
   deterministic CLI JSON, Markdown, HTML, repository-confined same-parent
   atomic output replacement after final destination-parent plus
-  temporary-object identity, mode, and content admission, and loopback browser
+  temporary-object identity, mode, and content admission, refusal before any
+  write of output paths that have a component equivalent to `.git` or
+  `.agentic-proofkit` at any depth (canonical caseless and HFS+-ignorable
+  equivalence), that are invalid UTF-8 or exceed 1024 bytes or 64 components,
+  or that have a component which becomes `.` or `..` once HFS+-ignorable code
+  points are removed, replacement that keeps read/write permission bits but
+  never execute bits, and loopback browser
   serving with one exact supported-view vocabulary without accepting
   caller-owned raw HTML or making rendered output authoritative.
 - `REQ-PROOFKIT-SPEC-010`: requirement impact input composition converts

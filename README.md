@@ -141,7 +141,10 @@ environment already places it on `PATH`; npm examples use explicit offline
 resolution.
 
 <!-- proofkit:platform-python:start -->
-Supported binary targets are macOS 13 or later on arm64 or x64.
+Supported binary targets are macOS 15 or later on arm64 or x64, executed by
+required CI on the GitHub-hosted `macos-15` and `macos-15-intel` runners. Darwin
+binaries declare a macOS 13.0 minimum in their Mach-O build metadata; macOS 13
+and 14 are binary-compatible by that metadata only, not executed or verified.
 Linux manylinux 2.17 or later is supported on arm64 or x64. Windows is unsupported. The Python
 runner requires Python 3.11 or later and wraps the same Go CLI; it is not a
 Python SDK.

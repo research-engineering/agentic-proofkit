@@ -20,10 +20,36 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathidentity"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/repositorytransaction"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 var outputWriterBarrier func(stage string, outputPath string)
+
+// Presentation output never enters Git metadata or Proofkit transaction control
+// state. The writer root is the working directory, not a known repository root,
+// so a protected component is refused at any depth.
+var protectedOutputComponents = []string{".git", repositorytransaction.ControlRoot}
+
+// admitPresentationOutputPath is the sole --output path predicate. Paths outside
+// the pathidentity domain are refused because their aliasing is not decided.
+func admitPresentationOutputPath(value string) (string, error) {
+	relative, err := admit.SafeRepoRelativePath(value, "requirement-spec-tree-view output")
+	if err != nil {
+		return "", err
+	}
+	for _, component := range protectedOutputComponents {
+		protected, err := pathidentity.ContainsComponentEquivalent(relative, component)
+		if err != nil {
+			return "", fmt.Errorf("requirement-spec-tree-view output path identity is invalid")
+		}
+		if protected {
+			return "", fmt.Errorf("requirement-spec-tree-view output must not enter repository metadata or Proofkit control state")
+		}
+	}
+	return relative, nil
+}
 
 func runRequirementView(command string, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
 	options, err := parseRequirementViewArgs(command, args)
@@ -102,7 +128,7 @@ func parseRequirementViewArgs(command string, args []string) (requirementViewArg
 			if args[index+1] == "-" {
 				return requirementViewArgs{}, fmt.Errorf("--output requires a repository-relative POSIX path other than -")
 			}
-			outputPath, err := admit.SafeRepoRelativePath(args[index+1], "requirement-spec-tree-view output")
+			outputPath, err := admitPresentationOutputPath(args[index+1])
 			if err != nil {
 				return requirementViewArgs{}, err
 			}
@@ -247,7 +273,7 @@ func writeViewText(output string, exitCode int, err error, outputPath string, st
 }
 
 func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
-	relative, err := admit.SafeRepoRelativePath(filepath.ToSlash(nativePath), "output path")
+	relative, err := admitPresentationOutputPath(filepath.ToSlash(nativePath))
 	if err != nil {
 		return err
 	}
@@ -279,7 +305,9 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 			return fmt.Errorf("output path must be a regular file: %s", relative)
 		}
 		priorOutput = info
-		outputMode = info.Mode().Perm()
+		// Replacement keeps read/write bits but never inherits execute bits:
+		// presentation bytes must not become a runnable hook or script.
+		outputMode = info.Mode().Perm() &^ 0o111
 	} else if !os.IsNotExist(err) {
 		return err
 	}

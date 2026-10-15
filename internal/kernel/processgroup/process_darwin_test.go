@@ -3,8 +3,10 @@ package processgroup
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -49,6 +51,88 @@ func TestDarwinObservationClassification(t *testing.T) {
 	}
 	if terminal, err := classifyDarwin(nil, nil, 123, 1); terminal || err == nil {
 		t.Fatal("empty record admitted")
+	}
+}
+
+func TestDarwinRecordSliceSeparatesAbsenceFromShortRecords(t *testing.T) {
+	running := unix.KinfoProc{}
+	running.Proc.P_pid, running.Eproc.Ppid, running.Eproc.Pgid, running.Proc.P_stat = 123, 1, 123, 2
+	partial := fmt.Errorf("sysctl() returned a size of 12, which is not a multiple of %d", unix.SizeofKinfoProc)
+	for _, test := range []struct {
+		name          string
+		records       []unix.KinfoProc
+		err           error
+		lost, failure bool
+	}{
+		{name: "nil_absent", lost: true, failure: true},
+		{name: "empty_absent", records: []unix.KinfoProc{}, lost: true, failure: true},
+		{name: "one_running", records: []unix.KinfoProc{running}},
+		{name: "two_records", records: []unix.KinfoProc{running, running}, failure: true},
+		{name: "partial_record", err: partial, failure: true},
+		{name: "wrapper_eio", err: unix.EIO, failure: true},
+		{name: "permission", err: unix.EPERM, failure: true},
+		{name: "no_process", err: unix.ESRCH, lost: true, failure: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			terminal, err := classifyDarwinRecords(test.records, test.err, 123, 1)
+			if terminal || (err != nil) != test.failure || errors.Is(err, ErrOwnershipLost) != test.lost {
+				t.Fatalf("classification: %v %v", terminal, err)
+			}
+			if test.lost && test.err == nil && !errors.Is(err, errRecordAbsent) {
+				t.Fatalf("absence lost its cause: %v", err)
+			}
+		})
+	}
+}
+
+// The production Darwin classifier drives the production lifecycle with fake
+// signal, reap and probe operations, so no syscall reaches a reaped identity.
+// Absence fails closed without numeric targeting; truncation and permission
+// errors keep retained cleanup because the unreaped child still pins its IDs.
+func TestDarwinObservationOutcomesDriveRetainedCleanup(t *testing.T) {
+	partial := fmt.Errorf("sysctl() returned a size of 12, which is not a multiple of %d", unix.SizeofKinfoProc)
+	for _, test := range []struct {
+		name    string
+		records []unix.KinfoProc
+		err     error
+		lost    bool
+	}{
+		{name: "absent_after_foreign_reap", lost: true},
+		{name: "no_process", err: unix.ESRCH, lost: true},
+		{name: "truncated_record", err: partial},
+		{name: "permission_denied", err: unix.EPERM},
+		{name: "kernel_eio", err: unix.EIO},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			kills, waits, probes := 0, 0, 0
+			child := newChild(123, 1, operations{
+				observe: func(pid, parent int) (bool, error) {
+					return classifyDarwinRecords(test.records, test.err, pid, parent)
+				},
+				kill: func(pid int) error {
+					if pid != 123 {
+						t.Errorf("signal targeted %d", pid)
+					}
+					kills++
+					return nil
+				},
+				wait:   func() error { waits++; return nil },
+				absent: func(int, time.Duration) error { probes++; return nil },
+			})
+			close(child.watchDone)
+			go child.observe()
+			<-child.Aborted()
+			_, err := child.Finish(time.Second)
+			if test.lost {
+				if !errors.Is(err, ErrOwnershipLost) || !strings.Contains(err.Error(), "child cleanup unverified") || kills != 0 || waits != 0 || probes != 0 {
+					t.Fatalf("lost ownership: err=%v kills=%d waits=%d probes=%d", err, kills, waits, probes)
+				}
+				return
+			}
+			if errors.Is(err, ErrOwnershipLost) || !errors.Is(err, test.err) || kills != 2 || waits != 1 || probes != 1 {
+				t.Fatalf("retained cleanup: err=%v kills=%d waits=%d probes=%d", err, kills, waits, probes)
+			}
+		})
 	}
 }
 

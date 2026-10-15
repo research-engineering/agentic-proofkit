@@ -174,8 +174,17 @@ func TestREADMEPlatformAndPythonProjection(t *testing.T) {
 	if len(ownerMinimums) != 2 {
 		t.Fatalf("README supported/unsupported OS projection is not closed: owners=%v", ownerMinimums)
 	}
+	// Executed support starts at the CI runners' macOS 15; the older wheel-tag
+	// minimum is metadata-only. A changed wheel-tag minimum requires re-authoring
+	// the split.
+	if ownerMinimums["darwin"] != "13" {
+		t.Fatalf("Darwin wheel-tag minimum %s no longer matches the README executed/metadata-only split", ownerMinimums["darwin"])
+	}
 	expectedBlock := strings.Join([]string{
-		fmt.Sprintf("Supported binary targets are macOS %s or later on %s.", ownerMinimums["darwin"], strings.Join(ownerArchitectures["darwin"], " or ")),
+		fmt.Sprintf("Supported binary targets are macOS 15 or later on %s, executed by", strings.Join(ownerArchitectures["darwin"], " or ")),
+		"required CI on the GitHub-hosted `macos-15` and `macos-15-intel` runners. Darwin",
+		"binaries declare a macOS 13.0 minimum in their Mach-O build metadata; macOS 13",
+		"and 14 are binary-compatible by that metadata only, not executed or verified.",
 		fmt.Sprintf("Linux manylinux %s or later is supported on %s. Windows is unsupported. The Python", ownerMinimums["linux"], strings.Join(ownerArchitectures["linux"], " or ")),
 		"runner requires Python 3.11 or later and wraps the same Go CLI; it is not a",
 		"Python SDK.",

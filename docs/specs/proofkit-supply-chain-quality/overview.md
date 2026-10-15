@@ -80,9 +80,10 @@ vulnerability absence, or consumer rollout safety by itself.
   required leaf check to finish with success, while the aggregate job omits
   job defaults and `continue-on-error` entirely. Exact workflow-level bash
   defaults plus a closed inventory require exact provider-check names and
-  scalar runners, bind the macOS job's presence-aware exact ordered step
-  inventory and exact local setup-action bytes to the fail-closed
-  package-script owner command, require every required leaf job and step to
+  scalar runners, bind each macOS job's (required arm64 `macos-15` and x86_64
+  `macos-15-intel`) presence-aware exact ordered step inventory and exact
+  local setup-action bytes to the fail-closed package-script owner command,
+  require every required leaf job and step to
   omit conditions except for exact named owner conditions, and reject
   dynamically false or explicit-null conditions, dual `run`/`uses` keys,
   non-string runner labels, nested or top-level semantic shadow steps,
