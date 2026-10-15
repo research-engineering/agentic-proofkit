@@ -837,6 +837,14 @@ func TestCIRequiredAggregateRejectsExecutionOverrides(t *testing.T) {
 		mutate func(*githubWorkflow)
 	}{
 		{
+			name: "undersized source job timeout",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["source-quality"]
+				job.TimeoutMinutes = 15
+				workflow.Jobs["source-quality"] = job
+			},
+		},
+		{
 			name: "workflow name",
 			mutate: func(workflow *githubWorkflow) {
 				workflow.Name = "shadow"
@@ -1675,7 +1683,7 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		runner         string
 		timeoutMinutes int
 	}{
-		"source-quality":   {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 15},
+		"source-quality":   {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 20},
 		"platform-smoke":   {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 12},
 		"browser-runtime":  {name: "quality / browser runtime", runner: "ubuntu-24.04", timeoutMinutes: 20},
 		"ci-required-gate": {name: "quality / required aggregate", runner: "ubuntu-24.04", timeoutMinutes: 5},
