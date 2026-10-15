@@ -52,17 +52,6 @@ Inlining exactly the `shared-` entries yields the native owner schema;
 embedded `$id` resources are never shared. Compile each variant as its own
 document, because its references resolve only at its root.
 
-In a source checkout, the schema-completeness oracles check the published
-structural schemas against a test-owned manifest: every command direction and
-variant is enumerated, the structural constraint classes each schema expresses
-are recomputed, and class-targeted mutants of recorded native observations are
-refused. The manifest's native-owned constraint records are a verified lower
-bound, not an inventory: each recorded owner is reachable from its command
-route, and an input class recorded as absent means only that no indicator of
-that class is reachable from the route. The schemas never become semantic or
-policy authority; native admission remains authoritative and may refuse values
-a schema admits.
-
 `receipt-currentness-scope` and `receipt-trust-class` publish nested input and
 output structures, including required nullable fields and typed report
 diagnostics. Their optional inputs in
