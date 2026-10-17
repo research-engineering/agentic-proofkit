@@ -2,10 +2,14 @@ package registryconsumerinputcompose
 
 import (
 	"regexp"
+	"slices"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/registryconsumer"
+	"github.com/research-engineering/agentic-proofkit/internal/command/releaseauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
@@ -71,7 +75,77 @@ func OutputStructure() map[string]any {
 	).JSONSchema()
 	properties := schema["properties"].(map[string]any)
 	properties["ruleResults"] = map[string]any{"oneOf": []any{jsonshape.Tuple(precondition, accepted).JSONSchema(), rules}}
-	properties["registryConsumerInput"] = map[string]any{"oneOf": []any{jsonshape.Null().JSONSchema(), registryconsumer.InputStructure()}}
-	schema["description"] = "Fixed composition identity/header1 and all eight root fields, six summary fields. Rules begin with the fixed preconditions rule. With no blockers and no failures outside the precondition class, a fixed accepted rule follows, even when missing preconditions make overall state failed. Otherwise sequential non-precondition failure rules follow (possibly none). Accepted-rule presence alone proves neither passed composition nor final child admission. registryConsumerInput is required nullable and uses the registry consumer owner's complete input structure when materialized. Native Build materializes it only for passed composition after registryconsumer.Build passes, prioritizes blocked over failed, and owns counter/rule/state relations. Builtin/caller nonClaims are sorted and deduplicated. No consumer execution, registry access, freshness or merge/release/readiness approval."
+	properties["registryConsumerInput"] = map[string]any{"oneOf": []any{jsonshape.Null().JSONSchema(), MaterializedInputStructure()}}
+	schema["description"] = "Fixed composition identity/header1 and all eight root fields, six summary fields. Rules begin with the fixed preconditions rule. With no blockers and no failures outside the precondition class, a fixed accepted rule follows, even when missing preconditions make overall state failed. Otherwise sequential non-precondition failure rules follow (possibly none). Accepted-rule presence alone proves neither passed composition nor final child admission. registryConsumerInput is required nullable; when materialized it uses the registry consumer owner's input structure with releaseAuthorityInput required and refined to the admitted release-authority input that a passed composition carries. Native Build materializes it only for passed composition after registryconsumer.Build passes, prioritizes blocked over failed, and owns counter/rule/state relations. Builtin/caller nonClaims are sorted and deduplicated. No consumer execution, registry access, freshness or merge/release/readiness approval."
 	return schema
+}
+
+// MaterializedInputStructure refines the registry consumer owner's input
+// structure to the registryConsumerInput that Build materializes. Build emits
+// it only for a passed composition, so releaseAuthorityInput is always the
+// admitted release-authority input that releaseAuthorityFailures accepted:
+// header3, channel registry_release, rolloutClaim false, and non-null
+// registryAuthority and package publishConfigRegistry. Other members keep the
+// owner structure; the owner's caller-input description is replaced because
+// its optional arbitrary releaseAuthorityInput does not describe this output.
+func MaterializedInputStructure() map[string]any {
+	schema := registryconsumer.InputStructure()
+	input := schema["properties"].(map[string]any)["input"].(map[string]any)
+	input["properties"].(map[string]any)["releaseAuthorityInput"] = materializedReleaseAuthorityStructure()
+	input["required"] = withRequired(input["required"].([]any), "releaseAuthorityInput")
+	schema["description"] = "Materialized only for a passed composition. The registry consumer owner's input structure, except that inner releaseAuthorityInput is required and is the admitted release-authority input: header3, channel registry_release, rolloutClaim false, a non-null registryAuthority and a present non-null package publishConfigRegistry. Native Build emits it only after registryconsumer.Build passes on it."
+	return schema
+}
+
+func materializedReleaseAuthorityStructure() map[string]any {
+	schema, err := releaseauthority.InputStructure(3)
+	if err != nil {
+		panic("invalid release-authority structure for composed registry consumer input")
+	}
+	delete(schema, "$schema")
+	properties := schema["properties"].(map[string]any)
+	properties["channel"] = subschema(jsonshape.StringLiteral(string(releasechannel.RegistryRelease)))
+	properties["rolloutClaim"] = subschema(jsonshape.BooleanLiteral(false))
+	properties["registryAuthority"] = nonNullable(properties["registryAuthority"])
+	releasePackage := properties["package"].(map[string]any)
+	packageProperties := releasePackage["properties"].(map[string]any)
+	packageProperties["publishConfigRegistry"] = nonNullable(packageProperties["publishConfigRegistry"])
+	releasePackage["required"] = withRequired(releasePackage["required"].([]any), "publishConfigRegistry")
+	schema["description"] = "Admitted release-authority input re-serialized by a passed composition: header3, channel registry_release, rolloutClaim false, a non-null registryAuthority and a present non-null package publishConfigRegistry. Other members keep the release-authority input structure; release-authority evaluation owns the remaining channel, package, consumer and publisher relations."
+	return schema
+}
+
+func subschema(shape jsonshape.Shape) map[string]any {
+	schema := shape.JSONSchema()
+	delete(schema, "$schema")
+	return schema
+}
+
+// nonNullable removes the null alternative that jsonshape.Nullable projects.
+func nonNullable(value any) map[string]any {
+	schema, ok := value.(map[string]any)
+	if !ok || len(schema) != 1 {
+		panic("composed registry consumer input expects a nullable owner member")
+	}
+	alternatives, ok := schema["anyOf"].([]any)
+	if !ok || len(alternatives) != 2 {
+		panic("composed registry consumer input expects a nullable owner member")
+	}
+	if null, ok := alternatives[0].(map[string]any); !ok || len(null) != 1 || null["type"] != "null" {
+		panic("composed registry consumer input expects a nullable owner member")
+	}
+	member, ok := alternatives[1].(map[string]any)
+	if !ok {
+		panic("composed registry consumer input expects a nullable owner member")
+	}
+	return member
+}
+
+func withRequired(required []any, name string) []any {
+	if slices.Contains(required, any(name)) {
+		panic("composed registry consumer input member is already required")
+	}
+	result := append(slices.Clone(required), name)
+	slices.SortFunc(result, func(a, b any) int { return strings.Compare(a.(string), b.(string)) })
+	return result
 }

@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
@@ -50,6 +51,7 @@ func OutputStructure() (map[string]any, error) {
 	properties["testEvidenceInventory"] = testevidenceinventory.CanonicalInventoryShape().JSONSchema()
 	properties["normalizedTestEvidenceInventory"] = map[string]any{"$ref": "#/$defs/normalizedInventory"}
 	schema["$defs"].(map[string]any)["normalizedInventory"] = testevidenceinventory.NormalizedProjectionStructure()
+	requirementbinding.RequireProducedSelectionMembers(properties["requirementProofBinding"].(map[string]any)["anyOf"].([]any)[1].(map[string]any))
 	required := []any{}
 	for name := range properties {
 		if name != "normalizedTestEvidenceInventory" {
@@ -62,6 +64,6 @@ func OutputStructure() (map[string]any, error) {
 	variants[0].(map[string]any)["properties"].(map[string]any)["normalizedTestEvidenceInventory"] = false
 	compact := variants[1].(map[string]any)
 	compact["required"] = append(compact["required"].([]any), "normalizedTestEvidenceInventory")
-	schema["description"] = "Producer refinement of requirement-coverage-view input: all common fields are emitted, including a null unused binding and optional-input defaults. Compact mode emits the canonical source envelope; direct mode omits it. No execution, oracle-adequacy or completeness claim follows from structural validity."
+	schema["description"] = "Producer refinement of requirement-coverage-view input: all common fields are emitted, including a null unused binding and optional-input defaults. A non-null binding selection carries changedPaths, ownerIds and requirementIds. Compact mode emits the canonical source envelope; direct mode omits it. No execution, oracle-adequacy or completeness claim follows from structural validity."
 	return schema, nil
 }

@@ -131,6 +131,7 @@ func TestRepositoryLicenseRetainsBundledRuntimeNotices(t *testing.T) {
 	}
 	for _, notice := range []string{
 		"Copyright 2009 The Go Authors.",
+		"Bundled BSD-3-Clause components: the Go standard library,",
 	} {
 		if !bytes.Contains(content, []byte(notice)) {
 			t.Fatalf("LICENSE is missing bundled runtime notice %q", notice)

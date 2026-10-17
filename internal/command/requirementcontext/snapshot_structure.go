@@ -18,7 +18,16 @@ var projectSnapshotShape = makeSnapshotShape(true)
 func SnapshotShape() jsonshape.Shape {
 	return jsonshape.OneOf(catalogSnapshotShape, projectSnapshotShape)
 }
-func CatalogSnapshotStructure() map[string]any { return catalogSnapshotShape.JSONSchema() }
+
+// CatalogSnapshotStructure describes compose output. Its proof binding is an
+// InputValue projection, so it requires the selection members that InputValue
+// always emits; snapshot admission keeps the binding input shape.
+func CatalogSnapshotStructure() map[string]any {
+	schema := catalogSnapshotShape.JSONSchema()
+	projections := schema["properties"].(map[string]any)["projections"].(map[string]any)
+	requirementbinding.RequireProducedSelectionMembers(projections["properties"].(map[string]any)["proofBinding"].(map[string]any))
+	return schema
+}
 
 func makeSnapshotShape(project bool) jsonshape.Shape {
 	text := jsonshape.String()
