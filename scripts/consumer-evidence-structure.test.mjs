@@ -158,6 +158,34 @@ test('composer whole CLI chain materializes only native accepted input and prior
   }
 });
 
+test('composer output describes the admitted release-authority input it materializes', () => {
+  const input = seed(composer), passed = output(composer, input); assert.equal(passed.status, 0);
+  const releaseDefinition = contract.contractDefinitions.find(x => x.definitionId === 'proofkit.release-authority.input.v1.json-schema');
+  const releaseInput = ajv.compile(releaseDefinition.fieldTree.variants.find(x => x.variantId === '03-dry-run-registry').schema);
+  const real = passed.record.registryConsumerInput.input.releaseAuthorityInput;
+  assert.equal(releaseInput(real), true, 'real member is a header3 release-authority input');
+  assert.deepEqual([real.schemaVersion, real.channel, real.rolloutClaim], [3, 'registry_release', false]);
+  assert.notEqual(real.registryAuthority, null); assert.equal(typeof real.package.publishConfigRegistry, 'string');
+  const member = mutate => record => { const copy = structuredClone(record); mutate(copy.registryConsumerInput.input); return copy; };
+  const field = (path, value) => member(child => {
+    const parent = path.slice(0, -1).reduce((current, key) => current[key], child.releaseAuthorityInput);
+    if (value === undefined) delete parent[path.at(-1)]; else parent[path.at(-1)] = value;
+  });
+  const mutants = [
+    ['absent', member(child => { delete child.releaseAuthorityInput; })],
+    ...[['0', 0], ['{}', {}], ['[0]', [0]], ['"x"', 'x'], ['null', null]].map(([label, value]) => [label, member(child => { child.releaseAuthorityInput = value; })]),
+    ['schemaVersion 2', field(['schemaVersion'], 2)], ['channel tarball_pilot', field(['channel'], 'tarball_pilot')],
+    ['rolloutClaim true', field(['rolloutClaim'], true)], ['registryAuthority null', field(['registryAuthority'], null)],
+    ['publishConfigRegistry null', field(['package', 'publishConfigRegistry'], null)],
+    ['publishConfigRegistry absent', field(['package', 'publishConfigRegistry'], undefined)],
+  ];
+  for (const [label, mutate] of mutants) {
+    const mutant = mutate(passed.record);
+    assert.equal(validators[composer].output(mutant), false, `composer/output/releaseAuthorityInput/${label}`);
+    assert.equal(validators[registry].input(mutant.registryConsumerInput), true, `registry/input admits ${label}`);
+  }
+});
+
 test('composer distinguishes precondition-only failure from downstream-only rejection', () => {
   const input = seed(composer), missing = structuredClone(input); missing.preconditions = [missing.preconditions[0]];
   const absent = output(composer, missing); assert.equal(absent.status, 1); assert.equal(absent.record.state, 'failed');
@@ -176,14 +204,22 @@ test('composer distinguishes precondition-only failure from downstream-only reje
 });
 
 const at = (value, path) => path.reduce((current, key) => current[key], value);
+// Caller inputs carry releaseAuthorityInput as arbitrary JSON. The composer's
+// output carries the admitted release-authority input there, whose structure
+// keeps only registryPublishDryRunProofId optional and only packageScope ''.
+const composedReleaseAuthority = ['registryConsumerInput', 'input', 'releaseAuthorityInput'];
+const insideComposedReleaseAuthority = (command, direction, path) => direction === 'output' && command === composer
+  && composedReleaseAuthority.every((key, index) => path[index] === key);
 function arbitrary(command, direction, path) {
-  return direction === 'input' && (path.includes('releaseAuthorityInput') || command === external && path.includes('witnessPlan') && (path.includes('vocabulary') || path.includes('commands') && path.some(x => typeof x === 'number')))
-    || direction === 'output' && command === composer && path.includes('registryConsumerInput') && path.includes('releaseAuthorityInput');
+  return direction === 'input' && (path.includes('releaseAuthorityInput') || command === external && path.includes('witnessPlan') && (path.includes('vocabulary') || path.includes('commands') && path.some(x => typeof x === 'number')));
 }
 function optional(command, direction, path) {
   return direction === 'input' && (path.at(-1) === 'releaseAuthorityInput' || command === registry && path.join('.') === 'proof')
-    || direction === 'output' && command === composer && (path.join('.') === 'registryConsumerInput.proof' || path.at(-1) === 'releaseAuthorityInput');
+    || direction === 'output' && command === composer && path.join('.') === 'registryConsumerInput.proof'
+    || insideComposedReleaseAuthority(command, direction, path) && path.join('.').endsWith('.artifactProof.registryPublishDryRunProofId');
 }
+const blankAdmitted = (command, direction, path, blank) => blank === ''
+  && insideComposedReleaseAuthority(command, direction, path) && path.join('.').endsWith('.registryAuthority.packageScope');
 function nullable(command, direction, path) {
   return arbitrary(command, direction, path) || direction === 'input' && (command === registry && path.join('.') === 'proof' || command === external && path.join('.') === 'evidence.consumerProof')
     || direction === 'output' && command === composer && ['registryConsumerInput', 'registryConsumerInput.proof'].includes(path.join('.'));
@@ -217,7 +253,7 @@ test('populated consumer records close nested key type optional null and cardina
         const wrong = typeof value === 'string' || value === null ? 0 : 'wrong-type';
         assert.equal(valid(replace(specimen, path, wrong)), false, `${row.command}/${direction}/${path}/type`); checked++;
         if (typeof value === 'string') for (const blank of ['', ' \t\r\n']) {
-          assert.equal(valid(replace(specimen, path, blank)), false, `${row.command}/${direction}/${path}/blank`);
+          assert.equal(valid(replace(specimen, path, blank)), blankAdmitted(row.command, direction, path, blank), `${row.command}/${direction}/${path}/blank`);
         }
       }
     }

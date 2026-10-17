@@ -52,20 +52,28 @@ after(() => { if (directory) rmSync(directory, {recursive: true, force: true}); 
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 // Declared, single-purpose deltas from the frozen predecessor streams. The
 // corpus stays untouched; each delta names its rows and exact byte change.
+const helpRows = Object.freeze(["stack-preset--help", "stack-preset-h", "json-report-cli-adapter-source--help", "json-report-cli-adapter-source-h"]);
 const declaredStreamDeltas = Object.freeze([Object.freeze({
   id: "PILOT-D10",
   reason: "Usage lines name the --format values a command admits instead of <mode>.",
   rows: Object.freeze(["json-report-cli-adapter-source--help", "json-report-cli-adapter-source-h"]),
   predecessor: "[--format <mode>]", current: "[--format <json>]", occurrences: 2,
+}), Object.freeze({
+  id: "HELP-CONTRACT-SCHEMAS",
+  reason: "The help contract stanza names the structural JSON Schemas the CLI contract publishes instead of root JSON shapes.",
+  rows: helpRows,
+  predecessor: "CLI command routing, root JSON shapes,", current: "CLI command routing, structural JSON Schemas,", occurrences: 1,
 })]);
 const count = (text, needle) => text.split(needle).length - 1;
-// Returns the predecessor stdout implied by the declared delta, or null when the
-// current bytes do not carry exactly that delta in exactly its occurrences.
+// Returns the predecessor stdout implied by the declared deltas of a row, or null
+// when the current bytes do not carry exactly each delta in exactly its occurrences.
 function predecessorStdout(rowName, stdout) {
-  const delta = declaredStreamDeltas.find(item => item.rows.includes(rowName));
-  if (!delta) return stdout;
-  if (count(stdout, delta.current) !== delta.occurrences || count(stdout, delta.predecessor) !== 0) return null;
-  return stdout.split(delta.current).join(delta.predecessor);
+  let predecessor = stdout;
+  for (const delta of declaredStreamDeltas.filter(item => item.rows.includes(rowName))) {
+    if (count(predecessor, delta.current) !== delta.occurrences || count(predecessor, delta.predecessor) !== 0) return null;
+    predecessor = predecessor.split(delta.current).join(delta.predecessor);
+  }
+  return predecessor;
 }
 const conservesPredecessor = (row, stdout) => {
   const predecessor = predecessorStdout(row.name, stdout);
@@ -194,8 +202,8 @@ test("starter schema does not launder native-only hash line-count and rendered-c
 });
 
 test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
-  const [delta] = declaredStreamDeltas;
-  assert.equal(declaredStreamDeltas.length, 1);
+  const delta = declaredStreamDeltas.find(item => item.id === "PILOT-D10");
+  assert.equal(declaredStreamDeltas.length, 2);
   const rows = baseline.observations.filter(row => delta.rows.includes(row.name));
   assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   const current = invoke(rows[0]).stdout;
@@ -208,6 +216,26 @@ test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
   }
   const unlisted = baseline.observations.find(row => row.name === "stack-preset--help");
   const unlistedCurrent = invoke(unlisted).stdout;
-  assert.ok(conservesPredecessor(unlisted, unlistedCurrent), "unlisted rows stay byte-exact");
+  assert.ok(conservesPredecessor(unlisted, unlistedCurrent), "rows outside the delta carry no usage delta");
   assert.equal(conservesPredecessor(unlisted, unlistedCurrent + delta.current), false, "delta applied to an unlisted row");
+});
+
+test("the HELP-CONTRACT-SCHEMAS help delta is exact and limited to help rows", () => {
+  const delta = declaredStreamDeltas.find(item => item.id === "HELP-CONTRACT-SCHEMAS");
+  const rows = baseline.observations.filter(row => delta.rows.includes(row.name));
+  assert.deepEqual(rows.map(row => row.name), [...helpRows]);
+  for (const row of rows) {
+    const current = invoke(row).stdout;
+    assert.equal(count(current, delta.current), 1, row.name); assert.equal(count(current, delta.predecessor), 0, row.name);
+    assert.ok(conservesPredecessor(row, current), `${row.name}/declared help delta`);
+    const reverted = current.replace(delta.current, delta.predecessor), otherByte = current.replace("Public contract:", "Public contract: ");
+    for (const [name, mutated] of [["reverted", reverted], ["other byte", otherByte]]) {
+      assert.notEqual(mutated, current, name);
+      assert.equal(conservesPredecessor(row, mutated), false, `${row.name}/${name}`);
+    }
+  }
+  const report = baseline.observations.find(row => !delta.rows.includes(row.name) && row.exitCode === 0);
+  const reportCurrent = invoke(report).stdout;
+  assert.equal(count(reportCurrent, delta.current), 0);
+  assert.ok(conservesPredecessor(report, reportCurrent), "non-help rows stay byte-exact");
 });

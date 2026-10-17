@@ -60,3 +60,26 @@ func makeBindingInputShape() jsonshape.Shape {
 func InputStructure() map[string]any {
 	return bindingInputShape.JSONSchema()
 }
+
+// RequireProducedSelectionMembers refines a JSON Schema projection of the
+// binding input shape, embedded by an output structure, to the selection
+// members that InputValue always emits. Input admission keeps them optional.
+func RequireProducedSelectionMembers(binding map[string]any) {
+	properties, ok := binding["properties"].(map[string]any)
+	if !ok {
+		panic("binding structure has no properties")
+	}
+	nullable, ok := properties["selection"].(map[string]any)
+	if !ok {
+		panic("binding structure has no selection member")
+	}
+	alternatives, ok := nullable["anyOf"].([]any)
+	if !ok || len(alternatives) != 2 {
+		panic("binding selection is not the nullable owner object")
+	}
+	selection, ok := alternatives[1].(map[string]any)
+	if !ok || selection["type"] != "object" || selection["required"] != nil {
+		panic("binding selection is not the owner object with optional members")
+	}
+	selection["required"] = []any{"changedPaths", "ownerIds", "requirementIds"}
+}
