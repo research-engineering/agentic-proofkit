@@ -52,7 +52,8 @@ function expectedHelp(row) {
   const navigation = row.command === release ? ["01-legacy-registry", "02-source-registry", "03-dry-run-registry"].map((variant, i) =>
     `root fields (${variant}): artifactProof{}, channel, consumerContract{}, nonClaims[], package{}, registryAuthority, releaseId, rollback{}, rolloutClaim, schemaVersion=${i + 1}`)
     : ["root fields: environmentPreconditions[], exactCommand, frontier{}, inputDefinitions[], markdownText, negatedNonClaimPhrases[], nonClaims[], phraseRules[], readinessRowPrefixes[], readinessSections[], reportId, runIdentity"];
-  return row.predecessorHelp.replace(before, "Input schema summary:\n  " + [...summaries, ...navigation].join("\n  "));
+  return row.predecessorHelp.replace(before, "Input schema summary:\n  " + [...summaries, ...navigation].join("\n  "))
+    .replace("  CLI command routing, root JSON shapes,", "  CLI command routing, structural JSON Schemas,");
 }
 function meanings(command, input, output, exitCode) {
   assert.equal(output.schemaVersion, 1); assert.equal(output.reportKind, `proofkit.${command}`);

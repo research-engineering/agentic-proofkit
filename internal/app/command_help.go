@@ -199,7 +199,7 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 			"  Do not promote candidates or infer execution from admission success.")
 	}
 	lines = append(lines, "", "Public contract:")
-	lines = append(lines, "  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.")
+	lines = append(lines, "  CLI command routing, structural JSON Schemas, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.")
 	lines = append(lines, "  Nested field semantics remain owned by native command admission.")
 	return strings.Join(lines, "\n") + "\n"
 }

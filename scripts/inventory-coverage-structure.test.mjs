@@ -1,19 +1,21 @@
 import assert from "node:assert/strict";
 import {execFileSync, spawnSync} from "node:child_process";
-import {mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
 import {assertCLITransport} from "./cli-process.mjs";
 import {compileVariantUnion} from "./schema-definitions.mjs";
-import {annotatedInventoryInput, directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, ownerInvariantRegistry, proofInventoryInput, sourceSetInput, twoSourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
+import {annotatedInventoryInput, directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, ownerInvariantRegistry, proofInventoryInput, requirementSource, sourceSetInput, twoSourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_INVENTORY_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
 const inventory = "test-evidence-inventory", composer = "requirement-coverage-input-compose", view = "requirement-coverage-view";
+const contextComposer = "requirement-context-compose", contextSlice = "requirement-context-slice";
 const validators = new Map();
-for (const command of [inventory, composer, view]) for (const direction of ["input", "output"]) {
+for (const [command, direction] of [[inventory, "input"], [inventory, "output"], [composer, "input"], [composer, "output"], [view, "input"], [view, "output"],
+  [contextComposer, "output"], [contextSlice, "input"]]) {
   const ref = contract.commands.find(row => row.command === command)[`${direction}Contract`].rootDefinitionRef;
   const definition = contract.contractDefinitions.find(row => row.definitionId === ref);
   assert.equal(definition.fieldTree.kind, "structural_json_schema");
@@ -86,6 +88,55 @@ test("published coverage envelope variant rejects independent nested corruption"
     const corrupted = structuredClone(output);
     mutate(corrupted);
     validates(view, "output", corrupted, false, label);
+  }
+});
+
+// A producer that emits requirementbinding selections always emits all three
+// members. The receiving input structures keep them optional, so each mutant is
+// checked against both: refused as producer output, still admitted as input.
+const selectionMembers = ["changedPaths", "ownerIds", "requirementIds"];
+function selectionMutants(selection) {
+  assert.deepEqual(Object.keys(selection).sort(), selectionMembers);
+  for (const member of selectionMembers) assert.ok(Array.isArray(selection[member]), member);
+  return [["empty selection", () => ({})], ...selectionMembers.map(member => [`missing ${member}`, value => {
+    const copy = structuredClone(value); delete copy[member]; return copy;
+  }])];
+}
+
+test("coverage compose output requires the binding selection members its producer emits", () => {
+  const output = native(composer, directComposeInput());
+  validates(view, "input", output, true, "real output as receiving input");
+  for (const [label, mutate] of selectionMutants(output.requirementProofBinding.selection)) {
+    const mutant = structuredClone(output);
+    mutant.requirementProofBinding.selection = mutate(output.requirementProofBinding.selection);
+    validates(composer, "output", mutant, false, label);
+    validates(view, "input", mutant, true, `${label} as receiving input`);
+  }
+});
+
+test("context compose output requires the proof-binding selection members its producer emits", () => {
+  const repository = join(directory, "context-selection");
+  mkdirSync(join(repository, "specs"), {recursive: true}); mkdirSync(join(repository, "proofkit"), {recursive: true});
+  const binding = directComposeInput().requirementProofBinding;
+  const tree = {schemaVersion: 2, treeId: "tree.one", rootNodeId: "spec.root", callerAnnotations: [], edges: [], overlays: [],
+    nodes: [{nodeId: "spec.root", nodeKind: "meta_spec", label: "Root", displayOrder: 1, callerAnnotations: [],
+      sourceRefs: [{sourceRefId: "spec.root.requirements", sourceRefKind: "source_id", sourceRole: "requirements", sourceId: "source.one"}]}]};
+  writeFileSync(join(repository, "specs/requirements.v2.json"), JSON.stringify(requirementSource()));
+  writeFileSync(join(repository, "specs/tree.json"), JSON.stringify(tree));
+  writeFileSync(join(repository, "proofkit/bindings.json"), JSON.stringify(binding));
+  const catalog = {schemaVersion: 2, catalogId: "catalog.selection", specTree: {path: "specs/tree.json"},
+    requirementSources: [{path: "specs/requirements.v2.json", nodeId: "spec.root"}], proofBinding: {path: "proofkit/bindings.json"}};
+  const result = assertCLITransport(spawnSync(binary, [contextComposer, "--repo-root", repository, "--input", "-"],
+    {input: JSON.stringify(catalog), encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20}));
+  assert.equal(result.status, 0, result.stderr); assert.equal(result.stderr, "");
+  const output = JSON.parse(result.stdout), slice = context => ({schemaVersion: 2, sliceId: "slice.one", context, query: {profile: "proof"}});
+  validates(contextComposer, "output", output, true, "real output");
+  validates(contextSlice, "input", slice(output), true, "real output as receiving context");
+  for (const [label, mutate] of selectionMutants(output.projections.proofBinding.selection)) {
+    const mutant = structuredClone(output);
+    mutant.projections.proofBinding.selection = mutate(output.projections.proofBinding.selection);
+    validates(contextComposer, "output", mutant, false, label);
+    validates(contextSlice, "input", slice(mutant), true, `${label} as receiving context`);
   }
 });
 

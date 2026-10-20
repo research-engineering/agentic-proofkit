@@ -21,8 +21,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Bundled BSD-3-Clause components: golang.org/x/mod, golang.org/x/net,
-golang.org/x/sys, and golang.org/x/text.
+Bundled BSD-3-Clause components: the Go standard library, golang.org/x/mod,
+golang.org/x/net, golang.org/x/sys, and golang.org/x/text.
 
 Copyright 2009 The Go Authors.
 
