@@ -149,15 +149,17 @@ Supported binary targets are macOS 15 or later on arm64 or x64, executed by
 required CI on the GitHub-hosted `macos-15` and `macos-15-intel` runners. Darwin
 binaries declare a macOS 13.0 minimum in their Mach-O build metadata; macOS 13
 and 14 are binary-compatible by that metadata only, not executed or verified.
-Linux manylinux 2.17 or later is supported on arm64 or x64. Windows is unsupported. The Python
-runner requires Python 3.11 or later and wraps the same Go CLI; it is not a
-Python SDK.
+Linux manylinux 2.17 or later is supported on arm64 or x64, executed by
+required CI on the GitHub-hosted `ubuntu-24.04-arm` and `ubuntu-24.04` runners.
+The manylinux 2.17 floor is the wheel-tag declaration; CI does not execute a
+host at that floor. Windows is unsupported. The Python runner requires Python
+3.11 or later and wraps the same Go CLI; it is not a Python SDK.
 
 Linux wheel installation requires pip 20.3 or later for the manylinux tag.
 Use an installer compatible with the selected Python. The bounded compatibility
-smoke exercises the initial Python 3.11 release with a checksum-pinned compatible
-installer. This is compatibility evidence, not a recommendation to use an
-obsolete interpreter.
+smoke exercises the initial Python 3.11 release on Linux arm64 and x64 with a
+checksum-pinned compatible installer. This is compatibility evidence, not a
+recommendation to use an obsolete interpreter.
 
 After an exact Python package version is available from an admitted channel,
 use one complete package-manager chain:
