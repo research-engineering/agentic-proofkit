@@ -5,7 +5,7 @@ import {join, resolve} from "node:path";
 import {assertInputSnapshotUnchanged, materializeInputSnapshot, snapshotInputAssets} from "./browser-proof-inputs.mjs";
 import {createUTF8StrictStreamDecoder, decodeUTF8Strict} from "./stable-json.mjs";
 
-export async function executeBrowserProof({environment, execFile, inputPaths, nodeExecutable, resolution, runDirectory, spawnProcess, startServer = startBrowserServer, testCommand}) {
+export async function executeBrowserProof({admissionArguments = [], environment, execFile, inputPaths, nodeExecutable, resolution, runDirectory, spawnProcess, startServer = startBrowserServer, testCommand}) {
   const sourceDirectory = resolve(runDirectory, "source");
   const assets = materializeInputSnapshot(inputPaths, ".", sourceDirectory);
   symlinkSync(resolve("node_modules"), join(sourceDirectory, "node_modules"), process.platform === "win32" ? "junction" : "dir");
@@ -18,7 +18,7 @@ export async function executeBrowserProof({environment, execFile, inputPaths, no
     testResult = runBrowserProofTests({environment, nodeExecutable, runDirectory, serverURL: server.url, sourceDirectory, spawnProcess, testCommand});
     if (testResult.error) throw testResult.error;
     if (testResult.status !== 0) throw new Error(`browser test command failed; diagnostics retained in ${runDirectory}`);
-    projects = admitBrowserProofReport({execFile, reportPath: resolve(runDirectory, "playwright-report.json"), sourceDirectory});
+    projects = admitBrowserProofReport({admissionArguments, execFile, reportPath: resolve(runDirectory, "playwright-report.json"), sourceDirectory});
   } catch (error) {
     executionError = error;
   }
@@ -57,10 +57,10 @@ export function runBrowserProofTests({environment, nodeExecutable, runDirectory,
   });
 }
 
-function admitBrowserProofReport({execFile, reportPath, sourceDirectory}) {
+function admitBrowserProofReport({admissionArguments, execFile, reportPath, sourceDirectory}) {
   const output = execFile(
     "go",
-    ["run", "./internal/tools/browserproofverify", "--admit-playwright-report", reportPath],
+    ["run", "./internal/tools/browserproofverify", ...admissionArguments, "--admit-playwright-report", reportPath],
     {cwd: sourceDirectory, maxBuffer: 8 << 20},
   );
   const encoded = typeof output === "string" ? output : decodeUTF8Strict(output, "browser proof report admission output");

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -39,6 +40,7 @@ type githubRunDefaults struct {
 }
 
 type githubJob struct {
+	Container       any             `yaml:"container,omitempty"`
 	ContinueOnError any             `yaml:"continue-on-error,omitempty"`
 	Defaults        *githubDefaults `yaml:"defaults,omitempty"`
 	Env             map[string]any  `yaml:"env"`
@@ -53,6 +55,7 @@ type githubJob struct {
 	TimeoutMinutes  any             `yaml:"timeout-minutes,omitempty"`
 	Uses            string          `yaml:"uses,omitempty"`
 
+	containerPresent       bool `yaml:"-"`
 	continueOnErrorPresent bool `yaml:"-"`
 	defaultsPresent        bool `yaml:"-"`
 	environmentPresent     bool `yaml:"-"`
@@ -106,6 +109,7 @@ func (job *githubJob) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	*job = githubJob(decoded)
+	job.containerPresent = yamlMappingHasKey(node, "container")
 	job.continueOnErrorPresent = yamlMappingHasKey(node, "continue-on-error")
 	job.defaultsPresent = yamlMappingHasKey(node, "defaults")
 	job.environmentPresent = yamlMappingHasKey(node, "environment")
@@ -270,8 +274,14 @@ func validateWorkflowClosedKeys(path string, raw []byte) error {
 			"steps",
 			"strategy",
 			"environment",
+			"container",
 		); err != nil {
 			return err
+		}
+		if container := yamlMappingValue(job, "container"); container != nil || yamlMappingHasKey(job, "container") {
+			if err := validateOwnedJobContainer(path, jobID, container); err != nil {
+				return err
+			}
 		}
 		if strategy := yamlMappingValue(job, "strategy"); strategy != nil {
 			if filepath.Base(path) != "codeql.yml" || jobID != "analyze" {
@@ -381,6 +391,61 @@ func validateOwnedReleaseEnvironment(path string, jobID string, environment *yam
 		}
 	default:
 		return fmt.Errorf("workflow %q job %q contains unowned key %q", path, jobID, "environment")
+	}
+	return nil
+}
+
+// The only admitted job container is the visual reference environment of the
+// ci workflow's browser-visual job: an exact digest-pinned image reference and
+// exact options. Every container image reference must carry a sha256 digest.
+const (
+	ownedVisualContainerJob     = "browser-visual"
+	ownedVisualContainerImage   = "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27"
+	ownedVisualContainerOptions = "--user 1001 --ipc=host --init"
+)
+
+var digestPinnedContainerImage = regexp.MustCompile(`^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:\.[a-z0-9]+(?:[._-][a-z0-9]+)*)*(?::[0-9]+)?(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}@sha256:[0-9a-f]{64}$`)
+
+func workflowAllowsVisualContainer(path string) bool {
+	actual, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	expected, err := filepath.Abs(filepath.Join("..", ".github", "workflows", "ci.yml"))
+	return err == nil && actual == expected
+}
+
+func validateContainerImageReference(reference string) error {
+	if !digestPinnedContainerImage.MatchString(reference) {
+		return fmt.Errorf("container image reference %q must be name:tag pinned by a sha256 digest", reference)
+	}
+	return nil
+}
+
+func validateOwnedJobContainer(path, jobID string, container *yaml.Node) error {
+	if !workflowAllowsVisualContainer(path) || jobID != ownedVisualContainerJob {
+		return fmt.Errorf("workflow %q job %q contains unowned key %q", path, jobID, "container")
+	}
+	label := fmt.Sprintf("workflow %q job %q container", path, jobID)
+	if container == nil {
+		return fmt.Errorf("%s must be an exact mapping", label)
+	}
+	if err := validateClosedYAMLMapping(label, container, "image", "options"); err != nil {
+		return err
+	}
+	image := yamlMappingValue(container, "image")
+	options := yamlMappingValue(container, "options")
+	if image == nil || image.Kind != yaml.ScalarNode || image.Tag != "!!str" {
+		return fmt.Errorf("%s image must be a string", label)
+	}
+	if err := validateContainerImageReference(image.Value); err != nil {
+		return fmt.Errorf("%s: %w", label, err)
+	}
+	if image.Value != ownedVisualContainerImage {
+		return fmt.Errorf("%s image must equal the exact owner-reviewed reference environment image", label)
+	}
+	if options == nil || options.Kind != yaml.ScalarNode || options.Tag != "!!str" || options.Value != ownedVisualContainerOptions {
+		return fmt.Errorf("%s options must equal exact %q", label, ownedVisualContainerOptions)
 	}
 	return nil
 }

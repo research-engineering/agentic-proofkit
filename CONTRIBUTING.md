@@ -82,6 +82,87 @@ reproduced the failure (1-minute load average median 19 on 8 CPUs), all pass
 with zero retries and no navigation completion failure, and update the fixture
 and this explanation together with it.
 
+The visual reference gate, `npm run browser:visual`, is separate from
+`npm run check`. It compares a canonical pixel digest of every rendered view
+with the owner-admitted entry in `tests/visual/references.json`, but only in
+the environment recorded in `tests/visual/environment.json`: the digest-pinned
+linux/arm64 `mcr.microsoft.com/playwright` image that the
+`quality / browser visual references` job runs on `ubuntu-24.04-arm`, with the
+font mapping of `tests/visual/fonts.conf`, which the gate copies into its run
+directory before it observes the environment. On any other host it detects the
+difference before launching a browser, records `unverified` and exits 0; CI
+adds `--require-reference-environment`, which makes that a failure. No
+reference image is stored in the repository, and the gate never writes
+references. Every reference-environment run keeps its captures in
+`artifacts/browser-run-*/captures/<engine>/<view>.<scheme>.<width>.png`, with
+`candidate-references.json` and `observed-environment.json` beside them; CI
+uploads these as the `browser-visual-captures-<sha>-<attempt>` artifact after
+every run and keeps it for 30 days. A local reference-environment run keeps
+about 30 MB below its `artifacts/browser-run-*` directory, which you may
+delete once you no longer need its captures.
+
+To view an admitted image, run the gate at the admitting commit in the pinned
+image and look at its captures; when it passes, every capture has the admitted
+digest. Use a separate clone rather than a worktree, because the container
+sees only the mounted directory and installs Linux `node_modules` into it. The
+container user, uid 1001, must be able to write the clone: Docker Desktop
+allows that, and on a Linux host the clone must belong to uid 1001. The
+container installs the same checksum-verified Node, npm and Go versions as the
+CI job:
+
+```bash
+git clone https://github.com/research-engineering/agentic-proofkit.git proofkit-visual
+cd proofkit-visual
+git checkout <admitting commit>
+docker run --rm --platform linux/arm64 --user 1001 --ipc=host --init \
+  -v "$PWD":/work -w /work \
+  mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 \
+  bash -euo pipefail -c '
+    git config --global --add safe.directory /work
+    tools="$(mktemp -d)"
+    cd "$tools"
+    curl -fsSLO https://nodejs.org/dist/v26.11.1/node-v26.11.1-linux-arm64.tar.gz
+    curl -fsSLO https://go.dev/dl/go1.27.3.linux-arm64.tar.gz
+    curl -fsSLO https://registry.npmjs.org/npm/-/npm-12.2.0.tgz
+    sha256sum -c - <<SUMS
+170454fb022f5e9b5f6cc76c25fa32ef5100895be44eb04e92f9780591491bbf  node-v26.11.1-linux-arm64.tar.gz
+a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49  go1.27.3.linux-arm64.tar.gz
+6666b48816b39b86c3febac7b51a4ee4de6c5ca589c382ad8004b6b113f86677  npm-12.2.0.tgz
+SUMS
+    tar -xzf node-v26.11.1-linux-arm64.tar.gz
+    tar -xzf go1.27.3.linux-arm64.tar.gz
+    tar -xzf npm-12.2.0.tgz
+    mkdir bin
+    printf "#!/bin/sh\nexec node %s/package/bin/npm-cli.js \"\$@\"\n" "$tools" > bin/npm
+    chmod +x bin/npm
+    export PATH="$tools/bin:$tools/node-v26.11.1-linux-arm64/bin:$tools/go/bin:$PATH"
+    cd /work
+    npm ci --ignore-scripts
+    npm run browser:visual -- --require-reference-environment'
+```
+
+To re-admit references after an intended visual change, let the job fail,
+download its `browser-visual-captures-*` artifact, review the captures, and
+regenerate `tests/visual/references.json` from that run with
+`go run ./internal/tools/browserproofverify --manifest scripts/browser-visual-proof-inputs.v1.json --admit-references --from <extracted artifact>/browser-run-<id>`;
+the artifact holds the run directory `browser-run-<id>` below its root.
+Admission accepts only a run whose observed environment equals the recorded
+one, with exactly one regular capture file per reference ID and no unstable
+directory; it recomputes every digest from the PNG files. It cannot tell
+whether the run directory changed after the run, so only a passing job proves
+the admitted digests. Push until the job passes on the exact final tree.
+Before merge, pass the gate on each CPU model named in the non-claims, or
+change those non-claims. Merging is the owner's admission. An environment
+change, including a Playwright upgrade, takes two steps. First, update
+`observed` in `tests/visual/environment.json` from the
+`observed-environment.json` of a run in the new environment; that run reports
+`unverified` and launches no browser.
+Second, run again: the browsers now launch, and if a launched version differs
+the engine fixture fails with that version, which then goes into
+`browserVersions`. Because `environmentId` changed, that run cannot pass until
+its captures are admitted as above. The same image runs natively on Apple
+Silicon; an emulated platform is always `unverified`.
+
 The composed `go:check` and CI source job both run `npm run go:deps`:
 `go mod tidy -diff` rejects manifest drift without rewriting `go.mod` or
 `go.sum`, then `go mod verify` checks the downloaded module cache. These are

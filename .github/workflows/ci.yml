@@ -369,6 +369,60 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  browser-visual:
+    name: quality / browser visual references
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --user 1001 --ipc=host --init
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.11.1
+          package-manager-cache: false
+
+      - name: Install verified npm
+        uses: ./.github/actions/setup-verified-npm
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install locked browser tooling
+        run: npm ci --ignore-scripts
+
+      - name: Run visual reference proof
+        run: npm run browser:visual -- --require-reference-environment
+
+      - name: Upload visual reference captures
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-visual-captures-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            artifacts/browser-run-*/captures
+            artifacts/browser-run-*/candidate-references.json
+            artifacts/browser-run-*/observed-environment.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload visual reference proof
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-visual-proof-${{ github.sha }}
+          path: artifacts/proofkit/browser-visual-proof.json
+          if-no-files-found: error
+          retention-days: 14
+
   ci-required-gate:
     name: quality / required aggregate
     runs-on: ubuntu-24.04
@@ -376,6 +430,7 @@ jobs:
     if: ${{ always() }}
     needs:
       - browser-runtime
+      - browser-visual
       - source-quality
       - platform-smoke
       - platform-smoke-intel
@@ -385,6 +440,7 @@ jobs:
         run: |
           set -euo pipefail
           test "${{ needs.browser-runtime.result }}" = "success"
+          test "${{ needs.browser-visual.result }}" = "success"
           test "${{ needs.source-quality.result }}" = "success"
           test "${{ needs.platform-smoke.result }}" = "success"
           test "${{ needs.platform-smoke-intel.result }}" = "success"

@@ -42,7 +42,7 @@ type goListPackage struct {
 	EmbedFiles   []string
 }
 
-func resolveProofInputs(root string, manifest proofInputManifest) (proofInputResolution, error) {
+func resolveProofInputs(root string, manifest proofInputManifest, kind proofKind) (proofInputResolution, error) {
 	goDirs, goFiles, err := repoLocalGoInputs(root, []string{proofVerifierTarget, manifest.ServerTarget})
 	if err != nil {
 		return proofInputResolution{}, err
@@ -50,9 +50,9 @@ func resolveProofInputs(root string, manifest proofInputManifest) (proofInputRes
 	if err := validateRegularInputPaths(root, goFiles); err != nil {
 		return proofInputResolution{}, err
 	}
-	roleOwnedPaths := []string{proofInputManifestPath, manifest.TestRoot, manifest.WriterPath}
+	roleOwnedPaths := []string{kind.ManifestPath, manifest.TestRoot, manifest.WriterPath}
 	selectors := sortedUnique(append(roleOwnedPaths, append(manifest.Paths, goDirs...)...))
-	if err := validateBrowserWitnessPolicy(root, selectors); err != nil {
+	if err := validateBrowserWitnessPolicy(root, kind.CommandID, selectors); err != nil {
 		return proofInputResolution{}, err
 	}
 	explicitPaths, err := collectInputPaths(root, append(roleOwnedPaths, manifest.Paths...))
@@ -146,7 +146,7 @@ func repoRelativePath(root, absolute string) (string, error) {
 	return admit.SafeRepoRelativePath(relative, "browser proof resolved input")
 }
 
-func validateBrowserWitnessPolicy(root string, expected []string) error {
+func validateBrowserWitnessPolicy(root, commandID string, expected []string) error {
 	raw, err := os.ReadFile(filepath.Join(root, "proofkit/witness-plan.json"))
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func validateBrowserWitnessPolicy(root string, expected []string) error {
 		if !ok {
 			return fmt.Errorf("witness plan policies[%d] must be an object", index)
 		}
-		if policy["commandId"] != "proofkit.browser-check" {
+		if policy["commandId"] != commandID {
 			continue
 		}
 		matches++
@@ -182,7 +182,7 @@ func validateBrowserWitnessPolicy(root string, expected []string) error {
 		}
 	}
 	if matches != 1 {
-		return fmt.Errorf("witness plan must contain exactly one browser-check policy")
+		return fmt.Errorf("witness plan must contain exactly one policy for the browser proof command")
 	}
 	return nil
 }

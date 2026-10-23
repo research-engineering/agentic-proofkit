@@ -1,0 +1,29 @@
+{
+  "authority": "routing_only",
+  "manifestId": "sha256:7f176c3093004fb75b7c50da2833fb062481d314774482b86107ce54cc7eee36",
+  "manifestKind": "proofkit.project-routing-manifest",
+  "materializationRequestId": "dispatch.request",
+  "nonClaims": [
+    "Project routing manifests do not duplicate child semantics or prove child admission, freshness, execution, merge, release, rollout, or production readiness."
+  ],
+  "projectId": "example.dispatch",
+  "routes": [
+    {
+      "artifactId": "sha256:fc42c57de63f3520b567f5b1f1a87acff666adae7e6b49f9f21b53ece823f738",
+      "artifactKind": "requirement_source",
+      "path": "docs/specs/dispatch/requirements.v2.json"
+    },
+    {
+      "artifactId": "sha256:5af29397368c993818b0f7520b1be553e2c2c122c06a2e00708f32aa52ea40f8",
+      "artifactKind": "requirement_proof_binding",
+      "path": "proofkit/bindings.json"
+    },
+    {
+      "artifactId": "sha256:9e2ae062461d1e919413de9feb9d7c433f9e73ad072bf7c0eb77099e7a1f1a93",
+      "artifactKind": "test_evidence_inventory",
+      "path": "proofkit/tests.json"
+    }
+  ],
+  "schemaVersion": 1,
+  "sourcePlanId": "sha256:8ef780506e8b5c91fed0d0e76e78061be04053e67c53c9419d4b27d60f31ca50"
+}
