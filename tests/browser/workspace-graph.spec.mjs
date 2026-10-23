@@ -1,6 +1,6 @@
 import {expect} from "@playwright/test";
 import {capacityTest, graphLayoutTest, test} from "./workspace-test-harness.mjs";
-import {openWorkspace} from "./workspace-navigation-harness.mjs";
+import {emulateMediaInEffect, openWorkspace} from "./workspace-navigation-harness.mjs";
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
 import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, normalizeGraphGeometry, readGraphGeometry} from "./graph-geometry-oracle.mjs";
 
@@ -209,7 +209,7 @@ graphLayoutTest("graph geometry preserves paint in dark and forced colors and de
   await page.setViewportSize({width: 1920, height: 1080});
   const graph = await openGraph(page, graphMixedLayoutURL);
   for (const media of [{colorScheme: "dark", forcedColors: "none"}, {colorScheme: "light", forcedColors: "active"}]) {
-    await page.emulateMedia(media);
+    await emulateMediaInEffect(page, media);
     await assertRenderedGraph(page, graph);
     await attachGraphScreenshot(page, testInfo, `graph-${media.forcedColors === "active" ? "forced" : "dark"}.png`);
   }

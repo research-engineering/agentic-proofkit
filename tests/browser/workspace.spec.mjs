@@ -5,7 +5,7 @@ import {test} from "./workspace-test-harness.mjs";
 
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
 
-import {admittedWorkspaceURL, isWorkspaceNavigationResponse, navigateWorkspace, openWorkspace, reloadWorkspace, staticViewCSP} from "./workspace-navigation-harness.mjs";
+import {admittedWorkspaceURL, emulateMediaInEffect, isWorkspaceNavigationResponse, navigateWorkspace, openWorkspace, reloadWorkspace, staticViewCSP} from "./workspace-navigation-harness.mjs";
 
 const fixtureWorkspaceCSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
@@ -1467,7 +1467,7 @@ async function assertReflow(page, row) {
 
 async function assertRenderedContrast(page, row) {
   for (const colorScheme of ["light", "dark"]) {
-    await page.emulateMedia({colorScheme});
+    await emulateMediaInEffect(page, {colorScheme});
     await assertWorkspaceState(page, row);
     const samples = await page.evaluate(() => {
       const parse = (value) => {
