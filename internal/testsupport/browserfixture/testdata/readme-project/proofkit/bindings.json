@@ -1,0 +1,141 @@
+{
+  "bindingId": "example.dispatch",
+  "bindings": [
+    {
+      "commandIds": [
+        "dispatch.check"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "requirementId": "REQ-DISPATCH-001",
+      "scenarioId": "dispatch.scenario.001",
+      "witnessId": "dispatch.witness.001",
+      "witnessKind": "contract",
+      "witnessPath": "tests/dispatch_test.go",
+      "witnessSelectors": [
+        {
+          "command": "go test ./tests -run TestDispatch001",
+          "selector": "TestDispatch001"
+        }
+      ]
+    },
+    {
+      "commandIds": [
+        "dispatch.check"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "requirementId": "REQ-DISPATCH-002",
+      "scenarioId": "dispatch.scenario.002",
+      "witnessId": "dispatch.witness.002",
+      "witnessKind": "contract",
+      "witnessPath": "tests/dispatch_test.go",
+      "witnessSelectors": [
+        {
+          "command": "go test ./tests -run TestDispatch002",
+          "selector": "TestDispatch002"
+        }
+      ]
+    },
+    {
+      "commandIds": [
+        "dispatch.check"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "requirementId": "REQ-DISPATCH-003",
+      "scenarioId": "dispatch.scenario.003",
+      "witnessId": "dispatch.witness.003",
+      "witnessKind": "contract",
+      "witnessPath": "tests/dispatch_test.go",
+      "witnessSelectors": [
+        {
+          "command": "go test ./tests -run TestDispatch003",
+          "selector": "TestDispatch003"
+        }
+      ]
+    },
+    {
+      "commandIds": [
+        "dispatch.check"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "requirementId": "REQ-DISPATCH-004",
+      "scenarioId": "dispatch.scenario.004",
+      "witnessId": "dispatch.witness.004",
+      "witnessKind": "contract",
+      "witnessPath": "tests/dispatch_test.go",
+      "witnessSelectors": [
+        {
+          "command": "go test ./tests -run TestDispatch004",
+          "selector": "TestDispatch004"
+        }
+      ]
+    }
+  ],
+  "nonClaims": [
+    "Synthetic delivery bindings do not execute witnesses."
+  ],
+  "requirements": [
+    {
+      "claimLevel": "blocking",
+      "nonClaims": [
+        "This synthetic requirement does not establish execution evidence."
+      ],
+      "ownerId": "example.dispatch",
+      "proofState": "witness_backed",
+      "requirementId": "REQ-DISPATCH-001",
+      "specPath": "docs/specs/dispatch/requirements.v2.json"
+    },
+    {
+      "claimLevel": "blocking",
+      "nonClaims": [
+        "This synthetic requirement does not establish execution evidence."
+      ],
+      "ownerId": "example.dispatch",
+      "proofState": "witness_backed",
+      "requirementId": "REQ-DISPATCH-002",
+      "specPath": "docs/specs/dispatch/requirements.v2.json"
+    },
+    {
+      "claimLevel": "blocking",
+      "nonClaims": [
+        "This synthetic requirement does not establish execution evidence."
+      ],
+      "ownerId": "example.dispatch",
+      "proofState": "witness_backed",
+      "requirementId": "REQ-DISPATCH-003",
+      "specPath": "docs/specs/dispatch/requirements.v2.json"
+    },
+    {
+      "claimLevel": "blocking",
+      "nonClaims": [
+        "This synthetic requirement does not establish execution evidence."
+      ],
+      "ownerId": "example.dispatch",
+      "proofState": "witness_backed",
+      "requirementId": "REQ-DISPATCH-004",
+      "specPath": "docs/specs/dispatch/requirements.v2.json"
+    }
+  ],
+  "schemaVersion": 1,
+  "selection": {
+    "changedPaths": [],
+    "ownerIds": [],
+    "requirementIds": []
+  },
+  "witnessCommands": [
+    {
+      "command": "go test ./tests",
+      "commandId": "dispatch.check",
+      "environmentClasses": [
+        "local-go"
+      ]
+    }
+  ]
+}

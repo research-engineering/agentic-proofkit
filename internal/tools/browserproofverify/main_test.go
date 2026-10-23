@@ -40,7 +40,7 @@ func TestInputManifestClosesGoDependenciesAndWitnessPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest, err := loadProofInputManifest(root)
+	manifest, err := loadProofInputManifest(root, runtimeProofKind())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestInputManifestClosesGoDependenciesAndWitnessPolicy(t *testing.T) {
 			t.Fatalf("manifest omits required browser proof input selector %q", required)
 		}
 	}
-	resolution, err := resolveProofInputs(root, manifest)
+	resolution, err := resolveProofInputs(root, manifest, runtimeProofKind())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestInputManifestClosesGoDependenciesAndWitnessPolicy(t *testing.T) {
 	weakened := slices.DeleteFunc(append([]string{}, resolution.Selectors...), func(path string) bool {
 		return path == "internal/command/requirementcontext"
 	})
-	if err := validateBrowserWitnessPolicy(root, weakened); err == nil {
+	if err := validateBrowserWitnessPolicy(root, "proofkit.browser-check", weakened); err == nil {
 		t.Fatal("witness policy accepted a resolver projection with a missing Go dependency")
 	}
 }
@@ -87,10 +87,10 @@ func TestInputManifestRejectsNonCanonicalAuthority(t *testing.T) {
 			if err := os.MkdirAll(filepath.Join(root, "scripts"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(proofInputManifestPath)), []byte(item.raw), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(runtimeProofKind().ManifestPath)), []byte(item.raw), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := loadProofInputManifest(root); err == nil {
+			if _, err := loadProofInputManifest(root, runtimeProofKind()); err == nil {
 				t.Fatalf("loadProofInputManifest accepted %s", item.name)
 			}
 		})

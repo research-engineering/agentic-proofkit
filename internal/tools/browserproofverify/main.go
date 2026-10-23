@@ -22,8 +22,6 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
-const proofPath = "artifacts/proofkit/browser-runtime-proof.json"
-
 var proofNonClaims = []string{
 	"This record proves only that the listed content-bound Playwright tests passed in each recorded project before record creation.",
 	"Playwright WebKit is not branded Safari compatibility proof.",
@@ -32,11 +30,23 @@ var proofNonClaims = []string{
 	"This record does not independently authenticate or sandbox the same-user proof runner, external toolchain packages, or browser binaries.",
 }
 
+const usage = "usage: browserproofverify [--manifest PATH] [--resolve-inputs | --run [--require-reference-environment] | --admit-playwright-report PATH | --admit-references --from RUN_DIRECTORY]"
+
 func main() {
-	if len(os.Args) == 3 && os.Args[1] == "--admit-playwright-report" {
+	arguments := os.Args[1:]
+	kind := runtimeProofKind()
+	if len(arguments) >= 2 && arguments[0] == "--manifest" {
+		selected, err := selectProofKind(arguments[1])
+		if err != nil {
+			exit(err)
+		}
+		kind = selected
+		arguments = arguments[2:]
+	}
+	if len(arguments) == 2 && arguments[0] == "--admit-playwright-report" {
 		root, err := os.Getwd()
 		if err == nil {
-			err = writeAdmittedPlaywrightReport(root, os.Args[2])
+			err = writeAdmittedPlaywrightReport(root, arguments[1], kind)
 		}
 		if err != nil {
 			exit(err)
@@ -48,26 +58,30 @@ func main() {
 		exit(err)
 	}
 	switch {
-	case len(os.Args) == 1:
-		err = verifyCurrentProof(root)
-	case len(os.Args) == 2 && os.Args[1] == "--resolve-inputs":
-		err = writeCurrentInputResolution(root)
-	case len(os.Args) == 2 && os.Args[1] == "--run":
-		err = runBrowserProof(root)
+	case len(arguments) == 0:
+		err = verifyCurrentProof(root, kind)
+	case len(arguments) == 1 && arguments[0] == "--resolve-inputs":
+		err = writeCurrentInputResolution(root, kind)
+	case len(arguments) == 1 && arguments[0] == "--run":
+		err = runBrowserProof(root, kind, false)
+	case len(arguments) == 2 && arguments[0] == "--run" && arguments[1] == "--require-reference-environment" && kind.admitsState("unverified"):
+		err = runBrowserProof(root, kind, true)
+	case len(arguments) == 3 && arguments[0] == "--admit-references" && arguments[1] == "--from" && kind.isVisual():
+		err = writeVisualReferenceInventory(root, arguments[2])
 	default:
-		err = fmt.Errorf("usage: browserproofverify [--resolve-inputs | --run | --admit-playwright-report PATH]")
+		err = fmt.Errorf("%s", usage)
 	}
 	if err != nil {
 		exit(err)
 	}
 }
 
-func verifyCurrentProof(root string) error {
-	manifest, err := loadProofInputManifest(root)
+func verifyCurrentProof(root string, kind proofKind) error {
+	manifest, err := loadProofInputManifest(root, kind)
 	if err != nil {
 		return err
 	}
-	resolution, err := resolveProofInputs(root, manifest)
+	resolution, err := resolveProofInputs(root, manifest, kind)
 	if err != nil {
 		return err
 	}
@@ -75,19 +89,26 @@ func verifyCurrentProof(root string) error {
 	if err != nil {
 		return err
 	}
-	value, err := readRootedJSON(root, proofPath, 8<<20)
+	value, err := readRootedJSON(root, kind.RecordPath, 8<<20)
 	if err != nil {
 		return err
+	}
+	return verifyKindRecord(root, kind, value, resolution, revision, state)
+}
+
+func verifyKindRecord(root string, kind proofKind, value any, resolution proofInputResolution, revision, state string) error {
+	if kind.isVisual() {
+		return verifyVisualRecord(root, value, resolution, revision, state)
 	}
 	return verifyRecord(root, value, resolution, revision, state)
 }
 
-func writeCurrentInputResolution(root string) error {
-	manifest, err := loadProofInputManifest(root)
+func writeCurrentInputResolution(root string, kind proofKind) error {
+	manifest, err := loadProofInputManifest(root, kind)
 	if err != nil {
 		return err
 	}
-	resolution, err := resolveProofInputs(root, manifest)
+	resolution, err := resolveProofInputs(root, manifest, kind)
 	if err != nil {
 		return err
 	}
@@ -99,12 +120,12 @@ func writeCurrentInputResolution(root string) error {
 	return err
 }
 
-func runBrowserProof(root string) (resultErr error) {
-	manifest, err := loadProofInputManifest(root)
+func runBrowserProof(root string, kind proofKind, requireReferenceEnvironment bool) (resultErr error) {
+	manifest, err := loadProofInputManifest(root, kind)
 	if err != nil {
 		return err
 	}
-	resolution, err := resolveProofInputs(root, manifest)
+	resolution, err := resolveProofInputs(root, manifest, kind)
 	if err != nil {
 		return err
 	}
@@ -112,11 +133,14 @@ func runBrowserProof(root string) (resultErr error) {
 	if err != nil {
 		return err
 	}
-	runPaths, err := prepareBrowserProofRun(root)
+	runPaths, err := prepareBrowserProofRun(root, kind)
 	if err != nil {
 		return err
 	}
 	defer func() {
+		if kind.RetainRun {
+			return
+		}
 		resultErr = finalizeBrowserProofRun(root, runPaths.RunDirectory, resultErr)
 	}()
 	command := exec.Command("node", manifest.WriterPath)
@@ -142,13 +166,39 @@ func runBrowserProof(root string) (resultErr error) {
 	if err != nil {
 		return err
 	}
-	if err := verifyRecord(root, value, resolution, revision, state); err != nil {
+	if err := verifyKindRecord(root, kind, value, resolution, revision, state); err != nil {
 		return fmt.Errorf("admit browser proof candidate: %w", err)
 	}
-	if err := writeRootedJSON(root, proofPath, value); err != nil {
-		return fmt.Errorf("write browser runtime proof: %w", err)
+	record := value.(map[string]any)
+	if record["state"] == "unverified" {
+		divergent := visualDivergentFields(record)
+		if requireReferenceEnvironment {
+			return fmt.Errorf("browser visual proof is unverified: the observed environment differs from the reference environment in %s", strings.Join(divergent, ", "))
+		}
+		fmt.Fprintln(os.Stdout, "browser visual proof: unverified; observed environment differs from the reference environment in: "+strings.Join(divergent, ", "))
 	}
-	return verifyCurrentProof(root)
+	if err := writeRootedJSON(root, kind.RecordPath, value); err != nil {
+		return fmt.Errorf("write browser proof record: %w", err)
+	}
+	return verifyCurrentProof(root, kind)
+}
+
+// writeVisualReferenceInventory is the owner's admission of one run's
+// captures; the gate never calls it.
+func writeVisualReferenceInventory(root, runDirectory string) error {
+	encoded, err := buildVisualReferenceInventoryFromRun(root, runDirectory)
+	if err != nil {
+		return err
+	}
+	rootFS, err := os.OpenRoot(root)
+	if err != nil {
+		return err
+	}
+	defer rootFS.Close()
+	if err := admitRootedDestination(rootFS, filepath.FromSlash(visualReferencesPath)); err != nil {
+		return err
+	}
+	return rootFS.WriteFile(filepath.FromSlash(visualReferencesPath), encoded, 0o644)
 }
 
 func currentSourceIdentity(root string) (string, string, error) {
@@ -212,52 +262,8 @@ func verifyRecord(root string, raw any, expectedResolution proofInputResolution,
 	if err := exactTextArray(command["argv"], []string{"node_modules/@playwright/test/cli.js", "test"}, "browser runtime proof command argv"); err != nil {
 		return err
 	}
-	inputResolution, ok := record["inputResolution"].(map[string]any)
-	if !ok || admit.KnownKeys(inputResolution, []string{"serverTarget", "writerPath"}, "browser runtime proof inputResolution") != nil ||
-		inputResolution["serverTarget"] != expectedResolution.ServerTarget || inputResolution["writerPath"] != expectedResolution.WriterPath {
-		return fmt.Errorf("browser runtime proof input resolution is invalid")
-	}
-	assets, ok := record["assets"].([]any)
-	if !ok || len(assets) != len(expectedResolution.InputPaths) {
-		return fmt.Errorf("browser runtime proof assets do not match the input set")
-	}
-	identityAssets := make([]any, 0, len(assets))
-	for index, rawAsset := range assets {
-		asset, ok := rawAsset.(map[string]any)
-		if !ok || admit.KnownKeys(asset, []string{"path", "sha256"}, "browser runtime proof asset") != nil || asset["path"] != expectedResolution.InputPaths[index] {
-			return fmt.Errorf("browser runtime proof asset order or shape is invalid")
-		}
-		path, err := admit.SafeRepoRelativePath(expectedResolution.InputPaths[index], "browser runtime proof asset path")
-		if err != nil {
-			return err
-		}
-		sha, err := admit.LowercaseSHA256(asset["sha256"], "browser runtime proof asset sha256")
-		if err != nil {
-			return err
-		}
-		content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
-		if err != nil {
-			return err
-		}
-		actual := sha256.Sum256(content)
-		if sha != hex.EncodeToString(actual[:]) {
-			return fmt.Errorf("browser runtime proof asset digest mismatch at %s", admit.RedactStructuralText(path))
-		}
-		identityAssets = append(identityAssets, map[string]any{"path": path, "sha256": sha})
-	}
-	encodedIdentity, err := stablejson.MarshalLayout(map[string]any{
-		"assets": identityAssets,
-		"inputResolution": map[string]any{
-			"serverTarget": expectedResolution.ServerTarget,
-			"writerPath":   expectedResolution.WriterPath,
-		},
-	}, stablejson.LayoutCompact)
-	if err != nil {
+	if err := verifyContentBoundInputs(root, record, expectedResolution, "browser runtime proof"); err != nil {
 		return err
-	}
-	expectedInputDigest := digest.SHA256TextRef(strings.TrimSuffix(string(encodedIdentity), "\n"))
-	if record["inputDigest"] != expectedInputDigest {
-		return fmt.Errorf("browser runtime proof inputDigest mismatch: got %s want %s", admit.RedactStructuralText(fmt.Sprint(record["inputDigest"])), expectedInputDigest)
 	}
 	engines, ok := record["engines"].([]any)
 	if !ok || len(engines) != 3 {
@@ -285,6 +291,59 @@ func verifyRecord(root string, raw any, expectedResolution proofInputResolution,
 	findings, err := secretjson.Scan(record, "browser_runtime_proof")
 	if err != nil || len(findings) > 0 {
 		return fmt.Errorf("browser runtime proof contains secret-shaped data")
+	}
+	return nil
+}
+
+// verifyContentBoundInputs binds a record's input resolution, ordered assets
+// and inputDigest to the resolved input set and the current file bytes.
+func verifyContentBoundInputs(root string, record map[string]any, expectedResolution proofInputResolution, label string) error {
+	inputResolution, ok := record["inputResolution"].(map[string]any)
+	if !ok || admit.KnownKeys(inputResolution, []string{"serverTarget", "writerPath"}, label+" inputResolution") != nil ||
+		inputResolution["serverTarget"] != expectedResolution.ServerTarget || inputResolution["writerPath"] != expectedResolution.WriterPath {
+		return fmt.Errorf("%s input resolution is invalid", label)
+	}
+	assets, ok := record["assets"].([]any)
+	if !ok || len(assets) != len(expectedResolution.InputPaths) {
+		return fmt.Errorf("%s assets do not match the input set", label)
+	}
+	identityAssets := make([]any, 0, len(assets))
+	for index, rawAsset := range assets {
+		asset, ok := rawAsset.(map[string]any)
+		if !ok || admit.KnownKeys(asset, []string{"path", "sha256"}, label+" asset") != nil || asset["path"] != expectedResolution.InputPaths[index] {
+			return fmt.Errorf("%s asset order or shape is invalid", label)
+		}
+		path, err := admit.SafeRepoRelativePath(expectedResolution.InputPaths[index], label+" asset path")
+		if err != nil {
+			return err
+		}
+		sha, err := admit.LowercaseSHA256(asset["sha256"], label+" asset sha256")
+		if err != nil {
+			return err
+		}
+		content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
+		if err != nil {
+			return err
+		}
+		actual := sha256.Sum256(content)
+		if sha != hex.EncodeToString(actual[:]) {
+			return fmt.Errorf("%s asset digest mismatch at %s", label, admit.RedactStructuralText(path))
+		}
+		identityAssets = append(identityAssets, map[string]any{"path": path, "sha256": sha})
+	}
+	encodedIdentity, err := stablejson.MarshalLayout(map[string]any{
+		"assets": identityAssets,
+		"inputResolution": map[string]any{
+			"serverTarget": expectedResolution.ServerTarget,
+			"writerPath":   expectedResolution.WriterPath,
+		},
+	}, stablejson.LayoutCompact)
+	if err != nil {
+		return err
+	}
+	expectedInputDigest := digest.SHA256TextRef(strings.TrimSuffix(string(encodedIdentity), "\n"))
+	if record["inputDigest"] != expectedInputDigest {
+		return fmt.Errorf("%s inputDigest mismatch: got %s want %s", label, admit.RedactStructuralText(fmt.Sprint(record["inputDigest"])), expectedInputDigest)
 	}
 	return nil
 }

@@ -1254,6 +1254,60 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestWorkflowExternalActionsUseFullCommitSHAs",
 			},
 		},
+		{"REQ-PROOFKIT-QUALITY-025", "proofkit.supply-chain-quality.workflow-container-digest-pins"}: {
+			witnessPath: "scripts/workflow_browser_visual_oracle_test.go",
+			selectors:   []string{"TestWorkflowContainerImagesArePinnedByDigest"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-reference-inventory"}: {
+			witnessPath: "internal/tools/browserproofverify/visual_inventory_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{
+				"TestBrowserVisualScriptIsSeparateFromThePackageGate",
+				"TestCommittedVisualReferencesAreDigestsBoundToTheRecordedEnvironment",
+				"TestVisualInventoryIsTheExactViewEngineSchemeWidthProduct",
+				"TestVisualReferenceInventoryRefusesEveryIntegrityMutant",
+				"TestVisualReferencesStayOutsideThePackage",
+			},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-environment-toolchain-binding"}: {
+			witnessPath: "internal/tools/browserproofverify/visual_inventory_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestVisualEnvironmentBindsThePinnedPlaywrightToolchain"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-proof-record"}: {
+			witnessPath: "internal/tools/browserproofverify/visual_record_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{
+				"TestVisualProofRunWritesNoRecordOnFailureOrRequiredUnverified",
+				"TestVisualRecordAdmitsOnlyConsistentPassedOrUnverifiedStates",
+			},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-reference-admission"}: {
+			witnessPath: "internal/tools/browserproofverify/visual_inventory_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestVisualReferenceAdmissionFromRunRefusesEveryUnadmissibleRun"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-readme-project"}: {
+			witnessPath: "internal/testsupport/browserfixture/readme_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestReadmeProjectMaterializesAnAdmittedViewProject"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-ci-reference-environment"}: {
+			witnessPath: "scripts/workflow_browser_visual_oracle_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{
+				"TestCIBrowserVisualRejectsWeakenedReferenceGate",
+				"TestCIBrowserVisualRunsTheRecordedReferenceEnvironment",
+			},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-exact-comparator"}: {
+			witnessPath: "scripts/browser-visual-references.test.mjs",
+			commandIDs:  []string{"proofkit.browser-check"}, environmentClasses: []string{"local-node-browser"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-reference-gate"}: {
+			witnessPath: "tests/visual/references.spec.mjs",
+			commandIDs:  []string{"proofkit.browser-visual"}, environmentClasses: []string{"container-linux-arm64-browser"},
+		},
 		{"REQ-PROOFKIT-SPEC-011", "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi"}: {
 			witnessPath: "internal/app/cli_abi_test.go",
 			selectors:   []string{"TestAdoptionContractEnvelopeCLIABI"},

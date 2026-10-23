@@ -629,6 +629,14 @@
       "nonClaims": ["This bounded diagnostic taxonomy does not prove confidentiality of values outside its admitted secret and control classes or claim that every repository-internal tool invocation uses the installed-carrier timeout policy."]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not claim pixel identity outside the recorded reference environment or on CPU models other than the calibrated Apple M1 (implementer 0x61) and Arm Neoverse N2 (implementer 0x41, part 0xd49), coverage of content below the first 2400 CSS pixels of a view, that weights 400 and 500, or weights 600 to 900, render differently (only regular and bold faces are installed, so each group renders identically), that a family name unknown to fontconfig, other than ui-monospace, falls through to the next family of its stack in WebKit (a name WebKit looks up resolves to Liberation Sans), that an admitted run directory is unmodified gate output (only a passing gate on the admitting tree proves the admitted digests), that the release candidate or the package gate reruns the visual gate, who reviewed or admitted a reference change, a human usability study, or WCAG conformance certification. Admitted images are not stored in the repository; they are reproducible from the admitting commit in the recorded environment on a calibrated CPU model while the pinned image and the pinned toolchain and dependency downloads remain available, and the uploaded gallery is derived, retention-limited evidence."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-017",
       "ownerId": "proofkit.spec-proof-core",
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
@@ -5212,6 +5220,21 @@
       "environmentClasses": ["local-go"]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-025",
+      "scenarioId": "proofkit.supply-chain-quality.workflow-container-digest-pins",
+      "witnessId": "proofkit.workflow.container-digest-pin-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_browser_visual_oracle_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowContainerImagesArePinnedByDigest",
+          "command": "go test ./scripts -run '^TestWorkflowContainerImagesArePinnedByDigest$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-QUALITY-026",
       "scenarioId": "proofkit.supply-chain-quality.unicode-scalar-policy",
       "witnessId": "proofkit.unicode-policy.scalar-table-falsifier",
@@ -5563,6 +5586,138 @@
       ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.visual-reference-inventory",
+      "witnessId": "proofkit.browser-visual.reference-inventory-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/browserproofverify/visual_inventory_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBrowserVisualScriptIsSeparateFromThePackageGate",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestBrowserVisualScriptIsSeparateFromThePackageGate$'"
+        },
+        {
+          "selector": "TestCommittedVisualReferencesAreDigestsBoundToTheRecordedEnvironment",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestCommittedVisualReferencesAreDigestsBoundToTheRecordedEnvironment$'"
+        },
+        {
+          "selector": "TestVisualInventoryIsTheExactViewEngineSchemeWidthProduct",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestVisualInventoryIsTheExactViewEngineSchemeWidthProduct$'"
+        },
+        {
+          "selector": "TestVisualReferenceInventoryRefusesEveryIntegrityMutant",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestVisualReferenceInventoryRefusesEveryIntegrityMutant$'"
+        },
+        {
+          "selector": "TestVisualReferencesStayOutsideThePackage",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestVisualReferencesStayOutsideThePackage$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.visual-environment-toolchain-binding",
+      "witnessId": "proofkit.browser-visual.environment-toolchain-binding",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/browserproofverify/visual_inventory_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVisualEnvironmentBindsThePinnedPlaywrightToolchain",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestVisualEnvironmentBindsThePinnedPlaywrightToolchain$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.visual-proof-record",
+      "witnessId": "proofkit.browser-visual.proof-record-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/browserproofverify/visual_record_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVisualProofRunWritesNoRecordOnFailureOrRequiredUnverified",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestVisualProofRunWritesNoRecordOnFailureOrRequiredUnverified$'"
+        },
+        {
+          "selector": "TestVisualRecordAdmitsOnlyConsistentPassedOrUnverifiedStates",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestVisualRecordAdmitsOnlyConsistentPassedOrUnverifiedStates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.visual-reference-admission",
+      "witnessId": "proofkit.browser-visual.reference-admission-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/browserproofverify/visual_inventory_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVisualReferenceAdmissionFromRunRefusesEveryUnadmissibleRun",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestVisualReferenceAdmissionFromRunRefusesEveryUnadmissibleRun$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.visual-readme-project",
+      "witnessId": "proofkit.browser-visual.readme-project-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/testsupport/browserfixture/readme_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReadmeProjectMaterializesAnAdmittedViewProject",
+          "command": "go test ./internal/testsupport/browserfixture -run '^TestReadmeProjectMaterializesAnAdmittedViewProject$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.visual-ci-reference-environment",
+      "witnessId": "proofkit.browser-visual.ci-reference-environment-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_browser_visual_oracle_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCIBrowserVisualRejectsWeakenedReferenceGate",
+          "command": "go test ./scripts -run '^TestCIBrowserVisualRejectsWeakenedReferenceGate$'"
+        },
+        {
+          "selector": "TestCIBrowserVisualRunsTheRecordedReferenceEnvironment",
+          "command": "go test ./scripts -run '^TestCIBrowserVisualRunsTheRecordedReferenceEnvironment$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.visual-exact-comparator",
+      "witnessId": "proofkit.browser-visual.exact-comparator-falsifiers",
+      "witnessKind": "technical",
+      "witnessPath": "scripts/browser-visual-references.test.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.visual-reference-gate",
+      "witnessId": "proofkit.browser-visual.reference-gate",
+      "witnessKind": "technical",
+      "witnessPath": "tests/visual/references.spec.mjs",
+      "commandIds": ["proofkit.browser-visual"],
+      "environmentClasses": ["container-linux-arm64-browser"]
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-019",
@@ -10467,6 +10622,11 @@
       "commandId": "proofkit.browser-check",
       "command": "npm run browser:check",
       "environmentClass": "local-node-browser"
+    },
+    {
+      "commandId": "proofkit.browser-visual",
+      "command": "npm run browser:visual -- --require-reference-environment",
+      "environmentClass": "container-linux-arm64-browser"
     },
     {
       "commandId": "proofkit.command-contract-check",

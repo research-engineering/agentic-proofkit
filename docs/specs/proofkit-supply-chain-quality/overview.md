@@ -189,10 +189,11 @@ vulnerability absence, or consumer rollout safety by itself.
   downloadable artifact-relative paths without inferring change completeness
   from the source diff.
 - `REQ-PROOFKIT-QUALITY-025`: exact workflow inventory, closed raw-YAML keys
-  before typed decoding, exact release deployment environments, pinned action
-  commit identities, admitted status expressions, the required aggregate shell
-  program, and read-only treatment of an existing release are source-oracle
-  invariants.
+  before typed decoding, exact release deployment environments, one exact
+  job container for the visual reference job, sha256-digest pins for every
+  workflow container image reference, pinned action commit identities,
+  admitted status expressions, the required aggregate shell program, and
+  read-only treatment of an existing release are source-oracle invariants.
 - `REQ-PROOFKIT-QUALITY-026`: every public or retained-evidence stable JSON
   implementation accepts only the repository-pinned Unicode scalar set and matches one
   preimplementation byte corpus for the pinned control, format, and separator
@@ -208,6 +209,16 @@ vulnerability absence, or consumer rollout safety by itself.
   Shared unsupported-key diagnostics preserve their context argument and report
   an unknown-key count instead of unknown names or values. Context and ordinary
   report fields retain their separate admission owners.
+- `REQ-PROOFKIT-QUALITY-028`: every rendered view in each engine, color scheme
+  and width, plus the README scene, has an owner-admitted canonical pixel
+  digest bound to one recorded, digest-pinned linux/arm64 container environment
+  with a committed font configuration; no reference image is stored. The
+  separate visual gate observes and records the environment before any browser
+  launch, reports another environment as unverified, captures each view twice,
+  requires equal dimensions and digest, keeps its captures for review, never
+  writes into the test directory and fails on a missing, changed or extra
+  reference. Admission recomputes the digests from a reference-environment
+  run's captures.
 
 ## Non-Claims
 
