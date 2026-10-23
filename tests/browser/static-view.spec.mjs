@@ -2,7 +2,7 @@ import {readFile} from "node:fs/promises";
 import {createHash} from "node:crypto";
 import {expect} from "@playwright/test";
 import {staticViewTest as test} from "./workspace-test-harness.mjs";
-import {openWorkspace} from "./workspace-navigation-harness.mjs";
+import {emulateMediaInEffect, openWorkspace} from "./workspace-navigation-harness.mjs";
 
 const heading = "Requirement Source View: browser.fixture.requirements";
 const treeHeading = "Requirement Spec Tree View: browser.fixture.tree";
@@ -146,7 +146,7 @@ test("static hierarchy links resolve once and remain deterministic", async ({sta
 for (const colorScheme of ["light", "dark"]) {
   test(`static control boundaries have computed contrast in ${colorScheme}`, async ({staticTreeURL, page}, testInfo) => {
     await openWorkspace(page, staticTreeURL, treeHeading, "static-view");
-    await page.emulateMedia({colorScheme});
+    await emulateMediaInEffect(page, {colorScheme});
     const controls = page.locator('input[type="search"], select, button');
     expect(await controls.count()).toBeGreaterThanOrEqual(4);
     const inspect = () => controls.evaluateAll(nodes => {
