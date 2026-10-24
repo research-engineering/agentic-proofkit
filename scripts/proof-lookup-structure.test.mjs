@@ -30,27 +30,102 @@ function valid(command, direction, value) {
 const hash = value => createHash('sha256').update(value).digest('hex');
 // Declared, single-purpose deltas from the frozen predecessor streams. The
 // corpus stays untouched; each delta names its rows and exact byte change.
+// The deltas apply in order; a current stream is inverted newest first.
+// The browserdoc stylesheet that the design-token delta replaced.
+const tokenDeltaReplacedStyle = [
+  ':root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.45;background:#f7f7f4;color:#1f2428}',
+  'body{margin:0;overflow-wrap:anywhere}',
+  'main{max-width:1120px;margin:0 auto;padding:32px 20px 56px}',
+  'header{margin-bottom:20px}',
+  'h1{font-size:clamp(1.7rem,2.8vw,2.6rem);line-height:1.1;margin:0}',
+  'h2{font-size:1.05rem;margin:0 0 12px}',
+  'h3{font-size:.95rem;margin:18px 0 8px}',
+  '.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:0;text-transform:uppercase;color:#586069;margin:0 0 8px}',
+  'a{color:#0969da;text-decoration:none}a:hover{text-decoration:underline}',
+  '.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:#fff;border:1px solid #d8dee4;border-radius:8px;box-shadow:0 1px 2px rgba(31,35,40,.04)}',
+  '.summary{padding:16px;margin-bottom:16px}',
+  '.hierarchy{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:16px;margin-bottom:16px}',
+  '.hierarchy section{min-width:0}',
+  '.hierarchy h2,.card-group>h2{font-size:.88rem;text-transform:uppercase;letter-spacing:0;color:#586069;margin:0 0 10px}',
+  '.hierarchy ul{margin:0;padding-left:18px}',
+  '.hierarchy li{margin:4px 0}.hierarchy span,.card-group>h2 span{font-weight:400;color:#586069}',
+  'dl{display:grid;grid-template-columns:minmax(140px,220px) 1fr;gap:8px 14px;margin:0}',
+  'dt{font-weight:700;color:#4b5563}',
+  'dd{margin:0;min-width:0}',
+  'code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;background:#f1f5f9;border-radius:4px;padding:.1em .3em}',
+  '.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end;padding:14px;margin-bottom:10px;position:sticky;top:0;z-index:1}',
+  '.control{display:grid;gap:6px;min-width:0}',
+  '.search-label{position:absolute;left:-10000px}',
+  'input[type=search],select{width:100%;box-sizing:border-box;border:1px solid #768390;border-radius:6px;padding:8px 10px;background:#fff;color:inherit}',
+  '.toggle{white-space:nowrap;font-size:.92rem}',
+  '.exports{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px;margin-bottom:10px}',
+  '.exports h2{font-size:.88rem;text-transform:uppercase;letter-spacing:0;color:#586069;margin:0 8px 0 0}',
+  'button{border:1px solid #768390;border-radius:6px;background:#f6f8fa;color:inherit;padding:8px 10px;cursor:pointer}button:hover{background:#eef2f6}',
+  '.result-count{margin:12px 2px;color:#586069}',
+  '.cards{display:grid;gap:18px}',
+  '.cards[hidden]{display:none}',
+  '.card-group[hidden]{display:none}',
+  '.card-group{display:grid;gap:12px;scroll-margin-top:86px}',
+  '.card-group>h2{border-bottom:1px solid #d8dee4;padding-bottom:8px}',
+  '.card{padding:18px}',
+  '.proofkit-id{display:inline-block;margin-right:8px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em}',
+  'html[data-show-ids=false] .proofkit-id{display:none}',
+  '.proofkit-title{font-weight:700}',
+  'details{border:1px solid #d8dee4;border-radius:6px;margin-top:12px;padding:10px 12px}',
+  'summary{cursor:pointer;font-weight:700}',
+  '.table-view{padding:0;overflow:hidden}',
+  '.table-scroll{overflow:auto}',
+  'table{width:100%;border-collapse:collapse;font-size:.92rem}',
+  'th,td{border-bottom:1px solid #d8dee4;padding:10px 12px;text-align:left;vertical-align:top}',
+  'th{position:sticky;top:0;background:#f6f8fa;font-size:.78rem;text-transform:uppercase;letter-spacing:0;color:#586069}',
+  '.non-claims{margin-top:18px;padding:18px}',
+  'ul{margin:8px 0 0;padding-left:22px}',
+  '@media (max-width:720px){main{padding:24px 12px 40px}.controls{grid-template-columns:1fr;position:static}dl{grid-template-columns:1fr}.summary,.controls,.exports,.card,.non-claims{border-radius:6px}}',
+  '@media (prefers-color-scheme:dark){:root{background:#101418;color:#e6edf3}.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:#161b22;border-color:#30363d}.eyebrow,.result-count,dt,.hierarchy h2,.card-group>h2,.hierarchy span,.card-group>h2 span,th,.exports h2{color:#9da7b1}input[type=search],select,th{background:#0d1117}input[type=search],select,button{border-color:#8b949e}button{background:#21262d}button:hover{background:#30363d}code{background:#0d1117}details,th,td,.card-group>h2{border-color:#30363d}a{color:#58a6ff}}',
+].join('');
 const declaredStreamDeltas = Object.freeze([Object.freeze({
   id: 'KERNEL-02',
   reason: 'The shared browserdoc stylesheet hides card groups without a matching record.',
   rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
   anchor: '.cards[hidden]{display:none}',
   insertion: '.card-group[hidden]{display:none}',
+}), Object.freeze({
+  id: 'UI-DESIGN-01',
+  reason: 'The single style element holds the design-token stylesheet and then the browserdoc stylesheet that reads its tokens.',
+  rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
+  styleSHA256: '24a618da1cb7e81b0dfa7e0c8d51d49bcfa06938419eae7af9b60dc2ccf4735d',
+  replacedStyle: tokenDeltaReplacedStyle,
 })]);
 const count = (text, needle) => text.split(needle).length - 1;
-// Returns the predecessor stdout implied by the declared delta, or null when the
-// current bytes do not carry exactly that delta at exactly that position.
-function predecessorStdout(rowName, stdout) {
-  const delta = declaredStreamDeltas.find(item => item.rows.includes(rowName));
-  if (!delta) return stdout;
+// Returns the stream before one delta, or null when the bytes do not carry
+// exactly that delta at exactly that position.
+function invertDelta(delta, stdout) {
   const style = stdout.indexOf('<style>'), styleEnd = stdout.indexOf('</style>');
+  if (count(stdout, '<style>') !== 1 || count(stdout, '</style>') !== 1 || styleEnd < style) return null;
+  if (delta.replacedStyle !== undefined) {
+    // The whole content of the only style element is the declared stylesheet;
+    // every byte outside it is conserved.
+    const content = style + '<style>'.length;
+    if (hash(stdout.slice(content, styleEnd)) !== delta.styleSHA256) return null;
+    return stdout.slice(0, content) + delta.replacedStyle + stdout.slice(styleEnd);
+  }
   const at = stdout.indexOf(delta.anchor + delta.insertion);
-  if (count(stdout, '<style>') !== 1 || count(stdout, '</style>') !== 1 || count(stdout, delta.insertion) !== 1 ||
-    at < style || at + delta.anchor.length + delta.insertion.length > styleEnd) return null;
+  if (count(stdout, delta.insertion) !== 1 || at < style || at + delta.anchor.length + delta.insertion.length > styleEnd) return null;
   return stdout.slice(0, at + delta.anchor.length) + stdout.slice(at + delta.anchor.length + delta.insertion.length);
 }
-const conservesPredecessor = (row, stdout) => {
-  const predecessor = predecessorStdout(row.name, stdout);
+// Returns the predecessor stdout implied by the declared deltas, or null when
+// the current bytes do not carry exactly those deltas.
+function predecessorStdout(rowName, stdout, deltas = declaredStreamDeltas) {
+  let current = stdout;
+  for (const delta of deltas.toReversed()) {
+    if (!delta.rows.includes(rowName)) continue;
+    current = invertDelta(delta, current);
+    if (current === null) return null;
+  }
+  return current;
+}
+const conservesPredecessor = (row, stdout, deltas = declaredStreamDeltas) => {
+  const predecessor = predecessorStdout(row.name, stdout, deltas);
   return predecessor !== null && hash(predecessor) === row.stdoutSHA256;
 };
 const seed = name => JSON.parse(baseline.observations.find(row => row.name === name).input);
@@ -90,28 +165,42 @@ test('lookup contracts conserve73actual predecessor process and rendered streams
   }
 });
 
-test('the KERNEL-02 stream delta is exact, positioned and limited to its rows', () => {
-  const [delta] = declaredStreamDeltas;
-  assert.equal(declaredStreamDeltas.length, 1);
+test('the declared stream deltas are exact, positioned and limited to their rows', () => {
+  const [kernel, tokens] = declaredStreamDeltas;
+  assert.deepEqual(declaredStreamDeltas.map(delta => delta.id), ['KERNEL-02', 'UI-DESIGN-01']);
   const rows = baseline.observations.filter(row => row.format === 'html');
-  assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
+  for (const delta of declaredStreamDeltas) assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   const row = rows[0];
   const current = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
     maxBuffer: 2 << 20}), row.name).stdout;
-  assert.ok(conservesPredecessor(row, current), 'current stdout must carry exactly the declared delta');
-  const rule = delta.insertion;
-  const twice = current.replace(delta.anchor + rule, delta.anchor + rule + rule);
-  const moved = current.replace(delta.anchor + rule, delta.anchor).replace('</style>', rule + '</style>');
-  const otherByte = current.replace('<main', '<main ');
-  for (const [name, mutated] of [['rule twice', twice], ['rule moved', moved], ['other byte', otherByte]]) {
+  assert.ok(conservesPredecessor(row, current), 'current stdout must carry exactly the declared deltas');
+  // The design-token delta: the style element moved, a second style element
+  // and one changed byte outside the style each break conservation.
+  const element = current.slice(current.indexOf('<style>'), current.indexOf('</style>') + '</style>'.length);
+  const moved = current.replace(element, '').replace('</body>', element + '</body>');
+  const second = current.replace('</head>', '<style></style></head>');
+  const outside = current.replace('<main', '<main ');
+  const inside = current.replace('</style>', ' </style>');
+  for (const [name, mutated] of [['style moved', moved], ['second style', second], ['byte outside the style', outside], ['byte inside the style', inside]]) {
     assert.notEqual(mutated, current, name);
     assert.equal(conservesPredecessor(row, mutated), false, name);
+  }
+  // The card-group delta, checked in the stream before the design-token delta.
+  const beforeTokens = invertDelta(tokens, current);
+  assert.ok(beforeTokens !== null && conservesPredecessor(row, beforeTokens, [kernel]), 'the replaced style must carry exactly the card-group delta');
+  const rule = kernel.insertion;
+  const twice = beforeTokens.replace(kernel.anchor + rule, kernel.anchor + rule + rule);
+  const ruleMoved = beforeTokens.replace(kernel.anchor + rule, kernel.anchor).replace('</style>', rule + '</style>');
+  const otherByte = beforeTokens.replace('<main', '<main ');
+  for (const [name, mutated] of [['rule twice', twice], ['rule moved', ruleMoved], ['other byte', otherByte]]) {
+    assert.notEqual(mutated, beforeTokens, name);
+    assert.equal(conservesPredecessor(row, mutated, [kernel]), false, name);
   }
   const unlisted = baseline.observations.find(item => item.format === 'json' && item.exitCode === 0);
   const unlistedCurrent = assertCLITransport(spawnWithInputFile(binary, unlisted.argv, {input: unlisted.input, encoding: 'utf8',
     timeout: 10000, maxBuffer: 2 << 20}), unlisted.name).stdout;
   assert.ok(conservesPredecessor(unlisted, unlistedCurrent), 'unlisted rows stay byte-exact');
-  assert.equal(conservesPredecessor(unlisted, unlistedCurrent + delta.anchor + rule), false, 'delta applied to an unlisted row');
+  assert.equal(conservesPredecessor(unlisted, unlistedCurrent + kernel.anchor + rule), false, 'delta applied to an unlisted row');
 });
 
 test('source index selection preserves order and composes into resolver and view', () => {

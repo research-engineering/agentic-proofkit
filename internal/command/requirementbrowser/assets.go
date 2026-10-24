@@ -1,6 +1,10 @@
 package requirementbrowser
 
-import _ "embed"
+import (
+	_ "embed"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/browserdoc"
+)
 
 //go:embed assets/workspace.js
 var workspaceJavaScript []byte
@@ -37,3 +41,7 @@ var workspaceHandoffJavaScript []byte
 
 //go:embed assets/workspace.css
 var workspaceCSS []byte
+
+// tokensCSS is the design-token stylesheet that browserdoc owns; the static
+// views inline the same bytes.
+var tokensCSS = []byte(browserdoc.TokenStylesheet())

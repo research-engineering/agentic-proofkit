@@ -634,7 +634,7 @@
       "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["This requirement does not claim pixel identity outside the recorded reference environment or on CPU models other than the calibrated Apple M1 (implementer 0x61) and Arm Neoverse N2 (implementer 0x41, part 0xd49), coverage of content below the first 2400 CSS pixels of a view, that weights 400 and 500, or weights 600 to 900, render differently (only regular and bold faces are installed, so each group renders identically), that a family name unknown to fontconfig, other than ui-monospace, falls through to the next family of its stack in WebKit (a name WebKit looks up resolves to Liberation Sans), that an admitted run directory is unmodified gate output (only a passing gate on the admitting tree proves the admitted digests), that the release candidate or the package gate reruns the visual gate, who reviewed or admitted a reference change, a human usability study, or WCAG conformance certification. Admitted images are not stored in the repository; they are reproducible from the admitting commit in the recorded environment on a calibrated CPU model while the pinned image and the pinned toolchain and dependency downloads remain available, and the uploaded gallery is derived, retention-limited evidence."]
+      "nonClaims": ["This requirement does not claim pixel identity outside the recorded reference environment or on CPU models other than the calibrated Apple M1 (implementer 0x61) and Arm Neoverse N2 (implementer 0x41, part 0xd49), coverage of content below the first 2400 CSS pixels of a view, that weights 400 and 500, or weights 600 to 900, render differently (only regular and bold faces are installed, so each group renders identically), that a family name unknown to fontconfig, other than ui-monospace, falls through to the next family of its stack in WebKit (a name WebKit looks up resolves to Liberation Sans), that an admitted run directory is unmodified gate output (only a passing gate on the admitting tree proves the admitted digests), that the release candidate or the package gate reruns the visual gate, who reviewed or admitted a reference change, a human usability study, or WCAG conformance certification. Admitted images are not stored in the repository; they are reproducible from the admitting commit in the recorded environment on a calibrated CPU model while the pinned image and the pinned toolchain and dependency downloads remain available, and the uploaded gallery is derived, retention-limited evidence.","The font-face check identifies a face through the family name that the recorded font configuration resolves, so it does not detect a font configuration that redirects a named Liberation face to another installed face; such a redirect changes the digests and needs re-admitted references and the owner's review.","The recorded font configuration hash binds tests/visual/fonts.conf, not the system and user font configuration that it includes, and the engine fixture checks only FONTCONFIG_FILE in the worker's environment.","The literal grammar test does not claim that each token category is used by both style owners, that the two style owners share one palette, that a token value meets a contrast or target-size criterion, or that a rendering of an input other than the static view and workspace fixtures carries no style or presentational attribute; it reads only the shipped stylesheets, the workspace scripts and the fixture renderings.","The literal grammar test's script checks are lexical and match listed spellings line by line, so the test does not claim to detect a matchMedia call, a style write or an SVG presentation attribute reached through a computed, concatenated or escaped name (for example one that reaches animate or styleMap), through reflection such as Reflect.set, through an alias or a destructured reference, or through a non-literal key such as a Map entry, nor a write through a property, method or attribute that it does not list, such as the disabled property of a stylesheet link or an SVG presentation attribute outside its list, nor a listed name or call spelled other than in the form it matches: with whitespace, a line break or a comment between its tokens, as an optional call, with a further argument, with a prefixed qualified name such as svg:style, with a namespace argument that contains a comma, or as a shorthand object property such as {style}."]
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-017",
@@ -5696,6 +5696,55 @@
         {
           "selector": "TestCIBrowserVisualRunsTheRecordedReferenceEnvironment",
           "command": "go test ./scripts -run '^TestCIBrowserVisualRunsTheRecordedReferenceEnvironment$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.design-token-owner",
+      "witnessId": "proofkit.requirement-browser.design-token-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/design_token_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestStaticAndWorkspaceViewsConsumeTheOneTokenStylesheet",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestStaticAndWorkspaceViewsConsumeTheOneTokenStylesheet$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.design-token-route",
+      "witnessId": "proofkit.requirement-browser.design-token-route",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkspaceAssetsHaveExactSecureHTTPContract",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestWorkspaceAssetsHaveExactSecureHTTPContract$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.design-token-literal-grammar",
+      "witnessId": "proofkit.requirement-browser.design-token-literal-grammar-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/design_token_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestDesignTokenGrammarAdmitsTheShippedStyleOwners",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestDesignTokenGrammarAdmitsTheShippedStyleOwners$'"
+        },
+        {
+          "selector": "TestDesignTokenGrammarRefusesEveryRuleMutant",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestDesignTokenGrammarRefusesEveryRuleMutant$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

@@ -17,6 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/browserdoc"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
@@ -275,6 +276,10 @@ func TestWorkspaceAssetsHaveExactSecureHTTPContract(t *testing.T) {
 		{method: http.MethodHead, path: "assets/selection-authority.js", wantBody: []byte{}, wantType: "text/javascript; charset=utf-8", wantStatus: http.StatusOK, wantSuccess: true},
 		{method: http.MethodPost, path: "assets/selection-authority.js", wantAllow: "GET, HEAD", wantBody: []byte("method not allowed\n"), wantStatus: http.StatusMethodNotAllowed},
 		{method: http.MethodGet, path: "assets/selection-authority.js/", wantBody: []byte("not found\n"), wantStatus: http.StatusNotFound},
+		{method: http.MethodGet, path: "assets/tokens.css", wantBody: []byte(browserdoc.TokenStylesheet()), wantType: "text/css; charset=utf-8", wantStatus: http.StatusOK, wantSuccess: true},
+		{method: http.MethodHead, path: "assets/tokens.css", wantBody: []byte{}, wantType: "text/css; charset=utf-8", wantStatus: http.StatusOK, wantSuccess: true},
+		{method: http.MethodPost, path: "assets/tokens.css", wantAllow: "GET, HEAD", wantBody: []byte("method not allowed\n"), wantStatus: http.StatusMethodNotAllowed},
+		{method: http.MethodGet, path: "assets/tokens.css/", wantBody: []byte("not found\n"), wantStatus: http.StatusNotFound},
 		{method: http.MethodGet, path: "assets/workspace.css", wantBody: workspaceCSS, wantType: "text/css; charset=utf-8", wantStatus: http.StatusOK, wantSuccess: true},
 		{method: http.MethodHead, path: "assets/workspace.css", wantBody: []byte{}, wantType: "text/css; charset=utf-8", wantStatus: http.StatusOK, wantSuccess: true},
 		{method: http.MethodPost, path: "assets/workspace.css", wantAllow: "GET, HEAD", wantBody: []byte("method not allowed\n"), wantStatus: http.StatusMethodNotAllowed},

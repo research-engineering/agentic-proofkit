@@ -1,0 +1,144 @@
+/* Design tokens of the static views and the requirement-browser workspace. */
+:root {
+  /* Workspace palette. */
+  --canvas: #ffffff;
+  --surface: #f5f6f5;
+  --active-surface: #e0f0e8;
+  --text: #202522;
+  --muted-text: #4d5952;
+  --border: #77867d;
+  --focus: #005fcc;
+  --accent: #17613d;
+  --plane-proof-coverage: #77589b;
+  --plane-code-traceability: #387080;
+  --plane-native-execution: #8a681a;
+  --backdrop: #00000080;
+  --transparent: transparent;
+  /* Static view palette; the dark scheme uses the separate dark tokens. */
+  --static-canvas: #f7f7f4;
+  --static-text: #1f2428;
+  --static-muted-text: #586069;
+  --static-term-text: #4b5563;
+  --static-link: #0969da;
+  --static-surface: #fff;
+  --static-border: #d8dee4;
+  --static-control-border: #768390;
+  --static-secondary-surface: #f6f8fa;
+  --static-secondary-hover: #eef2f6;
+  --static-code-surface: #f1f5f9;
+  --static-shadow: 0 1px 2px rgba(31,35,40,.04);
+  --static-dark-canvas: #101418;
+  --static-dark-text: #e6edf3;
+  --static-dark-surface: #161b22;
+  --static-dark-border: #30363d;
+  --static-dark-muted-text: #9da7b1;
+  --static-dark-inset-surface: #0d1117;
+  --static-dark-control-border: #8b949e;
+  --static-dark-secondary-surface: #21262d;
+  --static-dark-secondary-hover: #30363d;
+  --static-dark-link: #58a6ff;
+  /* Type scale and line heights. */
+  --font-size-root: 100%;
+  --font-size-12: .75rem;
+  --font-size-13: .8125rem;
+  --font-size-14: .875rem;
+  --font-size-16: 1rem;
+  --font-size-17: 1.0625rem;
+  --font-size-18: 1.125rem;
+  --font-size-20: 1.25rem;
+  --line-height-body: 1.55;
+  --line-height-loose: 1.65;
+  --static-font-size-title: clamp(1.7rem,2.8vw,2.6rem);
+  --static-font-size-heading: 1.05rem;
+  --static-font-size-subheading: .95rem;
+  --static-font-size-group: .88rem;
+  --static-font-size-control: .92rem;
+  --static-font-size-label: .78rem;
+  --static-font-size-code: .9em;
+  --static-line-height: 1.45;
+  --static-line-height-title: 1.1;
+  /* Spacing. */
+  --space-2: .125rem;
+  --space-4: .25rem;
+  --space-6: .375rem;
+  --space-8: .5rem;
+  --space-10: .625rem;
+  --space-12: .75rem;
+  --space-16: 1rem;
+  --space-20: 1.25rem;
+  --space-24: 1.5rem;
+  --space-48: 3rem;
+  --static-space-2: 2px;
+  --static-space-4: 4px;
+  --static-space-6: 6px;
+  --static-space-8: 8px;
+  --static-space-10: 10px;
+  --static-space-12: 12px;
+  --static-space-14: 14px;
+  --static-space-16: 16px;
+  --static-space-18: 18px;
+  --static-space-20: 20px;
+  --static-space-22: 22px;
+  --static-space-24: 24px;
+  --static-space-32: 32px;
+  --static-space-40: 40px;
+  --static-space-56: 56px;
+  --static-code-padding-block: .1em;
+  --static-code-padding-inline: .3em;
+  /* Radii and border widths. */
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --border-width: 1px;
+  --border-width-quote: 2px;
+  --border-width-plane: 4px;
+  /* Focus indicator and target sizes. */
+  --focus-width: 3px;
+  --focus-offset: 2px;
+  --target-size: 2.75rem;
+  --icon-size: 1.25rem;
+  --icon-stroke-width: 2;
+  --checkbox-size: 1.125rem;
+  /* Layout widths and heights. */
+  --layout-navigation-width: 17rem;
+  --layout-inspector-width: 20rem;
+  --layout-panel-width: 24rem;
+  --layout-product-bar-height: 4.25rem;
+  --layout-reading-width: 75ch;
+  --layout-question-height: 9rem;
+  --layout-graph-height: 42rem;
+  --layout-cell-width: 24rem;
+  --viewport-height: 100vh;
+  --dynamic-viewport-height: 100dvh;
+  --static-page-width: 1120px;
+  --static-hierarchy-column: 220px;
+  --static-term-column-min: 140px;
+  --static-term-column-max: 220px;
+  --static-control-column: 160px;
+  --static-offscreen: -10000px;
+  --static-scroll-margin: 86px;
+  /* Breakpoints; media conditions repeat these values, which CSS cannot read from tokens. */
+  --breakpoint-bar: 24rem;
+  --breakpoint-graph: 48rem;
+  --breakpoint-panels: 64rem;
+  --breakpoint-static: 720px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #181c19;
+    --surface: #222824;
+    --active-surface: #30483b;
+    --text: #f0f4f1;
+    --muted-text: #c4cec7;
+    --border: #87998e;
+    --focus: #84adff;
+    --accent: #a1dbba;
+  }
+}
+@media (forced-colors: active) {
+  :root {
+    --forced-border: CanvasText;
+    --forced-focus: Highlight;
+    --forced-ink: CanvasText;
+  }
+}
