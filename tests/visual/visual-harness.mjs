@@ -5,7 +5,7 @@ import {dirname, resolve, sep} from "node:path";
 import {fileURLToPath} from "node:url";
 import {expect, test as base} from "@playwright/test";
 
-import {startBrowserServer} from "../../scripts/browser-proof-execution.mjs";
+import {startBrowserServer, withNavigationRequestBarrier} from "../../scripts/browser-proof-execution.mjs";
 import {canonicalRGBADigest, decodePNG} from "./exact-png.mjs";
 
 // The visual reference harness. It captures each view twice, requires both
@@ -125,13 +125,14 @@ export const test = base.extend({
 // first navigation, the document is reloaded under it so that scripts reading
 // the scheme at load see it, and it is applied again after the reload, the
 // last navigation of every captured view; assertEmulation checks it before
-// each capture.
+// each capture. Both navigations run behind the shared navigation request
+// barrier.
 export async function navigate(page, url, profile, heading, scheme) {
   await emulate(page, scheme);
-  const first = await page.goto(url, {waitUntil: "load"});
+  const first = await withNavigationRequestBarrier(page, () => page.goto(url, {waitUntil: "load"}));
   if (first === null || first.status() !== 200) throw new Error("visual view navigation did not return 200");
   await emulate(page, scheme);
-  const response = await page.reload({waitUntil: "load"});
+  const response = await withNavigationRequestBarrier(page, () => page.reload({waitUntil: "load"}));
   if (response === null || response.status() !== 200) throw new Error("visual view reload did not return 200");
   await emulate(page, scheme);
   expect(response.headers()["content-security-policy"]).toBe(expectedCSP[profile]);

@@ -2,6 +2,8 @@ import {expect} from "@playwright/test";
 import {createHash, randomUUID} from "node:crypto";
 import {readFileSync} from "node:fs";
 
+import {withNavigationRequestBarrier} from "../../scripts/browser-proof-execution.mjs";
+
 const workspaceNavigationToken = "proofkit.workspace-navigation.scheduled";
 // Expected authority comes from source bytes, never a received CSP header.
 const staticScriptDigest = createHash("sha256").update(readFileSync(new URL("../../internal/kernel/browserdoc/browser.js", import.meta.url))).digest("base64");
@@ -36,7 +38,13 @@ export function isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame
     && request.frame() === mainFrame;
 }
 
-export async function navigateWorkspace(page, workspaceURL, trigger, responseError, heading = "browser.fixture.workspace", securityProfile = "workspace") {
+// navigateWorkspace runs one workspace navigation behind the shared
+// navigation request barrier, which is in place before the trigger runs.
+export function navigateWorkspace(page, workspaceURL, trigger, responseError, heading = "browser.fixture.workspace", securityProfile = "workspace") {
+  return withNavigationRequestBarrier(page, () => observeWorkspaceNavigation(page, workspaceURL, trigger, responseError, heading, securityProfile));
+}
+
+async function observeWorkspaceNavigation(page, workspaceURL, trigger, responseError, heading, securityProfile) {
   const expectedCSP = cspBySecurityProfile[securityProfile];
   if (!expectedCSP) throw new Error("Unsupported workspace security profile");
   const controller = new AbortController();

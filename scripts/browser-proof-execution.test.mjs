@@ -6,7 +6,7 @@ import {join} from "node:path";
 import {PassThrough} from "node:stream";
 import test from "node:test";
 
-import {executeBrowserProof, runBrowserProofTests, startBrowserServer} from "./browser-proof-execution.mjs";
+import {executeBrowserProof, runBrowserProofTests, startBrowserServer, withNavigationRequestBarrier} from "./browser-proof-execution.mjs";
 
 test("browser proof test execution rejects ambient remote-connect authority", () => {
   let observed;
@@ -129,6 +129,77 @@ test("browser proof preserves execution and cleanup failures", async () => {
     rmSync(root, {recursive: true, force: true});
   }
 });
+
+test("navigation request barrier is in place before its navigation starts and stays", async () => {
+  const page = new FakeRoutedPage();
+  const value = await withNavigationRequestBarrier(page, async () => {
+    page.log.push("navigation");
+    assert.equal(page.routes.length, 1);
+    const [{matcher, handler}] = page.routes;
+    for (const url of ["http://127.0.0.1:41001/", "http://127.0.0.1:41001/assets/workspace.js", "http://127.0.0.1:41002/?other"]) {
+      assert.equal(matcher(new URL(url)), true);
+    }
+    const route = new FakeRoute();
+    await handler(route);
+    assert.deepEqual(route.calls, [["fallback", []]]);
+    return "response";
+  });
+  assert.equal(value, "response");
+  assert.deepEqual(page.log, ["route", "navigation"]);
+  assert.equal(page.routes.length, 1);
+});
+
+test("navigation request barrier stays when its navigation fails", async () => {
+  const page = new FakeRoutedPage();
+  const failure = new Error("navigation failed");
+  await assert.rejects(withNavigationRequestBarrier(page, async () => { throw failure; }), (error) => error === failure);
+  assert.deepEqual(page.log, ["route"]);
+  assert.equal(page.routes.length, 1);
+});
+
+test("every navigation adds the barrier again, also after a test removed every route", async () => {
+  const page = new FakeRoutedPage();
+  await withNavigationRequestBarrier(page, async () => {});
+  page.routes = [];
+  await withNavigationRequestBarrier(page, async () => { assert.equal(page.routes.length, 1); });
+  await withNavigationRequestBarrier(page, async () => { assert.equal(page.routes.length, 2); });
+  assert.deepEqual(page.log, ["route", "route", "route"]);
+});
+
+test("navigation request barrier starts no navigation when the route cannot be added", async () => {
+  const failure = new Error("route failed");
+  const page = new FakeRoutedPage(failure);
+  let navigated = false;
+  await assert.rejects(withNavigationRequestBarrier(page, async () => { navigated = true; }), (error) => error === failure);
+  assert.equal(navigated, false);
+});
+
+class FakeRoute {
+  constructor() {
+    this.calls = [];
+    for (const name of ["abort", "continue", "fallback", "fetch", "fulfill"]) {
+      this[name] = async (...args) => { this.calls.push([name, args]); };
+    }
+  }
+}
+
+// A page that records routes and refuses every way to remove one.
+class FakeRoutedPage {
+  constructor(routeError = null) {
+    this.log = [];
+    this.routes = [];
+    this.routeError = routeError;
+    for (const name of ["unroute", "unrouteAll"]) {
+      this[name] = async () => { throw new Error(`the navigation request barrier must not call ${name}`); };
+    }
+  }
+
+  async route(matcher, handler) {
+    this.log.push("route");
+    if (this.routeError) throw this.routeError;
+    this.routes.push({matcher, handler});
+  }
+}
 
 class FakeChild extends EventEmitter {
   constructor(onKill) {
