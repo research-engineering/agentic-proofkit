@@ -71,6 +71,7 @@ type npmBranchCase struct {
 	wantLimit              string
 	delayedChildStartup    bool
 	lateReadyObservation   bool
+	pendingSignalAtBlock   bool
 	removeCleanupWait      bool
 }
 
@@ -145,25 +146,49 @@ func testNPMAbsenceBranchExecution(t *testing.T) {
 					t.Fatalf("dispatch writer did not close after one permit: n=%d err=%v", n, err)
 				}
 			})
+			t.Run("carrier/signal precedes its pipe close", func(t *testing.T) {
+				// The signal sender observes the pipe: a close before the signal is
+				// refused on every run, not only when Bash happens to read EOF first.
+				control := newNPMBranchControl(t)
+				sent := errors.New("fixture signal result")
+				atSignal := errors.New("signal sender not called")
+				err := control.signalCarrier(func() error {
+					atSignal = npmBranchSignalPipeOpen(control.signalReader)
+					return sent
+				})
+				if atSignal != nil {
+					t.Fatalf("signal-sent pipe at the signal: %v", atSignal)
+				}
+				if !errors.Is(err, sent) {
+					t.Fatalf("cancellation result=%v, want the signal sender's result", err)
+				}
+				if n, err := control.signalReader.Read(make([]byte, 1)); n != 0 || err != io.EOF {
+					t.Fatalf("signal-sent pipe did not close after the signal: n=%d err=%v", n, err)
+				}
+			})
 			t.Run("carrier/stdio bound", func(t *testing.T) {
 				item := cases[0]
 				item.wantLimit = "stdio"
 				executeNPMAbsenceBranch(t, header+"printf '%17000s' x\n", body, item)
 			})
+			pendingSignal := "signal pending when the carrier blocks"
 			for _, startup := range []struct {
 				name                 string
 				delayedChildStartup  bool
 				lateReadyObservation bool
+				pendingSignalAtBlock bool
 			}{
 				{name: "immediate"},
 				{name: "delayed child startup", delayedChildStartup: true},
 				{name: "delayed readiness observation", lateReadyObservation: true},
+				{name: pendingSignal, pendingSignalAtBlock: true},
 			} {
 				t.Run("carrier/blocked entrypoint cancellation/"+startup.name, func(t *testing.T) {
 					item := cases[0]
 					item.wantLimit = "context"
 					item.delayedChildStartup = startup.delayedChildStartup
 					item.lateReadyObservation = startup.lateReadyObservation
+					item.pendingSignalAtBlock = startup.pendingSignalAtBlock
 					result := executeNPMAbsenceBranch(t, header, body, item)
 					if result.orderingError != nil {
 						t.Fatal(result.orderingError)
@@ -173,18 +198,21 @@ func testNPMAbsenceBranchExecution(t *testing.T) {
 					}
 				})
 			}
-			t.Run("carrier/removed cleanup wait counterexample", func(t *testing.T) {
-				item := cases[0]
-				item.wantLimit = "context"
-				item.removeCleanupWait = true
-				result := executeNPMAbsenceBranch(t, header, body, item)
-				if result.orderingError == nil || result.orderingError.Error() != "carrier cleanup did not wait for classifier exit" {
-					t.Fatalf("removed-wait rejection=%v, want live-classifier cause", result.orderingError)
-				}
-				if result.trace != "view\nabsent\ncancelled\nreaped\n" || result.exitCode != 124 {
-					t.Fatalf("removed-wait mutant changed protected trace or exit: trace=%q exit=%d", result.trace, result.exitCode)
-				}
-			})
+			for _, schedule := range []string{"immediate", pendingSignal} {
+				t.Run("carrier/removed cleanup wait counterexample/"+schedule, func(t *testing.T) {
+					item := cases[0]
+					item.wantLimit = "context"
+					item.removeCleanupWait = true
+					item.pendingSignalAtBlock = schedule == pendingSignal
+					result := executeNPMAbsenceBranch(t, header, body, item)
+					if result.orderingError == nil || result.orderingError.Error() != "carrier cleanup did not wait for classifier exit" {
+						t.Fatalf("removed-wait rejection=%v, want live-classifier cause", result.orderingError)
+					}
+					if result.trace != "view\nabsent\ncancelled\nreaped\n" || result.exitCode != 124 {
+						t.Fatalf("removed-wait mutant changed protected trace or exit: trace=%q exit=%d", result.trace, result.exitCode)
+					}
+				})
+			}
 		}
 		for _, item := range cases {
 			t.Run(job+"/"+item.name, func(t *testing.T) {
@@ -342,6 +370,15 @@ func executeNPMAbsenceBranch(t *testing.T, header, body string, item npmBranchCa
 		// after cancellation. The deadline bounds faults; it is not the oracle.
 		control = newNPMBranchControl(t)
 	}
+	// Cancellation is one SIGTERM after Bash reports P. Bash 3.2 handles a trapped
+	// signal that arrives after its last pending-trap check before wait only when the
+	// awaited child exits, and the held classifier exits only at its own
+	// -test.timeout; one that arrives while wait sets up its interruption crashes
+	// Bash 3.2. The controlled shim therefore blocks on descriptor 7 instead,
+	// which signalCarrier closes only after the signal was sent, so the trap runs
+	// while the classifier is still held, whenever the signal arrives. pendingSignalAtBlock
+	// sends the signal after Bash's last pending-trap check before that read.
+	// The uncontrolled shim keeps waiting for the classifier it started.
 	script := `child=
 cleanup() {
   if [[ -n "$child" ]]; then
@@ -381,7 +418,7 @@ go() {
         IFS= read -r permit <&4
         [[ "$permit" == start ]] || return 97
       fi
-      "$BRANCH_BINARY" -test.run='^TestNPMAbsenceBranchEntrypoint$' -test.timeout=` + childTimeout.String() + ` -- "$@" </dev/null 4<&- 5>&- &
+      "$BRANCH_BINARY" -test.run='^TestNPMAbsenceBranchEntrypoint$' -test.timeout=` + childTimeout.String() + ` -- "$@" </dev/null 4<&- 5>&- 7<&- &
       if [[ "$BRANCH_CONTROL" == 1 ]]; then
         exec 3>&- 6<&-
         printf S >&5
@@ -389,7 +426,15 @@ go() {
         [[ "$permit" == register ]] || return 97
       fi
       child=$!
-      if [[ "$BRANCH_CONTROL" == 1 ]]; then printf P >&5; fi
+      if [[ "$BRANCH_CONTROL" == 1 ]]; then
+        printf P >&5
+        if [[ "$BRANCH_PENDING_SIGNAL" == 1 ]]; then
+          IFS= read -r permit <&"$(printf E >&5; IFS= read -r permit <&7 || :; printf 7)" || :
+        else
+          IFS= read -r permit <&7 || :
+        fi
+        return 97
+      fi
       local status=0
       wait "$child" || status=$?
       child=
@@ -419,15 +464,20 @@ report=report.json
 	defer deadline.Stop()
 	cmd := exec.CommandContext(ctx, "/bin/bash", "--noprofile", "--norc", "-c", script)
 	cmd.Dir = dir
-	cmd.Env = childcoverage.Environment(t, []string{"PATH=" + dir, "HOME=" + dir, "TMPDIR=" + dir, "PROOFKIT_BRANCH_ENTRYPOINT=1", "BRANCH_BINARY=" + binary, "BRANCH_PAYLOAD=" + item.payload, fmt.Sprintf("BRANCH_VIEW_EXIT=%d", item.viewExit), fmt.Sprintf("BRANCH_EXISTING_EXIT=%d", item.existingExit), "BRANCH_CONTROL=0", "BRANCH_DELAY_START=0"})
-	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
+	cmd.Env = childcoverage.Environment(t, []string{"PATH=" + dir, "HOME=" + dir, "TMPDIR=" + dir, "PROOFKIT_BRANCH_ENTRYPOINT=1", "BRANCH_BINARY=" + binary, "BRANCH_PAYLOAD=" + item.payload, fmt.Sprintf("BRANCH_VIEW_EXIT=%d", item.viewExit), fmt.Sprintf("BRANCH_EXISTING_EXIT=%d", item.existingExit), "BRANCH_CONTROL=0", "BRANCH_DELAY_START=0", "BRANCH_PENDING_SIGNAL=0"})
+	cmd.Cancel = func() error {
+		return control.signalCarrier(func() error { return cmd.Process.Signal(syscall.SIGTERM) })
+	}
 	cmd.WaitDelay = childTimeout + time.Second
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if control != nil {
-		cmd.ExtraFiles = []*os.File{control.readyWriter, control.commandReader, control.eventWriter, control.releaseReader}
+		cmd.ExtraFiles = []*os.File{control.readyWriter, control.commandReader, control.eventWriter, control.releaseReader, control.signalReader}
 		cmd.Env = append(cmd.Env, "PROOFKIT_BRANCH_READY=1", "BRANCH_CONTROL=1")
 		if item.delayedChildStartup {
 			cmd.Env = append(cmd.Env, "BRANCH_DELAY_START=1")
+		}
+		if item.pendingSignalAtBlock {
+			cmd.Env = append(cmd.Env, "BRANCH_PENDING_SIGNAL=1")
 		}
 	}
 	var stdout, stderr npmBranchOutput
