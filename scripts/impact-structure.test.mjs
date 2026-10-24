@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {createHash} from "node:crypto";
 import {mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 import {compileVariantUnion} from "./schema-definitions.mjs";
 import {composeInput, impactInput, obligation} from "./impact-fixtures.mjs";
 
@@ -58,7 +58,7 @@ function native(name, value, {exit = 0, report = true, carrier = "stdin", extra 
     const path = join(directory, "input.json"); writeFileSync(path, JSON.stringify({payload: value}));
     args = [name, "--input", path, "--input-pointer", "/payload", ...extra]; input = "";
   } else if (carrier === "compact") args.unshift("--json-layout", "compact");
-  const invoke = file => spawnSync(file, args, {input, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
+  const invoke = file => spawnWithInputFile(file, args, {input, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
   assertCLITransport(result);
   assert.equal(result.status, exit, `${name}: ${result.stderr}`);

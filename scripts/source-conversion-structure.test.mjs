@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 import {mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 
 const root = new URL('../', import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_SOURCE_CONVERSION_CONTRACT || new URL('proofkit/cli-contract.v2.json', root)));
@@ -46,7 +46,7 @@ function valid(direction, target, value, expected = true, label = '') {
 }
 
 function run(input, args, options = {}) {
-  const result = spawnSync(binary, [command, '--input', '-', ...args], {
+  const result = spawnWithInputFile(binary, [command, '--input', '-', ...args], {
     input, encoding: 'utf8', timeout: 20000, maxBuffer: 16 << 20, ...options,
   });
   return assertCLITransport(result);

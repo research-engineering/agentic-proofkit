@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {dirname, join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 import {compileVariantUnion} from "./schema-definitions.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -51,7 +51,7 @@ function native(input, {files = corpus.observations[0].files, carrier = "stdin"}
     bytes = "";
   }
   if (carrier === "compact") argv = ["--json-layout", "compact", ...argv];
-  const result = spawnSync(binary, argv, {input: bytes, encoding: "utf8", timeout: 10_000, maxBuffer: 4 << 20});
+  const result = spawnWithInputFile(binary, argv, {input: bytes, encoding: "utf8", timeout: 10_000, maxBuffer: 4 << 20});
   assertCLITransport(result, "native");
   assert.ok(result.status === 0 || result.status === 1);
   if (result.stdout) {

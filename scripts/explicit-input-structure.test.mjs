@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {mkdtempSync, readFileSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_EXPLICIT_INPUT_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -40,7 +40,7 @@ function containers(value, path = []) {
   return [path, ...Object.entries(value).flatMap(([key, child]) => containers(child, [...path, key]))];
 }
 function invoke(command, input, args = []) {
-  const r = spawnSync(binary, [command, "--input", "-", ...args], {input: typeof input === "string" ? input : JSON.stringify(input), encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
+  const r = spawnWithInputFile(binary, [command, "--input", "-", ...args], {input: typeof input === "string" ? input : JSON.stringify(input), encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   assertCLITransport(r, command);
   return r;
 }

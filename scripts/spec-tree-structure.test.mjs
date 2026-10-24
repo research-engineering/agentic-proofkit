@@ -5,7 +5,7 @@ import path from "node:path";
 import {spawnSync} from "node:child_process";
 import test from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 
 const contract = JSON.parse(fs.readFileSync(new URL("../proofkit/cli-contract.v2.json", import.meta.url), "utf8"));
 const observations = JSON.parse(fs.readFileSync(new URL("../internal/app/testdata/spec-tree-native-observations.json", import.meta.url), "utf8"));
@@ -201,7 +201,7 @@ test("spec tree schemas accept native failed reports visiting undeclared child I
       input.nodes = input.nodes.filter(node => node.nodeId === input.rootNodeId);
       input.overlays = [];
       input.edges = Array.from({length: count}, (_, i) => ({parentNodeId: input.rootNodeId, childNodeId: `missing${String(i).padStart(5, "0")}`}));
-      const run = spawnSync(binary, ["requirement-spec-tree", "--input", "-"], {env, input: JSON.stringify(input), encoding: "utf8", timeout: 60000, maxBuffer: 32 << 20});
+      const run = spawnWithInputFile(binary, ["requirement-spec-tree", "--input", "-"], {env, input: JSON.stringify(input), encoding: "utf8", timeout: 60000, maxBuffer: 32 << 20});
       assertCLITransport(run);
       assert.equal(run.status, count === 0 ? 0 : 1);
       assert.equal(run.stderr, "");

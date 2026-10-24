@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 import {impactInput} from './impact-fixtures.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -234,7 +234,7 @@ const stateOf = value => Array.isArray(value) ? (value.every(row => row.state ==
     : value.state ?? value.report?.state ?? value.sourceReport?.state;
 
 function run(command, input, flags = [], env = {}) {
-  const result = spawnSync(binary, [command, '--input', '-', ...flags], {
+  const result = spawnWithInputFile(binary, [command, '--input', '-', ...flags], {
     input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 20000, maxBuffer: 16 << 20,
     env: {...process.env, AGENTIC_PROOFKIT_LAUNCHER_PROFILE: 'path', AGENTIC_PROOFKIT_PYTHON_EXECUTABLE: '', ...env},
   });

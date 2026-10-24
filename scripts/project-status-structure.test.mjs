@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 import {mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, lstatSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 import {compileVariantUnion} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -134,7 +134,7 @@ test('actual navigation CLI preserves read-only states and its status-owned next
       const descriptor = contract.commands.find(row => row.command === command);
       const args = [...(descriptor.route ?? [command]), '--repo-root', repo, ...flags];
       if (input !== undefined) args.push('--input', '-');
-      const result = spawnSync(binary, args, {input: input === undefined ? undefined : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
+      const result = spawnWithInputFile(binary, args, {input: input === undefined ? undefined : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
       assertCLITransport(result); assert.equal(result.status, expected, result.stderr);
       return result;
     }

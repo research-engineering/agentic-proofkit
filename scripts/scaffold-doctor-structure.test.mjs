@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 import {expandSharedDefinitions} from './schema-definitions.mjs';
 
 // Independently authored expectations for adoption-doctor, scaffold-project-structure
@@ -194,7 +194,7 @@ function selected(command, value) {
 }
 const pathLauncher = {AGENTIC_PROOFKIT_LAUNCHER_PROFILE: 'path', AGENTIC_PROOFKIT_PYTHON_EXECUTABLE: ''};
 function run(command, input, flags = [], global = []) {
-  const result = spawnSync(binary, [...global, command, '--input', '-', ...flags], {
+  const result = spawnWithInputFile(binary, [...global, command, '--input', '-', ...flags], {
     input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 20000, maxBuffer: 16 << 20,
     env: {...process.env, ...pathLauncher},
   });
@@ -735,7 +735,7 @@ test('whole chains reuse the producing commands and their published structures',
   const bootstrapRun = run('gradual-adoption-bootstrap', input.bootstrap);
   assert.equal(bootstrapRun.status, 0); assert.equal(bootstrapRun.stderr, '');
   assert.deepEqual(value.bootstrapReport, JSON.parse(bootstrapRun.stdout));
-  const workflow = spawnSync(binary, ['adoption-workflow-plan', '--input', '-', '--input-pointer', '/adoptionWorkflowInput'], {
+  const workflow = spawnWithInputFile(binary, ['adoption-workflow-plan', '--input', '-', '--input-pointer', '/adoptionWorkflowInput'], {
     input: JSON.stringify(value), encoding: 'utf8', timeout: 20000, env: {...process.env, ...pathLauncher}});
   assert.equal(workflow.status, 0, workflow.stderr); assert.equal(workflow.stderr, '');
   assert.deepEqual(JSON.parse(workflow.stdout), value.adoptionWorkflowPlan);
@@ -745,7 +745,7 @@ test('whole chains reuse the producing commands and their published structures',
   assert.deepEqual(JSON.parse(files[input.paths.workflowInputPath].content), value.adoptionWorkflowInput);
   assert.deepEqual(JSON.parse(files[input.repoProfileScaffold.repository.profilePath].content), value.repoProfileScaffoldPlan.repoProfileDraft);
   for (const path of [input.paths.repoProfileScaffoldInputPath, input.paths.bootstrapInputPath]) {
-    const replay = spawnSync(binary, [path === input.paths.bootstrapInputPath ? 'gradual-adoption-bootstrap' : 'scaffold-profile-plan', '--input', '-'],
+    const replay = spawnWithInputFile(binary, [path === input.paths.bootstrapInputPath ? 'gradual-adoption-bootstrap' : 'scaffold-profile-plan', '--input', '-'],
       {input: files[path].content, encoding: 'utf8', timeout: 20000, env: {...process.env, ...pathLauncher}});
     assert.equal(replay.status, 0, replay.stderr);
   }

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {mkdtempSync, readFileSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 
 const root = new URL("../", import.meta.url), producer = "producer-policy-self-proof", migration = "migration-parity-admission";
 const baseline = JSON.parse(readFileSync(new URL("internal/app/testdata/authority-guard-native-observations.json", root)));
@@ -41,7 +41,7 @@ before(() => {
 after(() => {if (directory) rmSync(directory, {recursive: true, force: true});});
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 function invoke(command, input, argv = [command, "--input", "-"]) {
-  const result = spawnSync(binary, argv, {input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
+  const result = spawnWithInputFile(binary, argv, {input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
   return assertCLITransport(result);
 }
 const utf8Order = (a, b) => Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"));

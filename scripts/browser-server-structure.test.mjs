@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {execFileSync, spawn, spawnSync} from 'node:child_process';
+import {execFileSync, spawn} from 'node:child_process';
 import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {get, request as httpRequest} from 'node:http';
 import {tmpdir} from 'node:os';
@@ -7,7 +7,7 @@ import {delimiter, join} from 'node:path';
 import test, {after, before} from 'node:test';
 import {setTimeout as sleep} from 'node:timers/promises';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 import {bindingInput, resolverInput} from './proof-routing-fixtures.mjs';
 import {directComposeInput, inventoryInput, normalizedComposeInput, requirementSource} from './inventory-coverage-fixtures.mjs';
 
@@ -116,7 +116,7 @@ const flipped = value => typeof value === 'string' ? 7 : typeof value === 'numbe
 let directory, binary;
 const fixtures = {};
 function spawnCLI(args, input, options = {}) {
-  return spawnSync(binary, args, {input: input === undefined ? '' : JSON.stringify(input),
+  return spawnWithInputFile(binary, args, {input: input === undefined ? '' : JSON.stringify(input),
     encoding: 'utf8', timeout: 30000, maxBuffer: 32 << 20, ...options});
 }
 function run(args, input, options = {}) {
@@ -437,11 +437,11 @@ test('serving browse mode emits one non-JSON URL record and terminates on SIGTER
 });
 
 test('a CLI that exits before reading its stdin is accepted only as a refusal', () => {
-  // 8 MiB exceeds every pipe buffer; the flag refusal exits before reading stdin, so writing the payload must report EPIPE.
+  // The flag refusal exits before reading stdin, so the child leaves every byte of the payload unread.
   const payload = {...clone(fixtures.workspace), padding: 'x'.repeat(8 << 20)};
   const args = browserArgs('workspace', ['--serve', '--session-mode', 'one-shot-question']);
-  assert.equal(refused(args, payload, 'oversized one-shot without --open').error?.code, 'EPIPE');
-  // The closed pipe passes the transport check, so a caller that expects success fails on the refusal status.
+  assert.equal(refused(args, payload, 'oversized one-shot without --open').stdinUnreadBytes, Buffer.byteLength(JSON.stringify(payload)));
+  // Unread input passes the transport check only with a refusal status, so a caller that expects success fails on that status.
   assert.throws(() => json(args, payload), error => error.code === 'ERR_ASSERTION' && error.actual === 1 && error.expected === 0);
 });
 

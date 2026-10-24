@@ -2160,6 +2160,7 @@
         "proofkit/cli-contract.v2.json",
         "proofkit/requirement-bindings.json",
         "proofkit/witness-plan.json",
+        "scripts",
         "scripts/admission-records-structure.test.mjs",
         "scripts/adoption-envelope-structure.test.mjs",
         "scripts/agent-workflow-structure.test.mjs",
@@ -2196,7 +2197,8 @@
         "scripts/selective-proof-structure.test.mjs",
         "scripts/source-conversion-structure.test.mjs",
         "scripts/stable-json.mjs",
-        "scripts/workspace-structure.test.mjs"
+        "scripts/workspace-structure.test.mjs",
+        "tests"
       ],
       "outputSelectors": [],
       "resourceReads": [

@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 import {stableJSONStringify} from './stable-json.mjs';
 
 // Independent oracle for agent-route, change-workflow-plan and
@@ -64,7 +64,7 @@ after(() => {if (directory) rmSync(directory, {recursive: true, force: true});})
 
 const pathLauncher = {AGENTIC_PROOFKIT_LAUNCHER_PROFILE: 'path', AGENTIC_PROOFKIT_PYTHON_EXECUTABLE: ''};
 function run(args, input, {env = pathLauncher, cwd} = {}) {
-  const result = spawnSync(binary, args, {
+  const result = spawnWithInputFile(binary, args, {
     input: input === undefined ? undefined : typeof input === 'string' ? input : JSON.stringify(input),
     encoding: 'utf8', timeout: 20000, maxBuffer: 16 << 20, env: {...process.env, ...env}, cwd,
   });

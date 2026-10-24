@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 import {compileVariantUnion} from "./schema-definitions.mjs";
 import {annotatedInventoryInput, directComposeInput, discoveryInput, inventoryInput, normalizedComposeInput, ownerInvariantRegistry, proofInventoryInput, requirementSource, sourceSetInput, twoSourceSetInput, wrappedInventory} from "./inventory-coverage-fixtures.mjs";
 
@@ -43,7 +43,7 @@ function native(command, input, {flags = [], exit = 0, report = true, carrier = 
     writeFileSync(path, JSON.stringify({payload: input}));
     args = [command, "--input", path, "--input-pointer", "/payload", ...flags]; bytes = "";
   } else if (carrier === "compact") args.unshift("--json-layout", "compact");
-  const invoke = path => spawnSync(path, args, {input: bytes, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
+  const invoke = path => spawnWithInputFile(path, args, {input: bytes, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
   assertCLITransport(result);
   for (const value of absent) assert.equal((result.stdout + result.stderr).includes(value), false, "caller value disclosed");
@@ -126,7 +126,7 @@ test("context compose output requires the proof-binding selection members its pr
   writeFileSync(join(repository, "proofkit/bindings.json"), JSON.stringify(binding));
   const catalog = {schemaVersion: 2, catalogId: "catalog.selection", specTree: {path: "specs/tree.json"},
     requirementSources: [{path: "specs/requirements.v2.json", nodeId: "spec.root"}], proofBinding: {path: "proofkit/bindings.json"}};
-  const result = assertCLITransport(spawnSync(binary, [contextComposer, "--repo-root", repository, "--input", "-"],
+  const result = assertCLITransport(spawnWithInputFile(binary, [contextComposer, "--repo-root", repository, "--input", "-"],
     {input: JSON.stringify(catalog), encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20}));
   assert.equal(result.status, 0, result.stderr); assert.equal(result.stderr, "");
   const output = JSON.parse(result.stdout), slice = context => ({schemaVersion: 2, sliceId: "slice.one", context, query: {profile: "proof"}});

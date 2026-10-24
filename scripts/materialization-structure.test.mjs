@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 import {mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 import {compileVariantUnion} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -38,7 +38,7 @@ function native(command, repo, value, flags = [], executable = binary) {
   const descriptor = contract.commands.find(row => row.command === command);
   const argv = [...(descriptor.route ?? [command]), '--repo-root', repo, ...flags];
   if (value !== undefined) argv.push('--input', '-');
-  const result = spawnSync(executable, argv, {input: value === undefined ? undefined : JSON.stringify(value),
+  const result = spawnWithInputFile(executable, argv, {input: value === undefined ? undefined : JSON.stringify(value),
     encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
   assertCLITransport(result);
   return result;
