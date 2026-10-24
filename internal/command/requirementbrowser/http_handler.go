@@ -79,6 +79,8 @@ func browserHandler(view string, rendered renderedView, expectedAuthority, capab
 			serveWorkspaceAsset(response, method, workspaceGraphJavaScript, "text/javascript; charset=utf-8")
 		case "/assets/workspace-handoff.js":
 			serveWorkspaceAsset(response, method, workspaceHandoffJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/tokens.css":
+			serveWorkspaceAsset(response, method, tokensCSS, "text/css; charset=utf-8")
 		case "/assets/workspace.css":
 			serveWorkspaceAsset(response, method, workspaceCSS, "text/css; charset=utf-8")
 		case "/api/v1/manifest":

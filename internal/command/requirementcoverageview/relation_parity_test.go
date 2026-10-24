@@ -124,15 +124,18 @@ func TestCoverageRelationFullOutputParity(t *testing.T) {
 	// card groups; only that stylesheet rule changed the rendered bytes.
 	// "compact" was re-captured when compact Markdown/HTML began rendering
 	// declared witness routes; its JSON and exit-code projection is unchanged.
+	// HTML was re-captured when the single style element began holding the
+	// design-token stylesheet and a stylesheet that reads its tokens; only the
+	// style element's content changed the rendered bytes.
 	wants := map[string]string{
-		"sparse":         "f6e52d12b5bf07fe84b20cfe02791631815dbb79255fe40da9cba0f95cbfd6f1",
-		"dense":          "ece6842d9bf9ee589c6d4b353ee8b5f2c761a46f91e9f18b4b232378b6ca397f",
-		"no-match":       "e1199178877df52b4634abd873e76a6a8a3db289703951d3175fd3b3e53b0c34",
-		"missing":        "2da12f764a429da0b08cd38550c9e401e7715cc4bfcf7af1ddb550c8499c2cf3",
-		"failed":         "d0483811de43b06f2a5ff4f1582f60f05e9bbc15ad706ee4ba3c403c64d353ad",
-		"mixed-negative": "7ac30c89c9d7570d6a4f4dc30bf57ee2667e282e54c931edd0f42bfcd81798bd",
-		"owner-scope":    "87d6075e17f0e33c0966ca32022de5896dbc52b487142ae2f77ce693c8c8fceb",
-		"compact":        "07fb069aca5f40990960ed9a674d39526ac15a406fd50e332bb5a27642315ca2",
+		"sparse":         "d3bdbc9c1300d6ca7a02e4deaeacff5cf88cbafad0ffb5aba9318412f52bc24a",
+		"dense":          "f292ce5a452350fdce77e942144cd9ed9f66f8ad9d1ef9aea3515d553ff74898",
+		"no-match":       "72623c491e09c006703934d0aab7ee2382d3b3c2d08e9afc92adb7354939e479",
+		"missing":        "865ed9bc44443414ee70827f96ffad1fc5f91c80a7840cbe0bf90fffc24cbf55",
+		"failed":         "f0cc96e06ccb067c00e5e7d7f8846430d8216cb0cd26613ee9e40c5b546fcdc9",
+		"mixed-negative": "db947d4e61945a3185d0a4f9925c4a691a2c1452d77eff7f44aa6895805b30cc",
+		"owner-scope":    "7baeca97b85626bf9721edb3960dae11b5b5720c3ed6f2df487c03f1db4992c0",
+		"compact":        "df0917a3376a911b6e83792261ff53b8bfc8da861c19dad37535caafb2147446",
 	}
 	for _, name := range []string{"sparse", "dense", "no-match", "missing", "failed", "mixed-negative", "owner-scope", "compact"} {
 		t.Run(name, func(t *testing.T) {

@@ -37,6 +37,28 @@ func TestScriptHashSourceCommitsToExactEmittedBytes(t *testing.T) {
 	}
 }
 
+// The token stylesheet is the embedded file byte for byte, and every page's
+// only style element holds it followed by the static style.
+func TestTokenStylesheetIsTheEmbeddedFileAndOpensTheOnlyStyle(t *testing.T) {
+	source, err := os.ReadFile("tokens.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if TokenStylesheet() != string(source) || len(source) == 0 {
+		t.Fatal("TokenStylesheet must return the exact bytes of tokens.css")
+	}
+	for _, document := range []Document{
+		{},
+		{Title: "<style>different</style>", Cards: []Card{{Body: Text("</style>")}}, Table: &Table{}},
+	} {
+		output := HTML(document)
+		styles := regexp.MustCompile(`(?is)<style\b([^>]*)>(.*?)</style\s*>`).FindAllStringSubmatch(output, -1)
+		if len(styles) != 1 || styles[0][1] != "" || styles[0][2] != string(source)+css() {
+			t.Fatal("HTML must emit exactly one style element holding the token stylesheet and then the static style")
+		}
+	}
+}
+
 func TestSearchTextPreservesOriginalUnicodeAndCase(t *testing.T) {
 	values := []string{"\u039f\u0394\u039f\u03a3", "\u0130stanbul", "ASCII", "Cafe\u0301", `<script>"&`}
 	want := strings.Join(values, " ")

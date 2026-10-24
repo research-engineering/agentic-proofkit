@@ -242,7 +242,7 @@ func workspaceHTML(workspaceID string) string {
 		"<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
 		"<meta name=\"proofkit-browser-capability\" content=\"" + workspaceCapabilityPlaceholder + "\">",
 		"<title>" + html.EscapeString(workspaceID) + " - Proofkit workspace</title>",
-		"<link rel=\"stylesheet\" href=\"/assets/workspace.css\"></head>",
+		"<link rel=\"stylesheet\" href=\"/assets/tokens.css\"><link rel=\"stylesheet\" href=\"/assets/workspace.css\"></head>",
 		`<body data-state="bootstrap-loading"><a class="skip-link" href="#workspace-main" tabindex="0">Skip to workspace content</a><header class="product-bar">
 <button id="open-navigation" class="icon-button" type="button" data-open-panel="navigation" data-icon="panel-left" aria-label="Toggle specification navigation" title="Toggle specification navigation" aria-controls="workspace-navigation" aria-expanded="false"></button>
 <div class="product-identity"><strong>Proofkit</strong><h1>` + html.EscapeString(workspaceID) + `</h1></div>
