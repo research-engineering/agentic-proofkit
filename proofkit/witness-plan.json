@@ -324,6 +324,7 @@
       "argv": [
         "go",
         "test",
+        "-count=1",
         "./..."
       ],
       "environment": {

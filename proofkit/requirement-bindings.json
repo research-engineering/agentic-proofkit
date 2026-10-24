@@ -10650,7 +10650,7 @@
     },
     {
       "commandId": "proofkit.go-test",
-      "command": "go test ./...",
+      "command": "go test -count=1 ./...",
       "environmentClass": "local-go"
     },
     {
