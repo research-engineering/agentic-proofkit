@@ -46,7 +46,7 @@
     "go:check": "npm run go:fmt && npm run go:deps && npm run go:test && npm run go:vet && npm run go:staticcheck && npm run go:actionlint && npm run go:vulncheck",
     "go:deps": "go mod tidy -diff && go mod verify",
     "go:fmt": "test -z \"$(gofmt -l cmd internal scripts)\"",
-    "go:test": "go test ./...",
+    "go:test": "go test -count=1 ./...",
     "go:vet": "go vet ./...",
     "npm:version": "node -e \"const {execFileSync}=require('node:child_process'); const expected=require('./package.json').packageManager.split('@').at(-1); const actual=execFileSync('npm',['--version'],{encoding:'utf8'}).trim(); if(actual!==expected){throw new Error('expected npm '+expected+', got '+actual)}\"",
     "npm:registry-evidence": "go run ./internal/tools/npmregistry",
