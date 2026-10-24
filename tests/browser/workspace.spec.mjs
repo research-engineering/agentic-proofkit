@@ -405,6 +405,11 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     return pending;
   };
   const cleanupPage = {
+    // The shared navigation request barrier is in place first and stays.
+    route: async (matcher) => {
+      expect(matcher(new URL(workspaceURL))).toBe(true);
+      cleanupEvents.push("barrier-routed");
+    },
     mainFrame: () => cleanupFrame,
     evaluate: async () => undefined,
     on: (event) => {
@@ -434,6 +439,7 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   expect([...cleanupAborted].sort()).toEqual(["document", "navigation", "response"]);
   expect([...cleanupConsumed].sort()).toEqual(["document", "navigation", "response"]);
   expect(cleanupEvents).toEqual([
+    "barrier-routed",
     "request-armed",
     "response-armed",
     "download-armed",

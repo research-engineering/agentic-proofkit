@@ -10,7 +10,7 @@ const rejection = "Workspace observation was not admitted";
 const csp = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 function protocolModel(realPage, change) {
-  const state = {winner: "document", current: {location: {href: target}, readyState: "complete"}, status: 200, disposition: "", csp, nosniff: "nosniff", token: true, handles: [], phases: [], listeners: new Map(), waits: new Map()};
+  const state = {winner: "document", current: {location: {href: target}, readyState: "complete"}, status: 200, disposition: "", csp, nosniff: "nosniff", token: true, handles: [], phases: [], listeners: new Map(), waits: new Map(), barrierRoutes: []};
   change(state);
   const evaluate = (fn, arg) => runInNewContext(`(${fn.toString()})(argument)`, {document: state.current, argument: arg});
   const handle = value => {
@@ -55,6 +55,15 @@ function protocolModel(realPage, change) {
   const response = {request: () => request, url: () => target, ok: () => state.status >= 200 && state.status < 300,
     headers: () => ({"content-security-policy": state.csp, "x-content-type-options": state.nosniff, "content-disposition": state.disposition})};
   const fake = {
+    // The shared navigation request barrier is in place before anything else
+    // and is never removed.
+    async route(matcher, handler) {
+      expect(state.phases).toEqual([]);
+      state.phases.push("barrier:route");
+      state.barrierRoutes.push({matcher, handler});
+    },
+    async unroute() { throw new Error("the navigation request barrier must stay"); },
+    async unrouteAll() { throw new Error("the navigation request barrier must stay"); },
     mainFrame: () => frame,
     on: (name, listener) => { state.listeners.set(name, listener); },
     off: name => { state.listeners.delete(name); },
@@ -80,6 +89,14 @@ function protocolModel(realPage, change) {
   };
   const trigger = async token => {
     expect([...state.waits.keys()]).toEqual(["response", "event", "document"]);
+    // The barrier matches every URL and its handler only falls back.
+    expect(state.barrierRoutes).toHaveLength(1);
+    const [{matcher, handler}] = state.barrierRoutes;
+    expect([target, `${target}foreign`, "http://127.0.0.1:41002/assets/workspace.js"].map(url => matcher(new URL(url)))).toEqual([true, true, true]);
+    const routeCalls = [];
+    const route = Object.fromEntries(["fallback", "continue", "fulfill", "abort", "fetch"].map(name => [name, async (...args) => { routeCalls.push([name, args]); }]));
+    await handler(route);
+    expect(routeCalls).toEqual([["fallback", []]]);
     if (state.throwTrigger) throw new Error("controlled trigger failure");
     if (!state.keepOriginal) state.current = {location: {href: target}, readyState: "complete"};
     state.afterDocument?.();
@@ -167,6 +184,9 @@ test("controlled navigation protocol preserves operands, document identity and j
       expect(state.waits.size).toBe(0);
       expect(state.listeners.size).toBe(0);
       expect(state.handles.every(handle => handle.disposed && handle.disposals === 1)).toBe(true);
+      expect(state.barrierRoutes).toHaveLength(1);
+      expect(state.phases[0]).toBe("barrier:route");
+      expect(state.phases.filter(phase => phase.startsWith("barrier:"))).toEqual(["barrier:route"]);
       if (item.passed) {
         expect(state.phases.filter(phase => phase === "domcontentloaded")).toHaveLength(1);
         expect(state.phases.indexOf("domcontentloaded")).toBeLessThan(state.phases.indexOf("terminal"));
