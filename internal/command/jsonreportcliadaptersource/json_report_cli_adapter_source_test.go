@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:e9089d40688aa25c2565633825244c55bcadab85b65c74242ef871cedc2c6533"
+const expectedTypeScriptSourceSha256 = "sha256:e782b2cb6e17f1671a43418cf224a566365a4ebe90730a40699adbffbd1b0ac4"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -121,6 +121,58 @@ func TestGeneratedSourceUsesHardBoundedInputReads(t *testing.T) {
 	}
 }
 
+// The generated adapter runs the CLI synchronously without a timeout, so its
+// child must never read standard input from the socket of spawnSync's input
+// option: on macOS such a reader is sometimes not woken when the parent shuts
+// down writing, and the call then never returns. Except on Windows, the input
+// file and its directory are removed by path before the child starts.
+func TestGeneratedSourceGivesTheCLIItsInputAsARegularFile(t *testing.T) {
+	source := TypeScriptSource()
+	if count := strings.Count(source, "node:child_process"); count != 1 || !strings.Contains(source, "import { spawnSync } from \"node:child_process\";\n") {
+		t.Fatalf("generated source must import only spawnSync from node:child_process, found %d imports", count)
+	}
+	if count := strings.Count(source, "spawnSync("); count != 1 {
+		t.Fatalf("generated source must call spawnSync exactly once, found %d calls", count)
+	}
+	start := strings.Index(source, "spawnSync(options.binaryPath, childArgs, {\n")
+	if start < 0 {
+		t.Fatal("generated source lost its single spawnSync call")
+	}
+	end := strings.Index(source[start:], "\n  });\n")
+	if end < 0 {
+		t.Fatal("generated spawnSync options are not closed")
+	}
+	const wantOptions = "spawnSync(options.binaryPath, childArgs, {\n" +
+		"    cwd: options.cwd,\n" +
+		"    env: options.env,\n" +
+		"    maxBuffer: options.maxBuffer ?? defaultMaxBuffer,\n" +
+		"    stdio: [stdin, \"pipe\", \"pipe\"],"
+	if options := source[start : start+end]; options != wantOptions {
+		t.Fatalf("generated spawnSync options must be exactly cwd, env, maxBuffer and a stdin descriptor:\n%s", options)
+	}
+	for _, required := range []string{
+		"const inputText = options.inputMode === \"none\" ? null : proofkitStableJsonString(input);",
+		"spawnProofkitWithStdin(options, childArgs, \"ignore\")",
+		"const directory = mkdtempSync(join(tmpdir(), \"proofkit-cli-stdin-\"));",
+		"const writeFd = openSync(inputPath, \"wx\", 0o600);",
+		"writeFileSync(writeFd, inputText, {encoding: \"utf8\"});",
+		"    inputFd = openSync(inputPath, \"r\");\n" +
+			"    if (process.platform !== \"win32\") {\n" +
+			"      removeProofkitInputFile(inputPath, directory);\n" +
+			"      removed = true;\n" +
+			"    }\n" +
+			"    return spawnProofkitWithStdin(options, childArgs, inputFd);\n",
+		"if (inputFd !== null) closeSync(inputFd);",
+		"if (!removed) removeProofkitInputFile(inputPath, directory);",
+		"  rmSync(inputPath, {force: true});\n  rmdirSync(directory);\n",
+		"throw new Error(formatProofkitCliError(error));",
+	} {
+		if !strings.Contains(source, required) {
+			t.Fatalf("generated source missing regular-file stdin transport token %q", required)
+		}
+	}
+}
+
 func TestGeneratedSourcePreservesCLIExitCodeAsPublicContract(t *testing.T) {
 	source := TypeScriptSource()
 	for _, required := range []string{
@@ -202,6 +254,9 @@ func TestGeneratedTypeScriptAdapterExecutesCoreSemantics(t *testing.T) {
 	}
 	command := exec.Command(nodePath, "--experimental-strip-types", harnessPath)
 	command.Dir = tempDir
+	// A pipe, not the null device, so that a child which inherited the
+	// harness's standard input would show it.
+	command.Stdin = strings.NewReader("harness standard input\n")
 	output, err := command.CombinedOutput()
 	if err != nil {
 		t.Fatalf("generated TypeScript harness failed: %v\n%s", err, output)
@@ -223,7 +278,9 @@ func exportedDeclarations(source string) []string {
 }
 
 const fakeProofkitBinarySource = `#!/usr/bin/env node
-import { writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { fstatSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const commandIndex = process.argv[2] === "--json-layout" ? 4 : 2;
 const command = process.argv[commandIndex];
@@ -238,6 +295,10 @@ if (command === "adopt" && process.argv[commandIndex + 1] === "plan") {
 } else if (command === "four" && process.argv.slice(commandIndex, commandIndex + 4).join(" ") === "four route tokens exactly") {
   commandRoute = "four route tokens exactly";
   commandRouteLength = 4;
+}
+if (command === "early-refusal") {
+  process.stderr.write("early refusal\n");
+  process.exit(2);
 }
 let input = "";
 process.stdin.on("data", (chunk) => {
@@ -304,6 +365,33 @@ process.stdin.on("end", () => {
     process.stdout.write(JSON.stringify({schemaVersion: 1, state: "passed", inputless: true}) + "\n");
     process.exit(0);
   }
+  if (command === "stdin-probe") {
+    const info = fstatSync(0);
+    const temporaryRoot = process.env.PROOFKIT_PROBE_TMP_ROOT;
+    const directories = temporaryRoot === undefined ? [] : readdirSync(temporaryRoot).sort()
+      .filter((name) => name.startsWith("proofkit-cli-stdin-"))
+      .map((name) => ({
+        entries: readdirSync(join(temporaryRoot, name)).sort().map((entry) => ({mode: statSync(join(temporaryRoot, name, entry)).mode & 0o777, name: entry})),
+        mode: statSync(join(temporaryRoot, name)).mode & 0o777,
+      }));
+    process.stdout.write(JSON.stringify({schemaVersion: 1, state: "passed", directories, stdin: {
+      bytesRead: Buffer.byteLength(input),
+      inputFlag: process.argv.includes("--input"),
+      isFIFO: info.isFIFO(),
+      isFile: info.isFile(),
+      isNullDevice: info.isCharacterDevice() && info.rdev === statSync("/dev/null").rdev,
+      isSocket: info.isSocket(),
+      mode: info.mode & 0o777,
+      nlink: info.nlink,
+      sha256: createHash("sha256").update(input).digest("hex"),
+      size: info.size,
+    }}) + "\n");
+    process.exit(0);
+  }
+  if (command === "large-stdout") {
+    process.stdout.write("x".repeat(4096));
+    process.exit(0);
+  }
   if (command === "json-invalid-utf8") {
     process.stdout.write(Buffer.from([0x7b, 0x22, 0x78, 0x22, 0x3a, 0xff, 0x7d]));
     process.exit(0);
@@ -316,8 +404,10 @@ process.stdin.on("end", () => {
 func generatedAdapterHarnessSource(t *testing.T, fakeProofkitPath string) string {
 	t.Helper()
 	return `import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { createHash } from "node:crypto";
+import fs, { existsSync, fstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
+import { join, resolve, sep } from "node:path";
 import {
   formatProofkitCliError,
   parseProofkitJsonReportCli,
@@ -338,6 +428,10 @@ const repositoryRoot = "repository";
 const outsideRoot = "outside";
 mkdirSync(repositoryRoot);
 mkdirSync(outsideRoot);
+// Every adapter call of this harness creates its input directory here.
+const adapterTemporaryRoot = resolve("adapter-tmp");
+mkdirSync(adapterTemporaryRoot);
+process.env.TMPDIR = adapterTemporaryRoot;
 
 const parsed = parseProofkitJsonReportCli(["--input", "in.json", "--output", "out.json"], {
   flags: [{flag: "--input", key: "inputPath", required: true}],
@@ -668,6 +762,155 @@ const noInput = runProofkitNoInputJsonCommand("json-no-input", [], {binaryPath: 
 assert.equal(noInput.status, 0);
 assert.equal(noInput.value.inputless, true);
 
+const probeEnv = {...process.env, PROOFKIT_PROBE_TMP_ROOT: adapterTemporaryRoot};
+const probeInput = {a: true, payload: "x".repeat(1 << 20), z: 1};
+const probeText = proofkitStableJsonString(probeInput);
+const probeStdin = (nlink) => ({
+  bytesRead: Buffer.byteLength(probeText),
+  inputFlag: true,
+  isFIFO: false,
+  isFile: true,
+  isNullDevice: false,
+  isSocket: false,
+  mode: 0o600,
+  nlink,
+  sha256: createHash("sha256").update(probeText).digest("hex"),
+  size: Buffer.byteLength(probeText),
+});
+const inputDirectories = [{entries: [{mode: 0o600, name: "stdin"}], mode: 0o700}];
+const listInputDirectories = () => readdirSync(adapterTemporaryRoot).sort().map((name) => {
+  const directory = join(adapterTemporaryRoot, name);
+  return {
+    entries: readdirSync(directory).sort().map((entry) => ({mode: statSync(join(directory, entry)).mode & 0o777, name: entry})),
+    mode: statSync(directory).mode & 0o777,
+  };
+});
+const inAdapterTemporaryRoot = (path) => typeof path === "string" && path.startsWith(adapterTemporaryRoot + sep);
+const simulatedFailure = (code) => Object.assign(new Error("simulated " + code), {code});
+const openDescriptorCount = () => readdirSync("/dev/fd").length;
+// Replaces node:fs functions, as the adapter sees them, for one run.
+const withAdapterFs = (replacements, run) => {
+  const saved = {};
+  for (const [name, replace] of Object.entries(replacements)) {
+    saved[name] = fs[name];
+    fs[name] = replace(saved[name]);
+  }
+  syncBuiltinESMExports();
+  try {
+    return run();
+  } finally {
+    Object.assign(fs, saved);
+    syncBuiltinESMExports();
+  }
+};
+// The Windows branch of the adapter is exercised here by reporting win32 as the
+// platform; Windows itself is not.
+const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
+const asWindows = (run) => {
+  Object.defineProperty(process, "platform", {...platformDescriptor, value: "win32"});
+  try {
+    return run();
+  } finally {
+    Object.defineProperty(process, "platform", platformDescriptor);
+  }
+};
+// Records the input directory when the adapter opens the input file for the child.
+const runProbe = () => {
+  const atOpen = [];
+  const result = withAdapterFs({openSync: (open) => (path, flags, mode) => {
+    const descriptor = open(path, flags, mode);
+    if (inAdapterTemporaryRoot(path) && flags === "r") atOpen.push(...listInputDirectories());
+    return descriptor;
+  }}, () => runProofkitJsonCommand("stdin-probe", probeInput, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, env: probeEnv}));
+  return {atOpen, result};
+};
+
+const probe = runProbe();
+assert.deepEqual(probe.atOpen, inputDirectories, "the input file is alone in a fresh mode 0700 directory when it is opened for the child");
+assert.deepEqual(probe.result.value.stdin, probeStdin(0), "the child reads the stable JSON input to the end of a regular file that no longer has a name");
+assert.deepEqual(probe.result.value.directories, [], "no input directory remains while the child runs");
+assert.deepEqual(readdirSync(adapterTemporaryRoot), []);
+const windowsProbe = asWindows(runProbe);
+assert.deepEqual(windowsProbe.atOpen, inputDirectories);
+assert.deepEqual(windowsProbe.result.value.stdin, probeStdin(1), "on Windows the child reads the input file under its name");
+assert.deepEqual(windowsProbe.result.value.directories, inputDirectories, "on Windows the input directory remains while the child runs");
+assert.deepEqual(readdirSync(adapterTemporaryRoot), [], "on Windows the input directory is removed when the call returns");
+assert.equal(fstatSync(0).isFIFO(), true, "the harness's own standard input is a pipe");
+const noInputProbe = runProofkitNoInputJsonCommand("stdin-probe", [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, env: probeEnv});
+assert.equal(noInputProbe.value.stdin.inputFlag, false);
+assert.equal(noInputProbe.value.stdin.isNullDevice, true, "a call without input gives the child the null device, not an inherited standard input");
+assert.equal(noInputProbe.value.stdin.isFIFO, false);
+assert.equal(noInputProbe.value.stdin.isSocket, false);
+assert.equal(noInputProbe.value.stdin.bytesRead, 0);
+assert.deepEqual(noInputProbe.value.directories, [], "a call without input writes no input file");
+assert.throws(
+  () => runProofkitJsonCommand("early-refusal", {payload: "y".repeat(2 << 20)}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  (error) => error instanceof Error && error.message === "early refusal",
+  "a child that exits without reading its input reports its own refusal, not a write error",
+);
+assert.throws(
+  () => runProofkitJsonCommand("large-stdout", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, maxBuffer: 1024}),
+  /ENOBUFS/,
+);
+assert.throws(() => runProofkitJsonCommand("json-pass", {}, [], {binaryPath: resolve("missing-proofkit"), cwd: repositoryRoot}), /ENOENT/);
+// spawnSync's own argument errors are thrown with the adapter's redacted and
+// bounded diagnostic, as plain errors without Node's class or code.
+assert.throws(
+  () => runProofkitJsonCommand("json-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, maxBuffer: -1}),
+  (error) => error.constructor === Error && error.code === undefined && /options\.maxBuffer/.test(error.message),
+);
+assert.throws(
+  () => runProofkitJsonCommand("json-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, env: {PROOFKIT_PROBE_VALUE: "ghp_123456789012345678901234567890123456\u0000"}}),
+  (error) => error.constructor === Error && error.code === undefined && error.message === "<redacted-diagnostic-value>",
+  "a secret-shaped environment value in spawnSync's argument error is redacted",
+);
+assert.deepEqual(readdirSync(adapterTemporaryRoot), [], "a throw from spawnSync leaves no input directory");
+assert.throws(() => runProofkitJsonCommand("json-pass", cyclic, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}), /cycles/);
+process.env.TMPDIR = resolve("missing-temporary-root");
+assert.throws(() => runProofkitJsonCommand("json-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}), /ENOENT/);
+process.env.TMPDIR = adapterTemporaryRoot;
+
+// A throw inside the transport closes the input descriptor and leaves no input
+// directory; a failed removal before the child starts fails the call and is
+// retried once when the call ends.
+const descriptorsBeforeTransportFailures = openDescriptorCount();
+let reopenFailures = 0;
+assert.throws(
+  () => withAdapterFs({openSync: (open) => (path, flags, mode) => {
+    if (inAdapterTemporaryRoot(path) && flags === "r" && reopenFailures++ === 0) throw simulatedFailure("EIO");
+    return open(path, flags, mode);
+  }}, () => runProofkitJsonCommand("json-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot})),
+  /simulated EIO/,
+);
+assert.equal(reopenFailures, 1);
+assert.deepEqual(readdirSync(adapterTemporaryRoot), [], "a failed open for the child leaves no input directory");
+for (const name of ["rmSync", "rmdirSync"]) {
+  let removals = 0;
+  assert.throws(
+    () => withAdapterFs({[name]: (remove) => (path, ...rest) => {
+      if (inAdapterTemporaryRoot(path) && removals++ === 0) throw simulatedFailure("EBUSY");
+      return remove(path, ...rest);
+    }}, () => runProofkitJsonCommand("json-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot})),
+    /simulated EBUSY/,
+    name + ": a failed removal before the child starts fails the call",
+  );
+  assert.equal(removals, 2, name + ": the removal is retried once when the call ends");
+  assert.deepEqual(readdirSync(adapterTemporaryRoot), [], name + ": the retried removal leaves no input directory");
+}
+let windowsRemovals = 0;
+assert.throws(
+  () => asWindows(() => withAdapterFs({rmSync: (remove) => (path, ...rest) => {
+    if (inAdapterTemporaryRoot(path) && windowsRemovals++ === 0) throw simulatedFailure("EBUSY");
+    return remove(path, ...rest);
+  }}, () => runProofkitJsonCommand("json-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}))),
+  /simulated EBUSY/,
+  "on Windows a failed removal when the call ends fails the call",
+);
+assert.equal(windowsRemovals, 1);
+assert.equal(listInputDirectories().length, 1, "on Windows a failed removal leaves the input directory");
+for (const name of readdirSync(adapterTemporaryRoot)) rmSync(join(adapterTemporaryRoot, name), {force: true, recursive: true});
+assert.equal(openDescriptorCount(), descriptorsBeforeTransportFailures, "no input descriptor stays open after a transport failure");
+
 process.exitCode = undefined;
 runProofkitJsonReportCliMain({argv: [], run: () => 7});
 assert.equal(process.exitCode, 7);
@@ -720,6 +963,8 @@ runProofkitJsonReportCliMain({
 	assert.equal(formatProofkitCliError("a".repeat(8192) + "://safe " + beyondDecodeBudget), fixedDiagnostic);
 	assert(performance.now() - guardedURLStart < 2000, "generated URL candidate scanning must remain bounded");
 	assert.equal(formatProofkitCliError("123https://user:password@example.test"), fixedDiagnostic);
+
+assert.deepEqual(readdirSync(adapterTemporaryRoot), [], "every adapter call removes its input directory");
 
 console.log("generated adapter semantics ok");
 `
