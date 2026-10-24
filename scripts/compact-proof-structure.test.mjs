@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {mkdtempSync, readFileSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {after, before} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -34,7 +34,7 @@ before(() => {
 after(() => { if (directory) rmSync(directory, {recursive: true, force: true}); });
 
 function native(input, accepted, label) {
-  const result = spawnSync(binary, ["requirement-proof-resolver", "--input", "-", "--local-environment-class", "local-go"], {
+  const result = spawnWithInputFile(binary, ["requirement-proof-resolver", "--input", "-", "--local-environment-class", "local-go"], {
     input: typeof input === "string" ? input : JSON.stringify(input),
     encoding: "utf8", timeout: 10_000, maxBuffer: 2 << 20,
   });

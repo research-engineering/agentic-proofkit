@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {mkdtempSync, readFileSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 import {compileVariantUnion} from "./schema-definitions.mjs";
 
 const root = new URL("../", import.meta.url), release = "release-authority", readiness = "readiness-closeout";
@@ -42,7 +42,7 @@ const order = (a, b) => Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "u
 const trim = text => text.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, "");
 const mergedClaims = (command, values) => [...new Set([...builtin[command], ...values.map(trim)])].sort(order);
 function invoke(row) {
-  const result = spawnSync(binary, row.argv, {input: row.input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
+  const result = spawnWithInputFile(binary, row.argv, {input: row.input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
   return assertCLITransport(result);
 }
 function expectedHelp(row) {

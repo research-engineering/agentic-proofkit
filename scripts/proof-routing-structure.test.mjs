@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {createHash} from "node:crypto";
 import {mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 import {compileVariantUnion, expandSharedDefinitions} from "./schema-definitions.mjs";
 import {bindingInput, witnessInput, projectedWitnessInput, schedulerInput, populatedSchedulerInput, resolverInput} from "./proof-routing-fixtures.mjs";
 
@@ -62,7 +62,7 @@ function native(command, input, {exit = 0, report = true, carrier = "stdin", ext
     args = [command, "--input", path, "--input-pointer", "/payload", ...extra];
     bytes = "";
   } else if (carrier === "compact") args.unshift("--json-layout", "compact");
-  const invoke = executable => spawnSync(executable, args, {input: bytes, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
+  const invoke = executable => spawnWithInputFile(executable, args, {input: bytes, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
   assertCLITransport(result);
   assert.equal(result.status, exit, `${command}: ${result.stderr}`);

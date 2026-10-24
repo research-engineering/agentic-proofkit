@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {mkdtempSync, readFileSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 
 const root = new URL("../", import.meta.url), command = "spec-overview-claims";
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_OVERVIEW_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -44,7 +44,7 @@ before(() => {
 after(() => {if (directory) rmSync(directory, {recursive: true, force: true});});
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 function invoke(input, argv = [command, "--input", "-"]) {
-  const result = spawnSync(binary, argv, {input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
+  const result = spawnWithInputFile(binary, argv, {input, encoding: "utf8", timeout: 10000, maxBuffer: 2 << 20});
   return assertCLITransport(result);
 }
 function reportSemantics(input, output) {

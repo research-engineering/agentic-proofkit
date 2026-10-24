@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 import {expandSharedDefinitions} from './schema-definitions.mjs';
 
 // Independent oracle: expected inventories, vocabularies and fixtures are
@@ -63,7 +63,7 @@ function schema(command, direction, index, value, expected = true, label = '') {
   assert.equal(check(value), expected, `${command}/${direction}/${index}/${label}: ${JSON.stringify(check.errors?.slice(0, 2))}`);
 }
 function run(command, input, flags = []) {
-  const result = spawnSync(binary, [command, '--input', '-', ...flags], {
+  const result = spawnWithInputFile(binary, [command, '--input', '-', ...flags], {
     input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 8 << 20,
   });
   assertCLITransport(result);

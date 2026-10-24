@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {createHash} from "node:crypto";
 import {mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
@@ -7,7 +7,7 @@ import {join, relative, isAbsolute} from "node:path";
 import {fileURLToPath} from "node:url";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 import {compileVariantUnion} from "./schema-definitions.mjs";
 import {planInput, populatedPlanInput, evidenceInput, projectionInput, boundProjectionInput, decisionInput, decisionStates} from "./selective-proof-fixtures.mjs";
 
@@ -59,7 +59,7 @@ function native(name, value, {exit = 0, report = true, extra = [], carrier = "st
     const path = join(directory, "input.json"); writeFileSync(path, JSON.stringify({payload: value}));
     args = [name, "--input", path, "--input-pointer", "/payload", ...extra]; input = "";
   } else if (carrier === "compact") args.unshift("--json-layout", "compact");
-  const invoke = file => spawnSync(file, args, {...(carrier === "argv-only" ? {stdio: ["ignore", "pipe", "pipe"]} : {input}),
+  const invoke = file => spawnWithInputFile(file, args, {...(carrier === "argv-only" ? {stdio: ["ignore", "pipe", "pipe"]} : {input}),
     encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
   assertCLITransport(result, name); assert.equal(result.status, exit, `${name}: ${result.stderr}`);
@@ -326,7 +326,7 @@ test("coverage sourcePath is required nullable across receipt and command-key re
 
 test("delimiter-bearing duplicate keys retain command text and only repair the declared legacy fields", () => {
   const invoke = (file, input) => {
-    const result = spawnSync(file, [names[1], "--input", "-"], {input: JSON.stringify(input), encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
+    const result = spawnWithInputFile(file, [names[1], "--input", "-"], {input: JSON.stringify(input), encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
     assertCLITransport(result);
     assert.equal(result.status, 1); assert.equal(result.stderr, "");
     return result;
@@ -386,7 +386,7 @@ test("repaired report hashes bind both envelope references across layouts and om
   const sourceRefId = "proofkit.agent.context.selective-evidence.001";
   const invoke = (file, input, layout) => {
     const args = layout ? ["--json-layout", layout, names[1], "--input", "-", "--agent-envelope"] : [names[1], "--input", "-"];
-    const result = spawnSync(file, args,
+    const result = spawnWithInputFile(file, args,
       {input: JSON.stringify(input), encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
     assertCLITransport(result);
     assert.equal(result.status, 1); assert.equal(result.stderr, "");
