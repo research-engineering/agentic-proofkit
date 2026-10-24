@@ -268,6 +268,15 @@ npm exec --offline -- agentic-proofkit json-report-cli-adapter-source --language
 The generated adapter remains caller-owned after materialization. It must be
 reviewed, pinned to the installed package, and kept behind the same CLI/JSON
 contract; it does not become a separate public SDK or proof authority.
+A call that sends JSON input writes it to a file created with mode 0600 in a
+fresh mode 0700 directory under the calling process's temporary directory, so
+the caller needs a writable temporary directory, and gives the CLI that file,
+opened read-only, as its standard input. Except on Windows, the file and its
+directory are removed before the CLI starts. On Windows, which is not a
+supported platform, file modes do not apply, and the file and directory are
+removed when the call returns or throws. The input remains on disk after a call
+only if the calling process ends before that removal or the removal fails; a
+failed removal fails the call.
 
 ## Documentation And Boundaries
 

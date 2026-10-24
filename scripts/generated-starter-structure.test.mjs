@@ -53,6 +53,124 @@ const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 // Declared, single-purpose deltas from the frozen predecessor streams. The
 // corpus stays untouched; each delta names its rows and exact byte change.
 const helpRows = Object.freeze(["stack-preset--help", "stack-preset-h", "json-report-cli-adapter-source--help", "json-report-cli-adapter-source-h"]);
+// The adapter source gives the CLI its input as a regular file, and a call
+// without input the null device, instead of spawnSync's input socket, which on
+// macOS can leave the child blocked forever. The bundle rows carry the source
+// change, its digest and its line count; the texts below are adapter source,
+// compared in their JSON string encoding.
+const adapterBundleRows = Object.freeze(["adapter-default", "adapter-explicit-json", "adapter-compact"]);
+const adapterImportsPredecessor = `import { closeSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+`;
+const adapterImportsCurrent = `import { closeSync, fstatSync, fsyncSync, lstatSync, mkdirSync, mkdtempSync, openSync, readSync, realpathSync, renameSync, rmdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+`;
+const adapterTransportPredecessor = `  const childResult = spawnSync(options.binaryPath, childArgs, {
+    cwd: options.cwd,
+    env: options.env,
+    input: options.inputMode === "none" ? undefined : proofkitStableJsonString(input),
+    maxBuffer: options.maxBuffer ?? defaultMaxBuffer,
+  });
+  if (childResult.error !== undefined) {
+    throw new Error(formatProofkitCliError(childResult.error));
+  }
+  const child: ProofkitProcessResult = {
+    status: childResult.status,
+    stdout: decodeProofkitUTF8(childResult.stdout, "Proofkit stdout"),
+    stderr: decodeProofkitUTF8(childResult.stderr, "Proofkit stderr"),
+  };
+  return {child, outputFile: prepared.outputFile};
+}
+`;
+const adapterTransportCurrent = `  const inputText = options.inputMode === "none" ? null : proofkitStableJsonString(input);
+  const childResult = spawnProofkitChild(options, childArgs, inputText);
+  if (childResult.error !== undefined) {
+    throw new Error(formatProofkitCliError(childResult.error));
+  }
+  const child: ProofkitProcessResult = {
+    status: childResult.status,
+    stdout: decodeProofkitUTF8(childResult.stdout, "Proofkit stdout"),
+    stderr: decodeProofkitUTF8(childResult.stderr, "Proofkit stderr"),
+  };
+  return {child, outputFile: prepared.outputFile};
+}
+
+// The child never reads its standard input from spawnSync's input option. On
+// Unix-like systems that option writes into a socket pair, shuts down writing and
+// keeps its end open until the child exits, and on macOS a child blocked reading
+// such a socket is sometimes not woken by the shutdown and then waits forever.
+// Input goes through a regular file, which ends at its size; a call without input
+// gives the child the null device.
+function spawnProofkitChild(options: ProofkitCommandRunOptions, childArgs: readonly string[], inputText: string | null) {
+  try {
+    return inputText === null ?
+      spawnProofkitWithStdin(options, childArgs, "ignore") :
+      spawnProofkitWithInputFile(options, childArgs, inputText);
+  } catch (error) {
+    throw new Error(formatProofkitCliError(error));
+  }
+}
+
+// The input is written to a file created exclusively with mode 0600 in a fresh
+// mode 0700 directory under the temporary directory of this process, and the
+// child gets that file opened read-only. Except on Windows, the file and its
+// directory are removed as soon as the file is open, before the child starts:
+// the open descriptor alone keeps the input, so none remains on disk while the
+// child runs, and a signal that ends this process then leaves none behind. When
+// the call returns or throws, the descriptor is closed and the file and directory
+// are removed if they have not been removed yet: on Windows, where an open file
+// can keep its name until it is closed, after a throw before the early removal,
+// and after a failed early removal. The removal uses path calls only, so it needs
+// no descriptor of its own, and a failed removal fails the call.
+function spawnProofkitWithInputFile(options: ProofkitCommandRunOptions, childArgs: readonly string[], inputText: string) {
+  const directory = mkdtempSync(join(tmpdir(), "proofkit-cli-stdin-"));
+  const inputPath = join(directory, "stdin");
+  let inputFd: number | null = null;
+  let removed = false;
+  try {
+    const writeFd = openSync(inputPath, "wx", 0o600);
+    try {
+      writeFileSync(writeFd, inputText, {encoding: "utf8"});
+    } finally {
+      closeSync(writeFd);
+    }
+    inputFd = openSync(inputPath, "r");
+    if (process.platform !== "win32") {
+      removeProofkitInputFile(inputPath, directory);
+      removed = true;
+    }
+    return spawnProofkitWithStdin(options, childArgs, inputFd);
+  } finally {
+    try {
+      if (inputFd !== null) closeSync(inputFd);
+    } finally {
+      if (!removed) removeProofkitInputFile(inputPath, directory);
+    }
+  }
+}
+
+function removeProofkitInputFile(inputPath: string, directory: string): void {
+  rmSync(inputPath, {force: true});
+  rmdirSync(directory);
+}
+
+function spawnProofkitWithStdin(options: ProofkitCommandRunOptions, childArgs: readonly string[], stdin: "ignore" | number) {
+  return spawnSync(options.binaryPath, childArgs, {
+    cwd: options.cwd,
+    env: options.env,
+    maxBuffer: options.maxBuffer ?? defaultMaxBuffer,
+    stdio: [stdin, "pipe", "pipe"],
+  });
+}
+`;
+const jsonText = text => JSON.stringify(text).slice(1, -1);
+const adapterStdinReason = "The adapter source gives the CLI its input as a regular file instead of spawnSync's input socket.";
+const adapterStdinDelta = (suffix, rows, predecessor, current) => Object.freeze({
+  id: `ADAPTER-STDIN-FILE-${suffix}`, reason: adapterStdinReason, rows: Object.freeze(rows), predecessor, current, occurrences: 1,
+});
 const declaredStreamDeltas = Object.freeze([Object.freeze({
   id: "PILOT-D10",
   reason: "Usage lines name the --format values a command admits instead of <mode>.",
@@ -63,7 +181,15 @@ const declaredStreamDeltas = Object.freeze([Object.freeze({
   reason: "The help contract stanza names the structural JSON Schemas the CLI contract publishes instead of root JSON shapes.",
   rows: helpRows,
   predecessor: "CLI command routing, root JSON shapes,", current: "CLI command routing, structural JSON Schemas,", occurrences: 1,
-})]);
+}),
+adapterStdinDelta("IMPORTS", adapterBundleRows, jsonText(adapterImportsPredecessor), jsonText(adapterImportsCurrent)),
+adapterStdinDelta("TRANSPORT", adapterBundleRows, jsonText(adapterTransportPredecessor), jsonText(adapterTransportCurrent)),
+adapterStdinDelta("SHA256", adapterBundleRows,
+  "sha256:e9089d40688aa25c2565633825244c55bcadab85b65c74242ef871cedc2c6533",
+  "sha256:e782b2cb6e17f1671a43418cf224a566365a4ebe90730a40699adbffbd1b0ac4"),
+adapterStdinDelta("LINE-COUNT", ["adapter-default", "adapter-explicit-json"], "\"lineCount\": 1124", "\"lineCount\": 1189"),
+adapterStdinDelta("LINE-COUNT-COMPACT", ["adapter-compact"], "\"lineCount\":1124", "\"lineCount\":1189"),
+]);
 const count = (text, needle) => text.split(needle).length - 1;
 // Returns the predecessor stdout implied by the declared deltas of a row, or null
 // when the current bytes do not carry exactly each delta in exactly its occurrences.
@@ -203,7 +329,7 @@ test("starter schema does not launder native-only hash line-count and rendered-c
 
 test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
   const delta = declaredStreamDeltas.find(item => item.id === "PILOT-D10");
-  assert.equal(declaredStreamDeltas.length, 2);
+  assert.equal(declaredStreamDeltas.length, 7);
   const rows = baseline.observations.filter(row => delta.rows.includes(row.name));
   assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   const current = invoke(rows[0]).stdout;
@@ -218,6 +344,34 @@ test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
   const unlistedCurrent = invoke(unlisted).stdout;
   assert.ok(conservesPredecessor(unlisted, unlistedCurrent), "rows outside the delta carry no usage delta");
   assert.equal(conservesPredecessor(unlisted, unlistedCurrent + delta.current), false, "delta applied to an unlisted row");
+});
+
+test("the ADAPTER-STDIN-FILE deltas are exact and limited to the adapter bundle rows", () => {
+  const deltas = declaredStreamDeltas.filter(item => item.id.startsWith("ADAPTER-STDIN-FILE-"));
+  assert.equal(deltas.length, 5);
+  const rows = baseline.observations.filter(row => adapterBundleRows.includes(row.name));
+  assert.deepEqual(rows.map(row => row.name), [...adapterBundleRows]);
+  for (const row of rows) {
+    const current = invoke(row).stdout, source = JSON.parse(current).source;
+    assert.ok(conservesPredecessor(row, current), `${row.name}/declared adapter deltas`);
+    assert.equal(source.includes(adapterTransportCurrent), true, `${row.name}/file transport`);
+    assert.equal(source.includes("input: options.inputMode"), false, `${row.name}/no spawnSync input option`);
+    const applied = deltas.filter(item => item.rows.includes(row.name));
+    assert.equal(applied.length, 4, row.name);
+    for (const delta of applied) {
+      const reverted = current.replace(delta.current, delta.predecessor);
+      assert.notEqual(reverted, current, `${row.name}/${delta.id}`);
+      assert.equal(conservesPredecessor(row, reverted), false, `${row.name}/${delta.id}/reverted`);
+    }
+    const otherByte = current.replace("Proofkit binaryPath is required", "Proofkit binaryPath is  required");
+    assert.notEqual(otherByte, current);
+    assert.equal(conservesPredecessor(row, otherByte), false, `${row.name}/other byte`);
+  }
+  for (const name of ["json-report-cli-adapter-source--help", "adapter-missing", "preset-python_service"]) {
+    const row = baseline.observations.find(item => item.name === name), current = invoke(row).stdout;
+    assert.ok(conservesPredecessor(row, current), `${name}/no adapter delta`);
+    for (const delta of deltas) assert.equal(conservesPredecessor(row, current + delta.current), false, `${name}/${delta.id} applied to an unlisted row`);
+  }
 });
 
 test("the HELP-CONTRACT-SCHEMAS help delta is exact and limited to help rows", () => {
