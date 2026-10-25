@@ -18,7 +18,9 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:e782b2cb6e17f1671a43418cf224a566365a4ebe90730a40699adbffbd1b0ac4"
+const expectedTypeScriptSourceSha256 = "sha256:434d4b3a03096288ae895711ba0626e7e705fdc7724cfcba3e7306d8ce5ec06b"
+const optionsSnapshotStatement = "  const options = snapshotProofkitRunOptions(callerOptions, mode === \"json-no-input\" ? \"none\" : undefined);"
+const unownedOptionsStatement = "  const options = mode === \"json-no-input\" ? {...callerOptions, inputMode: \"none\" as const} : callerOptions;"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -50,6 +52,7 @@ func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if first["sourceSha256"] != digest.SHA256TextRef(source) {
 		t.Fatalf("source hash mismatch: %v", first["sourceSha256"])
 	}
+	t.Logf("generated source: %s, %d lines, %d bytes", first["sourceSha256"], sourceLineCount(source), len(source))
 	if first["sourceSha256"] != expectedTypeScriptSourceSha256 {
 		t.Fatalf("source hash=%v, want owner-approved ABI hash %s", first["sourceSha256"], expectedTypeScriptSourceSha256)
 	}
@@ -71,6 +74,14 @@ func TestBuildRejectsUnsupportedLanguageAndFormat(t *testing.T) {
 
 func TestGeneratedSourcePreservesConsumerOwnedPackageResolution(t *testing.T) {
 	source := TypeScriptSource()
+	const explicitCwdCapture = "    try { parentCwd = process.cwd(); } catch (error) { parentCwdError = error; }\n"
+	const explicitCwdAnchor = "executionCwd = parentCwd + (parentCwd.endsWith(sep) ? \"\" : sep) + cwd;"
+	if strings.Count(source, explicitCwdCapture) != 1 || strings.Count(source, explicitCwdAnchor) != 1 {
+		t.Fatal("working-directory normalization must capture only the explicit caller cwd once")
+	}
+	// Canonicalizing the explicit cwd is not package or repository discovery.
+	// Every other ambient cwd read remains forbidden below.
+	source = strings.Replace(source, explicitCwdCapture, "", 1)
 	for _, forbidden := range []string{
 		"node_modules",
 		"package.json",
@@ -144,7 +155,7 @@ func TestGeneratedSourceGivesTheCLIItsInputAsARegularFile(t *testing.T) {
 	}
 	const wantOptions = "spawnSync(options.binaryPath, childArgs, {\n" +
 		"    cwd: options.cwd,\n" +
-		"    env: options.env,\n" +
+		"    env: environment,\n" +
 		"    maxBuffer: options.maxBuffer ?? defaultMaxBuffer,\n" +
 		"    stdio: [stdin, \"pipe\", \"pipe\"],"
 	if options := source[start : start+end]; options != wantOptions {
@@ -185,7 +196,7 @@ func TestGeneratedSourcePreservesCLIExitCodeAsPublicContract(t *testing.T) {
 		"stdout: child.stdout",
 		"stderr: child.stderr",
 		"value: parseProofkitJsonStrict(jsonText)",
-		"const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options)",
+		"return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, input, args, options));",
 		"function outputPathFromArgs(args: readonly string[])",
 		"function admitWritableOutputTarget",
 		"prepared = prepareOutputArgs(options.cwd, args)",
@@ -235,35 +246,195 @@ func TestGeneratedSourceAvoidsGenericIndexedAssignmentDrift(t *testing.T) {
 
 func TestGeneratedTypeScriptAdapterExecutesCoreSemantics(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.091236415555979919321510491623647940156692204483402355271747696953075393053294")
+	t.Run("owned execution options", func(t *testing.T) {
+		output, err := executeGeneratedAdapterHarness(t, TypeScriptSource())
+		if err != nil {
+			t.Fatalf("generated TypeScript harness failed: %v\n%s", err, output)
+		}
+		if !strings.Contains(string(output), "generated adapter semantics ok") {
+			t.Fatalf("generated TypeScript harness did not confirm semantics:\n%s", output)
+		}
+	})
+	t.Run("mutable execution options falsifier", func(t *testing.T) {
+		const snapshot = optionsSnapshotStatement
+		const execution = "  const executionOptions = Object.freeze({...options, cwd: prepared.cwd});"
+		source := TypeScriptSource()
+		if strings.Count(source, snapshot) != 1 || strings.Count(source, execution) != 1 {
+			t.Fatal("execution-options snapshot mutation target drift")
+		}
+		source = strings.Replace(source, snapshot, unownedOptionsStatement, 1)
+		source = strings.Replace(source, execution, "  const executionOptions = options;", 1)
+		output, err := executeGeneratedAdapterHarness(t, source)
+		if err == nil {
+			t.Fatal("mutable execution-options mutant passed")
+		}
+		// Preserve the runtime failures observed on the PR233 implementation,
+		// not just any harness failure or a missing success marker.
+		for _, cause := range []string{
+			"json output root: child must not write outside admitted root A",
+			"text output root: child must not write outside admitted root A",
+			"json binary identity: substituted binary",
+			"text binary identity: substituted binary",
+			"explicit environment:", "default inherited environment:", "maxBuffer snapshot:",
+			"execution options must remain bound to their admitted snapshot",
+		} {
+			if !strings.Contains(string(output), cause) {
+				t.Fatalf("mutable execution-options mutant missed cause %q:\n%s", cause, output)
+			}
+		}
+	})
+	t.Run("initial options snapshot falsifier", func(t *testing.T) {
+		const before = optionsSnapshotStatement
+		source := TypeScriptSource()
+		if strings.Count(source, before) != 1 {
+			t.Fatal("initial snapshot mutation target drift")
+		}
+		output, err := executeGeneratedAdapterHarness(t, strings.Replace(source, before, unownedOptionsStatement, 1))
+		if err == nil {
+			t.Fatal("initial snapshot mutant passed despite owned execution projection")
+		}
+		for _, cause := range []string{"explicit environment:", "default inherited environment:", "json reads each option once:", "text reads each option once:"} {
+			if !strings.Contains(string(output), cause) {
+				t.Fatalf("initial snapshot mutant missed cause %q:\n%s", cause, output)
+			}
+		}
+	})
+	t.Run("Node permission environment normalization", func(t *testing.T) {
+		output, err := executeGeneratedAdapterHarness(t, TypeScriptSource(),
+			"--permission", "--allow-child-process", "--no-warnings")
+		if err != nil || !strings.Contains(string(output), "permission-model adapter assertions passed") {
+			t.Fatalf("permission-mode adapter environment failed: %v\n%s", err, output)
+		}
+	})
+	t.Run("relative working directory falsifier", func(t *testing.T) {
+		const before = "executionCwd = parentCwd + (parentCwd.endsWith(sep) ? \"\" : sep) + cwd;"
+		source := TypeScriptSource()
+		if strings.Count(source, before) != 1 {
+			t.Fatal("working-directory mutation target drift")
+		}
+		output, err := executeGeneratedAdapterHarness(t, strings.Replace(source, before, "executionCwd = cwd;", 1))
+		if err == nil {
+			t.Fatal("relative working-directory mutant passed")
+		}
+		for _, cause := range []string{"json relative cwd: relative cwd changed its admitted root", "text relative cwd: relative cwd changed its admitted root"} {
+			if !strings.Contains(string(output), cause) {
+				t.Fatalf("working-directory mutant missed cause %q:\n%s", cause, output)
+			}
+		}
+	})
+	t.Run("readonly transport environment falsifier", func(t *testing.T) {
+		const before = "Object.assign(Object.create(null), options.env)"
+		source := TypeScriptSource()
+		if strings.Count(source, before) != 1 {
+			t.Fatal("readonly transport mutation target drift")
+		}
+		source = strings.Replace(source, before, "Object.create(null, Object.getOwnPropertyDescriptors(options.env))", 1)
+		output, err := executeGeneratedAdapterHarness(t, source,
+			"--permission", "--allow-child-process", "--no-warnings")
+		if err == nil {
+			t.Fatal("readonly environment mutant passed")
+		}
+		for _, kind := range []string{"json", "text"} {
+			cause := kind + " permission environment: Cannot assign to read only property 'NODE_OPTIONS'"
+			if !strings.Contains(string(output), cause) {
+				t.Fatalf("readonly environment mutant missed cause %q:\n%s", cause, output)
+			}
+		}
+	})
+	t.Run("execution boundary falsifier", func(t *testing.T) {
+		for _, change := range []struct {
+			name, before, after string
+			causes              []string
+		}{
+			{"prototype", "Object.assign(Object.create(null), options.env)", "{...options.env}", []string{
+				"json prototype-isolated environment: captured environment acquired a late prototype entry",
+				"text prototype-isolated environment: captured environment acquired a late prototype entry",
+			}},
+			{"coverage guard", "Object.defineProperty(environment, \"NODE_V8_COVERAGE\", {value: undefined})", "environment.NODE_V8_COVERAGE = undefined", []string{
+				"Windows environment alias normalization: coverage absence guard displaced the explicit alias",
+			}},
+			{"filesystem components", "executionCwd = parentCwd + (parentCwd.endsWith(sep) ? \"\" : sep) + cwd;", "executionCwd = realpathSync(resolve(parentCwd, cwd));", []string{
+				"json symlink parent cwd cwd-components: filesystem component order differs from direct Node spawn",
+				"text symlink parent cwd cwd-components: filesystem component order differs from direct Node spawn",
+				"no-input symlink parent cwd cwd-components: filesystem component order differs from direct Node spawn",
+			}},
+			{"native output root", "const root = realpathSync.native(cwd);", "const root = realpathSync(cwd);", []string{
+				"json symlink parent output cwd-components: output escaped the physical Node cwd",
+				"text symlink parent output cwd-components: output escaped the physical Node cwd",
+				"writer symlink parent output cwd-components:",
+			}},
+			{"admitted execution root", "cwd: target.cwd", "cwd", []string{
+				"json admitted output cwd: output context reread a mutable cwd alias",
+				"text admitted output cwd: output context reread a mutable cwd alias",
+			}},
+			{"absolute context independence", "parentCwdError = error;", "throw error;", []string{
+				"json deleted ambient cwd: ENOENT:", "text deleted ambient cwd: ENOENT:", "no-input deleted ambient cwd: ENOENT:", "uv_cwd",
+			}},
+			{"no-input entry capture", "return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, null, args, options, \"json-no-input\"));", "return runProofkitJsonCommand<T>(commandRoute, null, args, {...options, inputMode: \"none\"});", []string{
+				"no-input entry context: no-input wrapper evaluated caller options before entry capture",
+			}},
+			{"no-input mode", "mode === \"json-no-input\" ? \"none\" : undefined", "undefined", []string{"unexpected input flag"}},
+		} {
+			t.Run(change.name, func(t *testing.T) {
+				source := TypeScriptSource()
+				if strings.Count(source, change.before) != 1 {
+					t.Fatal("environment snapshot mutation target drift")
+				}
+				source = strings.Replace(source, change.before, change.after, 1)
+				output, err := executeGeneratedAdapterHarness(t, source)
+				if err == nil {
+					t.Fatal("environment snapshot mutant passed")
+				}
+				for _, cause := range change.causes {
+					if !strings.Contains(string(output), cause) {
+						t.Fatalf("environment snapshot mutant missed cause %q:\n%s", cause, output)
+					}
+				}
+			})
+		}
+	})
+}
+
+func executeGeneratedAdapterHarness(t *testing.T, source string, nodeFlags ...string) ([]byte, error) {
+	t.Helper()
 	nodePath, err := exec.LookPath("node")
 	if err != nil {
 		t.Fatalf("node is required to prove generated TypeScript semantics: %v", err)
 	}
 	tempDir := t.TempDir()
+	tempDir, err = filepath.EvalSymlinks(tempDir)
+	if err != nil {
+		t.Fatalf("resolve private harness directory: %v", err)
+	}
 	adapterPath := filepath.Join(tempDir, "proofkit-json-report-cli-adapter.ts")
 	harnessPath := filepath.Join(tempDir, "harness.mjs")
 	fakeProofkitPath := filepath.Join(tempDir, "fake-proofkit.mjs")
-	if err := os.WriteFile(adapterPath, []byte(TypeScriptSource()), 0o644); err != nil {
+	if err := os.WriteFile(adapterPath, []byte(source), 0o644); err != nil {
 		t.Fatalf("write adapter: %v", err)
 	}
-	if err := os.WriteFile(fakeProofkitPath, []byte(fakeProofkitBinarySource), 0o755); err != nil {
+	// Resolve a possible toolchain shim before testing an explicitly empty env.
+	nodeExecutable, err := exec.Command(nodePath, "-p", "process.execPath").Output()
+	if err != nil {
+		t.Fatalf("resolve Node executable: %v", err)
+	}
+	fakeSource := strings.Replace(fakeProofkitBinarySource, "#!/usr/bin/env node", "#!"+strings.TrimSpace(string(nodeExecutable)), 1)
+	if err := os.WriteFile(fakeProofkitPath, []byte(fakeSource), 0o755); err != nil {
 		t.Fatalf("write fake proofkit: %v", err)
 	}
 	if err := os.WriteFile(harnessPath, []byte(generatedAdapterHarnessSource(t, fakeProofkitPath)), 0o644); err != nil {
 		t.Fatalf("write harness: %v", err)
 	}
-	command := exec.Command(nodePath, "--experimental-strip-types", harnessPath)
+	arguments := slices.Clone(nodeFlags)
+	if slices.Contains(arguments, "--permission") {
+		arguments = append(arguments, "--allow-fs-read="+tempDir, "--allow-fs-write="+tempDir)
+	}
+	arguments = append(arguments, "--experimental-strip-types", harnessPath)
+	command := exec.Command(nodePath, arguments...)
 	command.Dir = tempDir
 	// A pipe, not the null device, so that a child which inherited the
 	// harness's standard input would show it.
 	command.Stdin = strings.NewReader("harness standard input\n")
-	output, err := command.CombinedOutput()
-	if err != nil {
-		t.Fatalf("generated TypeScript harness failed: %v\n%s", err, output)
-	}
-	if !strings.Contains(string(output), "generated adapter semantics ok") {
-		t.Fatalf("generated TypeScript harness did not confirm semantics:\n%s", output)
-	}
+	return command.CombinedOutput()
 }
 
 func exportedDeclarations(source string) []string {
@@ -392,6 +563,18 @@ process.stdin.on("end", () => {
     process.stdout.write("x".repeat(4096));
     process.exit(0);
   }
+  if (command === "execution-options-probe") {
+    process.stdout.write(JSON.stringify({cwd: process.cwd(), argv: process.argv.slice(2), input,
+      nodeOptions: process.env.NODE_OPTIONS ?? null,
+      coverageAliases: Object.keys(process.env).filter(key => key.toUpperCase() === "NODE_V8_COVERAGE").sort(),
+      coverage: process.env.NODE_V8_COVERAGE ?? null, env: {
+      own: process.env.PROOFKIT_SNAPSHOT_OWN ?? null,
+      prototype: process.env.PROOFKIT_SNAPSHOT_PROTO ?? null,
+      optional: process.env.PROOFKIT_SNAPSHOT_UNDEFINED ?? null,
+      ambient: process.env.PROOFKIT_SNAPSHOT_AMBIENT ?? null,
+    }}));
+    process.exit(0);
+  }
   if (command === "json-invalid-utf8") {
     process.stdout.write(Buffer.from([0x7b, 0x22, 0x78, 0x22, 0x3a, 0xff, 0x7d]));
     process.exit(0);
@@ -406,6 +589,7 @@ func generatedAdapterHarnessSource(t *testing.T, fakeProofkitPath string) string
 	return `import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs, { existsSync, fstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
 import { join, resolve, sep } from "node:path";
 import {
@@ -432,6 +616,29 @@ mkdirSync(outsideRoot);
 const adapterTemporaryRoot = resolve("adapter-tmp");
 mkdirSync(adapterTemporaryRoot);
 process.env.TMPDIR = adapterTemporaryRoot;
+
+const assertPermissionTransport = (kind, cwd = repositoryRoot) => {
+  const run = kind === "json" ? runProofkitJsonCommand : runProofkitTextCommand;
+  const result = run("execution-options-probe", {}, [], {
+    binaryPath: fakeProofkitPath, cwd, env: {NODE_OPTIONS: "--no-warnings"},
+  });
+  const report = kind === "json" ? result.value : JSON.parse(result.text);
+  assert.equal(result.status, 0);
+  assert.equal(report.cwd, resolve(cwd));
+  assert.ok(report.nodeOptions.includes("--no-warnings"));
+  if (process.execArgv.includes("--permission")) assert.ok(report.nodeOptions.includes("--permission"), "Node child permission flags were not propagated");
+};
+if (process.execArgv.includes("--permission")) {
+  const failures = [];
+  for (const kind of ["json", "text"]) {
+    for (const cwd of [repositoryRoot, "/"]) {
+      try { assertPermissionTransport(kind, cwd); } catch (error) { failures.push(kind + " permission environment: " + error.message); }
+    }
+  }
+  assert.deepEqual(failures, []);
+  console.log("permission-model adapter assertions passed");
+  process.exit(0);
+}
 
 const parsed = parseProofkitJsonReportCli(["--input", "in.json", "--output", "out.json"], {
   flags: [{flag: "--input", key: "inputPath", required: true}],
@@ -761,6 +968,281 @@ assert.throws(
 const noInput = runProofkitNoInputJsonCommand("json-no-input", [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(noInput.status, 0);
 assert.equal(noInput.value.inputless, true);
+
+// Each case executes a real child; a Proxy can pass the data-property checks
+// while changing caller-owned execution options during serialization.
+const snapshotFailures = [];
+const snapshotCase = (name, run) => {
+  try { run(); } catch (error) { snapshotFailures.push(name + ": " + error.message); }
+};
+const mutatingInput = (mutate) => new Proxy({ok: true}, {
+  ownKeys(target) { mutate(); return Reflect.ownKeys(target); },
+});
+for (const kind of ["json", "text"]) {
+  const command = kind === "json" ? "requirement-spec-tree-view" : "text-pass";
+  const run = kind === "json" ? runProofkitJsonCommand : runProofkitTextCommand;
+  snapshotCase(kind + " output root", () => {
+    const name = "snapshot-" + kind + ".json";
+    const args = Object.freeze(["--output", name]);
+    const rootA = resolve(repositoryRoot), rootB = resolve(outsideRoot);
+    const sentinel = "outside sentinel";
+    writeFileSync(join(rootA, name), kind === "json" ? '{"old":true}\n' : "old text");
+    writeFileSync(join(rootB, name), sentinel);
+    const options = {binaryPath: fakeProofkitPath, cwd: rootA};
+    let mutations = 0;
+    const result = run(command, mutatingInput(() => { mutations++; options.cwd = rootB; }), args, options);
+    assert.equal(mutations, 1, "input Proxy must reach serialization");
+    assert.equal(options.cwd, rootB, "the adapter must not freeze caller options");
+    assert.equal(readFileSync(join(rootB, name), "utf8"), sentinel, "child must not write outside admitted root A");
+    assert.equal(result.status, 0); assert.equal(result.stdout, ""); assert.equal(result.stderr, "");
+    if (kind === "json") {
+      assert.deepEqual(result.value, {schemaVersion: 1, state: "passed", outputFile: true});
+      assert.deepEqual(JSON.parse(readFileSync(join(rootA, name), "utf8")), result.value);
+    } else {
+      assert.equal(result.text, "text output file");
+      assert.equal(readFileSync(join(rootA, name), "utf8"), result.text);
+    }
+  });
+  snapshotCase(kind + " binary identity", () => {
+    const otherBinary = resolve("substituted-" + kind + ".mjs");
+    writeFileSync(otherBinary, "#!" + process.execPath + "\nprocess.stderr.write('substituted binary\\n'); process.exit(23);\n", {mode: 0o755});
+    const options = {binaryPath: fakeProofkitPath, cwd: resolve(repositoryRoot)};
+    const result = run(kind === "json" ? "json-pass" : "text-pass",
+      mutatingInput(() => { options.binaryPath = otherBinary; }), Object.freeze([]), options);
+    assert.equal(result.status, 0); assert.equal(result.stderr, "");
+    assert.equal(options.binaryPath, otherBinary);
+    if (kind === "json") assert.deepEqual(result.value.received, {ok: true});
+    else assert.equal(result.text, "text result");
+  });
+  snapshotCase(kind + " relative cwd", () => {
+    const parent = process.cwd(), rootA = resolve(repositoryRoot), rootB = resolve(outsideRoot);
+    const other = join(rootB, repositoryRoot), name = "relative-" + kind + ".json";
+    mkdirSync(other, {recursive: true});
+    writeFileSync(join(rootA, name), kind === "json" ? '{"old":true}\n' : "old text");
+    writeFileSync(join(other, name), "outside sentinel");
+    try {
+      const result = run(command, mutatingInput(() => { process.chdir(rootB); }), ["--output", name],
+        {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
+      assert.equal(readFileSync(join(other, name), "utf8"), "outside sentinel", "relative cwd changed its admitted root");
+      assert.equal(result.status, 0);
+      if (kind === "json") assert.deepEqual(result.value, JSON.parse(readFileSync(join(rootA, name), "utf8")));
+      else assert.equal(result.text, readFileSync(join(rootA, name), "utf8"));
+      process.chdir(parent);
+      const reportResult = run("execution-options-probe", mutatingInput(() => { process.chdir(rootB); }), [],
+        {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
+      const report = kind === "json" ? reportResult.value : JSON.parse(reportResult.text);
+      assert.equal(report.cwd, rootA, "relative cwd changed its admitted root");
+    } finally { process.chdir(parent); }
+  });
+}
+snapshotCase("no-input entry context", () => {
+  const parent = process.cwd(), rootA = resolve(repositoryRoot), rootB = resolve(outsideRoot);
+  let reads = 0;
+  try {
+    const options = {cwd: repositoryRoot, inputMode: "required", env: {}};
+    Object.defineProperty(options, "binaryPath", {enumerable: true, get() {
+      reads++; process.chdir(rootB); return fakeProofkitPath;
+    }});
+    const result = runProofkitNoInputJsonCommand("execution-options-probe", [], options);
+    assert.equal(result.value.cwd, rootA, "no-input wrapper evaluated caller options before entry capture");
+    assert.equal(reads, 1);
+    assert.equal(result.value.input, "");
+    assert.deepEqual(result.value.argv, ["execution-options-probe"]);
+    assert.equal(result.stderr, "");
+  } finally { process.chdir(parent); }
+});
+const liveParent = process.cwd(), absoluteCwd = resolve(repositoryRoot), removedParent = resolve("removed-parent");
+mkdirSync(removedParent);
+try {
+  process.chdir(removedParent);
+  rmSync(removedParent, {recursive: true});
+  for (const [kind, none] of [["json", false], ["text", false], ["json", true], ["text", true], ["no-input", true]]) {
+    snapshotCase(kind + (none && kind !== "no-input" ? "-no-input" : "") + " deleted ambient cwd", () => {
+      const options = {binaryPath: fakeProofkitPath, cwd: absoluteCwd, env: {}, inputMode: none ? "none" : "required"};
+      const result = kind === "no-input" ? runProofkitNoInputJsonCommand("execution-options-probe", [], options) :
+        (kind === "json" ? runProofkitJsonCommand : runProofkitTextCommand)("execution-options-probe", {}, [], options);
+      const report = kind === "text" ? JSON.parse(result.text) : result.value;
+      assert.equal(report.cwd, absoluteCwd);
+      assert.equal(report.input, none ? "" : proofkitStableJsonString({}));
+      assert.equal(report.argv.includes("--input"), !none);
+      assert.equal(result.status, 0); assert.equal(result.stderr, "");
+    });
+  }
+} finally { process.chdir(liveParent); }
+const semanticRoot = resolve("cwd-components"), semanticTarget = join(semanticRoot, "actual", "leaf");
+mkdirSync(semanticTarget, {recursive: true});
+symlinkSync(semanticTarget, join(semanticRoot, "alias"), "dir");
+for (const prefix of ["cwd-components", semanticRoot]) {
+  const cwd = prefix + sep + "alias" + sep + "..";
+  const direct = spawnSync(fakeProofkitPath, ["execution-options-probe"], {cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"]});
+  assert.equal(direct.status, 0, direct.stderr);
+  const expectedCwd = JSON.parse(direct.stdout).cwd;
+  for (const kind of ["json", "text", "no-input"]) snapshotCase(kind + " symlink parent cwd " + prefix, () => {
+    const options = {binaryPath: fakeProofkitPath, cwd};
+    const result = kind === "no-input" ? runProofkitNoInputJsonCommand("execution-options-probe", [], options) :
+      (kind === "json" ? runProofkitJsonCommand : runProofkitTextCommand)("execution-options-probe", {}, [], options);
+    const report = kind === "text" ? JSON.parse(result.text) : result.value;
+    assert.equal(report.cwd, expectedCwd, "filesystem component order differs from direct Node spawn");
+  });
+  for (const kind of ["json", "text"]) snapshotCase(kind + " symlink parent output " + prefix, () => {
+    const name = "physical-" + kind + ".json", actual = join(expectedCwd, name), decoy = join(semanticRoot, name);
+    const sentinel = kind === "json" ? '{"decoy":true}' : "decoy";
+    writeFileSync(actual, kind === "json" ? '{"old":true}' : "old text");
+    writeFileSync(decoy, sentinel);
+    const result = (kind === "json" ? runProofkitJsonCommand : runProofkitTextCommand)(
+      kind === "json" ? "requirement-spec-tree-view" : "text-pass", {}, ["--output", name], {binaryPath: fakeProofkitPath, cwd});
+    assert.equal(readFileSync(decoy, "utf8"), sentinel, "output escaped the physical Node cwd");
+    if (kind === "json") assert.deepEqual(result.value, JSON.parse(readFileSync(actual, "utf8")));
+    else assert.equal(result.text, readFileSync(actual, "utf8"));
+  });
+  snapshotCase("writer symlink parent output " + prefix, () => {
+    const name = "physical-writer.json", actual = join(expectedCwd, name), decoy = join(semanticRoot, name);
+    writeFileSync(decoy, "outside sentinel");
+    writeProofkitJsonReportOutput({physical: true}, name, {cwd});
+    assert.deepEqual(JSON.parse(readFileSync(actual, "utf8")), {physical: true});
+    assert.equal(readFileSync(decoy, "utf8"), "outside sentinel", "writer escaped the physical Node cwd");
+  });
+}
+const replacementLeaf = join(semanticRoot, "replacement", "leaf");
+mkdirSync(replacementLeaf, {recursive: true});
+for (const kind of ["json", "text"]) snapshotCase(kind + " admitted output cwd", () => {
+  const name = "retarget-" + kind + ".json", other = join(semanticRoot, "replacement", name);
+  const alias = join(semanticRoot, "alias"), actual = join(semanticRoot, "actual", name);
+  writeFileSync(actual, kind === "json" ? '{"old":true}' : "old text");
+  writeFileSync(other, "outside sentinel");
+  try {
+    const result = (kind === "json" ? runProofkitJsonCommand : runProofkitTextCommand)(
+      kind === "json" ? "requirement-spec-tree-view" : "text-pass", mutatingInput(() => {
+        fs.unlinkSync(alias); symlinkSync(replacementLeaf, alias, "dir");
+      }), ["--output", name], {binaryPath: fakeProofkitPath, cwd: "cwd-components" + sep + "alias" + sep + ".."});
+    assert.equal(readFileSync(other, "utf8"), "outside sentinel", "output context reread a mutable cwd alias");
+    if (kind === "json") assert.deepEqual(result.value, JSON.parse(readFileSync(actual, "utf8")));
+    else assert.equal(result.text, readFileSync(actual, "utf8"));
+  } finally { fs.unlinkSync(alias); symlinkSync(semanticTarget, alias, "dir"); }
+});
+snapshotCase("explicit environment", () => {
+  const prototype = {PROOFKIT_SNAPSHOT_PROTO: "prototype before"};
+  const env = Object.assign(Object.create(prototype), {PATH: process.env.PATH, PROOFKIT_SNAPSHOT_OWN: "own before", PROOFKIT_SNAPSHOT_UNDEFINED: undefined});
+  const options = {binaryPath: fakeProofkitPath, cwd: resolve(repositoryRoot), env};
+  const result = runProofkitJsonCommand("execution-options-probe", mutatingInput(() => {
+    env.PROOFKIT_SNAPSHOT_OWN = "own after";
+    prototype.PROOFKIT_SNAPSHOT_PROTO = "prototype after";
+    env.PROOFKIT_SNAPSHOT_UNDEFINED = "defined after";
+    options.env = {PATH: process.env.PATH, PROOFKIT_SNAPSHOT_OWN: "replacement"};
+  }), [], options);
+  assert.deepEqual(result.value.env, {own: "own before", prototype: "prototype before", optional: null, ambient: null});
+  assert.equal(env.PROOFKIT_SNAPSHOT_OWN, "own after", "the adapter must not freeze caller env");
+});
+snapshotCase("default inherited environment", () => {
+  const saved = process.env.PROOFKIT_SNAPSHOT_AMBIENT;
+  process.env.PROOFKIT_SNAPSHOT_AMBIENT = "ambient before";
+  try {
+    const result = runProofkitJsonCommand("execution-options-probe", mutatingInput(() => {
+      process.env.PROOFKIT_SNAPSHOT_AMBIENT = "ambient after";
+    }), [], {binaryPath: fakeProofkitPath, cwd: resolve(repositoryRoot)});
+    assert.equal(result.value.env.ambient, "ambient before");
+  } finally {
+    if (saved === undefined) delete process.env.PROOFKIT_SNAPSHOT_AMBIENT;
+    else process.env.PROOFKIT_SNAPSHOT_AMBIENT = saved;
+  }
+});
+for (const kind of ["json", "text"]) snapshotCase(kind + " prototype-isolated environment", () => {
+  const key = "PROOFKIT_SNAPSHOT_PROTO";
+  const saved = Object.getOwnPropertyDescriptor(Object.prototype, key);
+  try {
+    const run = kind === "json" ? runProofkitJsonCommand : runProofkitTextCommand;
+    const result = run("execution-options-probe", mutatingInput(() => {
+      Object.defineProperty(Object.prototype, key, {value: "late prototype", enumerable: true, configurable: true});
+    }), [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, env: Object.create(null)});
+    const report = kind === "json" ? result.value : JSON.parse(result.text);
+    assert.equal(report.env.prototype, null, "captured environment acquired a late prototype entry");
+  } finally {
+    if (saved === undefined) delete Object.prototype[key];
+    else Object.defineProperty(Object.prototype, key, saved);
+  }
+});
+snapshotCase("Windows environment alias normalization", () => {
+  const saved = Object.getOwnPropertyDescriptor(process, "platform");
+  const coverage = process.env.NODE_V8_COVERAGE;
+  try {
+    delete process.env.NODE_V8_COVERAGE;
+    // Exercise Node's actual Windows key filter, not native Windows execution.
+    Object.defineProperty(process, "platform", {...saved, value: "win32"});
+    const result = runProofkitJsonCommand("execution-options-probe", {}, [], {
+      binaryPath: fakeProofkitPath, cwd: repositoryRoot, env: {node_v8_coverage: "captured alias"},
+    });
+    assert.deepEqual(result.value.coverageAliases, ["node_v8_coverage"], "coverage absence guard displaced the explicit alias");
+  } finally {
+    Object.defineProperty(process, "platform", saved);
+    if (coverage === undefined) delete process.env.NODE_V8_COVERAGE;
+    else process.env.NODE_V8_COVERAGE = coverage;
+  }
+});
+for (const kind of ["json", "text"]) snapshotCase(kind + " Node permission normalization", () => {
+  assertPermissionTransport(kind);
+});
+snapshotCase("maxBuffer snapshot", () => {
+  const options = {binaryPath: fakeProofkitPath, cwd: resolve(repositoryRoot), maxBuffer: 8192};
+  const result = runProofkitTextCommand("large-stdout", mutatingInput(() => { options.maxBuffer = 1; }), [], options);
+  assert.equal(result.status, 0); assert.equal(result.text, "x".repeat(4096));
+});
+for (const kind of ["json", "text"]) snapshotCase(kind + " reads each option once", () => {
+  const values = {binaryPath: fakeProofkitPath, cwd: resolve(repositoryRoot), env: {},
+    inputMode: "required", jsonLayout: kind === "json" ? "compact" : undefined, maxBuffer: 8192};
+  const reads = {}, options = {};
+  for (const key of Object.keys(values)) Object.defineProperty(options, key, {enumerable: true, get() {
+    reads[key] = (reads[key] ?? 0) + 1;
+    return values[key];
+  }});
+  const run = kind === "json" ? runProofkitJsonCommand : runProofkitTextCommand;
+  const result = run("execution-options-probe", mutatingInput(() => {
+    values.inputMode = "none"; values.jsonLayout = "invalid"; values.maxBuffer = 1;
+  }), Object.freeze([]), options);
+  const report = kind === "json" ? result.value : JSON.parse(result.text);
+  assert.deepEqual(reads, Object.fromEntries(Object.keys(values).map(key => [key, 1])));
+  assert.equal(report.cwd, resolve(repositoryRoot));
+  assert.equal(report.input, proofkitStableJsonString({ok: true}));
+  assert.deepEqual(report.argv, [...(kind === "json" ? ["--json-layout", "compact"] : []), "execution-options-probe", "--input", "-"]);
+});
+snapshotCase("explicit empty env and omitted values", () => {
+  const empty = {own: null, prototype: null, optional: null, ambient: null};
+  const inherited = Object.create({PROOFKIT_SNAPSHOT_PROTO: "hidden"});
+  Object.defineProperty(inherited, "PROOFKIT_SNAPSHOT_PROTO", {value: "non-enumerable", enumerable: false});
+  inherited.PROOFKIT_SNAPSHOT_UNDEFINED = undefined;
+  for (const env of [{}, inherited]) {
+    const result = runProofkitJsonCommand("execution-options-probe", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, env});
+    assert.deepEqual(result.value.env, empty);
+  }
+  const result = runProofkitJsonCommand("json-no-input", mutatingInput(() => { throw new Error("no-input serialized its input"); }), [],
+    {binaryPath: fakeProofkitPath, cwd: repositoryRoot, env: {}, inputMode: "none"});
+  assert.equal(result.value.inputless, true);
+});
+snapshotCase("coverage environment fallback", () => {
+  const saved = process.env.NODE_V8_COVERAGE;
+  const before = resolve("coverage-before"), after = resolve("coverage-after");
+  mkdirSync(before); mkdirSync(after);
+  try {
+    for (const [env, ambient, expected] of [
+      [undefined, undefined, null], [{}, before, before],
+      [Object.create({NODE_V8_COVERAGE: after}), before, before],
+      [{NODE_V8_COVERAGE: undefined}, before, null],
+      [{NODE_V8_COVERAGE: ""}, before, ""],
+      [{NODE_V8_COVERAGE: before}, after, before],
+    ]) {
+      if (ambient === undefined) delete process.env.NODE_V8_COVERAGE;
+      else process.env.NODE_V8_COVERAGE = ambient;
+      const result = runProofkitJsonCommand("execution-options-probe", mutatingInput(() => {
+        process.env.NODE_V8_COVERAGE = after;
+        if (env !== undefined) env.NODE_V8_COVERAGE = after;
+      }), [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, env});
+      assert.equal(result.value.coverage, expected);
+    }
+  } finally {
+    if (saved === undefined) delete process.env.NODE_V8_COVERAGE;
+    else process.env.NODE_V8_COVERAGE = saved;
+  }
+});
+assert.deepEqual(snapshotFailures, [], "execution options must remain bound to their admitted snapshot");
 
 const probeEnv = {...process.env, PROOFKIT_PROBE_TMP_ROOT: adapterTemporaryRoot};
 const probeInput = {a: true, payload: "x".repeat(1 << 20), z: 1};
