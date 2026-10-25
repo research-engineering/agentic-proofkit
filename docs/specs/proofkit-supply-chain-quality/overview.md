@@ -218,13 +218,7 @@ vulnerability absence, or consumer rollout safety by itself.
   requires equal dimensions and digest, keeps its captures for review, never
   writes into the test directory and fails on a missing, changed or extra
   reference. Admission recomputes the digests from a reference-environment
-  run's captures. The colors, sizes and breakpoints of the static views and the
-  workspace have one owner, the embedded design-token stylesheet, which the
-  static views inline and the workspace loads from an exact asset route; a
-  literal grammar test refuses a literal color or size in either style owner,
-  a breakpoint that equals no breakpoint token, @import, @font-face, url( or
-  image-set(, a listed spelling of a script style write outside the graph
-  geometry owner and a style or presentational attribute in rendered HTML.
+  run's captures.
 
 ## Non-Claims
 

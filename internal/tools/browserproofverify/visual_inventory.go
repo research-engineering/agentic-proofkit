@@ -56,9 +56,8 @@ var (
 		"static-coverage-cards", "static-coverage-table",
 		"workspace-specifications", "workspace-coverage", "workspace-diff", "workspace-traceability",
 	}
-	// Controls run in every engine: routed unchanged copies of the workspace
-	// stylesheets must keep the admitted digest, and each mutated copy must
-	// change it.
+	// Controls run in every engine: a routed unchanged stylesheet copy must
+	// keep the admitted digest, and each mutated copy must change it.
 	visualControlTitles = []string{
 		"a change of the monospace family to sans-serif differs from its reference",
 		"a change of the sans-serif family to serif differs from its reference",
