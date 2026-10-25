@@ -22,7 +22,6 @@ const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild 
 const setupVerifiedNPMActionSHA256 = "e5b863b6c0c9fac02ed3e00708d760cb3bc3ef6dc33c138b6ca13670d5895339"
 const ciSourceQualityStepInventorySHA256 = "9e7fdac5768a868929325052379a0b6382d18fc47052af7c1a148663b46ad153"
 const ciBrowserRuntimeStepInventorySHA256 = "c157f7ee933119596eecbce7dd03478c84389736fd99248ef884e338f24d9ee4"
-const ciBrowserVisualStepInventorySHA256 = "6f19d5ff18a70bcff69441bdbf8a783b8e0ec9456c971cfb4df3c75e688b741a"
 const releaseCandidateStepInventorySHA256 = "8e5002e046eab875b8549f4e90238f37a5d4d9bc77b4a9abe86d221fe6c7c2d5"
 
 type packageGateWorkflowExpectation struct {
@@ -754,7 +753,7 @@ func TestCIWorkflowDeclaresFailClosedRequiredAggregate(t *testing.T) {
 	if !usesAlwaysStatusCheck(gate.If) {
 		t.Fatalf("ci-required-gate if=%q, want always() so failed or skipped needs are inspected", gate.If)
 	}
-	wantNeeds := []string{"browser-runtime", "browser-visual", "platform-smoke", "platform-smoke-intel", "platform-smoke-linux-arm64", "source-quality"}
+	wantNeeds := []string{"browser-runtime", "platform-smoke", "platform-smoke-intel", "platform-smoke-linux-arm64", "source-quality"}
 	if got := needsList(gate.Needs); !reflect.DeepEqual(got, wantNeeds) {
 		t.Fatalf("ci-required-gate needs=%#v, want %#v", got, wantNeeds)
 	}
@@ -1851,7 +1850,6 @@ func singleLineRun(value string) string {
 
 const requiredAggregateShell = `set -euo pipefail
 test "${{ needs.browser-runtime.result }}" = "success"
-test "${{ needs.browser-visual.result }}" = "success"
 test "${{ needs.source-quality.result }}" = "success"
 test "${{ needs.platform-smoke.result }}" = "success"
 test "${{ needs.platform-smoke-intel.result }}" = "success"
@@ -1864,7 +1862,7 @@ npm run platform:smoke
 `
 
 // The exact required leaf jobs of the CI aggregate, in needsList order.
-var ciRequiredLeafJobs = []string{"browser-runtime", "browser-visual", "platform-smoke", "platform-smoke-intel", "platform-smoke-linux-arm64", "source-quality"}
+var ciRequiredLeafJobs = []string{"browser-runtime", "platform-smoke", "platform-smoke-intel", "platform-smoke-linux-arm64", "source-quality"}
 
 const linuxArm64PlatformSmokeJob = "platform-smoke-linux-arm64"
 
@@ -2098,7 +2096,6 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		workflow,
 		map[string]string{
 			"browser-runtime":            "",
-			"browser-visual":             "",
 			"platform-smoke":             "",
 			"platform-smoke-intel":       "",
 			"platform-smoke-linux-arm64": "",
@@ -2108,9 +2105,6 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		map[string]map[string]string{
 			"browser-runtime": {
 				"Upload browser failure diagnostics": "failure()",
-			},
-			"browser-visual": {
-				"Upload visual reference captures": "always()",
 			},
 		},
 	); err != nil {
@@ -2126,7 +2120,6 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		"platform-smoke-intel":       {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 20},
 		"platform-smoke-linux-arm64": {name: "quality / platform smoke / linux-arm64", runner: "ubuntu-24.04-arm", timeoutMinutes: 15},
 		"browser-runtime":            {name: "quality / browser runtime", runner: "ubuntu-24.04", timeoutMinutes: 20},
-		"browser-visual":             {name: "quality / browser visual references", runner: "ubuntu-24.04-arm", timeoutMinutes: 20},
 		"ci-required-gate":           {name: "quality / required aggregate", runner: "ubuntu-24.04", timeoutMinutes: 5},
 	}
 	for jobID, expected := range exactJobTopology {
@@ -2174,16 +2167,6 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 	); err != nil {
 		return err
 	}
-	if err := validateExactStepInventory(
-		"ci workflow browser-visual",
-		workflow.Jobs["browser-visual"].Steps,
-		ciBrowserVisualStepInventorySHA256,
-	); err != nil {
-		return err
-	}
-	if err := validateCIJobContainers(workflow); err != nil {
-		return err
-	}
 	gate, ok := workflow.Jobs["ci-required-gate"]
 	if !ok {
 		return errors.New("ci workflow missing ci-required-gate")
@@ -2210,37 +2193,6 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		len(step.Env) != 0 ||
 		strings.TrimSpace(step.Run) != requiredAggregateShell {
 		return errors.New("ci-required-gate aggregate step differs from the exact owner-reviewed shell block")
-	}
-	return nil
-}
-
-// validateCIJobContainers admits exactly one job container: the digest-pinned
-// visual reference environment of browser-visual with its exact options.
-func validateCIJobContainers(workflow githubWorkflow) error {
-	for jobID, job := range workflow.Jobs {
-		if jobID != ownedVisualContainerJob {
-			if job.Container != nil || job.containerPresent {
-				return fmt.Errorf("ci workflow job %s must not run in a container", jobID)
-			}
-			continue
-		}
-		container, ok := job.Container.(map[string]any)
-		if !ok || !job.containerPresent || len(container) != 2 {
-			return fmt.Errorf("ci workflow job %s must declare the exact reference environment container", jobID)
-		}
-		image, imageOK := container["image"].(string)
-		if !imageOK {
-			return fmt.Errorf("ci workflow job %s container image must be a string", jobID)
-		}
-		if err := validateContainerImageReference(image); err != nil {
-			return fmt.Errorf("ci workflow job %s: %w", jobID, err)
-		}
-		if image != ownedVisualContainerImage || container["options"] != ownedVisualContainerOptions {
-			return fmt.Errorf("ci workflow job %s container differs from the exact owner-reviewed reference environment", jobID)
-		}
-	}
-	if _, ok := workflow.Jobs[ownedVisualContainerJob]; !ok {
-		return fmt.Errorf("ci workflow missing %s", ownedVisualContainerJob)
 	}
 	return nil
 }

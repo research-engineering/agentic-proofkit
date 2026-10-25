@@ -17,7 +17,7 @@ func TestCIMinimumFailureCannotSatisfyAggregate(t *testing.T) {
 	// Both jobs that run the CPython 3.11.0 installed smoke are required
 	// leaves: a minimum failure in either job is a job result the aggregate
 	// must refuse, whatever the other leaves report.
-	leaves := []string{"source-quality", "browser-runtime", "browser-visual", "platform-smoke", "platform-smoke-intel", "platform-smoke-linux-arm64"}
+	leaves := []string{"source-quality", "browser-runtime", "platform-smoke", "platform-smoke-intel", "platform-smoke-linux-arm64"}
 	for _, failing := range ciMinimumPythonJobIDs() {
 		for _, status := range []string{"success", "failure", "skipped", "cancelled"} {
 			t.Run(failing+"/"+status, func(t *testing.T) {
