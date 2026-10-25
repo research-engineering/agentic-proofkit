@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -673,6 +674,261 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 			})
 		}
 	}
+}
+
+// goTestGateCommand is the Go test gate. Go's test cache replays a passing
+// package result while the test binary, the files the test process opened and
+// the environment variables it read are unchanged. Files read only by a child
+// process, such as a node script, git or a built CLI, are not part of that
+// key, so a cached pass can outlive a change that fails the test. -count=1 is
+// the flag Go documents for disabling the test cache.
+const goTestGateCommand = "go test -count=1 ./..."
+
+const goTestGateWitness = "proofkit.go-test"
+
+func TestGoTestGateExecutesEveryPackageOnTheTreeUnderTest(t *testing.T) {
+	scripts := readPackageScriptsForTest(t)
+	plan, bindings := readGoTestGateRecordsForTest(t)
+	if err := validateGoTestGate(scripts, plan, bindings); err != nil {
+		t.Fatal(err)
+	}
+	for _, mutation := range []struct {
+		name  string
+		apply func(scripts map[string]string, command, bound map[string]any)
+	}{
+		{"script replays cached verdicts", func(scripts map[string]string, _, _ map[string]any) { scripts["go:test"] = "go test ./..." }},
+		{"witness argv replays cached verdicts", func(_ map[string]string, command, _ map[string]any) {
+			command["argv"] = []any{"go", "test", "./..."}
+		}},
+		{"bound command replays cached verdicts", func(_ map[string]string, _, bound map[string]any) { bound["command"] = "go test ./..." }},
+		{"every site replays cached verdicts", func(scripts map[string]string, command, bound map[string]any) {
+			scripts["go:test"], command["argv"], bound["command"] = "go test ./...", []any{"go", "test", "./..."}, "go test ./..."
+		}},
+		{"script repeats each test", func(scripts map[string]string, _, _ map[string]any) { scripts["go:test"] = "go test -count=2 ./..." }},
+		{"script masks failure", func(scripts map[string]string, _, _ map[string]any) { scripts["go:test"] += " || true" }},
+		{"witness argv runs fewer packages", func(_ map[string]string, command, _ map[string]any) {
+			command["argv"] = []any{"go", "test", "-count=1", "./internal/..."}
+		}},
+		{"bound command runs fewer packages", func(_ map[string]string, _, bound map[string]any) {
+			bound["command"] = "go test -count=1 ./internal/..."
+		}},
+	} {
+		t.Run(mutation.name, func(t *testing.T) {
+			changedScripts := maps.Clone(scripts)
+			changedPlan, changedBindings := cloneLegacyWitnessRecord(t, plan), cloneLegacyWitnessRecord(t, bindings)
+			command, err := goTestGateRecord(changedPlan["commands"], "id")
+			if err != nil {
+				t.Fatal(err)
+			}
+			bound, err := goTestGateRecord(changedBindings["witnessCommands"], "commandId")
+			if err != nil {
+				t.Fatal(err)
+			}
+			mutation.apply(changedScripts, command, bound)
+			if err := validateGoTestGate(changedScripts, changedPlan, changedBindings); err == nil {
+				t.Fatal("Go test gate oracle admitted the mutation")
+			}
+		})
+	}
+}
+
+// validateGoTestGate requires the go:test script, the proofkit.go-test witness
+// argv and the command bound to that witness to be the same uncached command.
+func validateGoTestGate(scripts map[string]string, plan, bindings map[string]any) error {
+	if scripts["go:test"] != goTestGateCommand {
+		return fmt.Errorf("go:test must be %q, which executes every package instead of replaying cached verdicts", goTestGateCommand)
+	}
+	command, err := goTestGateRecord(plan["commands"], "id")
+	if err != nil {
+		return err
+	}
+	want := []any{}
+	for _, field := range strings.Fields(scripts["go:test"]) {
+		want = append(want, field)
+	}
+	if !reflect.DeepEqual(command["argv"], want) {
+		return fmt.Errorf("%s argv must be the go:test command %q", goTestGateWitness, scripts["go:test"])
+	}
+	bound, err := goTestGateRecord(bindings["witnessCommands"], "commandId")
+	if err != nil {
+		return err
+	}
+	if bound["command"] != scripts["go:test"] {
+		return fmt.Errorf("the command bound to %s must be the go:test command %q", goTestGateWitness, scripts["go:test"])
+	}
+	return nil
+}
+
+func goTestGateRecord(raw any, key string) (map[string]any, error) {
+	rows, ok := raw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("%s record collection is absent", goTestGateWitness)
+	}
+	var found map[string]any
+	for _, raw := range rows {
+		if row, ok := raw.(map[string]any); ok && row[key] == goTestGateWitness {
+			if found != nil {
+				return nil, fmt.Errorf("duplicate %s record", goTestGateWitness)
+			}
+			found = row
+		}
+	}
+	if found == nil {
+		return nil, fmt.Errorf("missing %s record", goTestGateWitness)
+	}
+	return found, nil
+}
+
+func readGoTestGateRecordsForTest(t *testing.T) (map[string]any, map[string]any) {
+	t.Helper()
+	plan, err := readJSONObject(filepath.Join("..", "proofkit", "witness-plan.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bindings, err := readJSONObject(filepath.Join("..", "proofkit", "requirement-bindings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return plan, bindings
+}
+
+// Every Go test invocation that the package scripts, the witness plan or a
+// file under .github declares sets -count=, which is not a cacheable test flag,
+// so none of their verdicts can be replayed from Go's test cache.
+func TestDeclaredGoTestInvocationsBypassTheTestCache(t *testing.T) {
+	scripts := readPackageScriptsForTest(t)
+	plan, _ := readGoTestGateRecordsForTest(t)
+	github := map[string]string{}
+	err := filepath.WalkDir(filepath.Join("..", ".github"), func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || (filepath.Ext(path) != ".yml" && filepath.Ext(path) != ".yaml") {
+			return err
+		}
+		content, err := os.ReadFile(path)
+		github[filepath.ToSlash(strings.TrimPrefix(path, ".."+string(filepath.Separator)))] = string(content)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sites, err := uncachedGoTestSites(scripts, plan, github)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("uncached Go test sites: %v", sites)
+	for _, want := range []string{"package.json go:test", "package.json go:bench", "proofkit/witness-plan.json proofkit.go-test", "proofkit/witness-plan.json proofkit.transaction-legacy-positive"} {
+		if !slices.Contains(sites, want) {
+			t.Fatalf("uncached Go test sites %v lack %s", sites, want)
+		}
+	}
+	workflowSites := 0
+	for _, site := range sites {
+		if strings.HasPrefix(site, ".github/workflows/ci.yml:") {
+			workflowSites++
+		}
+	}
+	if workflowSites < 5 {
+		t.Fatalf("uncached Go test sites %v name %d ci.yml lines, want the five direct go test steps", sites, workflowSites)
+	}
+	for _, mutation := range []struct {
+		name  string
+		apply func(scripts map[string]string, plan map[string]any, github map[string]string)
+	}{
+		{"script", func(scripts map[string]string, _ map[string]any, _ map[string]string) {
+			scripts["go:bench"] = strings.Replace(scripts["go:bench"], " -count=10", "", 1)
+		}},
+		{"chained script", func(scripts map[string]string, _ map[string]any, _ map[string]string) {
+			scripts["go:extra"] = "npm run go:fmt && go test ./internal/kernel/..."
+		}},
+		{"witness argv", func(_ map[string]string, plan map[string]any, _ map[string]string) {
+			for _, raw := range plan["commands"].([]any) {
+				command := raw.(map[string]any)
+				if command["id"] == legacyUnicodeWitness {
+					command["argv"] = slices.DeleteFunc(slices.Clone(command["argv"].([]any)), func(field any) bool { return field == "-count=1" })
+				}
+			}
+		}},
+		{"workflow step", func(_ map[string]string, _ map[string]any, github map[string]string) {
+			path := ".github/workflows/ci.yml"
+			github[path] = strings.Replace(github[path], "-run '^TestDeletionRejectsDifferentFilesystemBeforeControlMutation$' -count=1", "-run '^TestDeletionRejectsDifferentFilesystemBeforeControlMutation$'", 1)
+		}},
+		{"composite action", func(_ map[string]string, _ map[string]any, github map[string]string) {
+			github[".github/actions/extra/action.yml"] = "runs:\n  using: composite\n  steps:\n    - run: go test ./...\n      shell: bash\n"
+		}},
+	} {
+		t.Run(mutation.name, func(t *testing.T) {
+			changedScripts, changedPlan, changedGitHub := maps.Clone(scripts), cloneLegacyWitnessRecord(t, plan), maps.Clone(github)
+			mutation.apply(changedScripts, changedPlan, changedGitHub)
+			if reflect.DeepEqual(changedScripts, scripts) && reflect.DeepEqual(changedPlan, plan) && reflect.DeepEqual(changedGitHub, github) {
+				t.Fatal("mutation did not change a declared invocation")
+			}
+			if _, err := uncachedGoTestSites(changedScripts, changedPlan, changedGitHub); err == nil {
+				t.Fatal("cached Go test invocation was admitted")
+			}
+		})
+	}
+}
+
+// uncachedGoTestSites returns every declared Go test invocation and fails on
+// one without a -count= flag. Shell text is split into commands at newlines,
+// ;, | and &&, and a command is a Go test invocation when two adjacent fields
+// are go and test.
+func uncachedGoTestSites(scripts map[string]string, plan map[string]any, github map[string]string) ([]string, error) {
+	sites := []string{}
+	check := func(site string, fields []string) error {
+		for _, field := range fields {
+			if strings.HasPrefix(field, "-count=") {
+				sites = append(sites, site)
+				return nil
+			}
+		}
+		return fmt.Errorf("%s runs %q without -count=, so Go may replay a cached verdict", site, strings.Join(fields, " "))
+	}
+	shellCommands := func(text string) [][]string {
+		commands := [][]string{}
+		for _, segment := range regexp.MustCompile(`\n|;|\|`).Split(strings.ReplaceAll(text, "&&", ";"), -1) {
+			fields := strings.Fields(segment)
+			for index := 0; index+1 < len(fields); index++ {
+				if fields[index] == "go" && fields[index+1] == "test" {
+					commands = append(commands, fields[index:])
+					break
+				}
+			}
+		}
+		return commands
+	}
+	for _, name := range slices.Sorted(maps.Keys(scripts)) {
+		for _, command := range shellCommands(scripts[name]) {
+			if err := check("package.json "+name, command); err != nil {
+				return nil, err
+			}
+		}
+	}
+	commands, _ := plan["commands"].([]any)
+	for _, raw := range commands {
+		command, _ := raw.(map[string]any)
+		argv, _ := command["argv"].([]any)
+		if len(argv) < 2 || argv[0] != "go" || argv[1] != "test" {
+			continue
+		}
+		fields := []string{}
+		for _, field := range argv {
+			text, _ := field.(string)
+			fields = append(fields, text)
+		}
+		if err := check(fmt.Sprintf("proofkit/witness-plan.json %v", command["id"]), fields); err != nil {
+			return nil, err
+		}
+	}
+	for _, path := range slices.Sorted(maps.Keys(github)) {
+		for number, line := range strings.Split(github[path], "\n") {
+			for _, command := range shellCommands(line) {
+				if err := check(fmt.Sprintf("%s:%d", path, number+1), command); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return sites, nil
 }
 
 func TestExistingReleasePathIsReadOnlyAndFailsOnDrift(t *testing.T) {
