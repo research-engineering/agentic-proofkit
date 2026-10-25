@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 2,
+  "kind": "proofkit.requirement-source",
+  "sourceId": "example.dispatch",
+  "specPackagePath": "docs/specs/dispatch",
+  "sourceNonClaims": ["This synthetic delivery source does not describe a real service."],
+  "groups": [
+    {
+      "groupId": "RGRP-DISPATCH",
+      "profileId": "",
+      "statementStem": "",
+      "sharedPremises": [],
+      "members": [
+        {"requirementId":"REQ-DISPATCH-001","statementCompletion":"A delivery request is accepted only when its destination and idempotency key are present.","fields":{"nonClaims":["This synthetic requirement does not establish execution evidence."],"externalNonClaimRefs":[],"proofBindingRefs":["proofkit/bindings.json"],"ownerId":"example.dispatch","claimLevel":"blocking","riskClass":"high","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"example.dispatch","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}
+      , {"requirementId":"REQ-DISPATCH-002","statementCompletion":"Repeating the same idempotency key returns the original delivery identifier without scheduling another delivery.","fields":{"nonClaims":["This synthetic requirement does not establish execution evidence."],"externalNonClaimRefs":[],"proofBindingRefs":["proofkit/bindings.json"],"ownerId":"example.dispatch","claimLevel":"blocking","riskClass":"high","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"example.dispatch","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}
+      , {"requirementId":"REQ-DISPATCH-003","statementCompletion":"A temporary provider failure may be retried at most three times; the final failure remains visible to the caller.","fields":{"nonClaims":["This synthetic requirement does not establish execution evidence."],"externalNonClaimRefs":[],"proofBindingRefs":["proofkit/bindings.json"],"ownerId":"example.dispatch","claimLevel":"blocking","riskClass":"high","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"example.dispatch","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}
+      , {"requirementId":"REQ-DISPATCH-004","statementCompletion":"Delivery diagnostics omit credentials and the recipient address.","fields":{"nonClaims":["This synthetic requirement does not establish execution evidence."],"externalNonClaimRefs":[],"proofBindingRefs":["proofkit/bindings.json"],"ownerId":"example.dispatch","claimLevel":"blocking","riskClass":"high","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"example.dispatch","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}
+      ]
+    }
+  ]
+}

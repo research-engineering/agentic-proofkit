@@ -6,16 +6,21 @@ import {runDiagnosticEntrypoint} from "./diagnostic.mjs";
 
 test("repository-owned JavaScript entrypoints use the diagnostic boundary", () => {
   const manifest = JSON.parse(readFileSync("package.json", "utf8"));
-  const browserInputs = JSON.parse(readFileSync("scripts/browser-runtime-proof-inputs.v1.json", "utf8"));
-  const entrypoints = new Set([browserInputs.writerPath]);
+  const browserWriters = ["scripts/browser-runtime-proof-inputs.v1.json", "scripts/browser-visual-proof-inputs.v1.json"]
+    .map((path) => JSON.parse(readFileSync(path, "utf8")).writerPath);
+  // Reference admission runs the capture digest owner from Go.
+  const goInvoked = ["scripts/browser-visual-capture-digests.mjs"];
+  const entrypoints = new Set([...browserWriters, ...goInvoked]);
   for (const command of Object.values(manifest.scripts)) {
     for (const match of command.matchAll(/(?:^|&&|\|\|)\s*node\s+(scripts\/[^\s]+\.mjs)(?:\s|$)/gu)) {
       entrypoints.add(match[1]);
     }
   }
   assert.deepEqual([...entrypoints].sort(), [
+    "scripts/browser-visual-capture-digests.mjs",
     "scripts/source-hygiene.mjs",
     "scripts/write-browser-proof.mjs",
+    "scripts/write-browser-visual-proof.mjs",
   ]);
   for (const path of entrypoints) {
     const source = readFileSync(path, "utf8");

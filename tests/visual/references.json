@@ -1,0 +1,1022 @@
+{
+  "clipHeight": 2400,
+  "environmentId": "sha256:70a8d9e8054360d159fbb5bfff68feaf53b48d20df98b5c72e7dcc5bb84cedd7",
+  "kind": "proofkit.browser-visual-references",
+  "references": [
+    {
+      "height": 960,
+      "id": "chromium/readme-scene.light.1440",
+      "rgbaSHA256": "9052880808daa4dfaab00c20a4aa6ca84407e4135e583ec3fff94e45ffb0d1b9",
+      "width": 1440
+    },
+    {
+      "height": 1918,
+      "id": "chromium/static-coverage-cards.dark.1440",
+      "rgbaSHA256": "aea257f7b695563f015cbea1a62729bd6ab07aa263159b5d87c7ed7af4f64379",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-coverage-cards.dark.320",
+      "rgbaSHA256": "8ca3f44a38b39b05b4a8222cb2a347d042558dbbc98d115d30a7da45f189acd3",
+      "width": 320
+    },
+    {
+      "height": 1918,
+      "id": "chromium/static-coverage-cards.light.1440",
+      "rgbaSHA256": "17ddacebcc73bf0fc052da83825156d358baa174852fc0ad78297b5046e67582",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-coverage-cards.light.320",
+      "rgbaSHA256": "17f489d5c15b8dfec54b0cd580dd6aeb949a0b0b73ad667c482e38a3e0bea7bc",
+      "width": 320
+    },
+    {
+      "height": 1548,
+      "id": "chromium/static-coverage-table.dark.1440",
+      "rgbaSHA256": "424fa2d144afc0a53ea865d67da03175d20c6d957eca685ef59ad37f6913d0f9",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-coverage-table.dark.320",
+      "rgbaSHA256": "9e16299e0e23420d732741be74de738fc6cb488256c31339f0b048f196f79654",
+      "width": 320
+    },
+    {
+      "height": 1548,
+      "id": "chromium/static-coverage-table.light.1440",
+      "rgbaSHA256": "91784702bc12307ba18bf243fd76253c83f50e8a974b412cf5dd5dbd7daf2c8b",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-coverage-table.light.320",
+      "rgbaSHA256": "bfd61a5abc3b91d1ad52e94647ad152e2517f6b1d1a76f8f7499d7011403ce71",
+      "width": 320
+    },
+    {
+      "height": 1682,
+      "id": "chromium/static-proof-compact-cards.dark.1440",
+      "rgbaSHA256": "e9a6a5a92a9242ff820e70813bb222263e3bf7ecaec0f4c404b14cef6c35d78a",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-proof-compact-cards.dark.320",
+      "rgbaSHA256": "77a51e0a96839cbaf0592cff59677d9d2301e784535bd45f6a5a5aaae8b8c46f",
+      "width": 320
+    },
+    {
+      "height": 1682,
+      "id": "chromium/static-proof-compact-cards.light.1440",
+      "rgbaSHA256": "852bc05d40da4a8bf2055cbbcac05f4f6e222f7ddb6b022d373a936f29d9dc04",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-proof-compact-cards.light.320",
+      "rgbaSHA256": "6c330483b4d0e40b3d58611e89c3f303dfa81f365ffc0ac44cb644c719720f5a",
+      "width": 320
+    },
+    {
+      "height": 1409,
+      "id": "chromium/static-proof-compact-table.dark.1440",
+      "rgbaSHA256": "7a049c4dca16133474ae3c83d4d3cba8ad7f56453f9eb1b1a35fcc523d1ecfbf",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-proof-compact-table.dark.320",
+      "rgbaSHA256": "46adcbdd6d1078841ee87aaed193b9897c9139deb874e5b4bb6bd42a6ee77079",
+      "width": 320
+    },
+    {
+      "height": 1409,
+      "id": "chromium/static-proof-compact-table.light.1440",
+      "rgbaSHA256": "8238ea1eb4b092c79bd1f30012b972ad8f3c420d3747247aad13a71e5df0bcb0",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-proof-compact-table.light.320",
+      "rgbaSHA256": "9a55ea5e04c1fb9e08a69c1742ebd0e89b3b93cf53fd29439f45c41db22b168d",
+      "width": 320
+    },
+    {
+      "height": 1535,
+      "id": "chromium/static-proof-structured-cards.dark.1440",
+      "rgbaSHA256": "e5a44cc43cb632d6347cac29b401bcf21a2ed1538389618caf5504bb510c059d",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-proof-structured-cards.dark.320",
+      "rgbaSHA256": "8f573932ec123afbe96b51ca29aa97fd55ade5bbd820861845fb1e89a5813a63",
+      "width": 320
+    },
+    {
+      "height": 1535,
+      "id": "chromium/static-proof-structured-cards.light.1440",
+      "rgbaSHA256": "7bdf9b90cfe579bf38a3d89a134eacf250ebe730e4e9411cecbb0d68d1ebd7c7",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-proof-structured-cards.light.320",
+      "rgbaSHA256": "85d6ac88793f30a17443a9a55f6ef48410d5c47723945c48de38cc82656ba759",
+      "width": 320
+    },
+    {
+      "height": 1176,
+      "id": "chromium/static-proof-structured-table.dark.1440",
+      "rgbaSHA256": "4356b9d26b97ba5dfaed137ef2c191c7505e1ef8989ea06510c2b13da95952fc",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-proof-structured-table.dark.320",
+      "rgbaSHA256": "ce1c0194cd991130e59e223ad5e6d96ec9aa60ebd6bb421c22ab2bb64b6f6122",
+      "width": 320
+    },
+    {
+      "height": 1176,
+      "id": "chromium/static-proof-structured-table.light.1440",
+      "rgbaSHA256": "f491d954faa1bded7ae2f7e15033e8e8b8bc40c4290e2dbeeb571cd576c45921",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-proof-structured-table.light.320",
+      "rgbaSHA256": "aab05118acb3ec8fc8dc0300d1b52b141093e088029e2ef9f21558933a4471e3",
+      "width": 320
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-source-cards.dark.1440",
+      "rgbaSHA256": "585d260ed4d6faeaa2baeaaa366c6f52040df74d7d0161901a6a699267213401",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-source-cards.dark.320",
+      "rgbaSHA256": "8e8226cff3d0a3a83a64763e02272af567168dc8407a0514bc076ad6daf562b1",
+      "width": 320
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-source-cards.light.1440",
+      "rgbaSHA256": "c8a96ac517e82e3cdb18964a19bd29a9ac45025c6e4ecb9d446bfe833d1442c6",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-source-cards.light.320",
+      "rgbaSHA256": "e3d078a5cf37cde05972ca86516112894d358d07aa3409639b9fb5ed8977cb98",
+      "width": 320
+    },
+    {
+      "height": 1961,
+      "id": "chromium/static-source-table.dark.1440",
+      "rgbaSHA256": "0e2d8aadd6e3cd1af0de9c7c0bcec90e44a4c703bfbf50e7d103d50e8a5a9519",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-source-table.dark.320",
+      "rgbaSHA256": "77d2a88f5fde4e00d900a4f15cbaf17b3e1e97c51d85cb599e86cea1dea0b1e8",
+      "width": 320
+    },
+    {
+      "height": 1961,
+      "id": "chromium/static-source-table.light.1440",
+      "rgbaSHA256": "d8707cea4dbbd96ceb87c1ee906aa14e8222d87fac8ebbf663631bd278d9c067",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-source-table.light.320",
+      "rgbaSHA256": "152f39a809df4e3e8cd262a16b4851340b6d0d30190b052eaecd70086ef8d7fe",
+      "width": 320
+    },
+    {
+      "height": 1625,
+      "id": "chromium/static-spec-tree-cards.dark.1440",
+      "rgbaSHA256": "1bb776b91a0c3d93c6e8705ef00d0b45a80759e9487aeda41ce90588d4dd663e",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-spec-tree-cards.dark.320",
+      "rgbaSHA256": "66d1dc992771e0a899cdb31550571352dfbd72e0e0482558a0348b839b9ae936",
+      "width": 320
+    },
+    {
+      "height": 1625,
+      "id": "chromium/static-spec-tree-cards.light.1440",
+      "rgbaSHA256": "33d034f491aac0126142c9fe297c789239fd01457b4a5003d7530247081a2464",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-spec-tree-cards.light.320",
+      "rgbaSHA256": "cf688885cad196898988495ba6653c7c9f351b978118846fc1fcdba693ef1061",
+      "width": 320
+    },
+    {
+      "height": 1375,
+      "id": "chromium/static-spec-tree-table.dark.1440",
+      "rgbaSHA256": "f330e75b8282e90ef3e8cecc2a68d397a3b4c8cecb9d51550d40891893d53f7c",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-spec-tree-table.dark.320",
+      "rgbaSHA256": "366418789834a3cc6d466496a337575d34674de718c78b369b260828ce5c7348",
+      "width": 320
+    },
+    {
+      "height": 1375,
+      "id": "chromium/static-spec-tree-table.light.1440",
+      "rgbaSHA256": "f45f4a01dd73420751ed3539ac56442c2dfc45af29e751f7d188a8191b24ef52",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "chromium/static-spec-tree-table.light.320",
+      "rgbaSHA256": "6f8fdc9e0e5e43ff2018af0f2112af0ae733ffc7d181e47fd6ccb129ea881b0b",
+      "width": 320
+    },
+    {
+      "height": 973,
+      "id": "chromium/workspace-coverage.dark.1440",
+      "rgbaSHA256": "f4e634ffb9567e2ade0bbb1a2cac049effcce0bd1c8e9c8cbed22039bf35b4c7",
+      "width": 1440
+    },
+    {
+      "height": 1245,
+      "id": "chromium/workspace-coverage.dark.320",
+      "rgbaSHA256": "36fe0181ded1645a25f269673d7bc23d8de6cdbcef8ec2b909c6d958f5c244b1",
+      "width": 320
+    },
+    {
+      "height": 973,
+      "id": "chromium/workspace-coverage.light.1440",
+      "rgbaSHA256": "5819a8e77335e77927f8844af4cfcf79c07d41b0e8ba097ab111d0466253c79a",
+      "width": 1440
+    },
+    {
+      "height": 1245,
+      "id": "chromium/workspace-coverage.light.320",
+      "rgbaSHA256": "c5185570cd5bddd4d8862fefca5ec6b93960d7ebf5fe48d7d89cb4357357895b",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "chromium/workspace-diff.dark.1440",
+      "rgbaSHA256": "bcff1044fe77c9cd9cea5ea4138ef7f5e00b934d4e3a0e26c0590ef402c3925e",
+      "width": 1440
+    },
+    {
+      "height": 1281,
+      "id": "chromium/workspace-diff.dark.320",
+      "rgbaSHA256": "d09da6908258f21b3c343c066a7fa2e063e061cd73f268d2850de173c8f4f5b8",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "chromium/workspace-diff.light.1440",
+      "rgbaSHA256": "bef512ce700a63dc24a90eb5af8d77cc52ea16686a02b0e2872660933edba7cc",
+      "width": 1440
+    },
+    {
+      "height": 1281,
+      "id": "chromium/workspace-diff.light.320",
+      "rgbaSHA256": "4b8f0b97f76c5b165bcb1e4e4a6b51cdd5d1103b9556bd1fc2f6bfe745aa9d37",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "chromium/workspace-specifications.dark.1440",
+      "rgbaSHA256": "523693ce5642851139b9a75f83cf14c672448624672b727c91ce7fd20ec4289b",
+      "width": 1440
+    },
+    {
+      "height": 905,
+      "id": "chromium/workspace-specifications.dark.320",
+      "rgbaSHA256": "30c8b7814d46093e8714b9964c6de366dbe78fc2ab8e9bfae4e7995081ebe93b",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "chromium/workspace-specifications.light.1440",
+      "rgbaSHA256": "ea3a6ce0862006589b81fc7941741c85ef0c6cb7dd2ebc6c602e53cee6d69918",
+      "width": 1440
+    },
+    {
+      "height": 905,
+      "id": "chromium/workspace-specifications.light.320",
+      "rgbaSHA256": "0a1bdc63fef4ec6c5ca228e58f930626aac06f3c08debcd0e6cb046d80df0e91",
+      "width": 320
+    },
+    {
+      "height": 2041,
+      "id": "chromium/workspace-traceability.dark.1440",
+      "rgbaSHA256": "42b84851e529537c10f707a5148830f17293a0cb756d4279ae7bd8268e264069",
+      "width": 1440
+    },
+    {
+      "height": 2206,
+      "id": "chromium/workspace-traceability.dark.320",
+      "rgbaSHA256": "6c036648f76ca676008043de3532c398d1e57da4bdb583a34ec9885ae9cc4417",
+      "width": 320
+    },
+    {
+      "height": 2041,
+      "id": "chromium/workspace-traceability.light.1440",
+      "rgbaSHA256": "6c903c632b394a701a93543425f0a2fef665102d8c9a3aa65c27120d8ec9df97",
+      "width": 1440
+    },
+    {
+      "height": 2206,
+      "id": "chromium/workspace-traceability.light.320",
+      "rgbaSHA256": "9b6b3d28b6ee6d6935218f9a2aeb3d2f61efd3c0e2db1be393406d1821504201",
+      "width": 320
+    },
+    {
+      "height": 1928,
+      "id": "firefox/static-coverage-cards.dark.1440",
+      "rgbaSHA256": "0fca71b50b9a5798c81282eb44d673fd9c61f7cd0d676482ef92ab9f79988b24",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-coverage-cards.dark.320",
+      "rgbaSHA256": "357c5d64d311d4bb6399cf56dce37f320b089c82de211fb7fce18306a4f9ad91",
+      "width": 320
+    },
+    {
+      "height": 1928,
+      "id": "firefox/static-coverage-cards.light.1440",
+      "rgbaSHA256": "cedf63daa472e63fadb11fd4a429b02710978a929ff0fcf0245cfb1ff4e37d95",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-coverage-cards.light.320",
+      "rgbaSHA256": "c2ebde73b4a18ff07da923e965fdd118400a2a35ea37d30f5ee097fa3de97b0a",
+      "width": 320
+    },
+    {
+      "height": 1556,
+      "id": "firefox/static-coverage-table.dark.1440",
+      "rgbaSHA256": "3b8630df1bed65bbc0fe0b00ee991d7d84b3c424b8c0740397e67ff9e9e284c8",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-coverage-table.dark.320",
+      "rgbaSHA256": "3ae89ff4616a7ed0334d8becdb46285a278792e5f8fbcc7f429332a542383160",
+      "width": 320
+    },
+    {
+      "height": 1556,
+      "id": "firefox/static-coverage-table.light.1440",
+      "rgbaSHA256": "b118f66fa88d9d703bc7d2d7b168c8ce60880d5a7bf5ac3d13f070b3b841ad0d",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-coverage-table.light.320",
+      "rgbaSHA256": "1f89ed2b167b0a3f7f7762de78282a7788a1b24bac382760e7c3297b285b7ce3",
+      "width": 320
+    },
+    {
+      "height": 1689,
+      "id": "firefox/static-proof-compact-cards.dark.1440",
+      "rgbaSHA256": "80a57c8d7f30f35dfaf34e7741091191692a3c2b966410c5e78066bbdf904391",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-proof-compact-cards.dark.320",
+      "rgbaSHA256": "c21314ddbcd08555ad5f6a74350c9600e69d8990962d1adaff18bf7ef5efcaa7",
+      "width": 320
+    },
+    {
+      "height": 1689,
+      "id": "firefox/static-proof-compact-cards.light.1440",
+      "rgbaSHA256": "280a7ae630aaaa5d4cde8cb5364863b40946c83f43d19f34cb93b855887631c5",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-proof-compact-cards.light.320",
+      "rgbaSHA256": "998094bc8f6d4b3f64b1f4fff0134d8700a87a1d52506864126cd6b5d88a141d",
+      "width": 320
+    },
+    {
+      "height": 1416,
+      "id": "firefox/static-proof-compact-table.dark.1440",
+      "rgbaSHA256": "1e155fe775caf294d7be6aa3676316d2ed4f2fbb709069b030d726b07b4ac361",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-proof-compact-table.dark.320",
+      "rgbaSHA256": "487f042a2cb12a178290a35304ad2e181ad1ff2ea6ea95ae30744670730278fa",
+      "width": 320
+    },
+    {
+      "height": 1416,
+      "id": "firefox/static-proof-compact-table.light.1440",
+      "rgbaSHA256": "f4d0b122755485b8fbe92d2903347fbd717be0b3e76d8a21ed339501e2ab7089",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-proof-compact-table.light.320",
+      "rgbaSHA256": "5f4d44c665ae7af69ca999043316487bba8ed26b50a6bf25315e134abc2b0c21",
+      "width": 320
+    },
+    {
+      "height": 1542,
+      "id": "firefox/static-proof-structured-cards.dark.1440",
+      "rgbaSHA256": "aeb30db9d14bded83be089b2d10327273fb2fa96ed55c5add13da132d287ab92",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-proof-structured-cards.dark.320",
+      "rgbaSHA256": "29e62d9fce0a4078280e6414abf095fb1161248e38ff6d1b68e5ece5e8a52530",
+      "width": 320
+    },
+    {
+      "height": 1542,
+      "id": "firefox/static-proof-structured-cards.light.1440",
+      "rgbaSHA256": "134ef17b455a98635db08cc402d9289126a169822159ba3c2e815b95ed5bdb73",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-proof-structured-cards.light.320",
+      "rgbaSHA256": "ebebbc982177d1b77113d46d88fb9022739fa3820837640f1121380855482eb7",
+      "width": 320
+    },
+    {
+      "height": 1180,
+      "id": "firefox/static-proof-structured-table.dark.1440",
+      "rgbaSHA256": "eebd1e214d1916a32bf397d6d695c1e7aad2882344353632477b215be6d99a91",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-proof-structured-table.dark.320",
+      "rgbaSHA256": "beeea4f1702efbb8b82dad055a2ac3d5bec1fbeb655b8c26451f9740ce84ef4e",
+      "width": 320
+    },
+    {
+      "height": 1180,
+      "id": "firefox/static-proof-structured-table.light.1440",
+      "rgbaSHA256": "138e24162fd36d59e3bce4088c56c3b77d8678507cad545e5659f2da2268b0ce",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-proof-structured-table.light.320",
+      "rgbaSHA256": "6006f678e7b90ccf6d0fdfb9a6b36ba8b0547c80aa8d2d21602978519f455d4e",
+      "width": 320
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-source-cards.dark.1440",
+      "rgbaSHA256": "cb54c9b6d3c89f0b89525c87cc3764f1d92e68c32244a46d153c6cb278a971c3",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-source-cards.dark.320",
+      "rgbaSHA256": "9d4136c2a2921be6af7ae52c576ae5894b136fdc6216e399269715e6230c4729",
+      "width": 320
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-source-cards.light.1440",
+      "rgbaSHA256": "f2a9c8200852424f4987e1c3655a4fca651ba82a8508f0cdced6142128bb900a",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-source-cards.light.320",
+      "rgbaSHA256": "31b5bff495979a86337553e01fe52c920e605b437eec6b2deda1712fa5fb5202",
+      "width": 320
+    },
+    {
+      "height": 2089,
+      "id": "firefox/static-source-table.dark.1440",
+      "rgbaSHA256": "6e60ab0800f055cd50dd5bb20ec8309e39a2c128c2386cd48421a82c925ed90d",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-source-table.dark.320",
+      "rgbaSHA256": "9d4136c2a2921be6af7ae52c576ae5894b136fdc6216e399269715e6230c4729",
+      "width": 320
+    },
+    {
+      "height": 2089,
+      "id": "firefox/static-source-table.light.1440",
+      "rgbaSHA256": "7de658cdaf62079f9e84109ba4bce50348b9ce9fc3599b300bbeaa1abedc937c",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-source-table.light.320",
+      "rgbaSHA256": "31b5bff495979a86337553e01fe52c920e605b437eec6b2deda1712fa5fb5202",
+      "width": 320
+    },
+    {
+      "height": 1633,
+      "id": "firefox/static-spec-tree-cards.dark.1440",
+      "rgbaSHA256": "fcaa948e629e289ab68c98b67b020e78102d5182330113274abae64e3468d4e8",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-spec-tree-cards.dark.320",
+      "rgbaSHA256": "75a3c1bd351b4d68fbb053f9a62042c2b453dfb2fa42c4cb149a48d918539713",
+      "width": 320
+    },
+    {
+      "height": 1633,
+      "id": "firefox/static-spec-tree-cards.light.1440",
+      "rgbaSHA256": "8c08cbccea18e56c9c1b6676296ee5d6a4e58cb252da059d3153516d643c4b2f",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-spec-tree-cards.light.320",
+      "rgbaSHA256": "222865c55d23c814d45f17e5ab7e4edd9861405d24499d36475f0cc44ef23932",
+      "width": 320
+    },
+    {
+      "height": 1382,
+      "id": "firefox/static-spec-tree-table.dark.1440",
+      "rgbaSHA256": "90f8bf7fe1a3078e4d88af884a9a0bd32d8acab55dae745ae3c98af5f72a336d",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-spec-tree-table.dark.320",
+      "rgbaSHA256": "f2ac36bf5b3f1e883a42a482d4f64a6d80793c51365947f5729bb528fc7b50e7",
+      "width": 320
+    },
+    {
+      "height": 1382,
+      "id": "firefox/static-spec-tree-table.light.1440",
+      "rgbaSHA256": "9da1f9c8fa9fc60b4bbdfa2f51470aad11be4016bf56b2afd83e5acb9360a397",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "firefox/static-spec-tree-table.light.320",
+      "rgbaSHA256": "e0e8add2323516ffd563a182626a02ada9d279d7f1f7bb2e188528a284aa1d6b",
+      "width": 320
+    },
+    {
+      "height": 976,
+      "id": "firefox/workspace-coverage.dark.1440",
+      "rgbaSHA256": "773c1490c72328260aa2ec21d7ae4e63ef7febd53263d4c0a4811e325343f8e3",
+      "width": 1440
+    },
+    {
+      "height": 1248,
+      "id": "firefox/workspace-coverage.dark.320",
+      "rgbaSHA256": "5d0c0dcc1114d5290fb77e84d8591f2614c680fcb8f600eae94becfe0e6836c1",
+      "width": 320
+    },
+    {
+      "height": 976,
+      "id": "firefox/workspace-coverage.light.1440",
+      "rgbaSHA256": "1d65819575f83143fdee476507ec4e1f6567ad38392c7aac23ef4a4b14ded888",
+      "width": 1440
+    },
+    {
+      "height": 1248,
+      "id": "firefox/workspace-coverage.light.320",
+      "rgbaSHA256": "c9a5d4930b298fd2d1da8170a76a54141cd3c9a35b2308a8449557a2c1e195e6",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "firefox/workspace-diff.dark.1440",
+      "rgbaSHA256": "cd3a480372a36260889d8bdcb1f821582fc8bf08c2f41690a674cded19158778",
+      "width": 1440
+    },
+    {
+      "height": 1284,
+      "id": "firefox/workspace-diff.dark.320",
+      "rgbaSHA256": "8c037ba0f5ae90f9a7e5980828cbf0bd3ae714556867b2f11ef5229bd298f9d5",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "firefox/workspace-diff.light.1440",
+      "rgbaSHA256": "18e4011939d3c254305bfdfc24910fa566dbff1cb757bbd56b8fab276012e170",
+      "width": 1440
+    },
+    {
+      "height": 1284,
+      "id": "firefox/workspace-diff.light.320",
+      "rgbaSHA256": "83e21870706b6a2c27e4f8ebd1413457480b9959a547cd461caefc6f241b6f7e",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "firefox/workspace-specifications.dark.1440",
+      "rgbaSHA256": "45632c7557d786044d4781acd1ace06c3eee1260603855e2ce79a996b9746192",
+      "width": 1440
+    },
+    {
+      "height": 908,
+      "id": "firefox/workspace-specifications.dark.320",
+      "rgbaSHA256": "0d939edf2fe47b481cef946fedfaa1cd730d5fd5f31099ae2011db2296b900f4",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "firefox/workspace-specifications.light.1440",
+      "rgbaSHA256": "3036d7295a75307b99967bd6d9d2b9204f33ce0a30574f437bca3826be8231eb",
+      "width": 1440
+    },
+    {
+      "height": 908,
+      "id": "firefox/workspace-specifications.light.320",
+      "rgbaSHA256": "69351aa02aa6439c4c9529cbdcf9f96b1375909d7e9883cc98d8ac24d6916960",
+      "width": 320
+    },
+    {
+      "height": 2048,
+      "id": "firefox/workspace-traceability.dark.1440",
+      "rgbaSHA256": "749d598d57d4097fe9aea5702d44aa3e3f7339357be3ada67b6104f26ceb4e3c",
+      "width": 1440
+    },
+    {
+      "height": 2256,
+      "id": "firefox/workspace-traceability.dark.320",
+      "rgbaSHA256": "213d177a68936200f79f099489b1c674530aa3c1fffcaf578259a386fa0e352d",
+      "width": 320
+    },
+    {
+      "height": 2048,
+      "id": "firefox/workspace-traceability.light.1440",
+      "rgbaSHA256": "29a55b10723228ca307802a02748413bf221a7c7fd50ed3c3e3ceea222350ef9",
+      "width": 1440
+    },
+    {
+      "height": 2256,
+      "id": "firefox/workspace-traceability.light.320",
+      "rgbaSHA256": "af3aa365960d1ab790bfdfbbc18dc0aa5539e3d8151857945a15157edda42b1f",
+      "width": 320
+    },
+    {
+      "height": 1938,
+      "id": "webkit/static-coverage-cards.dark.1440",
+      "rgbaSHA256": "eac55269a6b7a563848b9a6bd51c001a3503a350cb38aa4a6e972cfb775c1b37",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-coverage-cards.dark.320",
+      "rgbaSHA256": "52e9b90341fec93f188f53833a73ce1a0a494abc6b064906f004ef6149a2032f",
+      "width": 320
+    },
+    {
+      "height": 1938,
+      "id": "webkit/static-coverage-cards.light.1440",
+      "rgbaSHA256": "d7162cb14916459882c41548a8ab88e41e1d1c25fb8a945b893e32219dd90c1e",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-coverage-cards.light.320",
+      "rgbaSHA256": "ecc81b2895a5db746137254c0a74b23328c17cf7f8c29f297545ebd49a2cf57f",
+      "width": 320
+    },
+    {
+      "height": 1571,
+      "id": "webkit/static-coverage-table.dark.1440",
+      "rgbaSHA256": "98abce2e60ac23d3feafe192fbc33ee74868d54a2b9c60919b33abc520015a40",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-coverage-table.dark.320",
+      "rgbaSHA256": "2233ad64338b9e5925b1e1f2e061da061e740ae2917a53f52a67f570eff611f9",
+      "width": 320
+    },
+    {
+      "height": 1571,
+      "id": "webkit/static-coverage-table.light.1440",
+      "rgbaSHA256": "18b9df82cac5e27a87ac6795732d067baab20e76a1188e082ed85d49d02c2963",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-coverage-table.light.320",
+      "rgbaSHA256": "d09ebdbfbebcb899a905e638c649f340a3e0c6fc7f17b63cbc97a51777695a35",
+      "width": 320
+    },
+    {
+      "height": 1703,
+      "id": "webkit/static-proof-compact-cards.dark.1440",
+      "rgbaSHA256": "6e3bbe2306c29e1bd553f225d21ad3523a28c44fb7119a2f84af7235fd28202f",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-proof-compact-cards.dark.320",
+      "rgbaSHA256": "beede2ed8aa3c40337f2bba34bb460a41aa96e08cc890a472bdabb0e3248e7e2",
+      "width": 320
+    },
+    {
+      "height": 1703,
+      "id": "webkit/static-proof-compact-cards.light.1440",
+      "rgbaSHA256": "6e1e54d31ca3b48983d8db19f1a9b73a658e41814ebf7cbb9508fbddeb5b01eb",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-proof-compact-cards.light.320",
+      "rgbaSHA256": "266ffe402710f00476deee68abe330a03c31d3c80b6285eebf651b89be706a36",
+      "width": 320
+    },
+    {
+      "height": 1485,
+      "id": "webkit/static-proof-compact-table.dark.1440",
+      "rgbaSHA256": "463736a2f0c533527b817705a9eabfabc40a22dcc2af82c36d3925db2011f34d",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-proof-compact-table.dark.320",
+      "rgbaSHA256": "c26cad10b2281eebb7aa493d42cebb822016b7b83dec89d141bc6386eb35c82c",
+      "width": 320
+    },
+    {
+      "height": 1485,
+      "id": "webkit/static-proof-compact-table.light.1440",
+      "rgbaSHA256": "2f259bc85bbf8071de3e115f4b0f6721109f244469cb9751436e2716c7a345ee",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-proof-compact-table.light.320",
+      "rgbaSHA256": "62df58ac12d5ebcc385e230edd8eafa42464e36daa4a57acadfc790b1be2d0c4",
+      "width": 320
+    },
+    {
+      "height": 1556,
+      "id": "webkit/static-proof-structured-cards.dark.1440",
+      "rgbaSHA256": "aa1c645ee3b0b6f1ab1bbcb1941914c84650b566c2dfe7031e2d8f25bb51a46f",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-proof-structured-cards.dark.320",
+      "rgbaSHA256": "d9be4eef29ca4d37eda8ba294adbbca096ba0c1f9d3fc6fdd8c005fb6962b8b2",
+      "width": 320
+    },
+    {
+      "height": 1556,
+      "id": "webkit/static-proof-structured-cards.light.1440",
+      "rgbaSHA256": "081cc73d397b3af26c144e30ffc6c4363b3bdad1c7b0087a6bfb021cc76069d6",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-proof-structured-cards.light.320",
+      "rgbaSHA256": "22798f81096aac2c7d8218ea39c9808a1f180fa9008ff9fd91007ff1681d6d9f",
+      "width": 320
+    },
+    {
+      "height": 1199,
+      "id": "webkit/static-proof-structured-table.dark.1440",
+      "rgbaSHA256": "308fcad92879fdbd8be6183c05ec46fdb9b54ecb58ecbf82eba462e9a9fe980c",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-proof-structured-table.dark.320",
+      "rgbaSHA256": "9e32ec583c13f3851762d153ad6c483cc6d6fc4d7717a463d42281d0b60312c7",
+      "width": 320
+    },
+    {
+      "height": 1199,
+      "id": "webkit/static-proof-structured-table.light.1440",
+      "rgbaSHA256": "25df37662192cc3aded5a8fc69b6e9e882b5c362f96a679a2265527424086368",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-proof-structured-table.light.320",
+      "rgbaSHA256": "bbfd98713c32381c6eb09395422e11666819fd07beb94ca40899a2fa08c9b913",
+      "width": 320
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-source-cards.dark.1440",
+      "rgbaSHA256": "2fbd10216cec8505515787ae2a3d37ea8db8c14e216e3a1048a3bb3b78b888ed",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-source-cards.dark.320",
+      "rgbaSHA256": "8e6cdf99ccaab8fa5e219ff9ec4dfe3b73eb3b9ae1f04fd953aa8dda7910f591",
+      "width": 320
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-source-cards.light.1440",
+      "rgbaSHA256": "3ad57ba23adbf2f3871d024fc4614c18f89489c9a1be6b2c8ba736c95db7a0e7",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-source-cards.light.320",
+      "rgbaSHA256": "0b078f3ba06f7b52f517c0f18218eea285895cf26ea44955cfd164baaa972ca2",
+      "width": 320
+    },
+    {
+      "height": 1983,
+      "id": "webkit/static-source-table.dark.1440",
+      "rgbaSHA256": "db9719f5bca2a64e78b43a1f51ba1820d4fbac87365e20cc5b54b338be974e28",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-source-table.dark.320",
+      "rgbaSHA256": "2cb93a0cce75844dceff4a6957dd36d7bc2f233f80b9b85d63534af4b5990f6e",
+      "width": 320
+    },
+    {
+      "height": 1983,
+      "id": "webkit/static-source-table.light.1440",
+      "rgbaSHA256": "7d80f8158864571c61ea75217aba30dd126eecbe6c4b19628452439ae998d599",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-source-table.light.320",
+      "rgbaSHA256": "2c29cb9e0eae186fc3b6c5d5e78ca06a0e63635b2f410115374d9c572234c694",
+      "width": 320
+    },
+    {
+      "height": 1648,
+      "id": "webkit/static-spec-tree-cards.dark.1440",
+      "rgbaSHA256": "55e9200467dacf50fc082aa1bc8c39cb7433921f109e63dfce30423da2244afc",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-spec-tree-cards.dark.320",
+      "rgbaSHA256": "e566bbb7a4f41e4c2d45ed84cd1afa16a0ce5119d6a81e7a3f09ee466aaf3d41",
+      "width": 320
+    },
+    {
+      "height": 1648,
+      "id": "webkit/static-spec-tree-cards.light.1440",
+      "rgbaSHA256": "e14affd991f238f7181b89f0624a47eab39a9051dabc683bdf9395258ccf7ac6",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-spec-tree-cards.light.320",
+      "rgbaSHA256": "c8d91328fd8e68c6d7d9070bdadc5f97d99abd59365b0bfb63d2490fe70ea5bb",
+      "width": 320
+    },
+    {
+      "height": 1400,
+      "id": "webkit/static-spec-tree-table.dark.1440",
+      "rgbaSHA256": "de7a3e2cd1b54a10ce2ae6c4c5042d6ff6c42ab0229b45bc65efd39b25fd67f4",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-spec-tree-table.dark.320",
+      "rgbaSHA256": "88ba1e733ef14be16ee7d47eac1946a546d91bcb9979e6199987c72c21971849",
+      "width": 320
+    },
+    {
+      "height": 1400,
+      "id": "webkit/static-spec-tree-table.light.1440",
+      "rgbaSHA256": "b3b97365e210d8629fe3082324b702381b2e8f4728aad9a7cbf2b13022b8ab9d",
+      "width": 1440
+    },
+    {
+      "height": 2400,
+      "id": "webkit/static-spec-tree-table.light.320",
+      "rgbaSHA256": "7893b75d18e97b0eedb64c8959729a4273f39c9a0d6ba18f5c2cd9b4b950ffc7",
+      "width": 320
+    },
+    {
+      "height": 973,
+      "id": "webkit/workspace-coverage.dark.1440",
+      "rgbaSHA256": "e51ba3e30226af0f355f205d8a0faf4e300a58456223abb51a12d68ff2fbf4d4",
+      "width": 1440
+    },
+    {
+      "height": 1245,
+      "id": "webkit/workspace-coverage.dark.320",
+      "rgbaSHA256": "c3384457bd8b6007ac23f58fe3b9f2789961ddb9089fa30fc78e083eaccfc5f3",
+      "width": 320
+    },
+    {
+      "height": 973,
+      "id": "webkit/workspace-coverage.light.1440",
+      "rgbaSHA256": "2e42d3b05d4299344c1a54f4b7ed59e11ddde7a6641473aa8b04a6fda013ce41",
+      "width": 1440
+    },
+    {
+      "height": 1245,
+      "id": "webkit/workspace-coverage.light.320",
+      "rgbaSHA256": "38d25105b2b1613a63d29ef4c3510dfa2d8e43f0bc6b01f989e1622d6b0c173d",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "webkit/workspace-diff.dark.1440",
+      "rgbaSHA256": "3725bae03ebc117296e05a36af06424e807b04f8b3d812b063d714f6e8a1ca63",
+      "width": 1440
+    },
+    {
+      "height": 1281,
+      "id": "webkit/workspace-diff.dark.320",
+      "rgbaSHA256": "6f1d6e864f1f89365a966bfe2d624c5d796a6db8363408658f09479e29064c4e",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "webkit/workspace-diff.light.1440",
+      "rgbaSHA256": "5d7936346f9ebab4a22b896a37382248eb32f03d388be26edb2e39f4c9f9cb3e",
+      "width": 1440
+    },
+    {
+      "height": 1281,
+      "id": "webkit/workspace-diff.light.320",
+      "rgbaSHA256": "0a57ba466e6221f8c5aad16758a67f3cb34c49de442a99804b50ab5fbd46c66e",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "webkit/workspace-specifications.dark.1440",
+      "rgbaSHA256": "5ab7589084e19ed7cbf74fa2d8637d40ca0ff8df8f76c849171688458e8bd5e4",
+      "width": 1440
+    },
+    {
+      "height": 905,
+      "id": "webkit/workspace-specifications.dark.320",
+      "rgbaSHA256": "803edd4d09e2c77de43db72ad61b54ea41d1b0380a0fabb5f2251582907594b8",
+      "width": 320
+    },
+    {
+      "height": 900,
+      "id": "webkit/workspace-specifications.light.1440",
+      "rgbaSHA256": "de81e9bcd21e5db202e984d2368a148cd17a52a861da1bb39eae63e57e719f54",
+      "width": 1440
+    },
+    {
+      "height": 905,
+      "id": "webkit/workspace-specifications.light.320",
+      "rgbaSHA256": "0ba0f25023171f4aee939e1e0b03d20b5592964bad3f0595a836ee423b5f24bf",
+      "width": 320
+    },
+    {
+      "height": 2042,
+      "id": "webkit/workspace-traceability.dark.1440",
+      "rgbaSHA256": "4d58c35c9a83ec99a897ae6981b966a67cae2164ee97d612494520dba9ee8a80",
+      "width": 1440
+    },
+    {
+      "height": 2206,
+      "id": "webkit/workspace-traceability.dark.320",
+      "rgbaSHA256": "cd1bb4479e0d036967caf8161a11687c4334adc8d5e39d9a5a6caa988f76a8f2",
+      "width": 320
+    },
+    {
+      "height": 2042,
+      "id": "webkit/workspace-traceability.light.1440",
+      "rgbaSHA256": "08018415f70353b6e364c8d1699218f4fe8456fd197ebefde129cdbe18b312c1",
+      "width": 1440
+    },
+    {
+      "height": 2206,
+      "id": "webkit/workspace-traceability.light.320",
+      "rgbaSHA256": "7c4b0676a3e7e455019d155b7ea0e73e42c7c678fc17655640292e39e3f860e3",
+      "width": 320
+    }
+  ],
+  "schemaVersion": 1
+}

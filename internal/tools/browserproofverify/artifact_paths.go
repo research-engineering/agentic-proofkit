@@ -17,7 +17,6 @@ import (
 const (
 	browserArtifactsDirectory        = "artifacts"
 	browserProofDirectory            = "artifacts/proofkit"
-	browserProofCandidateName        = "browser-runtime-proof.candidate.json"
 	browserRunDirectoryEnvironment   = "PROOFKIT_BROWSER_RUN_DIRECTORY"
 	browserProofCandidateEnvironment = "PROOFKIT_BROWSER_PROOF_CANDIDATE_PATH"
 )
@@ -27,7 +26,7 @@ type browserProofRunPaths struct {
 	RunDirectory  string
 }
 
-func prepareBrowserProofRun(root string) (browserProofRunPaths, error) {
+func prepareBrowserProofRun(root string, kind proofKind) (browserProofRunPaths, error) {
 	rootFS, err := os.OpenRoot(root)
 	if err != nil {
 		return browserProofRunPaths{}, fmt.Errorf("open browser proof repository root: %w", err)
@@ -39,7 +38,7 @@ func prepareBrowserProofRun(root string) (browserProofRunPaths, error) {
 	if err := ensureRootedDirectory(rootFS, browserProofDirectory, 0o755); err != nil {
 		return browserProofRunPaths{}, err
 	}
-	if err := admitRootedDestination(rootFS, proofPath); err != nil {
+	if err := admitRootedDestination(rootFS, filepath.FromSlash(kind.RecordPath)); err != nil {
 		return browserProofRunPaths{}, err
 	}
 	for attempt := 0; attempt < 16; attempt++ {
@@ -54,7 +53,7 @@ func prepareBrowserProofRun(root string) (browserProofRunPaths, error) {
 			return browserProofRunPaths{}, fmt.Errorf("create confined browser proof run directory: %w", err)
 		}
 		return browserProofRunPaths{
-			CandidatePath: filepath.ToSlash(filepath.Join(runDirectory, browserProofCandidateName)),
+			CandidatePath: filepath.ToSlash(filepath.Join(runDirectory, kind.CandidateName)),
 			RunDirectory:  filepath.ToSlash(runDirectory),
 		}, nil
 	}

@@ -12,7 +12,7 @@ import (
 func TestAdmitPlaywrightReportRequiresCleanEquivalentProjectExecutions(t *testing.T) {
 	root := t.TempDir()
 	report := validPlaywrightReport(root)
-	projects, err := admitPlaywrightReport(bytes.NewReader(encodePlaywrightReport(t, report)), root, "tests/browser", admittedBrowserTestPaths())
+	projects, err := admitPlaywrightReport(bytes.NewReader(encodePlaywrightReport(t, report)), root, "tests/browser", admittedBrowserTestPaths(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestAdmitPlaywrightReportResolvesTestDirRelativeSpecPaths(t *testing.T) {
 	for _, rawSpec := range firstPlaywrightSuite(report)["specs"].([]any) {
 		rawSpec.(map[string]any)["file"] = "workspace.spec.mjs"
 	}
-	projects, err := admitPlaywrightReport(bytes.NewReader(encodePlaywrightReport(t, report)), root, "tests/browser", admittedBrowserTestPaths())
+	projects, err := admitPlaywrightReport(bytes.NewReader(encodePlaywrightReport(t, report)), root, "tests/browser", admittedBrowserTestPaths(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestAdmitPlaywrightReportRejectsInvalidEvidenceSemantics(t *testing.T) {
 			root := t.TempDir()
 			report := validPlaywrightReport(root)
 			item.mutate(report)
-			if _, err := admitPlaywrightReport(bytes.NewReader(encodePlaywrightReport(t, report)), root, "tests/browser", admittedBrowserTestPaths()); err == nil {
+			if _, err := admitPlaywrightReport(bytes.NewReader(encodePlaywrightReport(t, report)), root, "tests/browser", admittedBrowserTestPaths(), nil); err == nil {
 				t.Fatal("expected report admission failure")
 			}
 		})
@@ -105,7 +105,7 @@ func TestAdmitPlaywrightReportRejectsDuplicateJSONKeys(t *testing.T) {
 	root := t.TempDir()
 	encoded := string(encodePlaywrightReport(t, validPlaywrightReport(root)))
 	duplicated := strings.Replace(encoded, `"suites":`, `"suites":[],"suites":`, 1)
-	if _, err := admitPlaywrightReport(strings.NewReader(duplicated), root, "tests/browser", admittedBrowserTestPaths()); err == nil || !strings.Contains(err.Error(), "duplicate object key") {
+	if _, err := admitPlaywrightReport(strings.NewReader(duplicated), root, "tests/browser", admittedBrowserTestPaths(), nil); err == nil || !strings.Contains(err.Error(), "duplicate object key") {
 		t.Fatalf("expected duplicate-key rejection, got %v", err)
 	}
 }

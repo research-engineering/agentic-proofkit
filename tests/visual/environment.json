@@ -1,0 +1,56 @@
+{
+  "browserVersions": {
+    "chromium": "153.0.8010.12",
+    "firefox": "155.0",
+    "webkit": "26.6"
+  },
+  "image": {
+    "indexDigest": "sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+    "name": "mcr.microsoft.com/playwright",
+    "platform": "linux/arm64",
+    "platformDigests": {
+      "linux/amd64": "sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7",
+      "linux/arm64": "sha256:a0f4498920a5dbac63196d9140ed738ef00470f27e2e74029abd8850b7bd5717"
+    },
+    "tag": "v1.63.0-noble"
+  },
+  "kind": "proofkit.browser-visual-environment",
+  "observed": {
+    "architecture": "aarch64",
+    "dockerImage": {
+      "dockerImageName": "mcr.microsoft.com/playwright:v1.63.0-noble",
+      "driverVersion": "1.63.0"
+    },
+    "emulation": "none",
+    "engines": {
+      "chromium": "1243",
+      "firefox": "1543",
+      "webkit": "2359"
+    },
+    "fontConfig": "sha256:5813e51e798ed34bdd02105f221499b368814bf181c792b249a579a36f3321e2",
+    "fontMatches": {
+      "monospace": "LiberationMono-Regular.ttf: \"Liberation Mono\" \"Regular\"",
+      "sans-serif": "LiberationSans-Regular.ttf: \"Liberation Sans\" \"Regular\"",
+      "serif": "LiberationSerif-Regular.ttf: \"Liberation Serif\" \"Regular\"",
+      "system-ui": "LiberationSans-Regular.ttf: \"Liberation Sans\" \"Regular\"",
+      "ui-monospace": "LiberationMono-Regular.ttf: \"Liberation Mono\" \"Regular\""
+    },
+    "os": {
+      "id": "ubuntu",
+      "versionId": "24.04"
+    },
+    "packages": {
+      "fontconfig": "2.15.0-1.1ubuntu2",
+      "fonts-freefont-ttf": "20211204+svn4273-2",
+      "fonts-ipafont-gothic": "00303-21ubuntu1",
+      "fonts-liberation": "1:2.1.5-3",
+      "fonts-noto-color-emoji": "2.047-0ubuntu0.24.04.1",
+      "fonts-tlwg-loma-otf": "1:0.7.3-1",
+      "fonts-unifont": "1:15.1.01-1build1",
+      "fonts-wqy-zenhei": "0.9.45-8",
+      "libfreetype6": "2.13.2+dfsg-1ubuntu0.1",
+      "libharfbuzz0b": "8.3.0-2build2"
+    }
+  },
+  "schemaVersion": 1
+}

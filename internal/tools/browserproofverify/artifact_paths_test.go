@@ -10,11 +10,11 @@ import (
 
 func TestPrepareBrowserProofRunCreatesAConfinedDisposableDirectory(t *testing.T) {
 	root := t.TempDir()
-	paths, err := prepareBrowserProofRun(root)
+	paths, err := prepareBrowserProofRun(root, runtimeProofKind())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(paths.RunDirectory, "artifacts/browser-run-") || paths.CandidatePath != paths.RunDirectory+"/"+browserProofCandidateName {
+	if !strings.HasPrefix(paths.RunDirectory, "artifacts/browser-run-") || paths.CandidatePath != paths.RunDirectory+"/"+runtimeProofKind().CandidateName {
 		t.Fatalf("unexpected confined run paths: %#v", paths)
 	}
 	info, err := os.Lstat(filepath.Join(root, filepath.FromSlash(paths.RunDirectory)))
@@ -31,7 +31,7 @@ func TestPrepareBrowserProofRunCreatesAConfinedDisposableDirectory(t *testing.T)
 
 func TestFinalizeBrowserProofRunCleansSuccessAndRetainsFailureDiagnostics(t *testing.T) {
 	root := t.TempDir()
-	successPaths, err := prepareBrowserProofRun(root)
+	successPaths, err := prepareBrowserProofRun(root, runtimeProofKind())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestFinalizeBrowserProofRunCleansSuccessAndRetainsFailureDiagnostics(t *tes
 		t.Fatalf("successful run directory survived cleanup: %v", err)
 	}
 
-	failurePaths, err := prepareBrowserProofRun(root)
+	failurePaths, err := prepareBrowserProofRun(root, runtimeProofKind())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestPrepareBrowserProofRunRejectsArtifactRootSymlink(t *testing.T) {
 	if err := os.Symlink(external, filepath.Join(root, browserArtifactsDirectory)); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
-	if _, err := prepareBrowserProofRun(root); err == nil {
+	if _, err := prepareBrowserProofRun(root, runtimeProofKind()); err == nil {
 		t.Fatal("prepareBrowserProofRun accepted a symlinked artifact root")
 	}
 	content, err := os.ReadFile(sentinel)
@@ -91,10 +91,10 @@ func TestWriteRootedJSONRejectsSymlinkDestination(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, browserProofDirectory), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(external, filepath.Join(root, filepath.FromSlash(proofPath))); err != nil {
+	if err := os.Symlink(external, filepath.Join(root, filepath.FromSlash(runtimeProofKind().RecordPath))); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
-	if err := writeRootedJSON(root, proofPath, map[string]any{"state": "passed"}); err == nil {
+	if err := writeRootedJSON(root, runtimeProofKind().RecordPath, map[string]any{"state": "passed"}); err == nil {
 		t.Fatal("writeRootedJSON accepted a symlink destination")
 	}
 	content, err := os.ReadFile(external)
@@ -105,10 +105,10 @@ func TestWriteRootedJSONRejectsSymlinkDestination(t *testing.T) {
 
 func TestWriteRootedJSONPreservesExactPrettyEncodingAndMode(t *testing.T) {
 	root := t.TempDir()
-	if err := writeRootedJSON(root, proofPath, map[string]any{"state": "passed"}); err != nil {
+	if err := writeRootedJSON(root, runtimeProofKind().RecordPath, map[string]any{"state": "passed"}); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(root, filepath.FromSlash(proofPath))
+	path := filepath.Join(root, filepath.FromSlash(runtimeProofKind().RecordPath))
 	content, err := os.ReadFile(path)
 	if err != nil || string(content) != "{\n  \"state\": \"passed\"\n}\n" {
 		t.Fatalf("unexpected pretty bytes: %q error=%v", content, err)
@@ -120,7 +120,7 @@ func TestWriteRootedJSONPreservesExactPrettyEncodingAndMode(t *testing.T) {
 	if info.Mode().Perm() != 0o644 {
 		t.Fatalf("mode=%v, want 0644", info.Mode())
 	}
-	value, err := readRootedJSON(root, proofPath, 1024)
+	value, err := readRootedJSON(root, runtimeProofKind().RecordPath, 1024)
 	if err != nil {
 		t.Fatal(err)
 	}

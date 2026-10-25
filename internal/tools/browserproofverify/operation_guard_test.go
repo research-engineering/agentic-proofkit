@@ -85,11 +85,11 @@ func writeWitnessPlan(t *testing.T, root string, selectors []any) {
 // stageCandidate writes the record the writer will publish; mutate may break it.
 func stageCandidate(t *testing.T, root string, mutate func(map[string]any)) {
 	t.Helper()
-	manifest, err := loadProofInputManifest(root)
+	manifest, err := loadProofInputManifest(root, runtimeProofKind())
 	if err != nil {
 		t.Fatal(err)
 	}
-	resolution, err := resolveProofInputs(root, manifest)
+	resolution, err := resolveProofInputs(root, manifest, runtimeProofKind())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,9 +117,9 @@ func observeBrowserRun(t *testing.T, root string) (writerRan bool, proofWritten 
 	t.Helper()
 	markers := t.TempDir()
 	t.Setenv("PROOFKIT_OPERATION_MARKERS", markers)
-	err = runBrowserProof(root)
+	err = runBrowserProof(root, runtimeProofKind(), false)
 	_, writerErr := os.Stat(filepath.Join(markers, "writer.log"))
-	_, proofErr := os.Stat(filepath.Join(root, filepath.FromSlash(proofPath)))
+	_, proofErr := os.Stat(filepath.Join(root, filepath.FromSlash(runtimeProofKind().RecordPath)))
 	_, artifactsErr := os.Lstat(filepath.Join(root, browserArtifactsDirectory))
 	return writerErr == nil, proofErr == nil, artifactsErr == nil, err
 }

@@ -11,10 +11,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
-const (
-	proofInputManifestPath = "scripts/browser-runtime-proof-inputs.v1.json"
-	proofVerifierTarget    = "./internal/tools/browserproofverify"
-)
+const proofVerifierTarget = "./internal/tools/browserproofverify"
 
 type proofInputManifest struct {
 	ServerTarget string
@@ -23,8 +20,8 @@ type proofInputManifest struct {
 	Paths        []string
 }
 
-func loadProofInputManifest(root string) (proofInputManifest, error) {
-	raw, err := os.ReadFile(filepath.Join(root, proofInputManifestPath))
+func loadProofInputManifest(root string, kind proofKind) (proofInputManifest, error) {
+	raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(kind.ManifestPath)))
 	if err != nil {
 		return proofInputManifest{}, err
 	}
@@ -39,7 +36,7 @@ func loadProofInputManifest(root string) (proofInputManifest, error) {
 	if err := admit.KnownKeys(record, []string{"paths", "proofKind", "schemaVersion", "serverTarget", "testRoot", "writerPath"}, "browser proof input manifest"); err != nil {
 		return proofInputManifest{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) || record["proofKind"] != "proofkit.browser-runtime-proof-inputs" {
+	if !admit.JSONNumberEquals(record["schemaVersion"], 1) || record["proofKind"] != kind.ManifestKind {
 		return proofInputManifest{}, fmt.Errorf("browser proof input manifest identity is invalid")
 	}
 	serverTarget, err := admitManifestGoTarget(record["serverTarget"])
@@ -58,7 +55,7 @@ func loadProofInputManifest(root string) (proofInputManifest, error) {
 	if err != nil {
 		return proofInputManifest{}, err
 	}
-	for _, ownedPath := range []string{proofInputManifestPath, testRoot, writerPath} {
+	for _, ownedPath := range []string{kind.ManifestPath, testRoot, writerPath} {
 		for _, path := range paths {
 			if path == ownedPath || strings.HasPrefix(ownedPath, path+"/") || strings.HasPrefix(path, ownedPath+"/") {
 				return proofInputManifest{}, fmt.Errorf("browser proof input manifest paths must not duplicate role-owned paths")

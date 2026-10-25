@@ -1,0 +1,146 @@
+{
+  "authority": "caller_owned_inventory",
+  "entries": [
+    {
+      "commandRefs": [
+        "dispatch.check"
+      ],
+      "evidenceClass": "declared_semantic_falsifier_route",
+      "falsifier": {
+        "dominanceGroup": "dispatch.group.001",
+        "falsifierId": "dispatch.falsifier.001",
+        "negativeCaseId": "dispatch.case.001",
+        "supersedes": [],
+        "wrongImplementationClassId": "dispatch.wrong.001"
+      },
+      "nonClaims": [],
+      "oracle": {
+        "assertionSummary": "The negative case is rejected.",
+        "expectedPublicOutcome": "a contradicting delivery is rejected",
+        "oracleId": "dispatch.oracle.001",
+        "oracleKind": "negative_exit_and_diagnostic"
+      },
+      "ownerId": "example.dispatch",
+      "ownerInvariantRefs": [],
+      "qualityFindings": [],
+      "requirementRefs": [
+        "REQ-DISPATCH-001"
+      ],
+      "selector": "go test ./tests -run TestDispatch001",
+      "sourcePath": "tests/dispatch_test.go",
+      "testId": "dispatch.test.001",
+      "witnessRefs": [
+        "dispatch.witness.001"
+      ]
+    },
+    {
+      "commandRefs": [
+        "dispatch.check"
+      ],
+      "evidenceClass": "declared_semantic_falsifier_route",
+      "falsifier": {
+        "dominanceGroup": "dispatch.group.002",
+        "falsifierId": "dispatch.falsifier.002",
+        "negativeCaseId": "dispatch.case.002",
+        "supersedes": [],
+        "wrongImplementationClassId": "dispatch.wrong.002"
+      },
+      "nonClaims": [],
+      "oracle": {
+        "assertionSummary": "The negative case is rejected.",
+        "expectedPublicOutcome": "a contradicting delivery is rejected",
+        "oracleId": "dispatch.oracle.002",
+        "oracleKind": "negative_exit_and_diagnostic"
+      },
+      "ownerId": "example.dispatch",
+      "ownerInvariantRefs": [],
+      "qualityFindings": [],
+      "requirementRefs": [
+        "REQ-DISPATCH-002"
+      ],
+      "selector": "go test ./tests -run TestDispatch002",
+      "sourcePath": "tests/dispatch_test.go",
+      "testId": "dispatch.test.002",
+      "witnessRefs": [
+        "dispatch.witness.002"
+      ]
+    },
+    {
+      "commandRefs": [
+        "dispatch.check"
+      ],
+      "evidenceClass": "declared_semantic_falsifier_route",
+      "falsifier": {
+        "dominanceGroup": "dispatch.group.003",
+        "falsifierId": "dispatch.falsifier.003",
+        "negativeCaseId": "dispatch.case.003",
+        "supersedes": [],
+        "wrongImplementationClassId": "dispatch.wrong.003"
+      },
+      "nonClaims": [],
+      "oracle": {
+        "assertionSummary": "The negative case is rejected.",
+        "expectedPublicOutcome": "a contradicting delivery is rejected",
+        "oracleId": "dispatch.oracle.003",
+        "oracleKind": "negative_exit_and_diagnostic"
+      },
+      "ownerId": "example.dispatch",
+      "ownerInvariantRefs": [],
+      "qualityFindings": [],
+      "requirementRefs": [
+        "REQ-DISPATCH-003"
+      ],
+      "selector": "go test ./tests -run TestDispatch003",
+      "sourcePath": "tests/dispatch_test.go",
+      "testId": "dispatch.test.003",
+      "witnessRefs": [
+        "dispatch.witness.003"
+      ]
+    },
+    {
+      "commandRefs": [
+        "dispatch.check"
+      ],
+      "evidenceClass": "declared_semantic_falsifier_route",
+      "falsifier": {
+        "dominanceGroup": "dispatch.group.004",
+        "falsifierId": "dispatch.falsifier.004",
+        "negativeCaseId": "dispatch.case.004",
+        "supersedes": [],
+        "wrongImplementationClassId": "dispatch.wrong.004"
+      },
+      "nonClaims": [],
+      "oracle": {
+        "assertionSummary": "The negative case is rejected.",
+        "expectedPublicOutcome": "a contradicting delivery is rejected",
+        "oracleId": "dispatch.oracle.004",
+        "oracleKind": "negative_exit_and_diagnostic"
+      },
+      "ownerId": "example.dispatch",
+      "ownerInvariantRefs": [],
+      "qualityFindings": [],
+      "requirementRefs": [
+        "REQ-DISPATCH-004"
+      ],
+      "selector": "go test ./tests -run TestDispatch004",
+      "sourcePath": "tests/dispatch_test.go",
+      "testId": "dispatch.test.004",
+      "witnessRefs": [
+        "dispatch.witness.004"
+      ]
+    }
+  ],
+  "inventoryId": "example.dispatch",
+  "nonClaims": [
+    "Synthetic delivery inventory does not establish execution.",
+    "Test evidence inventory reports do not approve merge, release, rollout, or repository policy.",
+    "Test evidence inventory reports do not authenticate runner output or receipt producers.",
+    "Test evidence inventory reports do not execute native tests.",
+    "Test evidence inventory reports do not prove repository inventory completeness.",
+    "Test evidence inventory reports do not resolve selectors or review caller-authored oracle quality.",
+    "Test evidence inventory reports do not verify that a caller-declared falsifier supersession dominates the superseded falsifier."
+  ],
+  "ownerId": "example.dispatch",
+  "schemaVersion": 1,
+  "sourceId": "dispatch.inventory"
+}

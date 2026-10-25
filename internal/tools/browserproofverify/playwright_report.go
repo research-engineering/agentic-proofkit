@@ -25,7 +25,7 @@ type browserProjectExecution struct {
 	TestIDs        []string
 }
 
-func writeAdmittedPlaywrightReport(root, reportPath string) error {
+func writeAdmittedPlaywrightReport(root, reportPath string, kind proofKind) error {
 	info, err := os.Lstat(reportPath)
 	if err != nil {
 		return err
@@ -40,11 +40,11 @@ func writeAdmittedPlaywrightReport(root, reportPath string) error {
 	if err != nil {
 		return err
 	}
-	manifest, err := loadProofInputManifest(root)
+	manifest, err := loadProofInputManifest(root, kind)
 	if err != nil {
 		return err
 	}
-	resolution, err := resolveProofInputs(root, manifest)
+	resolution, err := resolveProofInputs(root, manifest, kind)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,11 @@ func writeAdmittedPlaywrightReport(root, reportPath string) error {
 	for _, path := range resolution.InputPaths {
 		admittedPaths[path] = struct{}{}
 	}
-	projects, err := admitPlaywrightReport(bytes.NewReader(raw), root, manifest.TestRoot, admittedPaths)
+	var expectedTests map[string][]string
+	if kind.isVisual() {
+		expectedTests = expectedVisualProjectTests()
+	}
+	projects, err := admitPlaywrightReport(bytes.NewReader(raw), root, manifest.TestRoot, admittedPaths, expectedTests)
 	if err != nil {
 		return err
 	}
@@ -64,7 +68,10 @@ func writeAdmittedPlaywrightReport(root, reportPath string) error {
 	return err
 }
 
-func admitPlaywrightReport(reader io.Reader, root, testRoot string, admittedPaths map[string]struct{}) ([]browserProjectExecution, error) {
+// admitPlaywrightReport admits one all-passing report. Without expectedTests,
+// every project must pass the same test identities; with expectedTests, each
+// project must pass exactly its own expected identity set.
+func admitPlaywrightReport(reader io.Reader, root, testRoot string, admittedPaths map[string]struct{}, expectedTests map[string][]string) ([]browserProjectExecution, error) {
 	raw, err := admission.DecodeJSON(reader, maxPlaywrightReportBytes)
 	if err != nil {
 		return nil, err
@@ -114,9 +121,17 @@ func admitPlaywrightReport(reader io.Reader, root, testRoot string, admittedPath
 		projects[index] = browserProjectExecution{BrowserName: name, BrowserVersion: browserVersion, Name: name, TestIDs: testIDs}
 		totalExecutions += len(testIDs)
 	}
-	for _, project := range projects[1:] {
-		if !slices.Equal(project.TestIDs, projects[0].TestIDs) {
-			return nil, fmt.Errorf("playwright projects did not execute the same test identities")
+	if expectedTests != nil {
+		for _, project := range projects {
+			if !slices.Equal(project.TestIDs, expectedTests[project.Name]) {
+				return nil, fmt.Errorf("playwright project did not execute exactly its expected test identities")
+			}
+		}
+	} else {
+		for _, project := range projects[1:] {
+			if !slices.Equal(project.TestIDs, projects[0].TestIDs) {
+				return nil, fmt.Errorf("playwright projects did not execute the same test identities")
+			}
 		}
 	}
 	if err := admitPlaywrightStats(report["stats"], totalExecutions); err != nil {
