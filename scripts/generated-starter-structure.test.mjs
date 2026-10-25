@@ -85,8 +85,9 @@ const adapterTransportPredecessor = `  const childResult = spawnSync(options.bin
   return {child, outputFile: prepared.outputFile};
 }
 `;
-const adapterTransportCurrent = `  const inputText = options.inputMode === "none" ? null : proofkitStableJsonString(input);
-  const childResult = spawnProofkitChild(options, childArgs, inputText);
+const adapterTransportCurrent = `  const executionOptions = Object.freeze({...options, cwd: prepared.cwd});
+  const inputText = options.inputMode === "none" ? null : proofkitStableJsonString(input);
+  const childResult = spawnProofkitChild(executionOptions, childArgs, inputText);
   if (childResult.error !== undefined) {
     throw new Error(formatProofkitCliError(childResult.error));
   }
@@ -96,6 +97,34 @@ const adapterTransportCurrent = `  const inputText = options.inputMode === "none
     stderr: decodeProofkitUTF8(childResult.stderr, "Proofkit stderr"),
   };
   return {child, outputFile: prepared.outputFile};
+}
+
+// Capture before output admission or input serialization can run caller code.
+// Node includes enumerable inherited env entries and omits undefined values.
+// Its NODE_V8_COVERAGE fallback must also be captured, including absence, so
+// spawn cannot substitute a later ambient value. Only owned records are frozen.
+function snapshotProofkitRunOptions(caller: ProofkitCommandRunOptions, inputModeOverride?: "none"): ProofkitCommandRunOptions {
+  try {
+    let parentCwd: string | undefined;
+    let parentCwdError: unknown;
+    try { parentCwd = process.cwd(); } catch (error) { parentCwdError = error; }
+    const {binaryPath, cwd, env, inputMode, jsonLayout, maxBuffer} = caller;
+    let executionCwd = cwd;
+    if (cwd.length !== 0 && !isAbsolute(cwd)) {
+      if (parentCwd === undefined) throw parentCwdError;
+      executionCwd = parentCwd + (parentCwd.endsWith(sep) ? "" : sep) + cwd;
+    }
+    const sourceEnv = env ?? process.env;
+    const environment = Object.create(null) as Record<string, string | undefined>;
+    for (const key in sourceEnv) environment[key] = sourceEnv[key];
+    if (env == null || !Object.hasOwn(env, "NODE_V8_COVERAGE")) {
+      const coverage = process.env.NODE_V8_COVERAGE;
+      if (coverage) environment.NODE_V8_COVERAGE = coverage;
+    }
+    return Object.freeze({binaryPath, cwd: executionCwd, env: Object.freeze(environment), inputMode: inputModeOverride ?? inputMode, jsonLayout, maxBuffer});
+  } catch (error) {
+    throw new Error(formatProofkitCliError(error));
+  }
 }
 
 // The child never reads its standard input from spawnSync's input option. On
@@ -158,16 +187,18 @@ function removeProofkitInputFile(inputPath: string, directory: string): void {
 }
 
 function spawnProofkitWithStdin(options: ProofkitCommandRunOptions, childArgs: readonly string[], stdin: "ignore" | number) {
+  const environment = options.env === undefined ? undefined : Object.assign(Object.create(null), options.env);
+  if (environment !== undefined && !Object.hasOwn(environment, "NODE_V8_COVERAGE")) Object.defineProperty(environment, "NODE_V8_COVERAGE", {value: undefined});
   return spawnSync(options.binaryPath, childArgs, {
     cwd: options.cwd,
-    env: options.env,
+    env: environment,
     maxBuffer: options.maxBuffer ?? defaultMaxBuffer,
     stdio: [stdin, "pipe", "pipe"],
   });
 }
 `;
 const jsonText = text => JSON.stringify(text).slice(1, -1);
-const adapterStdinReason = "The adapter source gives the CLI its input as a regular file instead of spawnSync's input socket.";
+const adapterStdinReason = "The adapter uses regular-file stdin and one owned execution context, including the admitted physical output root and isolated Node environment.";
 const adapterStdinDelta = (suffix, rows, predecessor, current) => Object.freeze({
   id: `ADAPTER-STDIN-FILE-${suffix}`, reason: adapterStdinReason, rows: Object.freeze(rows), predecessor, current, occurrences: 1,
 });
@@ -183,12 +214,55 @@ const declaredStreamDeltas = Object.freeze([Object.freeze({
   predecessor: "CLI command routing, root JSON shapes,", current: "CLI command routing, structural JSON Schemas,", occurrences: 1,
 }),
 adapterStdinDelta("IMPORTS", adapterBundleRows, jsonText(adapterImportsPredecessor), jsonText(adapterImportsCurrent)),
+adapterStdinDelta("TEXT-OPTIONS", adapterBundleRows,
+  jsonText(`  if (options.jsonLayout !== undefined) {
+    throw new Error("Proofkit jsonLayout is valid only for JSON command output");
+  }
+  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options);`),
+  jsonText("  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options, \"text\");")),
+adapterStdinDelta("EXECUTION-OPTIONS", adapterBundleRows,
+  jsonText("function runProofkitCommand(commandRoute: string, input: unknown, args: readonly string[], options: ProofkitCommandRunOptions) {"),
+  jsonText(`function runProofkitCommand(commandRoute: string, input: unknown, args: readonly string[], callerOptions: ProofkitCommandRunOptions, mode: "json" | "text" | "json-no-input" = "json") {
+  const options = snapshotProofkitRunOptions(callerOptions, mode === "json-no-input" ? "none" : undefined);
+  if (mode === "text" && options.jsonLayout !== undefined) {
+    throw new Error("Proofkit jsonLayout is valid only for JSON command output");
+  }`)),
+adapterStdinDelta("JSON-RESULT-OWNER", adapterBundleRows,
+  jsonText(`  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options);
+  if (child.status !== 0 && child.stdout.trim().length === 0) {`),
+  jsonText(`  return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, input, args, options));
+}
+
+function readProofkitJsonCommandResult<T>(commandRoute: string, {child, outputFile}: ReturnType<typeof runProofkitCommand>): ProofkitJsonCommandResult<T> {
+  if (child.status !== 0 && child.stdout.trim().length === 0) {`)),
+adapterStdinDelta("NO-INPUT-OWNER", adapterBundleRows,
+  jsonText("  return runProofkitJsonCommand<T>(commandRoute, null, args, {...options, inputMode: \"none\"});"),
+  jsonText("  return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, null, args, options, \"json-no-input\"));")),
 adapterStdinDelta("TRANSPORT", adapterBundleRows, jsonText(adapterTransportPredecessor), jsonText(adapterTransportCurrent)),
+adapterStdinDelta("PREPARED-TYPE", adapterBundleRows,
+  jsonText("  let prepared: {readonly args: readonly string[]; readonly outputFile: string | null};"),
+  jsonText("  let prepared: {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string};")),
+adapterStdinDelta("OUTPUT-CONTEXT-TYPE", adapterBundleRows,
+  jsonText("function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null} {"),
+  jsonText("function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string} {")),
+adapterStdinDelta("NO-OUTPUT-CONTEXT", adapterBundleRows,
+  jsonText("    return {args, outputFile: null};"), jsonText("    return {args, outputFile: null, cwd};")),
+adapterStdinDelta("ADMITTED-OUTPUT-CONTEXT", adapterBundleRows,
+  jsonText("  return {args: canonicalArgs, outputFile: target.filePath};"),
+  jsonText("  return {args: canonicalArgs, outputFile: target.filePath, cwd: target.cwd};")),
+adapterStdinDelta("OUTPUT-TARGET-TYPE", adapterBundleRows,
+  jsonText("function admitWritableOutputTarget(cwd: string, outputPath: string): {readonly argument: string; readonly filePath: string} {"),
+  jsonText("function admitWritableOutputTarget(cwd: string, outputPath: string): {readonly argument: string; readonly filePath: string; readonly cwd: string} {")),
+adapterStdinDelta("PHYSICAL-OUTPUT-ROOT", adapterBundleRows,
+  jsonText("\tconst root = realpathSync(cwd);"), jsonText("\tconst root = realpathSync.native(cwd);")),
+adapterStdinDelta("OUTPUT-ROOT-BINDING", adapterBundleRows,
+  jsonText("  return {argument: relative(root, filePath), filePath};"),
+  jsonText("  return {argument: relative(root, filePath), filePath, cwd: root};")),
 adapterStdinDelta("SHA256", adapterBundleRows,
   "sha256:e9089d40688aa25c2565633825244c55bcadab85b65c74242ef871cedc2c6533",
-  "sha256:e782b2cb6e17f1671a43418cf224a566365a4ebe90730a40699adbffbd1b0ac4"),
-adapterStdinDelta("LINE-COUNT", ["adapter-default", "adapter-explicit-json"], "\"lineCount\": 1124", "\"lineCount\": 1189"),
-adapterStdinDelta("LINE-COUNT-COMPACT", ["adapter-compact"], "\"lineCount\":1124", "\"lineCount\":1189"),
+  "sha256:434d4b3a03096288ae895711ba0626e7e705fdc7724cfcba3e7306d8ce5ec06b"),
+adapterStdinDelta("LINE-COUNT", ["adapter-default", "adapter-explicit-json"], "\"lineCount\": 1124", "\"lineCount\": 1224"),
+adapterStdinDelta("LINE-COUNT-COMPACT", ["adapter-compact"], "\"lineCount\":1124", "\"lineCount\":1224"),
 ]);
 const count = (text, needle) => text.split(needle).length - 1;
 // Returns the predecessor stdout implied by the declared deltas of a row, or null
@@ -329,7 +403,7 @@ test("starter schema does not launder native-only hash line-count and rendered-c
 
 test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
   const delta = declaredStreamDeltas.find(item => item.id === "PILOT-D10");
-  assert.equal(declaredStreamDeltas.length, 7);
+  assert.equal(declaredStreamDeltas.length, 18);
   const rows = baseline.observations.filter(row => delta.rows.includes(row.name));
   assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   const current = invoke(rows[0]).stdout;
@@ -348,7 +422,7 @@ test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
 
 test("the ADAPTER-STDIN-FILE deltas are exact and limited to the adapter bundle rows", () => {
   const deltas = declaredStreamDeltas.filter(item => item.id.startsWith("ADAPTER-STDIN-FILE-"));
-  assert.equal(deltas.length, 5);
+  assert.equal(deltas.length, 16);
   const rows = baseline.observations.filter(row => adapterBundleRows.includes(row.name));
   assert.deepEqual(rows.map(row => row.name), [...adapterBundleRows]);
   for (const row of rows) {
@@ -357,7 +431,7 @@ test("the ADAPTER-STDIN-FILE deltas are exact and limited to the adapter bundle 
     assert.equal(source.includes(adapterTransportCurrent), true, `${row.name}/file transport`);
     assert.equal(source.includes("input: options.inputMode"), false, `${row.name}/no spawnSync input option`);
     const applied = deltas.filter(item => item.rows.includes(row.name));
-    assert.equal(applied.length, 4, row.name);
+    assert.equal(applied.length, 15, row.name);
     for (const delta of applied) {
       const reverted = current.replace(delta.current, delta.predecessor);
       assert.notEqual(reverted, current, `${row.name}/${delta.id}`);
