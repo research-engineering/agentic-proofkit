@@ -1300,6 +1300,24 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestCIBrowserVisualRunsTheRecordedReferenceEnvironment",
 			},
 		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.design-token-owner"}: {
+			witnessPath: "internal/command/requirementbrowser/design_token_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestStaticAndWorkspaceViewsConsumeTheOneTokenStylesheet"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.design-token-route"}: {
+			witnessPath: "internal/command/requirementbrowser/workspace_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestWorkspaceAssetsHaveExactSecureHTTPContract"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.design-token-literal-grammar"}: {
+			witnessPath: "internal/command/requirementbrowser/design_token_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{
+				"TestDesignTokenGrammarAdmitsTheShippedStyleOwners",
+				"TestDesignTokenGrammarRefusesEveryRuleMutant",
+			},
+		},
 		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-exact-comparator"}: {
 			witnessPath: "scripts/browser-visual-references.test.mjs",
 			commandIDs:  []string{"proofkit.browser-check"}, environmentClasses: []string{"local-node-browser"},
