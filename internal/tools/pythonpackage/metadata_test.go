@@ -181,20 +181,29 @@ func TestREADMEPlatformAndPythonProjection(t *testing.T) {
 	if ownerMinimums["darwin"] != "13" {
 		t.Fatalf("Darwin wheel-tag minimum %s no longer matches the README executed/metadata-only split", ownerMinimums["darwin"])
 	}
+	// Each OS names its required CI runners in the owner architecture order;
+	// a changed architecture set requires re-authoring the runner lists.
+	for _, goos := range []string{"darwin", "linux"} {
+		if strings.Join(ownerArchitectures[goos], " ") != "arm64 x64" {
+			t.Fatalf("%s architectures %v no longer match the README runner lists", goos, ownerArchitectures[goos])
+		}
+	}
 	expectedBlock := strings.Join([]string{
 		fmt.Sprintf("Supported binary targets are macOS 15 or later on %s, executed by", strings.Join(ownerArchitectures["darwin"], " or ")),
 		"required CI on the GitHub-hosted `macos-15` and `macos-15-intel` runners. Darwin",
 		"binaries declare a macOS 13.0 minimum in their Mach-O build metadata; macOS 13",
 		"and 14 are binary-compatible by that metadata only, not executed or verified.",
-		fmt.Sprintf("Linux manylinux %s or later is supported on %s. Windows is unsupported. The Python", ownerMinimums["linux"], strings.Join(ownerArchitectures["linux"], " or ")),
-		"runner requires Python 3.11 or later and wraps the same Go CLI; it is not a",
-		"Python SDK.",
+		fmt.Sprintf("Linux manylinux %s or later is supported on %s, executed by", ownerMinimums["linux"], strings.Join(ownerArchitectures["linux"], " or ")),
+		"required CI on the GitHub-hosted `ubuntu-24.04-arm` and `ubuntu-24.04` runners.",
+		fmt.Sprintf("The manylinux %s floor is the wheel-tag declaration; CI does not execute a", ownerMinimums["linux"]),
+		"host at that floor. Windows is unsupported. The Python runner requires Python",
+		"3.11 or later and wraps the same Go CLI; it is not a Python SDK.",
 		"",
 		"Linux wheel installation requires pip 20.3 or later for the manylinux tag.",
 		"Use an installer compatible with the selected Python. The bounded compatibility",
-		"smoke exercises the initial Python 3.11 release with a checksum-pinned compatible",
-		"installer. This is compatibility evidence, not a recommendation to use an",
-		"obsolete interpreter.",
+		"smoke exercises the initial Python 3.11 release on Linux arm64 and x64 with a",
+		"checksum-pinned compatible installer. This is compatibility evidence, not a",
+		"recommendation to use an obsolete interpreter.",
 		"",
 		"After an exact Python package version is available from an admitted channel,",
 		"use one complete package-manager chain:",

@@ -21,7 +21,7 @@ var hostPythonConsumer = regexp.MustCompile(`\bpython3\b|npm run (check|go:test|
 
 // Jobs whose run steps consume the host Python. Every other job must not.
 var expectedPythonJobs = map[string][]string{
-	"ci.yml":      {"platform-smoke", "platform-smoke-intel", "source-quality"},
+	"ci.yml":      {"platform-smoke", "platform-smoke-intel", "platform-smoke-linux-arm64", "source-quality"},
 	"release.yml": {"candidate", "publish-pypi", "publish-readiness"},
 }
 
@@ -174,6 +174,16 @@ func TestWorkflowPythonRuntimeRejectsUnpinnedConsumers(t *testing.T) {
 		}},
 		{"x86_64 platform runtime drift", "ci.yml", "platform-smoke-intel", func(job *githubJob) {
 			job.Steps[setupStep(*job)].With["python-version"] = "3.14.7"
+		}},
+		{"Linux arm64 platform setup omitted", "ci.yml", "platform-smoke-linux-arm64", func(job *githubJob) {
+			index := setupStep(*job)
+			job.Steps = append(job.Steps[:index], job.Steps[index+1:]...)
+		}},
+		{"Linux arm64 platform setup after smoke", "ci.yml", "platform-smoke-linux-arm64", func(job *githubJob) {
+			index := setupStep(*job)
+			step := job.Steps[index]
+			job.Steps = append(job.Steps[:index], job.Steps[index+1:]...)
+			job.Steps = append(job.Steps, step)
 		}},
 		{"new unpinned consumer", "release.yml", "release-metadata", func(job *githubJob) {
 			job.Steps = append(job.Steps, githubStep{Name: "Read version", Run: "python3 -c 'print(1)'", runPresent: true})

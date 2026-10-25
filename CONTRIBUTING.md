@@ -115,12 +115,12 @@ SZOMB. A truncated record or a permission error remains an ordinary observation
 failure: the observer runs only before the sole reap, so the unreaped child
 still pins its PID and group and retained cleanup may signal them. Linux
 uses fresh `waitid(P_PID, WEXITED|WNOWAIT|WNOHANG)` records. Source-check targets
-are the configured Ubuntu 24.04, macos-15 (arm64) and macos-15-intel (x86_64)
-jobs and the native Linux wheel verifier profile, each requiring actual
-host/API qualification. A CI label, cross-build or one local run is not native
-qualification of another host. macOS 13 and 14 are not executed: no hosted
-macOS 13 image exists, and GitHub retires `macos-14` on 2026-11-02 after failing
-brownouts (actions/runner-images#13518).
+are the configured Ubuntu 24.04 (x86_64), ubuntu-24.04-arm (arm64), macos-15
+(arm64) and macos-15-intel (x86_64) jobs and the native Linux wheel verifier
+profile, each requiring actual host/API qualification. A CI label, cross-build
+or one local run is not native qualification of another host. macOS 13 and 14
+are not executed: no hosted macOS 13 image exists, and GitHub retires
+`macos-14` on 2026-11-02 after failing brownouts (actions/runner-images#13518).
 This package is outside the CLI dependency closure on all four shipped targets;
 consumer wheel tags and platform minima are unchanged. Import or payload changes
 require a fresh closure proof, and unsupported hosts fail before child Start.

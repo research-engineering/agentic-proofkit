@@ -73,18 +73,21 @@ vulnerability absence, or consumer rollout safety by itself.
   tests does not prove assertion-branch execution, mutation adequacy, or
   exhaustive command semantics.
 - `REQ-PROOFKIT-QUALITY-011`: CI separates the OS-independent full
-  source/package gate from macOS platform smoke, executes the complete Go
-  package set through its owner command, uses explicit hosted runner labels
-  instead of floating latest labels, and exposes one fail-closed aggregate gate
-  whose exact expression and script reject neutralization and require every
-  required leaf check to finish with success, while the aggregate job omits
-  job defaults and `continue-on-error` entirely. Exact workflow-level bash
-  defaults plus a closed inventory require exact provider-check names and
-  scalar runners, bind each macOS job's (required arm64 `macos-15` and x86_64
-  `macos-15-intel`) presence-aware exact ordered step inventory and exact
-  local setup-action bytes to the fail-closed package-script owner command,
-  require every required leaf job and step to
-  omit conditions except for exact named owner conditions, and reject
+  source/package gate from macOS and Linux arm64 platform smoke, executes the
+  complete Go package set through its owner command, uses explicit hosted
+  runner labels instead of floating latest labels, and exposes one fail-closed
+  aggregate gate whose exact expression and script reject neutralization and
+  require every required leaf check to finish with success, while the
+  aggregate job omits job defaults and `continue-on-error` entirely. Exact
+  workflow-level bash defaults plus a closed inventory require exact
+  provider-check names and scalar runners, bind each platform job's (required
+  arm64 `macos-15`, x86_64 `macos-15-intel` and aarch64 `ubuntu-24.04-arm`)
+  presence-aware exact ordered step inventory, whose first step checks the
+  native architecture, and exact local setup-action bytes to the fail-closed
+  package-script owner command, require the minimum-version CPython installed-wheel
+  smoke in both the Linux x86_64 source job and the Linux arm64 job, require
+  every required leaf job and step to omit conditions except for exact named
+  owner conditions, and reject
   dynamically false or explicit-null conditions, dual `run`/`uses` keys,
   non-string runner labels, nested or top-level semantic shadow steps,
   reusable-job substitution, inherited or local environment entries, shell,
