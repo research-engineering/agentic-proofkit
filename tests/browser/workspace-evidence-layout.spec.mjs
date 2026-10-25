@@ -1,6 +1,6 @@
 import {expect} from "@playwright/test";
 import {coverageTest as test} from "./workspace-test-harness.mjs";
-import {openWorkspace} from "./workspace-navigation-harness.mjs";
+import {emulateMediaInEffect, openWorkspace} from "./workspace-navigation-harness.mjs";
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
 
 const viewports = [
@@ -16,11 +16,14 @@ const viewports = [
 for (const viewport of viewports) {
   test(`evidence ${viewport.view} reflows at ${viewport.width}x${viewport.height} ${viewport.colorScheme}`, async ({compactURL, page}, testInfo) => {
     await page.setViewportSize({width: viewport.width, height: viewport.height});
-    await page.emulateMedia({colorScheme: viewport.colorScheme, reducedMotion: "reduce"});
     await initializeAxe(page);
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
     await openWorkspace(page, compactURL);
+    // The workspace reads the color scheme and motion preference only through
+    // CSS (media queries and the root color-scheme property), which follows
+    // emulation in the loaded document, so no reload is needed.
+    await emulateMediaInEffect(page, {colorScheme: viewport.colorScheme, reducedMotion: "reduce"});
     await expect(page.locator("html")).toHaveCSS("font-size", "16px");
     await page.getByRole("button", {name: viewport.view === "coverage" ? "Coverage" : "Traceability", exact: true}).click();
     await expect(page.locator("body")).toHaveAttribute("data-state", viewport.view);

@@ -165,6 +165,43 @@ export async function openWorkspace(page, baseURL, heading, securityProfile = "w
   );
 }
 
+// Media features whose emulation every pinned engine reflects in matchMedia,
+// with their admitted values. For forced colors this proves the media feature,
+// which switches the author forced-colors rules, not an engine forced-color
+// palette: pinned WebKit applies none.
+const emulatedMediaQueries = Object.freeze({
+  colorScheme: Object.freeze({light: "(prefers-color-scheme: light)", dark: "(prefers-color-scheme: dark)"}),
+  reducedMotion: Object.freeze({reduce: "(prefers-reduced-motion: reduce)", "no-preference": "(prefers-reduced-motion: no-preference)"}),
+  forcedColors: Object.freeze({active: "(forced-colors: active)", none: "(forced-colors: none)"}),
+});
+
+// emulateMediaInEffect applies media emulation and asserts through matchMedia
+// that every given feature is in effect in the document under test. Call it
+// after the last navigation into that document: pinned Firefox drops
+// color-scheme emulation at a navigation into or out of a document served
+// with Cross-Origin-Opener-Policy: same-origin, which every fixture document
+// sends, unless both documents have the same origin and send that header;
+// each fixture server has its own origin. The document must be a served http
+// document, because a match in the initial about:blank document says nothing
+// about the next one.
+export async function emulateMediaInEffect(page, media) {
+  const queries = Object.entries(media).map(([feature, value]) => {
+    const values = Object.hasOwn(emulatedMediaQueries, feature) ? emulatedMediaQueries[feature] : {};
+    if (!Object.hasOwn(values, value)) throw new Error(`Unsupported media emulation ${feature}: ${String(value)}`);
+    return values[value];
+  });
+  if (queries.length === 0) throw new Error("Media emulation names no feature");
+  await page.emulateMedia(media);
+  const observed = await page.evaluate((queries) => ({
+    protocol: location.protocol,
+    matches: Object.fromEntries(queries.map((query) => [query, matchMedia(query).matches])),
+  }), queries);
+  expect(observed, "media emulation in effect in the document under test").toEqual({
+    protocol: "http:",
+    matches: Object.fromEntries(queries.map((query) => [query, true])),
+  });
+}
+
 export async function reloadWorkspace(page, baseURL) {
   const workspaceURL = admittedWorkspaceURL(baseURL);
   await navigateWorkspace(
