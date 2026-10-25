@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFileSync} from "node:child_process";
 import {mkdtempSync, readFileSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {assertCLITransport} from "./cli-process.mjs";
+import {assertCLITransport, spawnWithInputFile} from "./cli-process.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_BOOTSTRAP_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -27,7 +27,7 @@ before(() => {
 after(() => { if (directory) rmSync(directory, {recursive: true, force: true}); });
 const hash = text => createHash("sha256").update(text).digest("hex");
 function invoke(inputJSON, args = []) {
-  const r = spawnSync(binary, ["self-check", "--input", "-", ...args], {input: inputJSON, encoding: "utf8", timeout: 10000, maxBuffer: 1 << 20});
+  const r = spawnWithInputFile(binary, ["self-check", "--input", "-", ...args], {input: inputJSON, encoding: "utf8", timeout: 10000, maxBuffer: 1 << 20});
   return assertCLITransport(r);
 }
 function expected(kind) {

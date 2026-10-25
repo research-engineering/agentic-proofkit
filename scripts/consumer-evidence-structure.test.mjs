@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {before, after} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 
 const root = new URL('../', import.meta.url);
 const external = 'external-consumer', registry = 'registry-consumer', composer = 'registry-consumer-proof-input-compose';
@@ -65,7 +65,7 @@ const conservesPredecessor = (row, stdout) => {
   return predecessor !== null && hash(predecessor) === row.stdoutSHA256;
 };
 function invoke(command, input, argv = [command, '--input', '-']) {
-  const result = spawnSync(binary, argv, {input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
+  const result = spawnWithInputFile(binary, argv, {input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
   return assertCLITransport(result);
 }
 const seed = command => JSON.parse(baseline.observations.find(x => x.command === command && x.name === 'valid').input);

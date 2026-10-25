@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test, {before, after} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
-import {assertCLITransport} from './cli-process.mjs';
+import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
 
 const root = new URL('../', import.meta.url);
 const source = 'requirement-proof-source-set', view = 'requirement-proof-view';
@@ -62,7 +62,7 @@ before(() => {
 });
 after(() => {if (directory) rmSync(directory, {recursive: true, force: true});});
 function invoke(command, value, flags = []) {
-  const result = spawnSync(binary, [command, '--input', '-', ...flags], {
+  const result = spawnWithInputFile(binary, [command, '--input', '-', ...flags], {
     input: JSON.stringify(value), encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
   return assertCLITransport(result);
 }
@@ -76,7 +76,7 @@ function output(command, input, flags = []) {
 
 test('lookup contracts conserve73actual predecessor process and rendered streams', () => {
   for (const row of baseline.observations) {
-    const result = spawnSync(binary, row.argv, {input: row.carrier === 'stdin' ? row.input : undefined,
+    const result = spawnWithInputFile(binary, row.argv, {input: row.carrier === 'stdin' ? row.input : undefined,
       stdio: row.carrier === 'argv-only' ? ['ignore', 'pipe', 'pipe'] : undefined,
       encoding: 'utf8', timeout: 10000, maxBuffer: 2 << 20});
     assertCLITransport(result, row.name);
@@ -96,7 +96,7 @@ test('the KERNEL-02 stream delta is exact, positioned and limited to its rows', 
   const rows = baseline.observations.filter(row => row.format === 'html');
   assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   const row = rows[0];
-  const current = assertCLITransport(spawnSync(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
+  const current = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
     maxBuffer: 2 << 20}), row.name).stdout;
   assert.ok(conservesPredecessor(row, current), 'current stdout must carry exactly the declared delta');
   const rule = delta.insertion;
@@ -108,7 +108,7 @@ test('the KERNEL-02 stream delta is exact, positioned and limited to its rows', 
     assert.equal(conservesPredecessor(row, mutated), false, name);
   }
   const unlisted = baseline.observations.find(item => item.format === 'json' && item.exitCode === 0);
-  const unlistedCurrent = assertCLITransport(spawnSync(binary, unlisted.argv, {input: unlisted.input, encoding: 'utf8',
+  const unlistedCurrent = assertCLITransport(spawnWithInputFile(binary, unlisted.argv, {input: unlisted.input, encoding: 'utf8',
     timeout: 10000, maxBuffer: 2 << 20}), unlisted.name).stdout;
   assert.ok(conservesPredecessor(unlisted, unlistedCurrent), 'unlisted rows stay byte-exact');
   assert.equal(conservesPredecessor(unlisted, unlistedCurrent + delta.anchor + rule), false, 'delta applied to an unlisted row');
