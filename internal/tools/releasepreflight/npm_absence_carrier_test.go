@@ -11,12 +11,13 @@ import (
 )
 
 // This protocol owns only the cancellation carrier's registration, dispatch-release,
-// and independent child-exit witnesses. Product branch events stay in trace.
+// signal-sent, and independent child-exit witnesses. Product branch events stay in trace.
 type npmBranchControl struct {
 	readyReader, readyWriter     *os.File
 	commandReader, commandWriter *os.File
 	eventReader, eventWriter     *os.File
 	releaseReader, releaseWriter *os.File
+	signalReader, signalWriter   *os.File
 	finished                     bool
 }
 
@@ -30,6 +31,7 @@ func newNPMBranchControl(t *testing.T) *npmBranchControl {
 		{&control.commandReader, &control.commandWriter},
 		{&control.eventReader, &control.eventWriter},
 		{&control.releaseReader, &control.releaseWriter},
+		{&control.signalReader, &control.signalWriter},
 	} {
 		var err error
 		*pair.reader, *pair.writer, err = os.Pipe()
@@ -51,10 +53,11 @@ func (control *npmBranchControl) closeChildEnds() {
 	_ = control.commandReader.Close()
 	_ = control.eventWriter.Close()
 	_ = control.releaseReader.Close()
+	_ = control.signalReader.Close()
 }
 
 func (control *npmBranchControl) close() {
-	for _, file := range []*os.File{control.readyReader, control.readyWriter, control.commandReader, control.commandWriter, control.eventReader, control.eventWriter, control.releaseReader, control.releaseWriter} {
+	for _, file := range []*os.File{control.readyReader, control.readyWriter, control.commandReader, control.commandWriter, control.eventReader, control.eventWriter, control.releaseReader, control.releaseWriter, control.signalReader, control.signalWriter} {
 		if file != nil {
 			_ = file.Close()
 		}
@@ -79,6 +82,42 @@ func npmBranchMarker(reader *os.File, want byte) error {
 func (control *npmBranchControl) command(value string) error {
 	_, err := io.WriteString(control.commandWriter, value+"\n")
 	return err
+}
+
+// cmd.Cancel sends its SIGTERM only through signalCarrier: it calls send, and
+// only after send has returned does it close the signal-sent pipe. The signal
+// is then pending in Bash before Bash can read EOF from this pipe, so a read
+// that ends at this EOF is followed by the trap, never by the next command. A
+// nil control only sends.
+func (control *npmBranchControl) signalCarrier(send func() error) error {
+	err := send()
+	if control != nil {
+		_ = control.signalWriter.Close()
+	}
+	return err
+}
+
+// npmBranchSignalPipeOpen reads the signal-sent pipe without blocking: EAGAIN
+// means its writer is still open, EOF means it was already closed.
+func npmBranchSignalPipeOpen(reader *os.File) error {
+	connection, err := reader.SyscallConn()
+	if err != nil {
+		return err
+	}
+	var state error
+	err = connection.Read(func(fd uintptr) bool {
+		n, readError := syscall.Read(int(fd), make([]byte, 1))
+		if errors.Is(readError, syscall.EAGAIN) {
+			return true
+		}
+		if readError == nil && n == 0 {
+			state = fmt.Errorf("signal-sent pipe closed before the signal")
+		} else {
+			state = fmt.Errorf("signal-sent pipe state n=%d err=%v", n, readError)
+		}
+		return true
+	})
+	return errors.Join(state, err)
 }
 
 func (control *npmBranchControl) release() error {
@@ -125,6 +164,13 @@ func (control *npmBranchControl) run(item npmBranchCase, cancel func() error) er
 	}
 	if item.lateReadyObservation {
 		if err := <-ready; err != nil {
+			return err
+		}
+	}
+	if item.pendingSignalAtBlock {
+		// Bash is expanding the redirection of its blocking read, past its last
+		// trap check before that read, so the signal arrives as a pending trap.
+		if err := control.event('E'); err != nil {
 			return err
 		}
 	}
