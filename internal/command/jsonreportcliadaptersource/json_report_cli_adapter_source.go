@@ -737,7 +737,10 @@ export function runProofkitJsonCommand<T = unknown>(
   args: readonly string[],
   options: ProofkitCommandRunOptions,
 ): ProofkitJsonCommandResult<T> {
-  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options);
+  return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, input, args, options));
+}
+
+function readProofkitJsonCommandResult<T>(commandRoute: string, {child, outputFile}: ReturnType<typeof runProofkitCommand>): ProofkitJsonCommandResult<T> {
   if (child.status !== 0 && child.stdout.trim().length === 0) {
     throw new Error(formatProofkitCliError(child.stderr.trim() || commandRoute + " failed with exit code " + String(child.status)));
   }
@@ -761,7 +764,7 @@ export function runProofkitNoInputJsonCommand<T = unknown>(
   args: readonly string[],
   options: ProofkitCommandRunOptions,
 ): ProofkitJsonCommandResult<T> {
-  return runProofkitJsonCommand<T>(commandRoute, null, args, {...options, inputMode: "none"});
+  return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, null, args, options, "json-no-input"));
 }
 
 export function runProofkitTextCommand(
@@ -770,10 +773,7 @@ export function runProofkitTextCommand(
   args: readonly string[],
   options: ProofkitCommandRunOptions,
 ): ProofkitTextCommandResult {
-  if (options.jsonLayout !== undefined) {
-    throw new Error("Proofkit jsonLayout is valid only for JSON command output");
-  }
-  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options);
+  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options, "text");
   if (child.status !== 0 && child.stdout.length === 0) {
     throw new Error(formatProofkitCliError(child.stderr.trim() || commandRoute + " failed with exit code " + String(child.status)));
   }
@@ -788,10 +788,14 @@ export function runProofkitTextCommand(
   };
 }
 
-function runProofkitCommand(commandRoute: string, input: unknown, args: readonly string[], options: ProofkitCommandRunOptions) {
+function runProofkitCommand(commandRoute: string, input: unknown, args: readonly string[], callerOptions: ProofkitCommandRunOptions, mode: "json" | "text" | "json-no-input" = "json") {
+  const options = snapshotProofkitRunOptions(callerOptions, mode === "json-no-input" ? "none" : undefined);
+  if (mode === "text" && options.jsonLayout !== undefined) {
+    throw new Error("Proofkit jsonLayout is valid only for JSON command output");
+  }
   const routeTokens = admitCommandRoute(commandRoute);
   admitRunOptions(options);
-  let prepared: {readonly args: readonly string[]; readonly outputFile: string | null};
+  let prepared: {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string};
   try {
     prepared = prepareOutputArgs(options.cwd, args);
   } catch (error) {
@@ -799,8 +803,9 @@ function runProofkitCommand(commandRoute: string, input: unknown, args: readonly
   }
   const processArgs = options.jsonLayout === undefined ? [] : ["--json-layout", options.jsonLayout];
   const childArgs = options.inputMode === "none" ? [...processArgs, ...routeTokens, ...prepared.args] : [...processArgs, ...routeTokens, "--input", "-", ...prepared.args];
+  const executionOptions = Object.freeze({...options, cwd: prepared.cwd});
   const inputText = options.inputMode === "none" ? null : proofkitStableJsonString(input);
-  const childResult = spawnProofkitChild(options, childArgs, inputText);
+  const childResult = spawnProofkitChild(executionOptions, childArgs, inputText);
   if (childResult.error !== undefined) {
     throw new Error(formatProofkitCliError(childResult.error));
   }
@@ -810,6 +815,34 @@ function runProofkitCommand(commandRoute: string, input: unknown, args: readonly
     stderr: decodeProofkitUTF8(childResult.stderr, "Proofkit stderr"),
   };
   return {child, outputFile: prepared.outputFile};
+}
+
+// Capture before output admission or input serialization can run caller code.
+// Node includes enumerable inherited env entries and omits undefined values.
+// Its NODE_V8_COVERAGE fallback must also be captured, including absence, so
+// spawn cannot substitute a later ambient value. Only owned records are frozen.
+function snapshotProofkitRunOptions(caller: ProofkitCommandRunOptions, inputModeOverride?: "none"): ProofkitCommandRunOptions {
+  try {
+    let parentCwd: string | undefined;
+    let parentCwdError: unknown;
+    try { parentCwd = process.cwd(); } catch (error) { parentCwdError = error; }
+    const {binaryPath, cwd, env, inputMode, jsonLayout, maxBuffer} = caller;
+    let executionCwd = cwd;
+    if (cwd.length !== 0 && !isAbsolute(cwd)) {
+      if (parentCwd === undefined) throw parentCwdError;
+      executionCwd = parentCwd + (parentCwd.endsWith(sep) ? "" : sep) + cwd;
+    }
+    const sourceEnv = env ?? process.env;
+    const environment = Object.create(null) as Record<string, string | undefined>;
+    for (const key in sourceEnv) environment[key] = sourceEnv[key];
+    if (env == null || !Object.hasOwn(env, "NODE_V8_COVERAGE")) {
+      const coverage = process.env.NODE_V8_COVERAGE;
+      if (coverage) environment.NODE_V8_COVERAGE = coverage;
+    }
+    return Object.freeze({binaryPath, cwd: executionCwd, env: Object.freeze(environment), inputMode: inputModeOverride ?? inputMode, jsonLayout, maxBuffer});
+  } catch (error) {
+    throw new Error(formatProofkitCliError(error));
+  }
 }
 
 // The child never reads its standard input from spawnSync's input option. On
@@ -872,9 +905,11 @@ function removeProofkitInputFile(inputPath: string, directory: string): void {
 }
 
 function spawnProofkitWithStdin(options: ProofkitCommandRunOptions, childArgs: readonly string[], stdin: "ignore" | number) {
+  const environment = options.env === undefined ? undefined : Object.assign(Object.create(null), options.env);
+  if (environment !== undefined && !Object.hasOwn(environment, "NODE_V8_COVERAGE")) Object.defineProperty(environment, "NODE_V8_COVERAGE", {value: undefined});
   return spawnSync(options.binaryPath, childArgs, {
     cwd: options.cwd,
-    env: options.env,
+    env: environment,
     maxBuffer: options.maxBuffer ?? defaultMaxBuffer,
     stdio: [stdin, "pipe", "pipe"],
   });
@@ -901,22 +936,22 @@ function outputPathFromArgs(args: readonly string[]): string | null {
   return outputPath;
 }
 
-function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null} {
+function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string} {
   const outputPath = outputPathFromArgs(args);
   if (outputPath === null) {
-    return {args, outputFile: null};
+    return {args, outputFile: null, cwd};
   }
   const target = admitWritableOutputTarget(cwd, outputPath);
   const outputIndex = args.indexOf("--output");
   const canonicalArgs = args.map((argument, index) => index === outputIndex + 1 ? target.argument : argument);
-  return {args: canonicalArgs, outputFile: target.filePath};
+  return {args: canonicalArgs, outputFile: target.filePath, cwd: target.cwd};
 }
 
-function admitWritableOutputTarget(cwd: string, outputPath: string): {readonly argument: string; readonly filePath: string} {
+function admitWritableOutputTarget(cwd: string, outputPath: string): {readonly argument: string; readonly filePath: string; readonly cwd: string} {
   if (isAbsolute(outputPath)) {
     throw new Error("--output requires a repository-relative path");
   }
-	const root = realpathSync(cwd);
+	const root = realpathSync.native(cwd);
 	const lexicalTarget = resolve(root, outputPath);
 	assertPathInsideRoot(root, lexicalTarget, "--output must resolve inside the repository root");
 	ensureWritableParent(root, dirname(lexicalTarget));
@@ -924,7 +959,7 @@ function admitWritableOutputTarget(cwd: string, outputPath: string): {readonly a
   assertPathInsideRoot(root, parent, "--output parent must resolve inside the repository root", true);
   const filePath = resolve(parent, basename(lexicalTarget));
   requireRegularOutputTarget(filePath, true);
-  return {argument: relative(root, filePath), filePath};
+  return {argument: relative(root, filePath), filePath, cwd: root};
 }
 
 function ensureWritableParent(root: string, parentPath: string): void {
