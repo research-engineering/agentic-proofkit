@@ -151,12 +151,22 @@ one, with exactly one regular capture file per reference ID and no unstable
 directory; it recomputes every digest from the PNG files. It cannot tell
 whether the run directory changed after the run, so only a passing job proves
 the admitted digests. Push until the job passes on the exact final tree.
-Before merge, pass the gate on each CPU model named in the non-claims, or
-change those non-claims. Merging is the owner's admission. An environment
-change, including a Playwright upgrade, takes two steps. First, update
-`observed` in `tests/visual/environment.json` from the
-`observed-environment.json` of a run in the new environment; that run reports
-`unverified` and launches no browser.
+Before merge, pass the gate on each CPU model that the pixel-identity
+non-claim of REQ-PROOFKIT-QUALITY-028 and of the visual proof record names,
+Apple M1 and Arm Neoverse N2, or change that non-claim. It has four copies,
+which change together: the requirement in
+`docs/specs/proofkit-supply-chain-quality/requirements.v2.json`, its binding
+in `proofkit/requirement-bindings.json`,
+`internal/tools/browserproofverify/visual_record.go` and the writer,
+`scripts/write-browser-visual-proof.mjs`. The gate's record identifies an Arm
+Neoverse N2 runner by implementer and part (`implementer 0x41`, `part 0xd49`).
+Under Docker Desktop the record of an Apple M1 run shows only
+`implementer 0x61` and `part 0x000`, which do not identify the chip model, so
+take the Apple model from the host with `sysctl -n machdep.cpu.brand_string`.
+Merging is the owner's admission. An environment change, including a
+Playwright upgrade, takes two steps. First, update `observed` in
+`tests/visual/environment.json` from the `observed-environment.json` of a run
+in the new environment; that run reports `unverified` and launches no browser.
 Second, run again: the browsers now launch, and if a launched version differs
 the engine fixture fails with that version, which then goes into
 `browserVersions`. Because `environmentId` changed, that run cannot pass until

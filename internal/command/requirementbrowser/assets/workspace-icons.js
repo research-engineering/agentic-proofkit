@@ -73,7 +73,9 @@ const nodes = {
 export function icon(name) {
   if (!Object.hasOwn(nodes, name)) throw new Error("Unknown workspace icon");
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  for (const [key, value] of Object.entries({width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", focusable: "false", class: "workspace-icon"})) svg.setAttribute(key, value);
+  // The rendered size, line width and line ends come from .workspace-icon in
+  // workspace.css, whose sizes are design tokens.
+  for (const [key, value] of Object.entries({viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "aria-hidden": "true", focusable: "false", class: "workspace-icon"})) svg.setAttribute(key, value);
   for (const [tag, attributes] of nodes[name]) {
     const child = document.createElementNS(svg.namespaceURI, tag);
     for (const [key, value] of Object.entries(attributes)) child.setAttribute(key, value);
