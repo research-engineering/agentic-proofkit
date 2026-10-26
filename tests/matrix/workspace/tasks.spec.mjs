@@ -19,6 +19,29 @@ async function openTab(page, name, state) {
   await expect(page.locator("#workspace-content")).toHaveAttribute("aria-busy", "false");
 }
 
+test("wrapped workspace identity keeps sticky panel controls below the product bar", async ({page, matrixServers, security}) => {
+  await open(page, matrixServers);
+  await openTab(page, "Traceability", "graph");
+  const title = page.locator(".product-bar h1");
+  const original = await title.textContent();
+  for (const [width, identity, rootSize] of [[1440, "W".repeat(256), "100%"], [1120, "W".repeat(256), "100%"], [1440, "W".repeat(256), "200%"], [1440, original, "100%"]]) {
+    await page.setViewportSize({width, height: 900});
+    await title.evaluate((element, value) => {element.textContent = value;}, identity);
+    await page.evaluate(size => {document.documentElement.style.fontSize = size;}, rootSize);
+    await expect.poll(() => page.evaluate(() => {
+      window.scrollTo(0, 300);
+      if (window.scrollY === 0) return false;
+      const header = document.querySelector(".product-bar").getBoundingClientRect();
+      return [...document.querySelectorAll(".workspace-panel")].every(panel => {
+        const bounds = panel.getBoundingClientRect();
+        const control = panel.querySelector("button").getBoundingClientRect();
+        return Math.abs(bounds.top - header.bottom) < 1 && control.top >= header.bottom;
+      });
+    })).toBe(true);
+  }
+  await judgeSecurityNow(page, security);
+});
+
 test("a reader finds a requirement by searching the workspace", async ({page, matrixServers, security}) => {
   await open(page, matrixServers);
   await expect(page.locator("#workspace-content article")).toHaveCount(2);

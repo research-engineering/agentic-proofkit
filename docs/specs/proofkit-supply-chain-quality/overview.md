@@ -225,7 +225,10 @@ vulnerability absence, or consumer rollout safety by itself.
   literal grammar test refuses a literal color or size in either style owner,
   a breakpoint that equals no breakpoint token, @import, @font-face, url( or
   image-set(, a listed spelling of a script style write outside the graph
-  geometry owner and a style or presentational attribute in rendered HTML.
+  geometry owner and the panel owner's exact measured-header projection, and a
+  style or presentational attribute in rendered HTML. The measured header height
+  keeps sticky panels below wrapped workspace identifiers and follows font and
+  viewport changes without replacing the token-owned design minimum.
   Both style owners read every token category, and their styles differ
   between the color schemes only through the palette tokens, each of which has
   a light and a dark value. The README screenshot has the admitted README

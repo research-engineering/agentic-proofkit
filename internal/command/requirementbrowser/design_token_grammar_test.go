@@ -132,9 +132,9 @@ var cssLayoutProperties = designTokenSet(
 	"grid-auto-columns", "grid-auto-rows",
 )
 
-// The graph geometry owner, workspace-graph.js, sets exactly these custom
-// properties from GEOMETRY.
-var designTokenGeometryProperties = designTokenSet("--graph-card-width", "--graph-card-height", "--graph-edge-stroke")
+// The graph owner projects GEOMETRY; the panel owner projects the observed
+// product-bar height without changing its token-owned design minimum.
+var designTokenGeometryProperties = designTokenSet("--graph-card-width", "--graph-card-height", "--graph-edge-stroke", "--workspace-product-bar-height")
 
 func designTokenSet(values ...string) map[string]bool {
 	set := make(map[string]bool, len(values))
@@ -705,7 +705,7 @@ var scriptStyleWriteSpellings = []struct {
 
 // scriptStyleWrites are the only admitted style writes of the workspace
 // scripts: the graph geometry owner positions and sizes its canvas, plane
-// headings and nodes from GEOMETRY and sets the three geometry properties.
+// headings and nodes from GEOMETRY; the panel owner measures the product bar.
 var scriptStyleWrites = []string{
 	"workspace-graph.js: button.style.left = designRem(position.x);",
 	"workspace-graph.js: button.style.top = designRem(position.y);",
@@ -715,6 +715,7 @@ var scriptStyleWrites = []string{
 	"workspace-graph.js: canvas.style.height = designRem(height);",
 	"workspace-graph.js: canvas.style.width = designRem(width);",
 	"workspace-graph.js: heading.style.left = designRem(columns[column]);",
+	"workspace-panels.js: document.documentElement.style.setProperty(\"--workspace-product-bar-height\", `${productBar.getBoundingClientRect().height}px`);",
 }
 
 // SVG presentation attributes other than geometry, from SVG 1.1 and SVG 2. A
@@ -788,7 +789,7 @@ func checkScript(name, source string, table designTokenTable, referenced map[str
 			}
 		}
 		if len(spellings) > 0 && !slices.Contains(scriptStyleWrites, name+": "+strings.TrimSpace(line)) {
-			add(7, name, "writes a style outside the graph geometry owner through %s: %s", strings.Join(spellings, ", "), strings.TrimSpace(line))
+			add(7, name, "writes a style outside the admitted geometry owners through %s: %s", strings.Join(spellings, ", "), strings.TrimSpace(line))
 		}
 	}
 	nodesTable := [2]int{-1, -1}

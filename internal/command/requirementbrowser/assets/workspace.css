@@ -120,7 +120,7 @@ summary .workspace-icon { margin-right: var(--space-8); }
 .status-badge[data-status="info"] { color: var(--color-info); background: var(--color-info-surface); }
 
 /* Main column, view tabs and authority boundary. */
-main { grid-column: 2; grid-row: 2; min-width: 0; padding: var(--space-24) var(--space-32) var(--space-48); scroll-margin-block-start: var(--layout-product-bar-height); }
+main { grid-column: 2; grid-row: 2; min-width: 0; padding: var(--space-24) var(--space-32) var(--space-48); scroll-margin-block-start: var(--workspace-product-bar-height); }
 nav { display: flex; flex-wrap: wrap; gap: var(--space-8); margin: var(--space-16) 0; min-width: 0; max-width: 100%; }
 .view-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--layout-tab-width)), 1fr)); gap: var(--space-8); margin: 0 0 var(--space-16); }
 .view-controls button { min-width: 0; padding-inline: var(--space-12); color: var(--color-text-muted); }
@@ -157,11 +157,11 @@ details.projection-boundary > summary { min-block-size: var(--target-size); padd
 /* Side panels: full height beside the main column on wide screens. */
 .workspace-panel {
   position: sticky;
-  top: var(--layout-product-bar-height);
+  top: var(--workspace-product-bar-height);
   align-self: start;
   width: auto;
-  height: calc(var(--layout-dynamic-viewport-height) - var(--layout-product-bar-height));
-  max-height: calc(var(--layout-dynamic-viewport-height) - var(--layout-product-bar-height));
+  height: calc(var(--layout-dynamic-viewport-height) - var(--workspace-product-bar-height));
+  max-height: calc(var(--layout-dynamic-viewport-height) - var(--workspace-product-bar-height));
   margin: 0;
   padding: var(--space-20) var(--space-16);
   overflow: auto;

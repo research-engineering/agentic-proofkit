@@ -6,6 +6,15 @@ export function initializePanels(commitSelection) {
   const inspector = document.querySelector("#workspace-inspector");
   if (!(navigation instanceof HTMLDialogElement) || !(inspector instanceof HTMLDialogElement)) throw new Error("Missing workspace panels");
   const panels = {navigation, inspector};
+  const productBar = document.querySelector(".product-bar");
+  if (!(productBar instanceof HTMLElement)) throw new Error("Missing workspace product bar");
+  const synchronizeGeometry = () => {
+    document.documentElement.style.setProperty("--workspace-product-bar-height", `${productBar.getBoundingClientRect().height}px`);
+  };
+  // Keep the design minimum separate from the observed wrapping/font geometry.
+  const geometryObserver = new ResizeObserver(synchronizeGeometry);
+  geometryObserver.observe(productBar);
+  synchronizeGeometry();
   const mobile = window.matchMedia("(max-width: 64rem)");
   /** @type {Map<HTMLDialogElement, HTMLElement>} */
   const openers = new Map();

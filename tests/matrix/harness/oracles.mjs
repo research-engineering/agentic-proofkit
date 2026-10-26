@@ -346,6 +346,14 @@ export async function observeContent(page, recordSelector) {
     const records = [...document.querySelectorAll(selector)].filter((record) => !record.closest("[hidden]"));
     const findings = [];
     let texts = 0;
+    // Background boxes can cover only part of a line or opt out of hit-testing.
+    // Their geometry is an independent operand, not proof of pixel paint order.
+    const paintedBoxes = [...document.querySelectorAll("body *")].filter((element) => {
+      const style = getComputedStyle(element);
+      return style.visibility === "visible" && globalThis.proofkitMatrix.opacityOf(element) > 0
+        && (globalThis.proofkitMatrix.parse(style.backgroundColor)[3] > 0 || style.backgroundImage !== "none"
+          || element.matches("img, canvas, video, iframe, object, embed"));
+    });
     const listed = new Set([...document.querySelectorAll(".graph-records [data-graph-select]")]
       .filter((element) => element.getClientRects().length > 0)
       .map((element) => element.textContent.replace(/\s+/g, " ").trim()));
@@ -434,8 +442,32 @@ export async function observeContent(page, recordSelector) {
             probe = {line: index, by: hit === null ? null : hit.tagName, className: hit !== null && typeof hit.className === "string" ? hit.className : ""};
             break;
           }
+          for (const element of paintedBoxes) {
+            if (element.contains(owner)) continue;
+            const style = getComputedStyle(element);
+            for (const box of element.getClientRects()) {
+              const left = Math.max(0, rect.left, box.left);
+              const right = Math.min(document.documentElement.clientWidth, rect.right, box.right);
+              const top = Math.max(0, rect.top, box.top);
+              const bottom = Math.min(document.documentElement.clientHeight, rect.bottom, box.bottom);
+              if (right <= left || bottom <= top) continue;
+              if (style.pointerEvents === "none") {
+                painted = false;
+                probe = {line: index, by: element.tagName, problem: "overlapping paint excluded from hit-testing"};
+                break;
+              }
+              const overlapHit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+              if (overlapHit !== null && (overlapHit === element || element.contains(overlapHit))) {
+                painted = false;
+                probe = {line: index, by: element.tagName, problem: "intersecting painted box"};
+                break;
+              }
+            }
+            if (!painted) break;
+          }
+          if (!painted) break;
         }
-        if (!painted) findings.push({text, problem: "painted over", probe});
+        if (!painted) findings.push({text, problem: "visibility refused", probe});
       }
     }
     window.scrollTo(0, 0);
@@ -447,7 +479,7 @@ export function judgeContent(observation, expectedRecords) {
   if (observation.records !== expectedRecords || observation.texts === 0) {
     throw new OracleFailure("content", `the view must render exactly ${expectedRecords} records with text`, {records: observation.records, texts: observation.texts});
   }
-  if (observation.findings.length > 0) throw new OracleFailure("content", "record text is lost", observation.findings);
+  if (observation.findings.length > 0) throw new OracleFailure("content", "record text is lost or its visibility is undecidable", observation.findings);
 }
 
 export async function contentOracle(page, recordSelector, expectedRecords) {

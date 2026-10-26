@@ -39,6 +39,7 @@ var (
 		"reflow refuses an unlabelled scrolling region",
 		"lost content refuses clipped record text",
 		"lost content refuses hidden record text",
+		"lost content refuses full and partial painted overlays",
 		"contrast refuses undecidable group opacity",
 		"keyboard refuses an interactive element that Tab cannot reach",
 		"keyboard refuses an invisible focus indicator",
@@ -55,6 +56,7 @@ var (
 			"a reader sees the coverage gap of a static coverage view with an uncovered requirement",
 		},
 		"workspace": {
+			"wrapped workspace identity keeps sticky panel controls below the product bar",
 			"a reader finds a requirement by searching the workspace",
 			"a reader follows a Traceability record to its relation in the workspace",
 			"a reader sees that an admitted empty coverage report covers no requirement",

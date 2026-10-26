@@ -160,6 +160,39 @@ export function oracleControls({open, container, blockedLoad}) {
     }
   });
 
+  test("lost content refuses full and partial painted overlays", async ({page, matrixServers}) => {
+    const {records, expectedRecords} = await open(page, matrixServers);
+    await contentOracle(page, records, expectedRecords);
+    for (const mode of ["full-noninteractive", "partial", "partial-noninteractive"]) {
+      await page.evaluate(({selector, mode, id}) => {
+        const walker = document.createTreeWalker(document.querySelector(selector), NodeFilter.SHOW_TEXT);
+        let line = null;
+        while (walker.nextNode()) {
+          if (walker.currentNode.textContent.trim() === "") continue;
+          const range = document.createRange();
+          range.selectNodeContents(walker.currentNode);
+          line = [...range.getClientRects()].find(rect => rect.width > 20 && rect.height > 0);
+          if (line) break;
+        }
+        if (line === null) throw new Error("the control requires a rendered record line");
+        const overlay = document.createElement("div");
+        overlay.id = id;
+        overlay.style.position = "fixed";
+        overlay.style.top = "0";
+        overlay.style.bottom = "0";
+        overlay.style.left = mode === "full-noninteractive" ? "0" : `${line.left + line.width / 2}px`;
+        overlay.style.width = mode === "full-noninteractive" ? "100%" : `${line.width / 2}px`;
+        overlay.style.backgroundColor = "black";
+        overlay.style.zIndex = "999999";
+        overlay.style.pointerEvents = mode.endsWith("noninteractive") ? "none" : "auto";
+        document.body.append(overlay);
+      }, {selector: records, mode, id: controlId});
+      await expect(contentOracle(page, records, expectedRecords), mode).rejects.toThrow("content: record text is lost");
+      await page.locator(`#${controlId}`).evaluate(element => element.remove());
+      await contentOracle(page, records, expectedRecords);
+    }
+  });
+
   test("contrast refuses undecidable group opacity", async ({page, matrixServers}) => {
     await open(page, matrixServers);
     await page.evaluate(({selector, id}) => {
