@@ -65,8 +65,14 @@ export const workspaceTabs = Object.freeze({
 export const workspaceViews = Object.freeze(Object.keys(workspaceTabs));
 // Two dialog states, only in the narrow modes, where the panels are modal.
 export const workspaceDialogs = Object.freeze({
-  "workspace-navigation-dialog": {opener: "#open-navigation", panel: "#workspace-navigation"},
-  "workspace-inspector-dialog": {opener: "#open-inspector", panel: "#workspace-inspector"},
+  "workspace-navigation-dialog": {
+    opener: "#open-navigation", panel: "#workspace-navigation",
+    // Native select options have no document line boxes. Their labels, the
+    // navigation records and every other text-bearing panel section do.
+    records: "#workspace-navigation > .panel-heading, #workspace-search > label, #reset-filters, #selected-scope, #workspace-navigation > h3, #all-requirements, #spec-navigation",
+    expectedRecords: 9,
+  },
+  "workspace-inspector-dialog": {opener: "#open-inspector", panel: "#workspace-inspector", records: "#workspace-inspector", expectedRecords: 1},
 });
 
 export function cellTitle(view, scheme) {
@@ -198,11 +204,12 @@ export async function openWorkspaceView(page, servers, view, scheme, mode, selec
 // openWorkspaceDialog opens a panel from its toolbar button by keyboard; the
 // modal dialog then holds focus, and Escape must return it to the opener.
 export async function openWorkspaceDialog(page, dialog) {
-  const {opener, panel} = workspaceDialogs[dialog];
+  const {opener, panel, records, expectedRecords} = workspaceDialogs[dialog];
   await page.locator(opener).focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(`${panel}:modal`)).toHaveCount(1);
   await settle(page);
+  return {records, expectedRecords};
 }
 
 export async function closeDialogByEscape(page, dialog) {
@@ -224,7 +231,7 @@ export async function runOracles(page, security, {records, expectedRecords}, tes
   const axe = await axeOracle(page);
   const controlContrast = await controlContrastOracle(page);
   const reflow = await reflowOracle(page);
-  const content = records === null ? null : await contentOracle(page, records, expectedRecords);
+  const content = await contentOracle(page, records, expectedRecords);
   const keyboard = await keyboardOracle(page, browserName);
   await settleSecurityEvents(page);
   judgeSecurityEvents(security.observation());

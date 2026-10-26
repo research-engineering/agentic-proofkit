@@ -421,9 +421,7 @@ export async function observeContent(page, recordSelector) {
     const records = [...document.querySelectorAll(selector)].filter((record) => !record.closest("[hidden]"));
     const findings = [];
     let texts = 0;
-    // Background boxes can cover only part of a line or opt out of hit-testing.
-    // Their geometry is an independent operand, not proof of pixel paint order.
-    const paintedBoxes = [...document.querySelectorAll("body *")].filter(globalThis.proofkitMatrix.paints);
+    const paintByRoot = new Map();
     const listed = new Map([...document.querySelectorAll(".graph-records [data-graph-select]")]
       .filter((element) => element.getClientRects().length > 0)
       .map((element) => [element.dataset.graphSelect, element]));
@@ -443,6 +441,12 @@ export async function observeContent(page, recordSelector) {
       return false;
     };
     for (const record of records) {
+      // Modal boxes escape document-ancestor clips and ordinary document paint;
+      // their own descendants still clip and cover one another normally.
+      const modal = record.closest("dialog:modal");
+      const root = modal ?? document.body;
+      if (!paintByRoot.has(root)) paintByRoot.set(root, [...root.querySelectorAll("*")].filter(globalThis.proofkitMatrix.paints));
+      const paintedBoxes = paintByRoot.get(root);
       const walker = document.createTreeWalker(record, NodeFilter.SHOW_TEXT);
       while (walker.nextNode()) {
         const node = walker.currentNode;
@@ -473,7 +477,7 @@ export async function observeContent(page, recordSelector) {
         const union = rects.reduce((box, rect) => ({left: Math.min(box.left, rect.left), top: Math.min(box.top, rect.top), right: Math.max(box.right, rect.right), bottom: Math.max(box.bottom, rect.bottom)}),
           {left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity});
         let clipped = null;
-        for (let ancestor = owner; ancestor instanceof Element && ancestor !== document.documentElement; ancestor = ancestor.parentElement) {
+        for (let ancestor = owner; ancestor instanceof Element && ancestor !== document.documentElement && (modal === null || modal.contains(ancestor)); ancestor = ancestor.parentElement) {
           const style = getComputedStyle(ancestor);
           const clipsX = ["hidden", "clip"].includes(style.overflowX);
           const clipsY = ["hidden", "clip"].includes(style.overflowY);

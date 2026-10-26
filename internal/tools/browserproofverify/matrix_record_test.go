@@ -189,12 +189,15 @@ func TestMatrixRecordAdmitsOnlyAPassedRecordOfItsFamily(t *testing.T) {
 			{"other record kind", func(record map[string]any) { record["proofKind"] = "proofkit.browser-visual-proof" }},
 			{"schema version", func(record map[string]any) { record["schemaVersion"] = json.Number("2") }},
 			{"source revision", func(record map[string]any) { record["sourceRevision"] = "def456" }},
+			{"source tree state", func(record map[string]any) { record["sourceTreeState"] = "clean" }},
 			{"weakened non-claims", func(record map[string]any) { record["nonClaims"] = record["nonClaims"].([]any)[1:] }},
 			{"unknown key", func(record map[string]any) { record["retries"] = json.Number("1") }},
 			{"command argv", func(record map[string]any) {
 				record["command"].(map[string]any)["argv"] = []any{"node_modules/@playwright/test/cli.js", "test"}
 			}},
 			{"failed exit", func(record map[string]any) { record["command"].(map[string]any)["exitCode"] = json.Number("1") }},
+			{"command runner", func(record map[string]any) { record["command"].(map[string]any)["runner"] = "bun" }},
+			{"command input mode", func(record map[string]any) { record["command"].(map[string]any)["inputMode"] = "mutable_worktree" }},
 			{"other environment id", func(record map[string]any) {
 				record["referenceEnvironment"].(map[string]any)["environmentId"] = "sha256:" + strings.Repeat("0", 64)
 			}},
