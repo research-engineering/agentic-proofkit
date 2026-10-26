@@ -390,6 +390,13 @@ func checkTokenStylesheet(nodes []cssNode, add func(int, string, string, ...any)
 			add(2, tokenSourceName, "dark token %s is not a palette token declared in the base context", name)
 		}
 	}
+	// The palette switches with the color scheme: every palette token has a
+	// dark value as well as its light base value.
+	for _, name := range sortedKeys(table.palette) {
+		if _, dark := table.dark[name]; !dark {
+			add(2, tokenSourceName, "palette token %s has no dark color-scheme value", name)
+		}
+	}
 	for _, name := range sortedKeys(table.forced) {
 		_, base := table.base[name]
 		_, dark := table.dark[name]
@@ -428,7 +435,29 @@ func containsLiteralColor(tokens []cssToken) bool {
 	return false
 }
 
-// checkStyleOwner applies rules 1, 2 and 3 to one style owner.
+// schemeSwitch names how CSS tokens can switch styles on the color scheme
+// outside the palette tokens, or returns "": a prefers-color-scheme media
+// feature, a style() query, which can test a palette token's value, or an
+// if() function, which can test either inside a declaration value. Names are
+// compared unescaped, so an escaped spelling such as prefers-color-sch\65me
+// is the same feature.
+func schemeSwitch(tokens []cssToken) string {
+	for _, token := range tokens {
+		name := strings.ToLower(token.value)
+		switch {
+		case (token.kind == cssIdent || token.kind == cssFunction) && strings.Contains(name, "prefers-color-scheme"):
+			return "a prefers-color-scheme condition"
+		case token.kind == cssFunction && name == "style":
+			return "a style() query"
+		case token.kind == cssFunction && name == "if":
+			return "an if() function"
+		}
+	}
+	return ""
+}
+
+// checkStyleOwner applies rules 1, 2 and 3 to one style owner and records
+// the tokens it reads in referenced.
 func checkStyleOwner(owner string, nodes []cssNode, table designTokenTable, referenced map[string]bool, add func(int, string, string, ...any)) {
 	declared := map[string]bool{}
 	type reference struct {
@@ -441,6 +470,12 @@ func checkStyleOwner(owner string, nodes []cssNode, table designTokenTable, refe
 		for _, node := range nodes {
 			switch node.kind {
 			case cssAtRule:
+				// The palette tokens switch the color scheme, so a style owner
+				// holds no at-rule conditioned on it, in any at-rule and in any
+				// spelling.
+				if reason := schemeSwitch(node.prelude); reason != "" {
+					add(2, owner, "holds @%s %s, %s; the palette tokens switch the color scheme", node.name, cssText(node.prelude), reason)
+				}
 				walk(node.children, forced || (node.name == "media" && compactCSSText(node.prelude) == "(forced-colors:active)"))
 			case cssQualifiedRule:
 				walk(node.children, forced)
@@ -452,6 +487,9 @@ func checkStyleOwner(owner string, nodes []cssNode, table designTokenTable, refe
 				}
 				for _, problem := range literalProblems(node.name, node.value) {
 					add(rule, owner, "%s: %s", node.name, problem)
+				}
+				if reason := schemeSwitch(node.value); reason != "" {
+					add(2, owner, "%s holds %s; the palette tokens switch the color scheme", node.name, reason)
 				}
 				for _, name := range varReferences(node.value) {
 					references = append(references, reference{name: name, forced: forced})
@@ -738,6 +776,9 @@ func checkScript(name, source string, table designTokenTable, referenced map[str
 			continue
 		}
 		checkLengths(name, "matchMedia("+query+")", tokens, table, referenced, add)
+		if reason := schemeSwitch(tokens); reason != "" {
+			add(2, name, "matchMedia(%s) holds %s; the palette tokens switch the color scheme", query, reason)
+		}
 	}
 	for _, line := range strings.Split(source, "\n") {
 		spellings := []string{}
@@ -851,6 +892,9 @@ func checkRenderedHTML(name, document string, styleElements int, table designTok
 					continue
 				}
 				checkLengths(name, "<"+tag.name+"> media attribute "+attribute.value, tokens, table, referenced, add)
+				if reason := schemeSwitch(tokens); reason != "" {
+					add(2, name, "<%s> media attribute %q holds %s; the palette tokens switch the color scheme", tag.name, attribute.value, reason)
+				}
 			case renderedPresentationalAttributes[attribute.name]:
 				if admitted, ok := admittedSVGPresentationValues[attribute.name]; ok && attribute.value == admitted {
 					continue

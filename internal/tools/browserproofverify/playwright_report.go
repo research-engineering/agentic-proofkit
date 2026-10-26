@@ -52,11 +52,7 @@ func writeAdmittedPlaywrightReport(root, reportPath string, kind proofKind) erro
 	for _, path := range resolution.InputPaths {
 		admittedPaths[path] = struct{}{}
 	}
-	var expectedTests map[string][]string
-	if kind.isVisual() {
-		expectedTests = expectedVisualProjectTests()
-	}
-	projects, err := admitPlaywrightReport(bytes.NewReader(raw), root, manifest.TestRoot, admittedPaths, expectedTests)
+	projects, err := admitPlaywrightReport(bytes.NewReader(raw), root, manifest.TestRoot, admittedPaths, kind.expectedProjectTests())
 	if err != nil {
 		return err
 	}

@@ -1318,6 +1318,15 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestDesignTokenGrammarRefusesEveryRuleMutant",
 			},
 		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.design-token-categories"}: {
+			witnessPath: "internal/command/requirementbrowser/design_token_category_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestEveryDesignTokenCategoryIsUsedByBothStyleOwners"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-readme-screenshot"}: {
+			witnessPath: "scripts/browser-visual-references.test.mjs",
+			commandIDs:  []string{"proofkit.browser-check"}, environmentClasses: []string{"local-node-browser"},
+		},
 		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-exact-comparator"}: {
 			witnessPath: "scripts/browser-visual-references.test.mjs",
 			commandIDs:  []string{"proofkit.browser-check"}, environmentClasses: []string{"local-node-browser"},
@@ -1325,6 +1334,37 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.visual-reference-gate"}: {
 			witnessPath: "tests/visual/references.spec.mjs",
 			commandIDs:  []string{"proofkit.browser-visual"}, environmentClasses: []string{"container-linux-arm64-browser"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.accessibility-matrix-static"}: {
+			witnessPath: "tests/matrix/static/cells.spec.mjs",
+			commandIDs:  []string{"proofkit.browser-matrix-static"}, environmentClasses: []string{"container-linux-arm64-browser"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.accessibility-matrix-workspace"}: {
+			witnessPath: "tests/matrix/workspace/cells.spec.mjs",
+			commandIDs:  []string{"proofkit.browser-matrix-workspace"}, environmentClasses: []string{"container-linux-arm64-browser"},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.accessibility-matrix-record"}: {
+			witnessPath: "internal/tools/browserproofverify/matrix_record_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{
+				"TestBrowserMatrixScriptsAreSeparateFromThePackageGate",
+				"TestMatrixInventoryIsTheExactCellProduct",
+				"TestMatrixProofKindsRequireTheReferenceEnvironmentAndPassedRecords",
+				"TestMatrixRecordAdmitsOnlyAPassedRecordOfItsFamily",
+			},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.accessibility-matrix-ci"}: {
+			witnessPath: "scripts/workflow_browser_matrix_oracle_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{
+				"TestCIBrowserMatrixRejectsWeakenedMatrixGate",
+				"TestCIBrowserMatrixRunsBothFamiliesInTheReferenceEnvironment",
+			},
+		},
+		{"REQ-PROOFKIT-QUALITY-028", "proofkit.supply-chain-quality.accessibility-matrix-coverage-gap-fixture"}: {
+			witnessPath: "internal/testsupport/browserfixture/coverage_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestCoverageGapInputRendersAnUncoveredRequirementAsAFailure"},
 		},
 		{"REQ-PROOFKIT-SPEC-011", "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi"}: {
 			witnessPath: "internal/app/cli_abi_test.go",

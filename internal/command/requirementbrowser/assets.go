@@ -30,6 +30,9 @@ var workspaceNavigationJavaScript []byte
 //go:embed assets/workspace-coverage.js
 var workspaceCoverageJavaScript []byte
 
+//go:embed assets/workspace-presentation.js
+var workspacePresentationJavaScript []byte
+
 //go:embed assets/workspace-diff.js
 var workspaceDiffJavaScript []byte
 

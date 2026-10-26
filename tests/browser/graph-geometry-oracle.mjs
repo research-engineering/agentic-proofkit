@@ -127,18 +127,37 @@ export function assertGraphGeometry(graph, observed, domMeasurement = false) {
   for (let i = 1; i < sorted.length; i++) assert(sorted[i] - sorted[i - 1] >= 6, "slot spacing");
 }
 
+// The design token that inks graph relations and their arrowheads.
+export const GRAPH_INK_TOKEN = "--color-text-muted";
+
+// graphInkFromTokens returns the computed rgb() form of the graph ink token's
+// light value in the design-token stylesheet text: its first declaration,
+// which is in the base :root context.
+export function graphInkFromTokens(stylesheet) {
+  const match = stylesheet.match(new RegExp(GRAPH_INK_TOKEN + ": #([0-9a-f]{6});"));
+  assert(match !== null, "the design-token stylesheet declares " + GRAPH_INK_TOKEN + " as an opaque hex color");
+  const [red, green, blue] = [0, 2, 4].map(offset => Number.parseInt(match[1].slice(offset, offset + 2), 16));
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
+// readGraphInk returns the computed color of the graph ink token in the page.
+// In forced colors the edges use CanvasText instead.
+export async function readGraphInk(page) {
+  return page.locator(".graph-canvas").evaluate((canvas, token) => {
+    const probe = document.createElement("span");
+    probe.style.color = matchMedia("(forced-colors: active)").matches ? "CanvasText" : "var(" + token + ")";
+    canvas.append(probe);
+    const ink = getComputedStyle(probe).color;
+    probe.remove();
+    return ink;
+  }, GRAPH_INK_TOKEN);
+}
+
 export async function readGraphGeometry(page) {
-  return page.locator(".graph-canvas").evaluate(canvas => {
+  const geometry = await page.locator(".graph-canvas").evaluate(canvas => {
     const bounds = canvas.getBoundingClientRect(), svg = canvas.querySelector(":scope > svg");
     const svgBounds = svg.getBoundingClientRect();
     const matrix = svg.getScreenCTM();
-    // HTML authored color and SVG system ink need not have equal computed
-    // values in forced colors. Resolve the required token independently.
-    const probe = document.createElement("span");
-    probe.style.color = matchMedia("(forced-colors: active)").matches ? "CanvasText" : "var(--text)";
-    canvas.append(probe);
-    const expectedInk = getComputedStyle(probe).color;
-    probe.remove();
     return {
       rootFont: parseFloat(getComputedStyle(document.documentElement).fontSize),
       width: bounds.width, height: bounds.height, svgWidth: svgBounds.width, svgHeight: svgBounds.height,
@@ -157,9 +176,11 @@ export async function readGraphGeometry(page) {
       paint: [...svg.querySelectorAll("[data-edge-id]")].map(e => {const s = getComputedStyle(e); return {fill: s.fill, stroke: s.stroke, width: parseFloat(s.strokeWidth), join: s.strokeLinejoin, vectorEffect: s.vectorEffect};}),
       marker: Object.fromEntries(["viewBox", "markerUnits", "markerWidth", "markerHeight", "refX", "refY", "orient"].map(key => [key, svg.querySelector("marker").getAttribute(key)])),
       markerPath: svg.querySelector("marker path").getAttribute("d"), markerFill: getComputedStyle(svg.querySelector("marker path")).fill,
-      expectedInk,
     };
   });
+  // HTML authored color and SVG system ink need not have equal computed
+  // values in forced colors. Resolve the required token independently.
+  return {...geometry, expectedInk: await readGraphInk(page)};
 }
 
 export function normalizeGraphGeometry(observed) {

@@ -422,6 +422,24 @@ test("workspace navigation owns waiter rejection before a delayed trigger", asyn
   assert.equal(barrier.length, 1);
 });
 
+test("the module specifier scanner refuses a source it cannot advance through", () => {
+  const directory = mkdtempSync(join(tmpdir(), "proofkit-module-scan-"));
+  try {
+    const stuck = join(directory, "stuck.mjs");
+    // A "#" after a template substitution and one inside a regular
+    // expression literal both stop the context-free scanner.
+    for (const source of ["const b = `${a}#`;", "const b = /#/.test(a);"]) {
+      writeFileSync(stuck, `import {a} from "./a.mjs";\n${source}\n`);
+      assert.throws(() => localModuleSpecifiers(stuck), /does not scan: the module scanner stopped advancing/, source);
+    }
+    const plain = join(directory, "plain.mjs");
+    writeFileSync(plain, "import {a} from \"./a.mjs\";\nconst b = a + \": #\";\n");
+    assert.deepEqual(localModuleSpecifiers(plain), ["./a.mjs"]);
+  } finally {
+    rmSync(directory, {recursive: true, force: true});
+  }
+});
+
 test("every local JavaScript import is content-bound by the owner resolution", () => {
   const {inputPaths} = loadBrowserProofInputResolution();
   const admitted = new Set(inputPaths);
@@ -547,7 +565,16 @@ function passingProjectExecutions() {
 function localModuleSpecifiers(path) {
   const scanner = createScanner(true, LanguageVariant.Standard, readFileSync(path, "utf8"));
   const tokens = [];
+  // This context-free scanner does not rescan template continuations or
+  // regular expression literals, so it can read a "#" outside a string or
+  // template: after a template substitution, inside a regular expression or
+  // bare. When no identifier start follows that "#", it returns an empty
+  // private identifier without advancing, forever; refuse such a source
+  // instead of collecting tokens until the heap is exhausted.
+  let end = -1;
   for (let kind = scanner.scan(); kind !== SyntaxKind.EndOfFile; kind = scanner.scan()) {
+    if (scanner.getTokenEnd() <= end) throw new Error(`${path} does not scan: the module scanner stopped advancing at offset ${end}`);
+    end = scanner.getTokenEnd();
     tokens.push({kind, value: scanner.getTokenValue()});
   }
   const result = [];

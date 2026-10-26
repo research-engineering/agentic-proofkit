@@ -263,3 +263,57 @@ func TestInPageLinksResolveToTheirAnchoredDetails(t *testing.T) {
 		t.Fatal("anchored details must differ from details only by the id")
 	}
 }
+
+// A status badge always names its state in text; the state only selects the
+// tone, and a state outside the tone table gets the neutral info tone.
+func TestStatusNamesTheStateInTextAndSelectsAClosedTone(t *testing.T) {
+	for value, want := range map[string]string{
+		"passed":         `<span class="status-badge" data-status="passed">passed</span>`,
+		"failed":         `<span class="status-badge" data-status="failed">failed</span>`,
+		"blocked":        `<span class="status-badge" data-status="blocked">blocked</span>`,
+		"warning":        `<span class="status-badge" data-status="warning">warning</span>`,
+		"witness_backed": `<span class="status-badge" data-status="info">witness_backed</span>`,
+		"Failed":         `<span class="status-badge" data-status="info">Failed</span>`,
+		"<b>&\"":         `<span class="status-badge" data-status="info">&lt;b&gt;&amp;&#34;</span>`,
+	} {
+		if got := Status(value).html; got != want {
+			t.Errorf("Status(%q) = %s, want %s", value, got, want)
+		}
+	}
+}
+
+func TestTableCellsBreakOnlyAtSeparatorsAndLongRuns(t *testing.T) {
+	hash := "bef7043a7ad46d3a65098986129e4e6208af005ff8cc3a6b9d08d6616a303fa0"
+	for fragment, want := range map[string]string{
+		"REQ-BROWSER-COVERAGE-001":                      "REQ-<wbr>BROWSER-<wbr>COVERAGE-001",
+		"<code>test.browser.coverage.semantic</code>":   "<code>test.<wbr>browser.<wbr>coverage.<wbr>semantic</code>",
+		"mapped_to_declared_route":                      "mapped_<wbr>to_<wbr>declared_<wbr>route",
+		"go test ./internal/command/requirementbrowser": "go test ./<wbr>internal/<wbr>command/<wbr>requirementbrowser",
+		"browser_coverage_test.go::falsification":       "browser_<wbr>coverage_<wbr>test.<wbr>go::<wbr>falsification",
+		`<a href="#a.b-c"><code>x.y</code></a>`:         `<a href="#a.b-c"><code>x.<wbr>y</code></a>`,
+		"a.&lt;b &amp;b.c":                              "a.&lt;b &amp;b.<wbr>c",
+		"1.5 v2.json 0.17.0":                            "1.5 v2.<wbr>json 0.17.0",
+		"\u03a9.\u0394":                                 "\u03a9.<wbr>\u0394",
+		"sha256:" + hash:                                "sha256:<wbr>" + hash[0:12] + "<wbr>" + hash[12:24] + "<wbr>" + hash[24:36] + "<wbr>" + hash[36:48] + "<wbr>" + hash[48:60] + "<wbr>" + hash[60:],
+		strings.Repeat("a", 24):                         strings.Repeat("a", 24),
+		strings.Repeat("a", 25):                         strings.Repeat("a", 12) + "<wbr>" + strings.Repeat("a", 12) + "<wbr>a",
+		strings.Repeat("a", 36):                         strings.Repeat("a", 12) + "<wbr>" + strings.Repeat("a", 12) + "<wbr>" + strings.Repeat("a", 12),
+		"<ul><li>a.b</li></ul>":                         "<ul><li>a.<wbr>b</li></ul>",
+		"":                                              "",
+	} {
+		if got := breakOpportunities(fragment); got != want {
+			t.Errorf("breakOpportunities(%q) = %q, want %q", fragment, got, want)
+		}
+	}
+	// Only table cells carry the break opportunities; headings, cards and
+	// summaries render their text unchanged.
+	output := HTML(Document{
+		Title:        "a.b",
+		SummaryItems: []SummaryItem{Summary("x.y", "p.q", true)},
+		Cards:        []Card{{ID: "c.d", Title: "e.f", Body: Code("g.h")}},
+		Table:        &Table{Columns: []Column{{Key: "v", Label: "k.l"}}, Rows: []Row{{Cells: []Cell{TableCell("v", "m.n", true)}}}},
+	})
+	if got := strings.Count(output, "<wbr>"); got != 1 || !strings.Contains(output, "<td><code>m.<wbr>n</code></td>") {
+		t.Fatalf("rendered HTML holds %d break opportunities, want exactly the table cell's:\n%s", got, output)
+	}
+}

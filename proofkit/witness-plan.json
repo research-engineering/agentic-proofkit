@@ -128,6 +128,8 @@
     ],
     "parallelGroups": [
       "boundary-contract",
+      "browser-matrix-static",
+      "browser-matrix-workspace",
       "browser-runtime",
       "browser-visual",
       "compact-contract",
@@ -931,6 +933,80 @@
     },
     {
       "schemaVersion": 1,
+      "id": "proofkit.browser-matrix-static",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "browser:matrix:static",
+        "--",
+        "--require-reference-environment"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "container-linux-arm64-browser"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [
+        {
+          "kind": "report",
+          "path": "artifacts/proofkit/browser-matrix-static-proof.json",
+          "required": true
+        }
+      ],
+      "parallelGroup": "browser-matrix-static",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.browser-matrix-workspace",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "browser:matrix:workspace",
+        "--",
+        "--require-reference-environment"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "container-linux-arm64-browser"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [
+        {
+          "kind": "report",
+          "path": "artifacts/proofkit/browser-matrix-workspace-proof.json",
+          "required": true
+        }
+      ],
+      "parallelGroup": "browser-matrix-workspace",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
+    },
+    {
+      "schemaVersion": 1,
       "id": "proofkit.receipt-contract-check",
       "cwd": ".",
       "argv": [
@@ -1272,6 +1348,196 @@
         "The release candidate and the package gate do not run visual reference proof.",
         "Visual reference proof compares rendered views only in the recorded reference environment; any other host reports the comparison as unverified and makes no pixel claim.",
         "Visual reference proof does not cover content below the first 2400 CSS pixels of a view, identify who reviewed a reference, or prove usability or WCAG conformance."
+      ]
+    },
+    {
+      "commandId": "proofkit.browser-matrix-static",
+      "inputSelectors": [
+        "go.mod",
+        "go.sum",
+        "internal/command/adoptionmaterialization",
+        "internal/command/adoptionplan",
+        "internal/command/capabilitymapadmission",
+        "internal/command/nativeevidenceguidance",
+        "internal/command/projectstatus",
+        "internal/command/repositoryinventory",
+        "internal/command/requirementbinding",
+        "internal/command/requirementbrowser",
+        "internal/command/requirementcontext",
+        "internal/command/requirementcoverageview",
+        "internal/command/requirementdiff",
+        "internal/command/requirementgraph",
+        "internal/command/requirementproofview",
+        "internal/command/requirementsourceadmission",
+        "internal/command/requirementsourceview",
+        "internal/command/requirementspectree",
+        "internal/command/stackpreset",
+        "internal/command/testevidenceinventory",
+        "internal/kernel/admission",
+        "internal/kernel/admit",
+        "internal/kernel/agentenvelope",
+        "internal/kernel/browserdoc",
+        "internal/kernel/cliexec",
+        "internal/kernel/compactproofcontract",
+        "internal/kernel/diagnostic",
+        "internal/kernel/digest",
+        "internal/kernel/jsonshape",
+        "internal/kernel/markdownfmt",
+        "internal/kernel/pathidentity",
+        "internal/kernel/proofvocab",
+        "internal/kernel/report",
+        "internal/kernel/repositorytransaction",
+        "internal/kernel/requirementsourcecodec",
+        "internal/kernel/requirementsourcemodel",
+        "internal/kernel/rootpath",
+        "internal/kernel/scenarioidentity",
+        "internal/kernel/secretjson",
+        "internal/kernel/stablejson",
+        "internal/kernel/unicodepolicy",
+        "internal/kernel/witnesscommand",
+        "internal/testsupport/browserfixture",
+        "internal/tools/browserproofverify",
+        "internal/tools/browsertestserver",
+        "package-lock.json",
+        "package.json",
+        "playwright.matrix.config.mjs",
+        "proofkit/witness-plan.json",
+        "scripts/browser-matrix-static-proof-inputs.v1.json",
+        "scripts/browser-proof-execution.mjs",
+        "scripts/browser-proof-inputs.mjs",
+        "scripts/diagnostic.mjs",
+        "scripts/stable-json.mjs",
+        "scripts/write-browser-matrix-proof.mjs",
+        "tests/matrix/harness",
+        "tests/matrix/static",
+        "tests/visual/environment-probe.mjs",
+        "tests/visual/environment.json",
+        "tests/visual/fonts.conf"
+      ],
+      "outputSelectors": [
+        "artifacts/proofkit/browser-matrix-static-proof.json"
+      ],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.local-artifacts"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Accessibility matrix proof of the static rendering family covers only its listed views, modes, negative controls and reader tasks; it does not prove WCAG conformance certification, a human usability study, complete screen-reader interoperability or 400-percent zoom behavior.",
+        "Pinned Chromium, Firefox, and Playwright WebKit engines do not prove branded Safari compatibility.",
+        "The release candidate and the package gate do not run the accessibility matrix."
+      ]
+    },
+    {
+      "commandId": "proofkit.browser-matrix-workspace",
+      "inputSelectors": [
+        "go.mod",
+        "go.sum",
+        "internal/command/adoptionmaterialization",
+        "internal/command/adoptionplan",
+        "internal/command/capabilitymapadmission",
+        "internal/command/nativeevidenceguidance",
+        "internal/command/projectstatus",
+        "internal/command/repositoryinventory",
+        "internal/command/requirementbinding",
+        "internal/command/requirementbrowser",
+        "internal/command/requirementcontext",
+        "internal/command/requirementcoverageview",
+        "internal/command/requirementdiff",
+        "internal/command/requirementgraph",
+        "internal/command/requirementproofview",
+        "internal/command/requirementsourceadmission",
+        "internal/command/requirementsourceview",
+        "internal/command/requirementspectree",
+        "internal/command/stackpreset",
+        "internal/command/testevidenceinventory",
+        "internal/kernel/admission",
+        "internal/kernel/admit",
+        "internal/kernel/agentenvelope",
+        "internal/kernel/browserdoc",
+        "internal/kernel/cliexec",
+        "internal/kernel/compactproofcontract",
+        "internal/kernel/diagnostic",
+        "internal/kernel/digest",
+        "internal/kernel/jsonshape",
+        "internal/kernel/markdownfmt",
+        "internal/kernel/pathidentity",
+        "internal/kernel/proofvocab",
+        "internal/kernel/report",
+        "internal/kernel/repositorytransaction",
+        "internal/kernel/requirementsourcecodec",
+        "internal/kernel/requirementsourcemodel",
+        "internal/kernel/rootpath",
+        "internal/kernel/scenarioidentity",
+        "internal/kernel/secretjson",
+        "internal/kernel/stablejson",
+        "internal/kernel/unicodepolicy",
+        "internal/kernel/witnesscommand",
+        "internal/testsupport/browserfixture",
+        "internal/tools/browserproofverify",
+        "internal/tools/browsertestserver",
+        "package-lock.json",
+        "package.json",
+        "playwright.matrix.config.mjs",
+        "proofkit/witness-plan.json",
+        "scripts/browser-matrix-workspace-proof-inputs.v1.json",
+        "scripts/browser-proof-execution.mjs",
+        "scripts/browser-proof-inputs.mjs",
+        "scripts/diagnostic.mjs",
+        "scripts/stable-json.mjs",
+        "scripts/write-browser-matrix-proof.mjs",
+        "tests/matrix/harness",
+        "tests/matrix/workspace",
+        "tests/visual/environment-probe.mjs",
+        "tests/visual/environment.json",
+        "tests/visual/fonts.conf"
+      ],
+      "outputSelectors": [
+        "artifacts/proofkit/browser-matrix-workspace-proof.json"
+      ],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.local-artifacts"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Accessibility matrix proof of the workspace family covers only its listed views, modes, negative controls and reader tasks; it does not prove WCAG conformance certification, a human usability study, complete screen-reader interoperability or 400-percent zoom behavior.",
+        "Pinned Chromium, Firefox, and Playwright WebKit engines do not prove branded Safari compatibility.",
+        "The release candidate and the package gate do not run the accessibility matrix."
       ]
     },
     {

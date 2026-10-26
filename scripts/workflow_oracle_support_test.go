@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -395,14 +396,18 @@ func validateOwnedReleaseEnvironment(path string, jobID string, environment *yam
 	return nil
 }
 
-// The only admitted job container is the visual reference environment of the
-// ci workflow's browser-visual job: an exact digest-pinned image reference and
-// exact options. Every container image reference must carry a sha256 digest.
+// The only admitted job containers are the visual reference environment of
+// the ci workflow's browser-visual and browser-matrix jobs: one exact
+// digest-pinned image reference and exact options. Every container image
+// reference must carry a sha256 digest.
 const (
-	ownedVisualContainerJob     = "browser-visual"
 	ownedVisualContainerImage   = "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27"
 	ownedVisualContainerOptions = "--user 1001 --ipc=host --init"
 )
+
+// ownedContainerJobs lists, sorted, the ci jobs that run in the reference
+// environment container.
+var ownedContainerJobs = []string{"browser-matrix", "browser-visual"}
 
 var digestPinnedContainerImage = regexp.MustCompile(`^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:\.[a-z0-9]+(?:[._-][a-z0-9]+)*)*(?::[0-9]+)?(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}@sha256:[0-9a-f]{64}$`)
 
@@ -423,7 +428,7 @@ func validateContainerImageReference(reference string) error {
 }
 
 func validateOwnedJobContainer(path, jobID string, container *yaml.Node) error {
-	if !workflowAllowsVisualContainer(path) || jobID != ownedVisualContainerJob {
+	if !workflowAllowsVisualContainer(path) || !slices.Contains(ownedContainerJobs, jobID) {
 		return fmt.Errorf("workflow %q job %q contains unowned key %q", path, jobID, "container")
 	}
 	label := fmt.Sprintf("workflow %q job %q container", path, jobID)

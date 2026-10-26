@@ -30,6 +30,8 @@ var proofNonClaims = []string{
 	"This record does not independently authenticate or sandbox the same-user proof runner, external toolchain packages, or browser binaries.",
 }
 
+const requireReferenceEnvironmentVariable = "PROOFKIT_BROWSER_REQUIRE_REFERENCE_ENVIRONMENT"
+
 const usage = "usage: browserproofverify [--manifest PATH] [--resolve-inputs | --run [--require-reference-environment] | --admit-playwright-report PATH | --admit-references --from RUN_DIRECTORY]"
 
 func main() {
@@ -64,7 +66,7 @@ func main() {
 		err = writeCurrentInputResolution(root, kind)
 	case len(arguments) == 1 && arguments[0] == "--run":
 		err = runBrowserProof(root, kind, false)
-	case len(arguments) == 2 && arguments[0] == "--run" && arguments[1] == "--require-reference-environment" && kind.admitsState("unverified"):
+	case len(arguments) == 2 && arguments[0] == "--run" && arguments[1] == "--require-reference-environment" && kind.ReferenceEnvironment:
 		err = runBrowserProof(root, kind, true)
 	case len(arguments) == 3 && arguments[0] == "--admit-references" && arguments[1] == "--from" && kind.isVisual():
 		err = writeVisualReferenceInventory(root, arguments[2])
@@ -97,8 +99,11 @@ func verifyCurrentProof(root string, kind proofKind) error {
 }
 
 func verifyKindRecord(root string, kind proofKind, value any, resolution proofInputResolution, revision, state string) error {
-	if kind.isVisual() {
+	switch {
+	case kind.isVisual():
 		return verifyVisualRecord(root, value, resolution, revision, state)
+	case kind.isMatrix():
+		return verifyMatrixRecord(root, kind, value, resolution, revision, state)
 	}
 	return verifyRecord(root, value, resolution, revision, state)
 }
@@ -148,6 +153,11 @@ func runBrowserProof(root string, kind proofKind, requireReferenceEnvironment bo
 	environment := withEnvironmentValue(os.Environ(), proofInputResolutionEnvironment, strings.TrimSpace(string(encoded)))
 	environment = withEnvironmentValue(environment, browserRunDirectoryEnvironment, runPaths.RunDirectory)
 	environment = withEnvironmentValue(environment, browserProofCandidateEnvironment, runPaths.CandidatePath)
+	if requireReferenceEnvironment {
+		// A matrix writer refuses to launch a browser outside the recorded
+		// reference environment; the visual writer launches none there anyway.
+		environment = withEnvironmentValue(environment, requireReferenceEnvironmentVariable, "true")
+	}
 	command.Env = environment
 	command.Stdout = os.Stdout
 	stderr := diagnostic.NewStderrCapture()

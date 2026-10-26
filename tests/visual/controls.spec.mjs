@@ -33,12 +33,12 @@ function replaceOnce(stylesheet, from, to) {
 // Raises the blue channel of the light text color token of the design-token
 // stylesheet by one unit.
 function shiftTextColorByOneUnit(stylesheet) {
-  const declarations = [...stylesheet.matchAll(/--text: #([0-9a-f]{6});/g)];
+  const declarations = [...stylesheet.matchAll(/--color-text: #([0-9a-f]{6});/g)];
   if (declarations.length === 0) throw new Error("copied stylesheet has no text color token");
   const [declaration, hex] = declarations[0];
   const blue = Number.parseInt(hex.slice(4), 16);
   const shifted = hex.slice(0, 4) + (blue === 255 ? blue - 1 : blue + 1).toString(16).padStart(2, "0");
-  return stylesheet.replace(declaration, `--text: #${shifted};`);
+  return stylesheet.replace(declaration, `--color-text: #${shifted};`);
 }
 
 // copies maps each routed stylesheet asset to the function that copies it.
@@ -55,8 +55,9 @@ test("a routed unchanged stylesheet keeps its reference", async ({page, browserN
   expect(actual, "routing an unchanged stylesheet copy must keep the admitted digest and dimensions").toEqual({height: admitted.height, rgbaSHA256: admitted.rgbaSHA256, width: admitted.width});
 });
 
-// Each control mutates one stylesheet; the text color is a design token, and
-// the other mutations change workspace.css.
+// Each control mutates one stylesheet: the text color and the two font family
+// stacks are design tokens, and the shift and weight mutations change
+// workspace.css.
 const controls = [
   ["a one-unit text color change differs from its reference", "text-color-one-unit", "tokens.css", shiftTextColorByOneUnit],
   ["a one-pixel shift differs from its reference", "one-pixel-shift", "workspace.css", (stylesheet) => `${stylesheet}\nhtml { padding-inline-start: 1px; }\n`],
@@ -64,9 +65,9 @@ const controls = [
   // and no relative weight such as bolder reaches a heavier synthesized face.
   ["a font-weight change from 400 to 700 differs from its reference", "font-weight-700", "workspace.css", (stylesheet) => `${stylesheet}\n* { font-weight: 700 !important; }\n`],
   // The root family stack ends in sans-serif; the copy makes it serif.
-  ["a change of the sans-serif family to serif differs from its reference", "serif-family", "workspace.css", (stylesheet) => replaceOnce(stylesheet, "font-family: ui-sans-serif, system-ui, sans-serif;", "font-family: serif;")],
+  ["a change of the sans-serif family to serif differs from its reference", "serif-family", "tokens.css", (stylesheet) => replaceOnce(stylesheet, "--font-family-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;", "--font-family-sans: serif;")],
   // The requirement IDs use the monospace stack; the copy makes them sans-serif.
-  ["a change of the monospace family to sans-serif differs from its reference", "monospace-family", "workspace.css", (stylesheet) => replaceOnce(stylesheet, "font-family: ui-monospace, monospace;", "font-family: sans-serif;")],
+  ["a change of the monospace family to sans-serif differs from its reference", "monospace-family", "tokens.css", (stylesheet) => replaceOnce(stylesheet, "--font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace;", "--font-family-mono: sans-serif;")],
 ];
 
 for (const [title, name, asset, mutate] of controls) {

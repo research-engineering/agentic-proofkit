@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync} from "node:fs";
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test from "node:test";
@@ -125,6 +125,38 @@ test("the capture inventory digests every PNG capture and refuses other files", 
   } finally {
     rmSync(directory, {recursive: true, force: true});
   }
+});
+
+// The README screenshot is the admitted README scene: a PNG whose dimensions
+// and canonical RGBA digest equal the admitted reference entry, so it cannot
+// drift from the reference that the visual gate compares.
+const readmeSceneID = "chromium/readme-scene.light.1440";
+
+function assertREADMEScreenshot(png, references) {
+  const entries = references.references.filter((entry) => entry.id === readmeSceneID);
+  assert.equal(entries.length, 1, "the inventory admits exactly one README scene");
+  const image = decodePNG(png);
+  assert.deepEqual({width: image.width, height: image.height, rgbaSHA256: canonicalRGBADigest(image)},
+    {width: entries[0].width, height: entries[0].height, rgbaSHA256: entries[0].rgbaSHA256},
+    "docs/images/workspace.png must have the admitted README scene's dimensions and canonical RGBA digest");
+}
+
+test("the README screenshot is exactly the admitted README scene", () => {
+  const png = readFileSync(new URL("../docs/images/workspace.png", import.meta.url));
+  const references = JSON.parse(readFileSync(new URL("../tests/visual/references.json", import.meta.url), "utf8"));
+  assertREADMEScreenshot(png, references);
+  // Falsifiers: one channel of one pixel changed, the digest of another
+  // reference, and an inventory without the README scene.
+  const image = decodePNG(png);
+  const pixels = Buffer.from(image.rgba);
+  pixels[0] ^= 1;
+  const changed = encodePNG({width: image.width, height: image.height, colorType: 6, channels: 4, pixels});
+  assert.throws(() => assertREADMEScreenshot(changed, references), /admitted README scene/);
+  const other = references.references.find((entry) => entry.id !== readmeSceneID);
+  const swapped = {...references, references: references.references.map((entry) => entry.id === readmeSceneID ? {...entry, rgbaSHA256: other.rgbaSHA256} : entry)};
+  assert.throws(() => assertREADMEScreenshot(png, swapped), /admitted README scene/);
+  const missing = {...references, references: references.references.filter((entry) => entry.id !== readmeSceneID)};
+  assert.throws(() => assertREADMEScreenshot(png, missing), /exactly one README scene/);
 });
 
 test("exact PNG decoding refuses malformed, unsupported or oversized images", () => {

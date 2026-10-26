@@ -73,6 +73,8 @@ func browserHandler(view string, rendered renderedView, expectedAuthority, capab
 			serveWorkspaceAsset(response, method, workspaceNavigationJavaScript, "text/javascript; charset=utf-8")
 		case "/assets/workspace-coverage.js":
 			serveWorkspaceAsset(response, method, workspaceCoverageJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-presentation.js":
+			serveWorkspaceAsset(response, method, workspacePresentationJavaScript, "text/javascript; charset=utf-8")
 		case "/assets/workspace-diff.js":
 			serveWorkspaceAsset(response, method, workspaceDiffJavaScript, "text/javascript; charset=utf-8")
 		case "/assets/workspace-graph.js":

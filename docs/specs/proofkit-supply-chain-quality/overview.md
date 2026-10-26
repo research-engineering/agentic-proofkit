@@ -189,8 +189,9 @@ vulnerability absence, or consumer rollout safety by itself.
   downloadable artifact-relative paths without inferring change completeness
   from the source diff.
 - `REQ-PROOFKIT-QUALITY-025`: exact workflow inventory, closed raw-YAML keys
-  before typed decoding, exact release deployment environments, one exact
-  job container for the visual reference job, sha256-digest pins for every
+  before typed decoding, exact release deployment environments, two exact
+  job containers, one for the visual reference job and one for the
+  accessibility matrix job, sha256-digest pins for every
   workflow container image reference, pinned action commit identities,
   admitted status expressions, the required aggregate shell program, and
   read-only treatment of an existing release are source-oracle invariants.
@@ -225,6 +226,20 @@ vulnerability absence, or consumer rollout safety by itself.
   a breakpoint that equals no breakpoint token, @import, @font-face, url( or
   image-set(, a listed spelling of a script style write outside the graph
   geometry owner and a style or presentational attribute in rendered HTML.
+  Both style owners read every token category, and their styles differ
+  between the color schemes only through the palette tokens, each of which has
+  a light and a dark value. The README screenshot has the admitted README
+  scene's canonical pixel digest.
+  The separate accessibility matrix runs every view, and the workspace panel
+  dialogs, in each engine, color scheme and mode (320 and 1440 CSS pixels,
+  both also at a 200% root font size, and full-page zoom) through axe with a
+  computed-contrast oracle for its incomplete contrast results and for the
+  placeholder text and checkbox boundaries that axe does not test, reflow, lost
+  content, keyboard and visible focus, Unicode selection and the CSP, console
+  and security-policy oracles; each oracle has negative controls, reader tasks
+  cover finding, reading, following, coverage gaps and diffs, and each of its
+  two families writes a record only when every engine passes with zero
+  retries.
 
 ## Non-Claims
 

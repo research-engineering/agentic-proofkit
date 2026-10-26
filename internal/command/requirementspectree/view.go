@@ -338,10 +338,15 @@ func html(view map[string]any, exports []browserdoc.ExportFile) string {
 }
 
 func nodeBody(node map[string]any) browserdoc.Fragment {
+	// The root's parentNodeId is empty; like an empty list, it reads "none".
+	parent := browserdoc.Text("none")
+	if id := stringValue(node["parentNodeId"]); id != "" {
+		parent = browserdoc.Code(id)
+	}
 	return browserdoc.Concat(
 		browserdoc.DefinitionList(
 			browserdoc.Definition("Kind", browserdoc.Text(stringValue(node["nodeKind"]))),
-			browserdoc.Definition("Parent", browserdoc.Code(stringValue(node["parentNodeId"]))),
+			browserdoc.Definition("Parent", parent),
 			browserdoc.Definition("Children", browserdoc.ListOrNone(stringArray(node["childNodeIds"]), true)),
 			browserdoc.Definition("Source refs", browserdoc.ListOrNone(sourceRefIDs(anyArray(node["sourceRefs"])), true)),
 			browserdoc.Definition("Overlays", browserdoc.ListOrNone(overlayIDs(anyArray(node["overlays"])), true)),

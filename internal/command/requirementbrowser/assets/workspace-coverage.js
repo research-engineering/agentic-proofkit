@@ -1,6 +1,7 @@
 // @ts-check
 
 import {icon} from "./workspace-icons.js";
+import {statusBadge} from "./workspace-presentation.js";
 
 /** @param {HTMLElement} container @param {any} projection @param {(requirement: any, opener: HTMLButtonElement) => void} ask */
 export function renderCoveragePage(container, projection, ask) {
@@ -23,11 +24,14 @@ export function renderCoveragePage(container, projection, ask) {
     const title = document.createElement("h3");
     title.className = "caller-text";
     title.textContent = requirement.requirementId;
+    const heading = document.createElement("div");
+    heading.className = "record-heading";
+    heading.append(title, row === null ? statusBadge("Not reported", "warning") : statusBadge("Reported", "info"));
     const invariant = document.createElement("p");
     invariant.className = "caller-text";
     invariant.dataset.anchorId = requirement.anchor.anchorId;
     invariant.textContent = requirement.invariant;
-    identity.append(title, invariant);
+    identity.append(heading, invariant);
     if (requirement.sharedPremises?.length) {
       const premises = document.createElement("ul");
       premises.className = "shared-premises caller-text";

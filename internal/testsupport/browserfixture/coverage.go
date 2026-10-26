@@ -262,3 +262,23 @@ func CoverageWorkspace(mode string, empty bool) (map[string]any, error) {
 	current["snapshotId"] = digest.SHA256TextRef(string(identity))
 	return workspace, nil
 }
+
+// CoverageGapInput is the structured coverage input with a second active
+// requirement that no proof binding route or test evidence covers, so the
+// rendered coverage view reports a coverage gap and a failure.
+func CoverageGapInput() (map[string]any, error) {
+	input, err := CoverageInput("structured")
+	if err != nil {
+		return nil, err
+	}
+	members := input["requirementSource"].(map[string]any)["groups"].([]any)[0].(map[string]any)["members"].([]any)
+	covered := members[0].(map[string]any)
+	gap := map[string]any{"requirementId": "REQ-BROWSER-COVERAGE-002", "statementCompletion": "Coverage browser views show a requirement that no test evidence covers."}
+	fields := map[string]any{}
+	for key, value := range covered["fields"].(map[string]any) {
+		fields[key] = value
+	}
+	gap["fields"] = fields
+	input["requirementSource"].(map[string]any)["groups"].([]any)[0].(map[string]any)["members"] = append(members, gap)
+	return input, nil
+}

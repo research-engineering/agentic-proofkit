@@ -1,5 +1,7 @@
 // @ts-check
 
+import {statusBadge} from "./workspace-presentation.js";
+
 /** @param {any[]} changes */
 export function summarizeDiffPage(changes) {
   const requirements = new Set();
@@ -44,9 +46,14 @@ export function renderDiffPage(container, changes) {
   for (const change of changes) {
     const article = document.createElement("article");
     article.dataset.changeId = change.changeId;
+    // The heading names the changed entity and, as a badge, its change class;
+    // the browser gives no change class a meaning, so every class has the
+    // info tone.
     const title = document.createElement("h3");
-    title.textContent = `${change.changeClass}: ${change.entityKind} ${change.entityId}`;
-    title.className = "caller-text";
+    title.className = "caller-text record-heading";
+    const entity = document.createElement("span");
+    entity.textContent = `${change.entityKind} ${change.entityId}`;
+    title.append(entity, " ", statusBadge(change.changeClass, "info"));
     const pointer = document.createElement("p");
     pointer.className = "caller-text";
     pointer.textContent = change.jsonPointer;

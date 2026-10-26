@@ -688,6 +688,9 @@ func TestBuildViewMarkdownAndHTMLAreDeterministicAndEscaped(t *testing.T) {
 		"docs/specs/submodule/requirements.v1.json",
 		digestA(),
 		"Requirement spec tree views do not prove coverage completeness",
+		// The root's empty parent reads "none"; another node names its parent.
+		"<dt>Parent</dt><dd>none</dd>",
+		"<dt>Parent</dt><dd><code>",
 	} {
 		if !strings.Contains(leftHTML, want) {
 			t.Fatalf("HTML output missing %q:\n%s", want, leftHTML)
