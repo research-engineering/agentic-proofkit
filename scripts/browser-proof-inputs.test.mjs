@@ -401,7 +401,9 @@ test("workspace navigation excludes provider-falsified lifecycle waits", () => {
 test("workspace navigation owns waiter rejection before a delayed trigger", async () => {
   const armed = [];
   const disarmed = [];
+  const barrier = [];
   const page = {
+    route: async (matcher, handler) => { barrier.push({matcher, handler}); },
     mainFrame: () => ({}),
     evaluate: async () => undefined,
     on: (event) => { armed.push(event); },
@@ -416,6 +418,8 @@ test("workspace navigation owns waiter rejection before a delayed trigger", asyn
   }, "unexpected navigation response"), /early response rejection/);
   assert.deepEqual(armed, ["request", "response", "download"]);
   assert.deepEqual(disarmed, armed);
+  // The shared navigation request barrier was in place and stays.
+  assert.equal(barrier.length, 1);
 });
 
 test("every local JavaScript import is content-bound by the owner resolution", () => {

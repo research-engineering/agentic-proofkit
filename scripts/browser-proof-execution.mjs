@@ -69,6 +69,52 @@ function admitBrowserProofReport({admissionArguments, execFile, reportPath, sour
   return projects;
 }
 
+// Every page navigation of a browser proof harness runs inside
+// withNavigationRequestBarrier, which adds to the page, before the navigation
+// starts, a route that matches every URL and only falls back. From then on the
+// driver intercepts every request of the page. The handler overrides nothing:
+// each request continues unchanged to the next matching route of the test, or
+// to the network, and its response is the network's. While any route is in
+// place the driver also disables the HTTP cache; the fixture server already
+// marks its documents, assets and API results cache-control: no-store.
+//
+// The barrier closes a race in pinned WebKit (WebKit bug 325840). Every
+// fixture document is served with Cross-Origin-Opener-Policy: same-origin, so
+// a navigation into one from the initial about:blank, or from a document of
+// another origin, needs a browsing context group switch. WebKit starts that
+// switch when its network process receives the response, and continues the
+// navigation in a new web process. The old web process reports the start of
+// its provisional load to the UI process over its own connection, and when
+// that report arrives after the switch has begun, the UI process cancels the
+// switched navigation ("Load request cancelled"): nothing commits, the page
+// keeps its previous document, and goto waits for a load that cannot come.
+// The old web process sends that report before it starts loading the
+// document; with interception it then holds the document request and sends
+// the interception notice over the same connection, and the driver lets the
+// request continue only after receiving that notice. The request therefore
+// reaches the network process only after the UI process has handled the
+// report, and the switch cannot overtake it.
+//
+// The route stays for the page's lifetime. Removing it would turn
+// interception off while the page may still have requests in flight, and in
+// pinned Chromium a request issued while interception turns off can be left
+// pending forever, leaving the workspace waiting for an API result. Each call
+// adds the route again, so a page whose routes a test removed still navigates
+// behind the barrier; the first call on a page comes before its first
+// navigation, while the initial about:blank has no request in flight.
+export async function withNavigationRequestBarrier(page, navigation) {
+  await page.route(everyNavigationBarrierURL, fallBackFromNavigationBarrier);
+  return navigation();
+}
+
+function everyNavigationBarrierURL() {
+  return true;
+}
+
+function fallBackFromNavigationBarrier(route) {
+  return route.fallback();
+}
+
 export async function startBrowserServer(binary, options = {}) {
   const spawnProcess = options.spawnProcess ?? spawn;
   const readinessTimeoutMs = options.readinessTimeoutMs ?? 30_000;
