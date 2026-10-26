@@ -1408,12 +1408,10 @@
         "scripts/diagnostic.mjs",
         "scripts/stable-json.mjs",
         "scripts/write-browser-matrix-proof.mjs",
-        "tests/browser/focus-paint-oracle.mjs",
         "tests/matrix/harness",
         "tests/matrix/static",
         "tests/visual/environment-probe.mjs",
         "tests/visual/environment.json",
-        "tests/visual/exact-png.mjs",
         "tests/visual/fonts.conf"
       ],
       "outputSelectors": [
@@ -1505,12 +1503,10 @@
         "scripts/diagnostic.mjs",
         "scripts/stable-json.mjs",
         "scripts/write-browser-matrix-proof.mjs",
-        "tests/browser/focus-paint-oracle.mjs",
         "tests/matrix/harness",
         "tests/matrix/workspace",
         "tests/visual/environment-probe.mjs",
         "tests/visual/environment.json",
-        "tests/visual/exact-png.mjs",
         "tests/visual/fonts.conf"
       ],
       "outputSelectors": [

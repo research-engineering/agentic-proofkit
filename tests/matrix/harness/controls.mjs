@@ -1,7 +1,7 @@
 import {expect} from "@playwright/test";
 
 import {
-  axeOracle, axeRuleNodes, axeTargetSelector, computedContrast, contentOracle, controlContrastOracle, judgeSecurityEvents, keyboardOracle, reflowOracle,
+  axeOracle, axeRuleNodes, axeTargetSelector, computedContrast, contentOracle, controlContrastOracle, judgeSecurityEvents, keyboardOracle, reflowOracle, settleSecurityEvents,
 } from "./oracles.mjs";
 
 // Negative controls: each one breaks one oracle's premise in a real rendered
@@ -275,7 +275,7 @@ export function oracleControls({open, container, blockedLoad}) {
   });
 
   for (const [title, pointerEvents] of [["keyboard refuses an occluded focus indicator", "auto"], ["keyboard refuses potential non-hit-tested focus occlusion", "none"]]) {
-    test(title, async ({page, matrixServers}, testInfo) => {
+    test(title, async ({page, matrixServers, security}, testInfo) => {
       await open(page, matrixServers);
       await keyboardOracle(page, testInfo.project.name);
       await page.evaluate(({id, pointerEvents}) => {
@@ -287,6 +287,8 @@ export function oracleControls({open, container, blockedLoad}) {
       await expect(keyboardOracle(page, testInfo.project.name)).rejects.toThrow("keyboard: a focused element has no visible focus indicator");
       await page.locator(`#${controlId}`).evaluate(element => element.remove());
       await keyboardOracle(page, testInfo.project.name);
+      await settleSecurityEvents(page);
+      judgeSecurityEvents(security.observation());
     });
   }
 

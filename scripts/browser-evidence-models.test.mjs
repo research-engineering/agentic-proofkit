@@ -5,38 +5,6 @@ import {GEOMETRY, GRAPH_PAGE, GRAPH_PLANES, graphPagePositions, visibleGraphPage
 import {readFileSync} from "node:fs";
 import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, graphInkFromTokens, graphNodeIntersections, normalizeGraphGeometry, segmentIntersectsRectangle, unrelatedCollinearOverlaps} from "../tests/browser/graph-geometry-oracle.mjs";
 import {resolveHandoffRequirement} from "../internal/command/requirementbrowser/assets/workspace-handoff.js";
-import {sampleFocusPaint} from "../tests/browser/focus-paint-oracle.mjs";
-
-test("focus paint binds CSS coordinates, clip dimensions and exact opaque channels", () => {
-  const image = {width: 7, height: 3, rgba: new Uint8Array(7 * 3 * 4).fill(255)};
-  const color = [12, 102, 112, 1];
-  const offset = (1 * image.width + 2) * 4;
-  image.rgba.set([...color.slice(0, 3), 255], offset);
-  const before = image.rgba.slice();
-  const clip = {x: 10, y: 20, width: 7, height: 3};
-  const sample = {x: 12.9, y: 21.5, backgroundX: 14.9, backgroundY: 21.5};
-  const observe = (candidate = sample, expectedColor = color) => sampleFocusPaint(image, clip, {samples: [candidate], color: expectedColor})[0];
-  assert.deepEqual(observe(), {sample, ring: [12, 102, 112, 255], background: [255, 255, 255, 255], colorMatches: true});
-  for (const channel of [0, 1, 2]) {
-    const changed = [...color]; changed[channel] += 1;
-    assert.equal(observe(sample, changed).colorMatches, false);
-  }
-  assert.equal(observe(sample, [...color.slice(0, 3), 0.5]).colorMatches, false);
-  for (const [x, y] of [[9.9, 21], [17, 21], [12, 19.9], [12, 23], [NaN, 21], [12, Infinity]]) {
-    assert.equal(observe({...sample, x, y}).colorMatches, false);
-    assert.equal(observe({...sample, backgroundX: x, backgroundY: y}).colorMatches, false);
-  }
-  image.rgba[offset + 3] = 254;
-  assert.equal(observe().colorMatches, false);
-  image.rgba.set(before);
-  image.rgba[(1 * image.width + 4) * 4 + 3] = 254;
-  assert.equal(observe().colorMatches, false);
-  image.rgba.set(before);
-  for (const field of ["width", "height"]) {
-    assert.throws(() => sampleFocusPaint(image, {...clip, [field]: clip[field] + 1}, {samples: [sample], color}), /dimensions differ/);
-  }
-  assert.deepEqual(image.rgba, before);
-});
 
 test("diff page classes partition changes while risk and lifecycle remain independent facets", () => {
   const changes = [

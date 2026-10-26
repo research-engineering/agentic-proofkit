@@ -1,7 +1,5 @@
 import axeMin from "axe-core/axe.min.js";
 import {expect} from "@playwright/test";
-import {decodePNG} from "../../visual/exact-png.mjs";
-import {sampleFocusPaint} from "../../browser/focus-paint-oracle.mjs";
 
 // The oracles of one accessibility-matrix cell. Each oracle observes the page
 // and hands its observation to a pure judgement; the negative controls feed
@@ -122,6 +120,9 @@ const proofkitMatrix = (() => {
     const modal = element.closest("dialog:modal");
     const nonHitPaint = [...(modal ?? document.body).querySelectorAll("*")]
       .filter(candidate => unrelated(candidate) && getComputedStyle(candidate).pointerEvents === "none" && paints(candidate));
+    const interior = document.elementsFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    const interiorLayer = interior.indexOf(element);
+    const behindInterior = new Set(interiorLayer < 0 ? [] : interior.slice(interiorLayer + 1));
     const containsPoint = (candidate, x, y) => {
       const paint = candidate.getBoundingClientRect();
       let {left, top, right, bottom} = paint;
@@ -136,19 +137,10 @@ const proofkitMatrix = (() => {
     const visible = unclipped.some(([x, y]) => {
       const stack = document.elementsFromPoint(x, y);
       const ownLayer = stack.findIndex(candidate => candidate.contains(element) || element.contains(candidate));
-      return ownLayer >= 0 && !stack.slice(0, ownLayer).some(candidate => unrelated(candidate) && paints(candidate))
+      return ownLayer >= 0 && !stack.slice(0, ownLayer).some(candidate => unrelated(candidate) && !behindInterior.has(candidate) && paints(candidate))
         && !nonHitPaint.some(candidate => containsPoint(candidate, x, y));
     });
-    const samples = unclipped.map(([x, y]) => ({x, y, backgroundX: x, backgroundY: y}));
-    for (const sample of samples) {
-      const index = points.findIndex(([x, y]) => x === sample.x && y === sample.y);
-      if (index === 0) sample.backgroundX -= width / 2 + 1;
-      if (index === 1) sample.backgroundX += width / 2 + 1;
-      if (index === 2) sample.backgroundY -= width / 2 + 1;
-      if (index === 3) sample.backgroundY += width / 2 + 1;
-    }
-    return {visible, reason: visible ? null : "outline paint needs observation", bounds, points,
-      paintProbe: visible ? null : {samples, color: parse(style.outlineColor), box: {left: box.left, top: box.top, right: box.right, bottom: box.bottom}, margin: offset + width + 2}};
+    return {visible, reason: visible ? null : "outline is covered or its visibility is undecidable", bounds, points};
   };
   // tabStops lists the enabled interactive elements in DOM order: inside an
   // open modal dialog only its own, outside closed details only summaries.
@@ -615,36 +607,11 @@ export async function observeKeyboard(page, browserName) {
         outlineWidth,
         token,
         visible: paintDecidable && visibility.visible,
-        paintDecidable,
-        viewport: {width: document.documentElement.clientWidth, height: document.documentElement.clientHeight},
         visibilityProblem: visibility.reason,
         visibilityGeometry: visibility,
         contrast: helpers.ratio(helpers.composite(outline, background), background),
       };
     });
-    const probe = observation.visibilityGeometry?.paintProbe;
-    if (probe && observation.paintDecidable && probe.color[3] === 1) {
-      // Hit-testing can see paint beneath an outline. Resolve only this
-      // ambiguity from a viewport-relative CSS-pixel capture, not paint order.
-      const viewport = observation.viewport;
-      const x = Math.max(0, Math.floor(probe.box.left - probe.margin));
-      const y = Math.max(0, Math.floor(probe.box.top - probe.margin));
-      const width = Math.min(viewport.width, Math.ceil(probe.box.right + probe.margin)) - x;
-      const height = Math.min(viewport.height, Math.ceil(probe.box.bottom + probe.margin)) - y;
-      const image = decodePNG(await page.screenshot({clip: {x, y, width, height}, scale: "css"}));
-      const samples = sampleFocusPaint(image, {x, y, width, height}, probe);
-      observation.visibilityGeometry.paintSamples = samples;
-      for (const {sample, ring, background, colorMatches} of samples) {
-        if (!colorMatches) continue;
-        const contrast = await page.evaluate(({ring, background}) => globalThis.proofkitMatrix.ratio(ring, background), {ring, background});
-        if (contrast >= 3) {
-          observation.visible = true;
-          observation.visibilityProblem = null;
-          observation.visibilityGeometry.paintObservation = {sample, ring, background, contrast};
-          break;
-        }
-      }
-    }
     return observation;
   };
   const visited = [];
