@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -211,6 +212,55 @@ func TestMatrixRecordAdmitsOnlyAPassedRecordOfItsFamily(t *testing.T) {
 				record["engines"].([]any)[1].(map[string]any)["version"] = "1"
 			}},
 			{"engine version not from its project", func(record map[string]any) { record["engines"].([]any)[2].(map[string]any)["version"] = "1" }},
+			{"project name", func(record map[string]any) { record["projects"].([]any)[0].(map[string]any)["name"] = "chrome" }},
+			{"project browser name", func(record map[string]any) { record["projects"].([]any)[0].(map[string]any)["browserName"] = "chrome" }},
+			{"project version empty", func(record map[string]any) { record["projects"].([]any)[0].(map[string]any)["browserVersion"] = "" }},
+			{"engine name", func(record map[string]any) { record["engines"].([]any)[0].(map[string]any)["name"] = "chrome" }},
+			{"engine order", func(record map[string]any) {
+				engines := record["engines"].([]any)
+				engines[0], engines[1] = engines[1], engines[0]
+			}},
+			{"project order", func(record map[string]any) {
+				projects := record["projects"].([]any)
+				projects[0], projects[1] = projects[1], projects[0]
+			}},
+			{"two engine versions", func(record map[string]any) { record["engines"] = record["engines"].([]any)[:2] }},
+			{"test id order", func(record map[string]any) {
+				ids := record["projects"].([]any)[0].(map[string]any)["testIds"].([]any)
+				ids[0], ids[1] = ids[1], ids[0]
+			}},
+			{"duplicate test id", func(record map[string]any) {
+				ids := record["projects"].([]any)[0].(map[string]any)["testIds"].([]any)
+				ids[1] = ids[0]
+			}},
+			{"wrong executed count", func(record map[string]any) {
+				record["projects"].([]any)[0].(map[string]any)["executedTestCount"] = json.Number("1")
+			}},
+			{"text passed count", func(record map[string]any) { record["projects"].([]any)[0].(map[string]any)["passedTestCount"] = "1" }},
+			{"input digest", func(record map[string]any) { record["inputDigest"] = "sha256:" + strings.Repeat("0", 64) }},
+			{"input server", func(record map[string]any) {
+				record["inputResolution"].(map[string]any)["serverTarget"] = "./internal/tools/other"
+			}},
+			{"input writer", func(record map[string]any) {
+				record["inputResolution"].(map[string]any)["writerPath"] = "scripts/other.mjs"
+			}},
+			{"asset order", func(record map[string]any) {
+				assets := record["assets"].([]any)
+				assets[0], assets[1] = assets[1], assets[0]
+			}},
+			{"asset count", func(record map[string]any) { record["assets"] = record["assets"].([]any)[1:] }},
+			{"invalid observed font digest", func(record map[string]any) { record["observedEnvironment"].(map[string]any)["fontConfig"] = "invalid" }},
+			{"invalid observed architecture", func(record map[string]any) { record["observedEnvironment"].(map[string]any)["architecture"] = true }},
+			{"invalid observed OS", func(record map[string]any) { record["observedEnvironment"].(map[string]any)["os"] = "linux" }},
+			{"invalid observed package", func(record map[string]any) {
+				record["observedEnvironment"].(map[string]any)["packages"].(map[string]any)["fontconfig"] = true
+			}},
+			{"invalid CPU flag", func(record map[string]any) {
+				record["observedEnvironment"].(map[string]any)["cpu"].(map[string]any)["avx2"] = "false"
+			}},
+			{"invalid CPU text", func(record map[string]any) {
+				record["observedEnvironment"].(map[string]any)["cpu"].(map[string]any)["model"] = true
+			}},
 			{"missing cell", func(record map[string]any) {
 				project := record["projects"].([]any)[0].(map[string]any)
 				ids := project["testIds"].([]any)
@@ -239,6 +289,104 @@ func TestMatrixRecordAdmitsOnlyAPassedRecordOfItsFamily(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestMatrixRecordRejectsStructuralMutations(t *testing.T) {
+	for _, family := range []string{"static", "workspace"} {
+		kind := matrixKind(t, family)
+		root, resolution := repositoryMatrixResolution(t, kind)
+		base := matrixRecordFixture(t, root, kind, resolution)
+		if err := verifyMatrixRecord(root, kind, base, resolution, "abc123", "dirty"); err != nil {
+			t.Fatal(err)
+		}
+		encoded, err := json.Marshal(base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fresh := func(t *testing.T) map[string]any {
+			t.Helper()
+			var record map[string]any
+			decoder := json.NewDecoder(bytes.NewReader(encoded))
+			decoder.UseNumber()
+			if err := decoder.Decode(&record); err != nil {
+				t.Fatal(err)
+			}
+			return record
+		}
+		objects := []struct {
+			name         string
+			keys         []string
+			selectObject func(map[string]any) map[string]any
+		}{
+			{"record", []string{"assets", "command", "divergentFields", "engines", "family", "inputDigest", "inputResolution", "nonClaims", "observedEnvironment", "projects", "proofKind", "referenceEnvironment", "schemaVersion", "sourceRevision", "sourceTreeState", "state"}, func(r map[string]any) map[string]any { return r }},
+			{"command", []string{"argv", "exitCode", "inputMode", "runner"}, func(r map[string]any) map[string]any { return r["command"].(map[string]any) }},
+			{"reference", []string{"environmentId"}, func(r map[string]any) map[string]any { return r["referenceEnvironment"].(map[string]any) }},
+			{"project", []string{"browserName", "browserVersion", "executedTestCount", "name", "passedTestCount", "testIds"}, func(r map[string]any) map[string]any { return r["projects"].([]any)[0].(map[string]any) }},
+			{"engine", []string{"name", "version"}, func(r map[string]any) map[string]any { return r["engines"].([]any)[0].(map[string]any) }},
+			{"input", []string{"serverTarget", "writerPath"}, func(r map[string]any) map[string]any { return r["inputResolution"].(map[string]any) }},
+			{"asset", []string{"path", "sha256"}, func(r map[string]any) map[string]any { return r["assets"].([]any)[0].(map[string]any) }},
+		}
+		for _, object := range objects {
+			for _, key := range append(append([]string{}, object.keys...), "unknown") {
+				for _, mode := range []string{"missing", "null"} {
+					if key == "unknown" && mode == "missing" {
+						continue
+					}
+					t.Run(family+"/"+object.name+"/"+key+"/"+mode, func(t *testing.T) {
+						record := fresh(t)
+						fields := object.selectObject(record)
+						if mode == "missing" {
+							delete(fields, key)
+						} else {
+							fields[key] = nil
+						}
+						if err := verifyMatrixRecord(root, kind, record, resolution, "abc123", "dirty"); err == nil {
+							t.Fatal("structurally invalid matrix record was admitted")
+						}
+					})
+				}
+			}
+		}
+		if err := verifyMatrixRecord(root, kind, nil, resolution, "abc123", "dirty"); err == nil {
+			t.Fatal("null matrix record was admitted")
+		}
+		// These observation values may be null, but their named fields must exist.
+		for _, object := range []struct {
+			name         string
+			keys         []string
+			selectObject func(map[string]any) map[string]any
+		}{
+			{"environment", []string{"architecture", "cpu", "dockerImage", "emulation", "engines", "fontConfig", "fontMatches", "os", "packages"}, func(r map[string]any) map[string]any { return r["observedEnvironment"].(map[string]any) }},
+			{"cpu", []string{"avx2", "avx512f", "features", "hypervisor", "model", "vendor"}, func(r map[string]any) map[string]any {
+				return r["observedEnvironment"].(map[string]any)["cpu"].(map[string]any)
+			}},
+		} {
+			for _, key := range append(append([]string{}, object.keys...), "unknown") {
+				t.Run(family+"/"+object.name+"/"+key, func(t *testing.T) {
+					record := fresh(t)
+					fields := object.selectObject(record)
+					if key == "unknown" {
+						fields[key] = nil
+					} else {
+						delete(fields, key)
+					}
+					if err := verifyMatrixRecord(root, kind, record, resolution, "abc123", "dirty"); err == nil {
+						t.Fatal("incomplete or extended environment observation was admitted")
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestMatrixRecordReaderRejectsDuplicateKeys(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "record.json"), []byte(`{"family":"static","family":"workspace"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readRepositoryJSON(root, "record.json", 1024); err == nil || !strings.Contains(err.Error(), "duplicate object key") {
+		t.Fatalf("strict repository JSON reader must reject duplicate keys, got %v", err)
 	}
 }
 

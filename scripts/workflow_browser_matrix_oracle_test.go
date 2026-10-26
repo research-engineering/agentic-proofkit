@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -10,6 +12,54 @@ import (
 )
 
 const browserMatrixJob = "browser-matrix"
+
+func TestBrowserStaticCollectorRetainsEveryOracleSuite(t *testing.T) {
+	files := []string{
+		"scripts/browser-evidence-models.test.mjs",
+		"scripts/browser-proof-execution.test.mjs",
+		"scripts/browser-proof-inputs.test.mjs",
+		"scripts/browser-selection-authority.test.mjs",
+		"scripts/browser-visual-references.test.mjs",
+		"scripts/browser-workspace-requests.test.mjs",
+		"scripts/diagnostic-entrypoints.test.mjs",
+		"scripts/stable-json.test.mjs",
+		"tests/matrix/harness/oracles.test.mjs",
+	}
+	want := "tsc -p tsconfig.browser.json && node --test " + strings.Join(files, " ")
+	validate := func(script string) error {
+		if script != want {
+			return errors.New("browser:static-check must run type checking and every owned oracle suite without suppression")
+		}
+		return nil
+	}
+	raw, err := os.ReadFile(filepath.Join("..", "package.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Scripts map[string]string `json:"scripts"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if err := validate(manifest.Scripts["browser:static-check"]); err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		t.Run(file, func(t *testing.T) {
+			for _, replacement := range []string{"", "scripts/not-an-oracle.test.mjs"} {
+				if err := validate(strings.Replace(want, file, replacement, 1)); err == nil {
+					t.Fatal("collector admitted an omitted or replaced suite")
+				}
+			}
+		})
+	}
+	for _, script := range []string{strings.TrimPrefix(want, "tsc -p tsconfig.browser.json && "), want + " || true"} {
+		if err := validate(script); err == nil {
+			t.Fatal("collector admitted omitted type checking or failure suppression")
+		}
+	}
+}
 
 // validateCIBrowserMatrixJob checks the accessibility matrix job: the same
 // digest-pinned reference environment container as the visual job on the
