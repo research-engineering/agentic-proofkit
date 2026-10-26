@@ -238,7 +238,8 @@ vulnerability absence, or consumer rollout safety by itself.
   both also at a 200% root font size, and full-page zoom) through axe with a
   computed-contrast oracle for its incomplete contrast results and for the
   placeholder text and checkbox boundaries that axe does not test, reflow, lost
-  content, keyboard and visible focus, Unicode selection and the CSP, console
+  content in the observed native disclosure state, keyboard and visible focus,
+  Unicode selection and the CSP, console
   and security-policy oracles; each oracle has negative controls, reader tasks
   cover finding, reading, following, coverage gaps and diffs, and each of its
   two families writes a record only when every engine passes with zero

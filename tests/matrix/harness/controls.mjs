@@ -160,6 +160,28 @@ export function oracleControls({open, container, blockedLoad}) {
     }
   });
 
+  test("lost content follows native disclosure state", async ({page, matrixServers}) => {
+    const {records, expectedRecords} = await open(page, matrixServers);
+    await page.evaluate(({selector, id}) => {
+      const details = document.createElement("details");
+      details.id = id;
+      const summary = document.createElement("summary");
+      summary.textContent = "Disclosure control";
+      const text = document.createElement("p");
+      text.textContent = "Required expanded disclosure text";
+      text.hidden = true;
+      details.append(summary, text);
+      document.querySelector(selector).append(details);
+    }, {selector: records, id: controlId});
+    await contentOracle(page, records, expectedRecords);
+    await page.locator(`#${controlId}`).evaluate(element => {element.open = true;});
+    await expect(contentOracle(page, records, expectedRecords)).rejects.toThrow("content: record text is lost");
+    await page.locator(`#${controlId} p`).evaluate(element => {element.hidden = false;});
+    await contentOracle(page, records, expectedRecords);
+    await page.locator(`#${controlId}`).evaluate(element => element.remove());
+    await contentOracle(page, records, expectedRecords);
+  });
+
   test("lost content refuses full and partial painted overlays", async ({page, matrixServers}) => {
     const {records, expectedRecords} = await open(page, matrixServers);
     await contentOracle(page, records, expectedRecords);

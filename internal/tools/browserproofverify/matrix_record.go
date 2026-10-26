@@ -39,6 +39,7 @@ var (
 		"reflow refuses an unlabelled scrolling region",
 		"lost content refuses clipped record text",
 		"lost content refuses hidden record text",
+		"lost content follows native disclosure state",
 		"lost content refuses full and partial painted overlays",
 		"contrast refuses undecidable group opacity",
 		"keyboard refuses an interactive element that Tab cannot reach",

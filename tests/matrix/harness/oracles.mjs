@@ -337,7 +337,8 @@ export async function reflowOracle(page) {
 // ---------------------------------------------------------------------------
 // Oracle 3: lost content. Every text of the view's records is rendered, not
 // clipped by an ancestor with overflow hidden or clip, and not painted over.
-// Declared exceptions: a graph node label clamped inside the labelled graph
+// Native closed disclosures require only their summaries, not their bodies.
+// Other declared exceptions: a graph node label clamped inside the labelled graph
 // region whose full text the visible record list holds, and the graph region
 // hidden at 48rem or less while the record list is visible.
 
