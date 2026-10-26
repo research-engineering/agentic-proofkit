@@ -99,6 +99,23 @@ func repositoryMatrixResolution(t *testing.T, kind proofKind) (string, proofInpu
 	return root, resolution
 }
 
+func TestMatrixRequiresChildPaintAndMobileIdentityControls(t *testing.T) {
+	for _, family := range []string{"static", "workspace"} {
+		tests := expectedMatrixProjectTests(family)
+		required := []string{"tests/matrix/" + family + "/controls.spec.mjs::controls.spec.mjs > contrast refuses opaque child paint and preserves transparent text wrappers"}
+		if family == "workspace" {
+			required = append(required, "tests/matrix/workspace/tasks.spec.mjs::tasks.spec.mjs > a reader can use view controls below a tall mobile product identity")
+		}
+		for _, engine := range visualEngines {
+			for _, id := range required {
+				if !slices.Contains(tests[engine], id) {
+					t.Fatalf("%s %s is missing mandatory test %s", family, engine, id)
+				}
+			}
+		}
+	}
+}
+
 // The matrix is the fourteen inventory views in each engine, color scheme and
 // mode, plus the two workspace dialogs in the three narrow modes: 456 cells.
 func TestMatrixInventoryIsTheExactCellProduct(t *testing.T) {

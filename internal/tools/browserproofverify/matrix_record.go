@@ -33,6 +33,7 @@ var (
 		"axe refuses a view in which target-size applies to no node",
 		"axe refuses an incomplete target-size result",
 		"axe refuses an incomplete color-contrast node that fails the computed-contrast oracle",
+		"contrast refuses opaque child paint and preserves transparent text wrappers",
 		"contrast refuses a placeholder below 4.5:1",
 		"contrast refuses a checkbox without a 3:1 boundary",
 		"reflow refuses a horizontally scrolling document",
@@ -63,6 +64,7 @@ var (
 		},
 		"workspace": {
 			"wrapped workspace identity keeps sticky panel controls below the product bar",
+			"a reader can use view controls below a tall mobile product identity",
 			"a reader finds a requirement by searching the workspace",
 			"a reader follows a Traceability record to its relation in the workspace",
 			"a reader sees that an admitted empty coverage report covers no requirement",
