@@ -130,6 +130,44 @@ test("browser proof preserves execution and cleanup failures", async () => {
   }
 });
 
+test("one snapshot server is published before any browser worker can execute", async () => {
+  const root = mkdtempSync(join(tmpdir(), "proofkit-browser-published-server-"));
+  const runDirectory = join(root, "run");
+  const events = [];
+  try {
+    await executeBrowserProof({
+      environment: {},
+      execFile: (_command, args) => {
+        if (args[0] === "build") {
+          events.push("build");
+          assert.deepEqual(args, ["build", "-o", join(runDirectory, "server"), "./internal/tools/browsertestserver"]);
+          return;
+        }
+        events.push("admit");
+        return "[]";
+      },
+      inputPaths: ["package.json"],
+      nodeExecutable: "node",
+      resolution: {serverTarget: "./internal/tools/browsertestserver"},
+      runDirectory,
+      spawnProcess: (_command, _args, options) => {
+        events.push("tests");
+        assert.deepEqual(events, ["build", "start", "tests"]);
+        assert.equal(options.env.PROOFKIT_BROWSER_TEST_OUTPUT_DIR, join(runDirectory, "test-results"));
+        return {status: 0};
+      },
+      startServer: async (binary) => {
+        events.push("start");
+        assert.equal(binary, join(runDirectory, "server"));
+        assert.deepEqual(events, ["build", "start"]);
+        return {url: "http://127.0.0.1:41001/", stop: async () => { events.push("stop"); }};
+      },
+      testCommand: ["playwright", "test"],
+    });
+    assert.deepEqual(events, ["build", "start", "tests", "admit", "stop"]);
+  } finally {rmSync(root, {recursive: true, force: true});}
+});
+
 test("navigation request barrier is in place before its navigation starts and stays", async () => {
   const page = new FakeRoutedPage();
   const value = await withNavigationRequestBarrier(page, async () => {

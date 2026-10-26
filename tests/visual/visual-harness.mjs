@@ -1,6 +1,6 @@
-import {execFileSync, spawn} from "node:child_process";
+import {spawn} from "node:child_process";
 import {createHash} from "node:crypto";
-import {existsSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
+import {mkdirSync, readFileSync, writeFileSync} from "node:fs";
 import {dirname, resolve, sep} from "node:path";
 import {fileURLToPath} from "node:url";
 import {expect, test as base} from "@playwright/test";
@@ -88,10 +88,8 @@ export const test = base.extend({
     await use();
   }, {auto: true}],
   visualServers: [async ({}, use, workerInfo) => {
-    // One fixture server binary per run, built beside the output directory;
-    // a worker restarted after a failure reuses it.
-    const binary = resolve(workerInfo.project.outputDir, "..", "visual-fixture-server");
-    if (!existsSync(binary)) execFileSync("go", ["build", "-o", binary, "./internal/tools/browsertestserver"], {stdio: "pipe"});
+    // Every worker consumes the binary published before Playwright started.
+    const binary = resolve(workerInfo.project.outputDir, "..", "server");
     const servers = new Map();
     try {
       await use({

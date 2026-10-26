@@ -1,4 +1,5 @@
 import axeMin from "axe-core/axe.min.js";
+import {expect} from "@playwright/test";
 
 // The oracles of one accessibility-matrix cell. Each oracle observes the page
 // and hands its observation to a pure judgement; the negative controls feed
@@ -58,6 +59,7 @@ const proofkitMatrix = (() => {
   const undecidable = (element) => {
     for (let current = element; current instanceof Element; current = current.parentElement) {
       const style = getComputedStyle(current);
+      if (Number(style.opacity) !== 1) return "group opacity on " + current.tagName;
       if (style.backgroundImage !== "none") return "background image on " + current.tagName;
       if (style.filter !== "none" || style.mixBlendMode !== "normal" || (style.backdropFilter ?? "none") !== "none") return "filter or blend mode on " + current.tagName;
     }
@@ -80,6 +82,35 @@ const proofkitMatrix = (() => {
     for (let current = element; current instanceof Element; current = current.parentElement) opacity *= Number(getComputedStyle(current).opacity);
     return opacity;
   };
+  // An outline does not participate in hit-testing. Decide axis-aligned
+  // clipping from its four side midpoints, not the DOM hit beneath its paint.
+  const outlineVisible = (element, style) => {
+    const width = Number.parseFloat(style.outlineWidth);
+    const offset = Number.parseFloat(style.outlineOffset);
+    if (!(width > 0) || !(offset >= 0)) return {visible: false, reason: "outline geometry"};
+    const box = element.getBoundingClientRect();
+    const bounds = {left: 0, top: 0, right: document.documentElement.clientWidth, bottom: document.documentElement.clientHeight};
+    for (let ancestor = element.parentElement; ancestor instanceof Element; ancestor = ancestor.parentElement) {
+      const outer = getComputedStyle(ancestor);
+      if (outer.clipPath !== "none" || Number(outer.opacity) !== 1) return {visible: false, reason: "unsupported ancestor paint"};
+      const clip = ancestor.getBoundingClientRect();
+      const left = clip.left + ancestor.clientLeft;
+      const top = clip.top + ancestor.clientTop;
+      if (outer.overflowX !== "visible") {
+        bounds.left = Math.max(bounds.left, left);
+        bounds.right = Math.min(bounds.right, left + ancestor.clientWidth);
+      }
+      if (outer.overflowY !== "visible") {
+        bounds.top = Math.max(bounds.top, top);
+        bounds.bottom = Math.min(bounds.bottom, top + ancestor.clientHeight);
+      }
+    }
+    const middle = offset + width / 2;
+    const points = [[box.left - middle, box.top + box.height / 2], [box.right + middle, box.top + box.height / 2],
+      [box.left + box.width / 2, box.top - middle], [box.left + box.width / 2, box.bottom + middle]];
+    const visible = points.some(([x, y]) => x >= bounds.left && x < bounds.right && y >= bounds.top && y < bounds.bottom);
+    return {visible, reason: visible ? null : "outline is clipped", bounds, points};
+  };
   // tabStops lists the enabled interactive elements in DOM order: inside an
   // open modal dialog only its own, outside closed details only summaries.
   const tabStops = () => {
@@ -100,7 +131,7 @@ const proofkitMatrix = (() => {
       return element.hasAttribute("tabindex") && element.tabIndex >= 0;
     });
   };
-  return Object.freeze({parse, composite, luminance, ratio, undecidable, backgroundOf, opacityOf, tabStops});
+  return Object.freeze({parse, composite, luminance, ratio, undecidable, backgroundOf, opacityOf, outlineVisible, tabStops});
 })();
 Object.defineProperty(globalThis, "proofkitMatrix", {value: proofkitMatrix});
 `;
@@ -129,9 +160,10 @@ export async function runAxe(page) {
 }
 
 // computedContrast decides one element's text contrast from computed styles:
-// the text color, faded by the opacity of the element and its ancestors, over
-// the composite of the ancestors' background colors. It refuses to decide
-// when a background image, filter or blend mode is in the chain, or when an
+// the text color over the composite of the ancestors' background colors.
+// It refuses group opacity, which requires group compositing rather than
+// independent background/text fading, and refuses to decide when a background
+// image, filter or blend mode is in the chain, or when an
 // element with a background other than its ancestors is painted above the
 // text's first line.
 export async function computedContrast(page, selectors) {
@@ -147,7 +179,6 @@ export async function computedContrast(page, selectors) {
     const large = fontSize >= 24 || (bold && fontSize >= 18.66);
     const background = helpers.backgroundOf(element);
     const text = helpers.parse(style.color);
-    text[3] *= helpers.opacityOf(element);
     const ratio = helpers.ratio(helpers.composite(text, background), background);
     element.scrollIntoView({block: "center", inline: "center"});
     const range = document.createRange();
@@ -228,7 +259,8 @@ export async function observeControlContrast(page) {
         const background = helpers.backgroundOf(element);
         const text = helpers.parse(style.color);
         text[3] *= Number(style.opacity) * helpers.opacityOf(element);
-        return {control: describe(element), color: style.color, opacity: style.opacity, ratio: helpers.ratio(helpers.composite(text, background), background)};
+        return {control: describe(element), color: style.color, opacity: style.opacity, decided: helpers.undecidable(element) === null,
+          ratio: helpers.ratio(helpers.composite(text, background), background)};
       });
     const token = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--border-width"));
     const checkboxes = [...document.querySelectorAll("input[type=checkbox]")]
@@ -238,7 +270,7 @@ export async function observeControlContrast(page) {
         const background = helpers.backgroundOf(element.parentElement ?? document.documentElement);
         const outline = helpers.parse(style.outlineColor);
         outline[3] *= helpers.opacityOf(element);
-        return {control: describe(element), outlineStyle: style.outlineStyle, outlineWidth: Number.parseFloat(style.outlineWidth), token,
+        return {control: describe(element), decided: helpers.undecidable(element) === null, outlineStyle: style.outlineStyle, outlineWidth: Number.parseFloat(style.outlineWidth), token,
           ratio: helpers.ratio(helpers.composite(outline, background), background)};
       });
     return {placeholders, checkboxes};
@@ -246,9 +278,9 @@ export async function observeControlContrast(page) {
 }
 
 export function judgeControlContrast({placeholders, checkboxes}) {
-  const faint = placeholders.filter((entry) => !(entry.ratio >= 4.5));
+  const faint = placeholders.filter((entry) => !entry.decided || !(entry.ratio >= 4.5));
   if (faint.length > 0) throw new OracleFailure("contrast", "a placeholder has less than 4.5:1 contrast with its field", faint);
-  const unbounded = checkboxes.filter((entry) => entry.outlineStyle !== "solid" || !(entry.outlineWidth >= entry.token) || !(entry.ratio >= 3));
+  const unbounded = checkboxes.filter((entry) => !entry.decided || entry.outlineStyle !== "solid" || !(entry.outlineWidth >= entry.token) || !(entry.ratio >= 3));
   if (unbounded.length > 0) throw new OracleFailure("contrast", "a checkbox has no boundary of the border width with 3:1 contrast", unbounded);
 }
 
@@ -331,9 +363,13 @@ export async function observeContent(page, recordSelector) {
         if (node.textContent.trim() === "" || closedDetailsContent(node)) continue;
         const owner = node.parentElement;
         const ownerStyle = getComputedStyle(owner);
-        if (ownerStyle.display === "none" || owner.closest("[hidden]") || owner.closest("script, style, template")) continue;
+        if (owner.closest("script, style, template")) continue;
         texts += 1;
         const text = node.textContent.trim().slice(0, 80);
+        if (ownerStyle.visibility !== "visible" || globalThis.proofkitMatrix.opacityOf(owner) === 0 || globalThis.proofkitMatrix.parse(ownerStyle.color)[3] === 0) {
+          findings.push({text, problem: "not visible"});
+          continue;
+        }
         const graphNode = owner.closest(".graph-node");
         const graphRegion = owner.closest("[role=region]");
         const range = document.createRange();
@@ -453,32 +489,55 @@ export async function observeKeyboard(page, browserName) {
     }
     return {count: elements.length, modal, focused: document.activeElement?.getAttribute("data-proofkit-matrix-stop") ?? null};
   });
-  const describeFocus = () => page.evaluate(() => {
-    const helpers = globalThis.proofkitMatrix;
-    const element = document.activeElement;
-    // Focus that left the document for the browser leaves either the body
-    // focused or the document unfocused.
-    if (!document.hasFocus() || !(element instanceof Element) || element === document.body || element === document.documentElement) return {stop: null, outside: true, tagName: element?.tagName ?? null};
-    const token = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--focus-width"));
-    const style = getComputedStyle(element);
-    const outlineWidth = Number.parseFloat(style.outlineWidth);
-    const background = helpers.backgroundOf(element.parentElement ?? document.documentElement);
-    const outline = helpers.parse(style.outlineColor);
-    outline[3] *= helpers.opacityOf(element);
-    const scroller = ["auto", "scroll"].includes(style.overflowY) && element.scrollHeight > element.clientHeight ||
-      ["auto", "scroll"].includes(style.overflowX) && element.scrollWidth > element.clientWidth;
-    return {
-      stop: element.getAttribute("data-proofkit-matrix-stop"),
-      outside: false,
-      container: element.tagName === "DIALOG" && element.open || scroller,
-      tagName: element.tagName,
-      label: (element.getAttribute("aria-label") ?? element.textContent ?? "").trim().slice(0, 60),
-      outlineStyle: style.outlineStyle,
-      outlineWidth,
-      token,
-      contrast: helpers.ratio(helpers.composite(outline, background), background),
-    };
-  });
+  const describeFocus = async () => {
+    // WebKit can acknowledge a key before its focus-induced scroll commits.
+    // Wait for that semantic readiness, never repeat the key or ignore clipping.
+    let readiness;
+    try {
+      await expect.poll(async () => {
+        readiness = await page.evaluate(() => {
+          const element = document.activeElement;
+          if (!document.hasFocus() || !(element instanceof Element) || element === document.body || element === document.documentElement) return {visible: true};
+          const box = element.getBoundingClientRect();
+          return {visible: box.bottom > 0 && box.top < document.documentElement.clientHeight && box.right > 0 && box.left < document.documentElement.clientWidth,
+            tagName: element.tagName, id: element.id, top: box.top, left: box.left, bottom: box.bottom, right: box.right};
+        });
+        return readiness;
+      }).toMatchObject({visible: true});
+    } catch {
+      throw new OracleFailure("keyboard", "the focused control did not reach the viewport", readiness);
+    }
+    return page.evaluate(() => {
+      const helpers = globalThis.proofkitMatrix;
+      const element = document.activeElement;
+      // Focus that left the document for the browser leaves either the body
+      // focused or the document unfocused.
+      if (!document.hasFocus() || !(element instanceof Element) || element === document.body || element === document.documentElement) return {stop: null, outside: true, tagName: element?.tagName ?? null};
+      const token = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--focus-width"));
+      const style = getComputedStyle(element);
+      const outlineWidth = Number.parseFloat(style.outlineWidth);
+      const visibility = helpers.outlineVisible(element, style);
+      const background = helpers.backgroundOf(element.parentElement ?? document.documentElement);
+      const outline = helpers.parse(style.outlineColor);
+      outline[3] *= helpers.opacityOf(element);
+      const scroller = ["auto", "scroll"].includes(style.overflowY) && element.scrollHeight > element.clientHeight ||
+        ["auto", "scroll"].includes(style.overflowX) && element.scrollWidth > element.clientWidth;
+      return {
+        stop: element.getAttribute("data-proofkit-matrix-stop"),
+        outside: false,
+        container: element.tagName === "DIALOG" && element.open || scroller,
+        tagName: element.tagName,
+        label: (element.getAttribute("aria-label") ?? element.textContent ?? "").trim().slice(0, 60),
+        outlineStyle: style.outlineStyle,
+        outlineWidth,
+        token,
+        visible: helpers.undecidable(element) === null && visibility.visible,
+        visibilityProblem: visibility.reason,
+        visibilityGeometry: visibility,
+        contrast: helpers.ratio(helpers.composite(outline, background), background),
+      };
+    });
+  };
   const visited = [];
   // walk presses the key until focus reaches the target stop, collecting
   // every step; it gives up after the stop count plus a margin.
@@ -517,7 +576,7 @@ export function judgeKeyboard({expected, forward, backward, visited}) {
   if (stops(backward).join(",") !== backwardOrder.join(",")) {
     throw new OracleFailure("keyboard", "Shift+Tab does not walk back from the last interactive element through every one in reverse DOM order", {count: expected.count, backward});
   }
-  const invisible = visited.filter((focus) => ["none", "hidden"].includes(focus.outlineStyle) || !(focus.outlineWidth >= focus.token) || !(focus.contrast >= 3));
+  const invisible = visited.filter((focus) => !focus.visible || ["none", "hidden"].includes(focus.outlineStyle) || !(focus.outlineWidth >= focus.token) || !(focus.contrast >= 3));
   if (invisible.length > 0) throw new OracleFailure("keyboard", "a focused element has no visible focus indicator of the focus token's width with 3:1 contrast", invisible);
 }
 

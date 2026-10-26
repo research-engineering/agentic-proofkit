@@ -38,19 +38,27 @@ test("a reader opens a requirement's scenario in the static source view", async 
 });
 
 test("a reader follows a proof hierarchy link to the binding's witness in the static proof view", async ({page, matrixServers, security}) => {
-  await open(page, matrixServers, "static-proof-structured");
-  await page.getByRole("navigation", {name: "Specification hierarchy"}).getByRole("link", {name: "browser.coverage", exact: true}).click();
-  const group = page.locator("[data-proofkit-card-group]").filter({has: page.getByRole("heading", {name: "Owner: browser.coverage 1"})});
-  expect(new URL(page.url()).hash).toBe(`#${await group.getAttribute("id")}`);
-  await expect(group.getByRole("heading", {name: "Owner: browser.coverage 1"})).toBeInViewport();
-  const card = group.locator("[data-proofkit-card]");
-  await expect(card.locator(".proofkit-id")).toHaveText("REQ-BROWSER-COVERAGE-001");
-  await card.locator("summary", {hasText: "Scenarios and test witnesses"}).click();
-  const binding = card.locator(".scenario-block").filter({has: page.getByRole("heading", {name: "proofkit.browser.coverage.scenario"})});
-  await expect(binding.locator("dt", {hasText: "Witness id"}).locator("+ dd")).toHaveText("proofkit.browser.coverage.witness");
-  await expect(binding.locator("dt", {hasText: "Witness path"}).locator("+ dd")).toHaveText("internal/browser_coverage_test.go");
-  await expect(binding).toBeVisible();
-  await judgeSecurityNow(page, security);
+  for (const initialMode of ["cards", "table"]) {
+    await open(page, matrixServers, "static-proof-structured");
+    await page.getByLabel("View", {exact: true}).selectOption(initialMode);
+    const query = initialMode === "table" ? "no-matching-hierarchy-record" : "REQ-BROWSER";
+    await page.getByRole("searchbox", {name: "Search"}).fill(query);
+    await expect(page.locator("#proofkit-visible-count")).toHaveText(initialMode === "table" ? "0" : "1");
+    await page.getByRole("navigation", {name: "Specification hierarchy"}).getByRole("link", {name: "browser.coverage", exact: true}).click();
+    await expect(page.getByLabel("View", {exact: true})).toHaveValue("cards");
+    await expect(page.getByRole("searchbox", {name: "Search"})).toHaveValue(initialMode === "table" ? "" : query);
+    const group = page.locator("[data-proofkit-card-group]").filter({has: page.getByRole("heading", {name: "Owner: browser.coverage 1"})});
+    expect(new URL(page.url()).hash).toBe(`#${await group.getAttribute("id")}`);
+    await expect(group.getByRole("heading", {name: "Owner: browser.coverage 1"})).toBeInViewport();
+    const card = group.locator("[data-proofkit-card]");
+    await expect(card.locator(".proofkit-id")).toHaveText("REQ-BROWSER-COVERAGE-001");
+    await card.locator("summary", {hasText: "Scenarios and test witnesses"}).click();
+    const binding = card.locator(".scenario-block").filter({has: page.getByRole("heading", {name: "proofkit.browser.coverage.scenario"})});
+    await expect(binding.locator("dt", {hasText: "Witness id"}).locator("+ dd")).toHaveText("proofkit.browser.coverage.witness");
+    await expect(binding.locator("dt", {hasText: "Witness path"}).locator("+ dd")).toHaveText("internal/browser_coverage_test.go");
+    await expect(binding).toBeVisible();
+    await judgeSecurityNow(page, security);
+  }
 });
 
 test("a reader sees the coverage gap of a static coverage view with an uncovered requirement", async ({page, matrixServers, security}) => {

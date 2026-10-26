@@ -273,6 +273,33 @@ const declaredStreamDeltas = Object.freeze([Object.freeze({
   replacements: Object.freeze([
     Object.freeze({inside: false, from: '<label class="toggle"><input id="proofkit-show-ids" type="checkbox" checked> Show IDs</label>\n<label class="toggle"><input id="proofkit-open-details" type="checkbox"> Open details</label>', to: '<div class="control" role="group" aria-labelledby="proofkit-display-label"><span class="control-label" id="proofkit-display-label">Display</span><div class="toggles"><label class="toggle"><input id="proofkit-show-ids" type="checkbox" checked> Show IDs</label><label class="toggle"><input id="proofkit-open-details" type="checkbox"> Open details</label></div></div>'}),
   ]),
+}), Object.freeze({
+  id: 'UI-DESIGN-01-NAVIGATION',
+  reason: 'Hierarchy navigation reveals its card-group target, and keyboard focus scrolls into the viewport only when outside it.',
+  rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
+  scriptAnchor: '  search.addEventListener("input", applyFilters);\n',
+  scriptInsertion: String.raw`  for (const link of document.querySelectorAll('.hierarchy a[href^="#"]')) {
+    link.addEventListener("click", () => {
+      const target = document.getElementById((link.getAttribute("href") || "").slice(1));
+      if (!target) return;
+      if (viewMode) viewMode.value = "cards";
+      applyFilters();
+      if (target.closest("[hidden]")) {
+        search.value = "";
+        for (const filter of filters) filter.value = "";
+        applyFilters();
+      }
+    });
+  }
+  document.addEventListener("focusin", (event) => {
+    const focused = event.target;
+    if (!(focused instanceof HTMLElement) || focused === document.body || focused === document.documentElement) return;
+    const box = focused.getBoundingClientRect();
+    if (box.top < 0 || box.bottom > document.documentElement.clientHeight || box.left < 0 || box.right > document.documentElement.clientWidth) {
+      focused.scrollIntoView({block: "nearest", inline: "nearest"});
+    }
+  });
+`,
 })]);
 const count = (text, needle) => text.split(needle).length - 1;
 // tableBreaks mirrors browserdoc's table cell break opportunities: in the text
@@ -320,6 +347,13 @@ const tableCells = /<td>([\s\S]*?)<\/td>/g;
 // exactly that delta at exactly that position.
 function invertDelta(delta, stdout) {
   if (count(stdout, '<style>') !== 1 || count(stdout, '</style>') !== 1 || stdout.indexOf('</style>') < stdout.indexOf('<style>')) return null;
+  if (delta.scriptInsertion !== undefined) {
+    const at = stdout.indexOf(delta.scriptAnchor + delta.scriptInsertion);
+    const start = stdout.indexOf('<script>'), end = stdout.indexOf('</script>');
+    if (count(stdout, '<script>') !== 1 || count(stdout, '</script>') !== 1 || count(stdout, delta.scriptInsertion) !== 1 ||
+      at <= start || at + delta.scriptAnchor.length + delta.scriptInsertion.length > end) return null;
+    return stdout.slice(0, at + delta.scriptAnchor.length) + stdout.slice(at + delta.scriptAnchor.length + delta.scriptInsertion.length);
+  }
   if (delta.tableBreaks) {
     // The break opportunities go first: every <wbr> lies in a table cell,
     // exactly where tableBreaks puts it, and none is missing.
@@ -405,19 +439,33 @@ test('lookup contracts conserve73actual predecessor process and rendered streams
 });
 
 test('the declared stream deltas are exact, positioned and limited to their rows', () => {
-  const [kernel, tokens, accessibility, redesign] = declaredStreamDeltas;
-  assert.deepEqual(declaredStreamDeltas.map(delta => delta.id), ['KERNEL-02', 'UI-DESIGN-01', 'UI-DESIGN-01-ACCESSIBILITY', 'UI-DESIGN-01-REDESIGN']);
+  const [kernel, tokens, accessibility, redesign, hierarchy] = declaredStreamDeltas;
+  assert.deepEqual(declaredStreamDeltas.map(delta => delta.id), ['KERNEL-02', 'UI-DESIGN-01', 'UI-DESIGN-01-ACCESSIBILITY', 'UI-DESIGN-01-REDESIGN', 'UI-DESIGN-01-NAVIGATION']);
   const rows = baseline.observations.filter(row => row.format === 'html');
   for (const delta of declaredStreamDeltas) assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   const row = rows[0];
-  const current = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
+  const withHierarchy = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
     maxBuffer: 2 << 20}), row.name).stdout;
-  assert.ok(conservesPredecessor(row, current), 'current stdout must carry exactly the declared deltas');
+  assert.ok(conservesPredecessor(row, withHierarchy), 'current stdout must carry every declared delta');
+  const legacy = [kernel, tokens, accessibility, redesign];
+  assert.equal(conservesPredecessor(row, withHierarchy, legacy), false, 'the hierarchy change must be declared');
+  const current = invertDelta(hierarchy, withHierarchy);
+  assert.ok(current !== null, 'the hierarchy insertion must be exact');
+  assert.equal(conservesPredecessor(row, current), false, 'the hierarchy insertion must be present');
+  for (const mutated of [withHierarchy.replace(hierarchy.scriptInsertion, hierarchy.scriptInsertion + hierarchy.scriptInsertion),
+    withHierarchy.replace(hierarchy.scriptInsertion, '').replace('</style>', hierarchy.scriptInsertion + '</style>'),
+    withHierarchy.replace('if (!target) return;', 'if (!target)  return;')]) {
+    assert.notEqual(mutated, withHierarchy);
+    assert.equal(conservesPredecessor(row, mutated), false, 'the hierarchy insertion cannot be repeated, moved or altered');
+  }
+  // Earlier deltas are tested after removing only the exact new insertion.
+  const conservesLegacy = (row, stdout, deltas = legacy) => conservesPredecessor(row, stdout, deltas);
+  assert.ok(conservesLegacy(row, current), 'current stdout must carry exactly the earlier deltas');
   // The redesign delta: one changed byte inside the style, the toggle group
   // not replaced, repeated or moved into the style, and one changed byte
   // outside the style each break conservation; without the delta the current
   // stream does not conserve the corpus.
-  assert.equal(conservesPredecessor(row, current, [kernel, tokens, accessibility]), false, 'the redesign must be declared');
+  assert.equal(conservesLegacy(row, current, [kernel, tokens, accessibility]), false, 'the redesign must be declared');
   const group = redesign.replacements[0];
   const styleByte = current.replace('</style>', ' </style>');
   const groupNotReplaced = current.replace(group.to, group.from);
@@ -433,7 +481,7 @@ test('the declared stream deltas are exact, positioned and limited to their rows
   for (const [name, mutated] of [['byte inside the style', styleByte], ['toggle group not replaced', groupNotReplaced], ['toggle group repeated', groupRepeated], ['toggle group inside the style', groupInStyle], ['byte outside the style', outsideByte],
     ['break opportunity outside a table cell', breakOutsideCell], ['break opportunity where tableBreaks puts none', breakAfterLetter], ['break opportunity missing', breakMissing]]) {
     assert.notEqual(mutated, current, name);
-    assert.equal(conservesPredecessor(row, mutated), false, name);
+    assert.equal(conservesLegacy(row, mutated), false, name);
   }
   // The accessibility delta, checked in the stream before the redesign: a
   // missing, repeated or relocated replacement and the region markup without

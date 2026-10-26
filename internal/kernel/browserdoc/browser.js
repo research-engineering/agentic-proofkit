@@ -67,6 +67,27 @@
   }
 
   search.addEventListener("input", applyFilters);
+  for (const link of document.querySelectorAll('.hierarchy a[href^="#"]')) {
+    link.addEventListener("click", () => {
+      const target = document.getElementById((link.getAttribute("href") || "").slice(1));
+      if (!target) return;
+      if (viewMode) viewMode.value = "cards";
+      applyFilters();
+      if (target.closest("[hidden]")) {
+        search.value = "";
+        for (const filter of filters) filter.value = "";
+        applyFilters();
+      }
+    });
+  }
+  document.addEventListener("focusin", (event) => {
+    const focused = event.target;
+    if (!(focused instanceof HTMLElement) || focused === document.body || focused === document.documentElement) return;
+    const box = focused.getBoundingClientRect();
+    if (box.top < 0 || box.bottom > document.documentElement.clientHeight || box.left < 0 || box.right > document.documentElement.clientWidth) {
+      focused.scrollIntoView({block: "nearest", inline: "nearest"});
+    }
+  });
   showIds.addEventListener("change", applyFilters);
   openDetails.addEventListener("change", applyDetails);
   if (viewMode) viewMode.addEventListener("change", applyFilters);

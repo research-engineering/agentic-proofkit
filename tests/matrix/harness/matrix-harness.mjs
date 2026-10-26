@@ -1,10 +1,10 @@
-import {execFileSync, spawn} from "node:child_process";
+import {spawn} from "node:child_process";
 import {createHash} from "node:crypto";
-import {existsSync, readFileSync} from "node:fs";
+import {readFileSync} from "node:fs";
 import {resolve} from "node:path";
 import {expect, test as base} from "@playwright/test";
 
-import {startBrowserServer} from "../../../scripts/browser-proof-execution.mjs";
+import {startBrowserServer, withNavigationRequestBarrier} from "../../../scripts/browser-proof-execution.mjs";
 import {
   SecurityMonitor, axeOracle, contentOracle, controlContrastOracle, judgeDocumentHeaders, judgeSecurityEvents, keyboardOracle,
   matrixInitScript, reflowOracle, settleSecurityEvents,
@@ -94,9 +94,8 @@ export const test = base.extend({
     await use();
   }, {auto: true}],
   matrixServers: [async ({}, use, workerInfo) => {
-    // One fixture server binary per run, built beside the output directory.
-    const binary = resolve(workerInfo.project.outputDir, "..", "matrix-fixture-server");
-    if (!existsSync(binary)) execFileSync("go", ["build", "-o", binary, "./internal/tools/browsertestserver"], {stdio: "pipe"});
+    // The proof runner publishes this snapshot-built binary before workers start.
+    const binary = resolve(workerInfo.project.outputDir, "..", "server");
     const servers = new Map();
     try {
       await use({
@@ -130,7 +129,7 @@ export const test = base.extend({
 // served with Cross-Origin-Opener-Policy: same-origin, so emulation follows
 // the last navigation and matchMedia proves it.
 export async function navigate(page, url, profile, heading, scheme) {
-  const response = await page.goto(url, {waitUntil: "load"});
+  const response = await withNavigationRequestBarrier(page, () => page.goto(url, {waitUntil: "load"}));
   if (response === null || response.status() !== 200) throw new Error("matrix view navigation did not return 200");
   judgeDocumentHeaders(response.headers(), expectedCSP[profile]);
   await emulateSchemeInEffect(page, scheme);

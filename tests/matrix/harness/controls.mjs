@@ -1,7 +1,7 @@
 import {expect} from "@playwright/test";
 
 import {
-  axeOracle, axeRuleNodes, axeTargetSelector, contentOracle, controlContrastOracle, judgeSecurityEvents, keyboardOracle, reflowOracle,
+  axeOracle, axeRuleNodes, axeTargetSelector, computedContrast, contentOracle, controlContrastOracle, judgeSecurityEvents, keyboardOracle, reflowOracle,
 } from "./oracles.mjs";
 
 // Negative controls: each one breaks one oracle's premise in a real rendered
@@ -139,6 +139,49 @@ export function oracleControls({open, container, blockedLoad}) {
     await expect(contentOracle(page, records, expectedRecords)).rejects.toThrow("content: record text is lost");
   });
 
+  test("lost content refuses hidden record text", async ({page, matrixServers}) => {
+    const {records, expectedRecords} = await open(page, matrixServers);
+    await contentOracle(page, records, expectedRecords);
+    for (const mode of ["display", "hidden", "visibility", "opacity", "transparent"]) {
+      await page.evaluate(({selector, mode, id}) => {
+        const text = document.createElement("p");
+        text.id = id;
+        text.textContent = "Required record control text";
+        if (mode === "display") text.style.display = "none";
+        if (mode === "hidden") text.hidden = true;
+        if (mode === "visibility") text.style.visibility = "hidden";
+        if (mode === "opacity") text.style.opacity = "0";
+        if (mode === "transparent") text.style.color = "transparent";
+        document.querySelector(selector).append(text);
+      }, {selector: records, mode, id: controlId});
+      await expect(contentOracle(page, records, expectedRecords), mode).rejects.toThrow("content: record text is lost");
+      await page.locator(`#${controlId}`).evaluate((element) => element.remove());
+      await contentOracle(page, records, expectedRecords);
+    }
+  });
+
+  test("contrast refuses undecidable group opacity", async ({page, matrixServers}) => {
+    await open(page, matrixServers);
+    await page.evaluate(({selector, id}) => {
+      const group = document.createElement("div");
+      group.id = id;
+      group.style.opacity = "0.5";
+      group.style.backgroundColor = "black";
+      const text = document.createElement("p");
+      text.textContent = "White text in a translucent black group";
+      text.style.color = "white";
+      group.append(text);
+      document.querySelector(selector).prepend(group);
+    }, {selector: container, id: controlId});
+    const observation = await computedContrast(page, [`#${controlId} p`]);
+    expect(observation).toHaveLength(1);
+    expect(observation[0]).toMatchObject({decided: false, reason: "group opacity on DIV"});
+    await page.locator(`#${controlId}`).evaluate((element) => { element.style.opacity = "1"; });
+    const restored = await computedContrast(page, [`#${controlId} p`]);
+    expect(restored[0]).toMatchObject({decided: true, required: 4.5});
+    expect(restored[0].ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
   test("keyboard refuses an interactive element that Tab cannot reach", async ({page, matrixServers}, testInfo) => {
     await open(page, matrixServers);
     await page.evaluate(() => {
@@ -154,6 +197,26 @@ export function oracleControls({open, container, blockedLoad}) {
       for (const element of globalThis.proofkitMatrix.tabStops()) element.style.setProperty("outline", "none", "important");
     });
     await expect(keyboardOracle(page, testInfo.project.name)).rejects.toThrow("keyboard: a focused element has no visible focus indicator");
+  });
+
+  test("keyboard refuses a clipped focus indicator", async ({page, matrixServers}, testInfo) => {
+    await open(page, matrixServers);
+    await keyboardOracle(page, testInfo.project.name);
+    await page.evaluate((selector) => {
+      const clip = document.createElement("div");
+      clip.style.width = "100px";
+      clip.style.height = "40px";
+      clip.style.overflow = "hidden";
+      const button = document.createElement("button");
+      button.textContent = "Clipped ring";
+      button.style.width = "100px";
+      button.style.height = "40px";
+      clip.append(button);
+      document.querySelector(selector).prepend(clip);
+    }, container);
+    await expect(keyboardOracle(page, testInfo.project.name)).rejects.toThrow("keyboard: a focused element has no visible focus indicator");
+    await page.locator("button", {hasText: "Clipped ring"}).evaluate((button) => button.parentElement.remove());
+    await keyboardOracle(page, testInfo.project.name);
   });
 
   test("security refuses a page-initiated load that the CSP blocks", async ({page, matrixServers, security}) => {
