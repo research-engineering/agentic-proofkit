@@ -75,7 +75,7 @@ func MaterializeContext(ctx context.Context, root, destination string) (Snapshot
 		if err != nil {
 			return Snapshot{}, err
 		}
-		info, content, err := readSourceFile(sourceRoot, normalized)
+		info, content, err := ReadSourceFile(sourceRoot, normalized)
 		if err != nil {
 			return Snapshot{}, err
 		}

@@ -89,7 +89,7 @@ func digestPaths(ctx context.Context, root string, paths []string) (string, erro
 		if err != nil {
 			return "", err
 		}
-		info, content, err := readSourceFile(rootFS, normalized)
+		info, content, err := ReadSourceFile(rootFS, normalized)
 		if err != nil {
 			return "", err
 		}
@@ -145,7 +145,11 @@ func materializedPaths(ctx context.Context, root string) ([]string, error) {
 	return paths, nil
 }
 
-func readSourceFile(root *os.Root, path string) (fs.FileInfo, []byte, error) {
+// ReadSourceFile returns only a complete, stable regular file within root.
+func ReadSourceFile(root *os.Root, path string) (fs.FileInfo, []byte, error) {
+	if _, err := normalizedPath(path); err != nil {
+		return nil, nil, err
+	}
 	localPath := filepath.FromSlash(path)
 	info, err := root.Lstat(localPath)
 	if err != nil {
@@ -164,9 +168,24 @@ func readSourceFile(root *os.Root, path string) (fs.FileInfo, []byte, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("open repository snapshot source entry failed")
 	}
-	defer file.Close()
+	opened, content, readErr := readOpenedSourceFile(info, file)
+	closeErr := file.Close()
+	if readErr != nil {
+		return nil, nil, readErr
+	}
+	if closeErr != nil {
+		return nil, nil, fmt.Errorf("close repository snapshot source entry failed")
+	}
+	pathAfter, err := root.Lstat(localPath)
+	if err != nil || !sameSourceState(opened, pathAfter) {
+		return nil, nil, fmt.Errorf("repository snapshot source entry changed while being read")
+	}
+	return opened, content, nil
+}
+
+func readOpenedSourceFile(info fs.FileInfo, file fs.File) (fs.FileInfo, []byte, error) {
 	opened, err := file.Stat()
-	if err != nil || !os.SameFile(info, opened) || !opened.Mode().IsRegular() {
+	if err != nil || !sameSourceState(info, opened) || !opened.Mode().IsRegular() {
 		return nil, nil, fmt.Errorf("repository snapshot source entry changed during admission")
 	}
 	content, err := io.ReadAll(io.LimitReader(file, maxSourceFileBytes+1))
@@ -177,10 +196,14 @@ func readSourceFile(root *os.Root, path string) (fs.FileInfo, []byte, error) {
 		return nil, nil, fmt.Errorf("repository snapshot source entry exceeds resource limit")
 	}
 	after, err := file.Stat()
-	if err != nil || !os.SameFile(opened, after) || opened.Size() != after.Size() || after.Size() != int64(len(content)) {
+	if err != nil || !sameSourceState(opened, after) || after.Size() != int64(len(content)) {
 		return nil, nil, fmt.Errorf("repository snapshot source entry changed while being read")
 	}
 	return opened, content, nil
+}
+
+func sameSourceState(left, right fs.FileInfo) bool {
+	return os.SameFile(left, right) && left.Mode() == right.Mode() && left.Size() == right.Size() && left.ModTime().Equal(right.ModTime())
 }
 
 func normalizedPath(path string) (string, error) {

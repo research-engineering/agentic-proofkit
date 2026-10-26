@@ -20,6 +20,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/repositorysnapshot"
 )
 
 var proofNonClaims = []string{
@@ -318,6 +319,11 @@ func verifyContentBoundInputs(root string, record map[string]any, expectedResolu
 		return fmt.Errorf("%s assets do not match the input set", label)
 	}
 	identityAssets := make([]any, 0, len(assets))
+	rootFS, err := os.OpenRoot(root)
+	if err != nil {
+		return fmt.Errorf("open browser proof input root failed")
+	}
+	defer rootFS.Close()
 	for index, rawAsset := range assets {
 		asset, ok := rawAsset.(map[string]any)
 		if !ok || admit.KnownKeys(asset, []string{"path", "sha256"}, label+" asset") != nil || asset["path"] != expectedResolution.InputPaths[index] {
@@ -331,7 +337,7 @@ func verifyContentBoundInputs(root string, record map[string]any, expectedResolu
 		if err != nil {
 			return err
 		}
-		content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
+		_, content, err := repositorysnapshot.ReadSourceFile(rootFS, path)
 		if err != nil {
 			return err
 		}

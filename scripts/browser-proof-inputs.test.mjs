@@ -4,6 +4,7 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync}
 import {tmpdir} from "node:os";
 import {dirname, join, relative, resolve} from "node:path";
 import test from "node:test";
+import {fileURLToPath} from "node:url";
 
 import {createScanner, LanguageVariant, SyntaxKind} from "typescript/unstable/ast";
 
@@ -492,6 +493,76 @@ test("materialized execution snapshot rejects escaping destination paths", () =>
     assert.throws(() => materializeInputSnapshot([join(root, "input.txt")], root, join(root, "execution")), /repository-relative/);
   } finally {
     rmSync(root, {recursive: true, force: true});
+  }
+});
+
+test("both input readers refuse incomplete or replaced descriptor bytes before publication", () => {
+  const program = `
+    import assert from "node:assert/strict";
+    import fs from "node:fs";
+    import {syncBuiltinESMExports} from "node:module";
+    import {tmpdir} from "node:os";
+    import {join} from "node:path";
+    const [operation, fault] = process.argv.slice(1);
+    const root = fs.mkdtempSync(join(tmpdir(), "proofkit-input-read-"));
+    const input = join(root, "input.txt");
+    const destination = join(root, "copy");
+    const original = {open: fs.openSync, read: fs.readFileSync, close: fs.closeSync};
+    let descriptorReads = 0;
+    let descriptorCloses = 0;
+    let inputDescriptor;
+    let replaced = false;
+    try {
+      fs.writeFileSync(input, "complete");
+      if (fault === "symlink") {
+        fs.renameSync(input, join(root, "target"));
+        fs.symlinkSync("target", input);
+      }
+      fs.openSync = (path, ...args) => {
+        const acquisition = path === input && typeof args[0] === "number" && (args[0] & fs.constants.O_NOFOLLOW) !== 0;
+        if (acquisition && fault === "replacement" && !replaced) {
+          replaced = true;
+          fs.renameSync(input, join(root, "old"));
+          fs.writeFileSync(input, "replaced");
+        }
+        const fd = original.open(path, ...args);
+        if (acquisition) inputDescriptor = fd;
+        return fd;
+      };
+      fs.readFileSync = (path, ...args) => {
+        const content = original.read(path, ...args);
+        if (path !== inputDescriptor) return content;
+        descriptorReads += 1;
+        if (fault === "short") return content.subarray(0, 1);
+        if (fault === "mutation") fs.writeFileSync(input, "different");
+        return content;
+      };
+      fs.closeSync = (fd) => {
+        if (fd === inputDescriptor) { descriptorCloses += 1; inputDescriptor = undefined; }
+        return original.close(fd);
+      };
+      syncBuiltinESMExports();
+      const readers = await import("./browser-proof-inputs.mjs");
+      const invoke = () => operation === "materialize"
+        ? readers.materializeInputSnapshot(["input.txt"], root, destination)
+        : readers.snapshotInputAssets([input]);
+      if (fault === "none") {
+        assert.equal(invoke().length, 1);
+        assert.equal(descriptorReads, 1);
+        if (operation === "materialize") assert.equal(original.read(join(destination, "input.txt"), "utf8"), "complete");
+      } else {
+        assert.throws(invoke, /complete regular non-symlink file/);
+        assert.equal(fs.existsSync(join(destination, "input.txt")), false);
+      }
+      assert.equal(descriptorCloses, fault === "symlink" ? 0 : 1);
+    } finally {
+      fs.rmSync(root, {recursive: true, force: true});
+    }
+  `;
+  for (const operation of ["snapshot", "materialize"]) {
+    for (const fault of ["none", "short", "replacement", "mutation", "symlink"]) {
+      execFileSync(process.execPath, ["--input-type=module", "-e", program, operation, fault], {cwd: dirname(fileURLToPath(import.meta.url)), stdio: "pipe"});
+    }
   }
 });
 

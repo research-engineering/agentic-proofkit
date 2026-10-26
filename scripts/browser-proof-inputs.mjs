@@ -1,6 +1,6 @@
 import {execFileSync} from "node:child_process";
 import {createHash} from "node:crypto";
-import {lstatSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
+import {closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, writeFileSync} from "node:fs";
 import {dirname, isAbsolute, join} from "node:path";
 
 import {decodeUTF8Strict} from "./stable-json.mjs";
@@ -33,13 +33,10 @@ export function snapshotInputAssets(inputPaths, root = ".") {
 export function materializeInputSnapshot(inputPaths, sourceRoot, destinationRoot) {
   return inputPaths.map((path) => {
     if (!isSafeRepoPath(path)) throw new Error("browser proof snapshot input path must be repository-relative");
-    const source = filePath(sourceRoot, path);
-    const metadata = lstatSync(source);
-    if (metadata.isSymbolicLink() || !metadata.isFile()) throw new Error("browser proof inputs must be regular non-symlink files");
-    const content = readFileSync(source);
+    const {metadata, content} = readInputFile(filePath(sourceRoot, path));
     const destination = filePath(destinationRoot, path);
     mkdirSync(dirname(destination), {recursive: true});
-    writeFileSync(destination, content, {flag: "wx", mode: metadata.mode & 0o777});
+    writeFileSync(destination, content, {flag: "wx", mode: Number(metadata.mode & 0o777n)});
     return {path, sha256: createHash("sha256").update(content).digest("hex")};
   });
 }
@@ -51,10 +48,36 @@ export function assertInputSnapshotUnchanged(before, after) {
 }
 
 function inputAsset(path, root) {
-  const source = filePath(root, path);
-  const metadata = lstatSync(source);
-  if (metadata.isSymbolicLink() || !metadata.isFile()) throw new Error("browser proof inputs must be regular non-symlink files");
-  return {path, sha256: createHash("sha256").update(readFileSync(source)).digest("hex")};
+  const {content} = readInputFile(filePath(root, path));
+  return {path, sha256: createHash("sha256").update(content).digest("hex")};
+}
+
+function readInputFile(source) {
+  let descriptor;
+  let result;
+  try {
+    const metadata = lstatSync(source, {bigint: true});
+    if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error();
+    descriptor = openSync(source, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    const opened = fstatSync(descriptor, {bigint: true});
+    if (!opened.isFile() || !sameFileState(metadata, opened)) throw new Error();
+    const content = readFileSync(descriptor);
+    const after = fstatSync(descriptor, {bigint: true});
+    const pathAfter = lstatSync(source, {bigint: true});
+    if (BigInt(content.byteLength) !== opened.size || !sameFileState(opened, after) || !sameFileState(after, pathAfter)) throw new Error();
+    result = {metadata: opened, content};
+  } catch {
+    throw new Error("browser proof input must remain a complete regular non-symlink file during acquisition");
+  } finally {
+    if (descriptor !== undefined) {
+      try { closeSync(descriptor); } catch { throw new Error("browser proof input descriptor cleanup failed"); }
+    }
+  }
+  return result;
+}
+
+function sameFileState(left, right) {
+  return ["dev", "ino", "mode", "size", "mtimeNs", "ctimeNs"].every((key) => left[key] === right[key]);
 }
 
 function filePath(root, path) {

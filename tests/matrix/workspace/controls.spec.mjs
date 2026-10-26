@@ -19,6 +19,28 @@ test("lost graph content requires its narrow breakpoint and exact alternate reco
   const {records, expectedRecords} = await openWorkspaceView(page, matrixServers, "workspace-traceability", "light", mode);
   const graph = page.getByRole("region", {name: "Traceability graph viewport", includeHidden: true});
   await contentOracle(page, records, expectedRecords);
+  const node = page.locator(".graph-node").first();
+  for (const field of ["label", "identity"]) {
+    const text = node.locator(`.graph-node-${field}`);
+    await text.evaluate(element => {element.style.height = "1px"; element.style.overflow = "hidden"; element.style.flex = "none";});
+    await contentOracle(page, records, expectedRecords);
+    await text.evaluate(element => {for (const property of ["height", "overflow", "flex"]) element.style.removeProperty(property);});
+    await contentOracle(page, records, expectedRecords);
+  }
+  const addUnrepresentedText = className => node.evaluate((element, className) => {
+    const extra = document.createElement("span");
+    extra.id = "graph-unrepresented-control";
+    extra.className = className;
+    extra.textContent = "Unrepresented graph text.";
+    Object.assign(extra.style, {display: "block", flex: "none", height: "1px", lineHeight: "16px", overflow: "hidden"});
+    element.append(extra);
+  }, className);
+  for (const className of ["", "graph-node-label", "graph-node-identity"]) {
+    await addUnrepresentedText(className);
+    await expect(contentOracle(page, records, expectedRecords)).rejects.toThrow(/content: record text is lost[\s\S]*Unrepresented graph text/);
+    await page.locator("#graph-unrepresented-control").evaluate(element => element.remove());
+    await contentOracle(page, records, expectedRecords);
+  }
   await graph.evaluate(element => {element.style.display = "none";});
   await expect(contentOracle(page, records, expectedRecords)).rejects.toThrow("content: record text is lost");
   await graph.evaluate(element => {element.style.removeProperty("display");});
@@ -29,16 +51,24 @@ test("lost graph content requires its narrow breakpoint and exact alternate reco
   await expect(graph).toBeHidden();
   await contentOracle(page, records, expectedRecords);
   const alternate = page.locator(".graph-records [data-graph-select]").first();
-  const original = await alternate.evaluate(element => ({id: element.dataset.graphSelect, label: element.querySelector(".graph-node-label").textContent}));
-  for (const field of ["identity", "label"]) {
+  for (const className of ["", "graph-node-label", "graph-node-identity"]) {
+    await addUnrepresentedText(className);
+    await expect(contentOracle(page, records, expectedRecords)).rejects.toThrow(/content: record text is lost[\s\S]*Unrepresented graph text/);
+    await page.locator("#graph-unrepresented-control").evaluate(element => element.remove());
+    await contentOracle(page, records, expectedRecords);
+  }
+  const original = await alternate.evaluate(element => ({id: element.dataset.graphSelect,
+    label: element.querySelector(".graph-node-label").textContent, identity: element.querySelector(".graph-node-identity").textContent}));
+  for (const field of ["node-id", "label", "identity", "label-whitespace"]) {
     await alternate.evaluate((element, field) => {
-      if (field === "identity") element.dataset.graphSelect = "missing:alternate";
-      else element.querySelector(".graph-node-label").textContent += " altered";
+      if (field === "node-id") element.dataset.graphSelect = "missing:alternate";
+      else element.querySelector(`.graph-node-${field === "label-whitespace" ? "label" : field}`).textContent += field === "label-whitespace" ? " " : " altered";
     }, field);
     await expect(contentOracle(page, records, expectedRecords)).rejects.toThrow("content: record text is lost");
     await alternate.evaluate((element, original) => {
       element.dataset.graphSelect = original.id;
       element.querySelector(".graph-node-label").textContent = original.label;
+      element.querySelector(".graph-node-identity").textContent = original.identity;
     }, original);
     await contentOracle(page, records, expectedRecords);
   }

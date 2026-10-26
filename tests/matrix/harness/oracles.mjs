@@ -413,9 +413,8 @@ export async function reflowOracle(page) {
 // Oracle 3: lost content. Every text of the view's records is rendered, not
 // clipped by an ancestor with overflow hidden or clip, and not painted over.
 // Native closed disclosures require only their summaries, not their bodies.
-// Other declared exceptions: a graph node label clamped inside the labelled graph
-// region whose full text the visible record list holds, and the graph region
-// hidden at 48rem or less while the record list is visible.
+// Graph exceptions cover only the canonical label/identity with their full exact
+// visible alternate: summary clamping, or a canvas hidden at 48rem or less.
 
 export async function observeContent(page, recordSelector) {
   return page.evaluate((selector) => {
@@ -425,7 +424,6 @@ export async function observeContent(page, recordSelector) {
     // Background boxes can cover only part of a line or opt out of hit-testing.
     // Their geometry is an independent operand, not proof of pixel paint order.
     const paintedBoxes = [...document.querySelectorAll("body *")].filter(globalThis.proofkitMatrix.paints);
-    const normalizeText = (text) => text.replace(/\s+/g, " ").trim();
     const listed = new Map([...document.querySelectorAll(".graph-records [data-graph-select]")]
       .filter((element) => element.getClientRects().length > 0)
       .map((element) => [element.dataset.graphSelect, element]));
@@ -434,7 +432,7 @@ export async function observeContent(page, recordSelector) {
       return alternate !== undefined && [".graph-node-label", ".graph-node-identity"].every(selector => {
         const original = graphNode.querySelector(selector);
         const replacement = alternate.querySelector(selector);
-        return original !== null && replacement !== null && normalizeText(original.textContent) === normalizeText(replacement.textContent);
+        return original !== null && replacement !== null && original.textContent === replacement.textContent;
       });
     };
     const closedDetailsContent = (node) => {
@@ -459,12 +457,14 @@ export async function observeContent(page, recordSelector) {
           continue;
         }
         const graphNode = owner.closest(".graph-node");
-        const graphRegion = owner.closest("[role=region]");
+        const graphRegion = graphNode?.closest(".graph-viewport[role=region]") ?? null;
+        const representedGraphText = graphNode !== null && [".graph-node-label", ".graph-node-identity"]
+          .some(selector => graphNode.querySelector(selector)?.contains(node));
         const range = document.createRange();
         range.selectNodeContents(node);
         let rects = [...range.getClientRects()].filter((rect) => rect.width > 0 && rect.height > 0);
         if (rects.length === 0) {
-          const hiddenGraph = graphNode !== null && graphRegion !== null && getComputedStyle(graphRegion).display === "none"
+          const hiddenGraph = representedGraphText && graphRegion !== null && getComputedStyle(graphRegion).display === "none"
             && matchMedia("(max-width: 48rem)").matches && graphAlternate(graphNode);
           if (!hiddenGraph) findings.push({text, problem: "not rendered"});
           continue;
@@ -489,7 +489,7 @@ export async function observeContent(page, recordSelector) {
           }
         }
         if (clipped !== null) {
-          const clamped = graphNode !== null && graphRegion !== null && graphRegion.contains(graphNode) && graphAlternate(graphNode);
+          const clamped = representedGraphText && graphRegion !== null && graphRegion.contains(graphNode) && graphAlternate(graphNode);
           if (!clamped) findings.push({text, problem: "clipped", clipped});
           continue;
         }
