@@ -204,8 +204,9 @@ export function oracleControls({open, container, blockedLoad}) {
 
   test("reflow refuses an unlabelled scrolling region", async ({page, matrixServers}) => {
     await open(page, matrixServers);
-    await page.evaluate((selector) => {
+    await page.evaluate(({selector, id}) => {
       const region = document.createElement("div");
+      region.id = id;
       region.style.overflowX = "auto";
       region.style.width = "100px";
       const table = document.createElement("table");
@@ -214,8 +215,53 @@ export function oracleControls({open, container, blockedLoad}) {
       cell.style.minWidth = "400px";
       region.append(table);
       document.querySelector(selector).prepend(region);
-    }, container);
+    }, {selector: container, id: controlId});
     await expect(reflowOracle(page)).rejects.toThrow("reflow: content overflows an element that is not a labelled focusable graph or table region");
+    const region = page.locator(`#${controlId}`);
+    const restore = () => region.evaluate(element => {
+      element.setAttribute("role", "region");
+      element.setAttribute("aria-label", "Scrollable data");
+      element.removeAttribute("aria-labelledby");
+      element.tabIndex = 0;
+      element.style.overflowX = "auto";
+      const table = document.createElement("table");
+      const cell = table.insertRow().insertCell();
+      cell.textContent = "wide";
+      cell.style.minWidth = "400px";
+      element.replaceChildren(table);
+    });
+    await restore();
+    await reflowOracle(page);
+    for (const field of ["role", "name", "tabIndex", "overflowX", "content"]) {
+      await region.evaluate((element, field) => {
+        if (field === "role") element.removeAttribute("role");
+        if (field === "name") element.removeAttribute("aria-label");
+        if (field === "tabIndex") element.tabIndex = -1;
+        if (field === "overflowX") element.style.overflowX = "hidden";
+        if (field === "content") {
+          const content = document.createElement("div");
+          content.style.width = "400px";
+          content.textContent = "wide";
+          element.replaceChildren(content);
+        }
+      }, field);
+      await expect(reflowOracle(page)).rejects.toThrow("reflow: content overflows an element that is not a labelled focusable graph or table region");
+      await restore();
+      await reflowOracle(page);
+    }
+    await region.evaluate(element => {
+      const label = document.createElement("span");
+      label.id = "proofkit-scroll-label";
+      label.textContent = "Scrollable data";
+      element.before(label);
+      element.removeAttribute("aria-label");
+      element.setAttribute("aria-labelledby", label.id);
+    });
+    await reflowOracle(page);
+    await page.locator("#proofkit-scroll-label").evaluate(element => element.textContent = " ");
+    await expect(reflowOracle(page)).rejects.toThrow("reflow: content overflows an element that is not a labelled focusable graph or table region");
+    await page.locator("#proofkit-scroll-label").evaluate(element => element.textContent = "Scrollable data");
+    await reflowOracle(page);
   });
 
   test("lost content refuses clipped record text", async ({page, matrixServers}) => {
@@ -400,6 +446,23 @@ export function oracleControls({open, container, blockedLoad}) {
     await page.evaluate(() => console.error("matrix control console error"));
     await expect.poll(() => security.observation().consoleErrors.length).toBeGreaterThan(0);
     expect(() => judgeSecurityEvents(security.observation())).toThrow("security: the page raised a console error, a page error or a securitypolicyviolation event");
+  });
+
+  test("security refuses an uncaught page error", async ({page, matrixServers, security}) => {
+    await open(page, matrixServers);
+    await settleSecurityEvents(page);
+    expect(security.observation()).toEqual({consoleErrors: [], pageErrors: [], violations: []});
+    const [uncaught] = await Promise.all([
+      page.waitForEvent("pageerror"),
+      page.evaluate(() => { setTimeout(() => { throw new Error("matrix control uncaught error"); }, 0); }),
+    ]);
+    expect(uncaught.message).toContain("matrix control uncaught error");
+    await settleSecurityEvents(page);
+    const observation = security.observation();
+    expect(observation.consoleErrors).toEqual([]);
+    expect(observation.violations).toEqual([]);
+    expect(observation.pageErrors).toEqual(["matrix control uncaught error"]);
+    expect(() => judgeSecurityEvents(observation)).toThrow("security: the page raised a console error, a page error or a securitypolicyviolation event");
   });
 
   test("security refuses a document whose CSP differs from the exact policy", async ({page, matrixServers}) => {

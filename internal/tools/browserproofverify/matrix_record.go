@@ -51,6 +51,7 @@ var (
 		"keyboard refuses potential non-hit-tested focus occlusion",
 		"security refuses a page-initiated load that the CSP blocks",
 		"security refuses a console error",
+		"security refuses an uncaught page error",
 		"security refuses a document whose CSP differs from the exact policy",
 	}
 	matrixFamilyControlTitles = map[string][]string{

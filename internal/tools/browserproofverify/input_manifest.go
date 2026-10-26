@@ -3,15 +3,16 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
-const proofVerifierTarget = "./internal/tools/browserproofverify"
+const (
+	proofVerifierTarget       = "./internal/tools/browserproofverify"
+	maxBrowserSourceFileBytes = 64 << 20
+)
 
 type proofInputManifest struct {
 	ServerTarget string
@@ -21,7 +22,7 @@ type proofInputManifest struct {
 }
 
 func loadProofInputManifest(root string, kind proofKind) (proofInputManifest, error) {
-	raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(kind.ManifestPath)))
+	raw, err := readRepositoryFile(root, kind.ManifestPath, 1<<20)
 	if err != nil {
 		return proofInputManifest{}, err
 	}

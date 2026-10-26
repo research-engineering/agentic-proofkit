@@ -1228,6 +1228,8 @@
         "scripts/stable-json.test.mjs",
         "scripts/write-browser-proof.mjs",
         "tests/browser",
+        "tests/matrix/harness/oracles.mjs",
+        "tests/matrix/harness/oracles.test.mjs",
         "tsconfig.browser.json"
       ],
       "outputSelectors": [
@@ -1321,6 +1323,8 @@
         "scripts/diagnostic.mjs",
         "scripts/stable-json.mjs",
         "scripts/write-browser-visual-proof.mjs",
+        "tests/matrix/harness/oracles.mjs",
+        "tests/matrix/harness/oracles.test.mjs",
         "tests/visual"
       ],
       "outputSelectors": [

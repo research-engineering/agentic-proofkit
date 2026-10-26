@@ -534,7 +534,10 @@ test("both input readers refuse incomplete or replaced descriptor bytes before p
         if (path !== inputDescriptor) return content;
         descriptorReads += 1;
         if (fault === "short") return content.subarray(0, 1);
-        if (fault === "mutation") fs.writeFileSync(input, "different");
+        if (fault === "mutation") {
+          fs.writeFileSync(input, "replaced");
+          fs.utimesSync(input, 1, 1);
+        }
         return content;
       };
       fs.closeSync = (fd) => {

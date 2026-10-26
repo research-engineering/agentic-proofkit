@@ -92,7 +92,7 @@ func verifyCurrentProof(root string, kind proofKind) error {
 	if err != nil {
 		return err
 	}
-	value, err := readRootedJSON(root, kind.RecordPath, 8<<20)
+	value, err := readRepositoryJSON(root, kind.RecordPath, 8<<20)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func runBrowserProof(root string, kind proofKind, requireReferenceEnvironment bo
 		}
 		return fmt.Errorf("run browser proof writer: %w", err)
 	}
-	value, err := readRootedJSON(root, runPaths.CandidatePath, 8<<20)
+	value, err := readRepositoryJSON(root, runPaths.CandidatePath, 8<<20)
 	if err != nil {
 		return fmt.Errorf("read browser proof candidate: %w", err)
 	}
@@ -337,7 +337,7 @@ func verifyContentBoundInputs(root string, record map[string]any, expectedResolu
 		if err != nil {
 			return err
 		}
-		_, content, err := repositorysnapshot.ReadSourceFile(rootFS, path)
+		_, content, err := repositorysnapshot.ReadRegularFile(rootFS, path, maxBrowserSourceFileBytes)
 		if err != nil {
 			return err
 		}

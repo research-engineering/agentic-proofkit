@@ -33,7 +33,7 @@ export function snapshotInputAssets(inputPaths, root = ".") {
 export function materializeInputSnapshot(inputPaths, sourceRoot, destinationRoot) {
   return inputPaths.map((path) => {
     if (!isSafeRepoPath(path)) throw new Error("browser proof snapshot input path must be repository-relative");
-    const {metadata, content} = readInputFile(filePath(sourceRoot, path));
+    const {metadata, content} = readBrowserProofFile(filePath(sourceRoot, path));
     const destination = filePath(destinationRoot, path);
     mkdirSync(dirname(destination), {recursive: true});
     writeFileSync(destination, content, {flag: "wx", mode: Number(metadata.mode & 0o777n)});
@@ -48,11 +48,11 @@ export function assertInputSnapshotUnchanged(before, after) {
 }
 
 function inputAsset(path, root) {
-  const {content} = readInputFile(filePath(root, path));
+  const {content} = readBrowserProofFile(filePath(root, path));
   return {path, sha256: createHash("sha256").update(content).digest("hex")};
 }
 
-function readInputFile(source) {
+export function readBrowserProofFile(source) {
   let descriptor;
   let result;
   try {

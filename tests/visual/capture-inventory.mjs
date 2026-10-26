@@ -1,7 +1,8 @@
-import {lstatSync, readdirSync, readFileSync} from "node:fs";
+import {lstatSync, readdirSync} from "node:fs";
 import {join} from "node:path";
 
 import {canonicalRGBADigest, decodePNG} from "./exact-png.mjs";
+import {readBrowserProofFile} from "../../scripts/browser-proof-inputs.mjs";
 
 // captureInventory decodes every PNG capture below a capture directory and
 // returns its entries sorted by ID (<engine>/<view>.<scheme>.<width>). Any
@@ -18,7 +19,7 @@ export function captureInventory(directory) {
         continue;
       }
       if (!metadata.isFile() || !path.endsWith(".png")) throw new Error("capture directory may contain only PNG captures");
-      const image = decodePNG(readFileSync(join(directory, path)));
+      const image = decodePNG(readBrowserProofFile(join(directory, path)).content);
       entries.push({height: image.height, id: path.slice(0, -".png".length), rgbaSHA256: canonicalRGBADigest(image), width: image.width});
     }
   };

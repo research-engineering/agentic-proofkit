@@ -1,12 +1,12 @@
 import {execFileSync, spawnSync} from "node:child_process";
 import {createHash} from "node:crypto";
-import {chmodSync, constants, copyFileSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {chmodSync, constants, copyFileSync, existsSync, readdirSync, rmSync, writeFileSync} from "node:fs";
 import {join, resolve} from "node:path";
 
 import {captureInventory} from "../tests/visual/capture-inventory.mjs";
 import {comparedEnvironmentFields, environmentDivergence, observeEnvironment} from "../tests/visual/environment-probe.mjs";
 import {executeBrowserProof} from "./browser-proof-execution.mjs";
-import {isSafeRepoPath, loadBrowserProofInputResolution, snapshotInputAssets} from "./browser-proof-inputs.mjs";
+import {isSafeRepoPath, loadBrowserProofInputResolution, readBrowserProofFile, snapshotInputAssets} from "./browser-proof-inputs.mjs";
 import {runDiagnosticEntrypoint} from "./diagnostic.mjs";
 import {decodeUTF8Strict, stableJSONStringify} from "./stable-json.mjs";
 
@@ -22,9 +22,10 @@ await runDiagnosticEntrypoint(async () => {
   if (proofCandidatePath !== `${runDirectory}/browser-visual-proof.candidate.json`) {
     throw new Error("browser visual proof candidate path must belong to the admitted run directory");
   }
-  const environment = JSON.parse(readFileSync(`${testRoot}/environment.json`, "utf8"));
+  const environment = JSON.parse(decodeUTF8Strict(readBrowserProofFile(`${testRoot}/environment.json`).content, "visual environment"));
   const environmentId = `sha256:${createHash("sha256").update(stableJSONStringify(environment)).digest("hex")}`;
-  const references = JSON.parse(readFileSync(`${testRoot}/references.json`, "utf8"));
+  const referencesBytes = readBrowserProofFile(`${testRoot}/references.json`).content;
+  const references = JSON.parse(decodeUTF8Strict(referencesBytes, "visual references"));
   // The font configuration is copied into the run directory and set before the
   // environment is observed and recorded and before any browser launches, so
   // the hashed bytes are the bytes that fc-match and every browser read; the
@@ -106,7 +107,7 @@ await runDiagnosticEntrypoint(async () => {
     referenceEnvironment: {
       environmentId: references.environmentId,
       referenceCount: Array.isArray(references.references) ? references.references.length : 0,
-      referencesDigest: `sha256:${createHash("sha256").update(readFileSync(`${testRoot}/references.json`)).digest("hex")}`,
+      referencesDigest: `sha256:${createHash("sha256").update(referencesBytes).digest("hex")}`,
     },
     schemaVersion: 1,
     sourceRevision,

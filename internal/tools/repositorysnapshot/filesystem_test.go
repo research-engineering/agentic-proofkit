@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestReadSourceFileAdmitsCompleteBytesAndRejectsNonRegularOrOversize(t *testing.T) {
+func TestReadRegularFileAdmitsCompleteBytesAndRejectsNonRegularOrOversize(t *testing.T) {
 	directory := t.TempDir()
 	writeFile(t, filepath.Join(directory, "input"), "complete")
 	root, err := os.OpenRoot(directory)
@@ -16,7 +16,7 @@ func TestReadSourceFileAdmitsCompleteBytesAndRejectsNonRegularOrOversize(t *test
 		t.Fatal(err)
 	}
 	defer root.Close()
-	info, content, err := ReadSourceFile(root, "input")
+	info, content, err := ReadRegularFile(root, "input", maxSourceFileBytes)
 	if err != nil || info == nil || string(content) != "complete" || info.Size() != int64(len(content)) {
 		t.Fatalf("complete read = %v, %q, %v", info, content, err)
 	}
@@ -34,19 +34,22 @@ func TestReadSourceFileAdmitsCompleteBytesAndRejectsNonRegularOrOversize(t *test
 		t.Fatal(err)
 	}
 	for _, path := range []string{"link", ".", "../input", "oversize"} {
-		info, content, err := ReadSourceFile(root, path)
+		info, content, err := ReadRegularFile(root, path, maxSourceFileBytes)
 		if err == nil || info != nil || content != nil {
 			t.Fatalf("invalid source %q retained a read: %v, %v, %v", path, info, content, err)
 		}
 	}
 }
 
-func TestOpenedSourceReaderRejectsPrematureEOFAndChangedFile(t *testing.T) {
-	for _, fault := range []string{"short", "changed", "identity", "complete"} {
+func TestOpenedRegularReaderRejectsPrematureEOFAndChangedFile(t *testing.T) {
+	for _, fault := range []string{"short", "json-prefix", "changed", "identity", "complete"} {
 		t.Run(fault, func(t *testing.T) {
 			directory := t.TempDir()
 			path := filepath.Join(directory, "input")
 			writeFile(t, path, "complete")
+			if fault == "json-prefix" {
+				writeFile(t, path, `{"ok":true}trailing-invalid`)
+			}
 			file, err := os.Open(path)
 			if err != nil {
 				t.Fatal(err)
@@ -60,6 +63,8 @@ func TestOpenedSourceReaderRejectsPrematureEOFAndChangedFile(t *testing.T) {
 			switch fault {
 			case "short":
 				reader = io.LimitReader(file, 1)
+			case "json-prefix":
+				reader = io.LimitReader(file, int64(len(`{"ok":true}`)))
 			case "changed":
 				reader = io.MultiReader(readAction(func() {
 					if err := os.WriteFile(path, []byte("different"), 0o600); err != nil {
@@ -74,7 +79,7 @@ func TestOpenedSourceReaderRejectsPrematureEOFAndChangedFile(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			info, content, err := readOpenedSourceFile(observed, observedReader{file, reader})
+			info, content, err := readOpenedRegularFile(observed, observedReader{file, reader}, maxSourceFileBytes)
 			if fault == "complete" {
 				if err != nil || info == nil || string(content) != "complete" {
 					t.Fatalf("restored read = %v, %q, %v", info, content, err)
@@ -83,6 +88,29 @@ func TestOpenedSourceReaderRejectsPrematureEOFAndChangedFile(t *testing.T) {
 				t.Fatalf("fault %s retained bytes: %v, %q, %v", fault, info, content, err)
 			}
 		})
+	}
+}
+
+func TestReadRegularFileHonorsCallerBoundAndEmptyFile(t *testing.T) {
+	directory := t.TempDir()
+	writeFile(t, filepath.Join(directory, "input"), "complete")
+	writeFile(t, filepath.Join(directory, "empty"), "")
+	root, err := os.OpenRoot(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	for _, limit := range []int64{-1, 0, 7, 1<<63 - 1} {
+		info, content, err := ReadRegularFile(root, "input", limit)
+		if err == nil || info != nil || content != nil {
+			t.Fatalf("limit %d retained a result: %v, %q, %v", limit, info, content, err)
+		}
+	}
+	if _, content, err := ReadRegularFile(root, "input", 8); err != nil || string(content) != "complete" {
+		t.Fatalf("exact bound = %q, %v", content, err)
+	}
+	if _, content, err := ReadRegularFile(root, "empty", 0); err != nil || len(content) != 0 {
+		t.Fatalf("empty bounded file = %q, %v", content, err)
 	}
 }
 

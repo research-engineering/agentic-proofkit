@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -19,6 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/repositorysnapshot"
 )
 
 // The visual reference inventory is owned here: every rendered view in each
@@ -466,26 +466,17 @@ func buildVisualReferenceInventoryFromRun(root, runDirectory string) ([]byte, er
 }
 
 func readRunFile(path string, maxBytes int64) ([]byte, error) {
-	info, err := os.Lstat(path)
+	absolute, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return nil, fmt.Errorf("visual run file must be a regular non-symlink file")
-	}
-	file, err := os.Open(path)
+	root, err := os.OpenRoot(filepath.Dir(absolute))
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	content, err := io.ReadAll(io.LimitReader(file, maxBytes+1))
-	if err != nil {
-		return nil, err
-	}
-	if int64(len(content)) > maxBytes {
-		return nil, fmt.Errorf("visual run file exceeds its size limit")
-	}
-	return content, nil
+	defer root.Close()
+	_, content, err := repositorysnapshot.ReadRegularFile(root, filepath.Base(absolute), maxBytes)
+	return content, err
 }
 
 // admitRunObservedEnvironment requires the run's observed environment to equal
@@ -634,13 +625,8 @@ func readRepositoryFile(root, path string, maxBytes int64) ([]byte, error) {
 	if err := admitRootedRegularFile(rootFS, localPath); err != nil {
 		return nil, err
 	}
-	file, err := rootFS.Open(localPath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	// One byte past the limit lets callers distinguish an oversized file.
-	return io.ReadAll(io.LimitReader(file, maxBytes+1))
+	_, content, err := repositorysnapshot.ReadRegularFile(rootFS, path, maxBytes)
+	return content, err
 }
 
 func readRepositoryJSON(root, path string, maxBytes int64) (any, error) {

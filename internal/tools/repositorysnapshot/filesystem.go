@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 )
 
 func admitEmptyDestination(root, destination string, sourceRoot, destinationRoot *os.Root) error {
@@ -89,7 +91,7 @@ func digestPaths(ctx context.Context, root string, paths []string) (string, erro
 		if err != nil {
 			return "", err
 		}
-		info, content, err := ReadSourceFile(rootFS, normalized)
+		info, content, err := ReadRegularFile(rootFS, normalized, maxSourceFileBytes)
 		if err != nil {
 			return "", err
 		}
@@ -145,8 +147,12 @@ func materializedPaths(ctx context.Context, root string) ([]string, error) {
 	return paths, nil
 }
 
-// ReadSourceFile returns only a complete, stable regular file within root.
-func ReadSourceFile(root *os.Root, path string) (fs.FileInfo, []byte, error) {
+// ReadRegularFile binds complete bytes to observed identity and metadata.
+// The caller owns the byte limit; route traversal never follows symlinks.
+func ReadRegularFile(root *os.Root, path string, maxBytes int64) (fs.FileInfo, []byte, error) {
+	if maxBytes < 0 || maxBytes == 1<<63-1 {
+		return nil, nil, fmt.Errorf("repository file byte limit is invalid")
+	}
 	if _, err := normalizedPath(path); err != nil {
 		return nil, nil, err
 	}
@@ -161,14 +167,14 @@ func ReadSourceFile(root *os.Root, path string) (fs.FileInfo, []byte, error) {
 	if !info.Mode().IsRegular() {
 		return nil, nil, fmt.Errorf("repository snapshot source entry non-regular files are not admitted")
 	}
-	if info.Size() > maxSourceFileBytes {
+	if info.Size() > maxBytes {
 		return nil, nil, fmt.Errorf("repository snapshot source entry exceeds resource limit")
 	}
-	file, err := root.Open(localPath)
+	file, err := rootpath.OpenExactRegularFile(root, path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open repository snapshot source entry failed")
 	}
-	opened, content, readErr := readOpenedSourceFile(info, file)
+	opened, content, readErr := readOpenedRegularFile(info, file, maxBytes)
 	closeErr := file.Close()
 	if readErr != nil {
 		return nil, nil, readErr
@@ -183,16 +189,16 @@ func ReadSourceFile(root *os.Root, path string) (fs.FileInfo, []byte, error) {
 	return opened, content, nil
 }
 
-func readOpenedSourceFile(info fs.FileInfo, file fs.File) (fs.FileInfo, []byte, error) {
+func readOpenedRegularFile(info fs.FileInfo, file fs.File, maxBytes int64) (fs.FileInfo, []byte, error) {
 	opened, err := file.Stat()
 	if err != nil || !sameSourceState(info, opened) || !opened.Mode().IsRegular() {
 		return nil, nil, fmt.Errorf("repository snapshot source entry changed during admission")
 	}
-	content, err := io.ReadAll(io.LimitReader(file, maxSourceFileBytes+1))
+	content, err := io.ReadAll(io.LimitReader(file, maxBytes+1))
 	if err != nil {
 		return nil, nil, fmt.Errorf("read repository snapshot source entry failed")
 	}
-	if int64(len(content)) > maxSourceFileBytes {
+	if int64(len(content)) > maxBytes {
 		return nil, nil, fmt.Errorf("repository snapshot source entry exceeds resource limit")
 	}
 	after, err := file.Stat()

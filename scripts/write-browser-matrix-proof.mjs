@@ -1,11 +1,11 @@
 import {execFileSync, spawnSync} from "node:child_process";
 import {createHash} from "node:crypto";
-import {chmodSync, constants, copyFileSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {chmodSync, constants, copyFileSync, rmSync, writeFileSync} from "node:fs";
 import {join, resolve} from "node:path";
 
 import {comparedEnvironmentFields, environmentDivergence, observeEnvironment} from "../tests/visual/environment-probe.mjs";
 import {executeBrowserProof} from "./browser-proof-execution.mjs";
-import {isSafeRepoPath, loadBrowserProofInputResolution} from "./browser-proof-inputs.mjs";
+import {isSafeRepoPath, loadBrowserProofInputResolution, readBrowserProofFile} from "./browser-proof-inputs.mjs";
 import {runDiagnosticEntrypoint} from "./diagnostic.mjs";
 import {decodeUTF8Strict, stableJSONStringify} from "./stable-json.mjs";
 
@@ -28,7 +28,7 @@ await runDiagnosticEntrypoint(async () => {
   if (proofCandidatePath !== `${runDirectory}/browser-matrix-${family}-proof.candidate.json`) {
     throw new Error("browser matrix proof candidate path must belong to the admitted run directory");
   }
-  const environment = JSON.parse(readFileSync("tests/visual/environment.json", "utf8"));
+  const environment = JSON.parse(decodeUTF8Strict(readBrowserProofFile("tests/visual/environment.json").content, "matrix environment"));
   const environmentId = `sha256:${createHash("sha256").update(stableJSONStringify(environment)).digest("hex")}`;
   // The recorded font mapping is copied into the run directory and set before
   // the environment is observed and before any browser launches.
