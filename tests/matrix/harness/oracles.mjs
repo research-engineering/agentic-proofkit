@@ -1,5 +1,7 @@
 import axeMin from "axe-core/axe.min.js";
 import {expect} from "@playwright/test";
+import {decodePNG} from "../../visual/exact-png.mjs";
+import {sampleFocusPaint} from "../../browser/focus-paint-oracle.mjs";
 
 // The oracles of one accessibility-matrix cell. Each oracle observes the page
 // and hands its observation to a pure judgement; the negative controls feed
@@ -82,8 +84,8 @@ const proofkitMatrix = (() => {
     for (let current = element; current instanceof Element; current = current.parentElement) opacity *= Number(getComputedStyle(current).opacity);
     return opacity;
   };
-  // An outline does not participate in hit-testing. Decide axis-aligned
-  // clipping from its four side midpoints, not the DOM hit beneath its paint.
+  // An outline does not participate in hit-testing. Its side midpoints must
+  // escape clipping and unrelated paint, not hit the focused element itself.
   const outlineVisible = (element, style) => {
     const width = Number.parseFloat(style.outlineWidth);
     const offset = Number.parseFloat(style.outlineOffset);
@@ -108,8 +110,45 @@ const proofkitMatrix = (() => {
     const middle = offset + width / 2;
     const points = [[box.left - middle, box.top + box.height / 2], [box.right + middle, box.top + box.height / 2],
       [box.left + box.width / 2, box.top - middle], [box.left + box.width / 2, box.bottom + middle]];
-    const visible = points.some(([x, y]) => x >= bounds.left && x < bounds.right && y >= bounds.top && y < bounds.bottom);
-    return {visible, reason: visible ? null : "outline is clipped", bounds, points};
+    const unclipped = points.filter(([x, y]) => x >= bounds.left && x < bounds.right && y >= bounds.top && y < bounds.bottom);
+    if (unclipped.length === 0) return {visible: false, reason: "outline is clipped", bounds, points};
+    const paints = (candidate) => {
+      const paint = getComputedStyle(candidate);
+      return paint.visibility === "visible" && opacityOf(candidate) > 0
+        && (parse(paint.backgroundColor)[3] > 0 || paint.backgroundImage !== "none"
+          || candidate.matches("img, canvas, video, iframe, object, embed"));
+    };
+    const unrelated = (candidate) => !candidate.contains(element) && !element.contains(candidate);
+    const modal = element.closest("dialog:modal");
+    const nonHitPaint = [...(modal ?? document.body).querySelectorAll("*")]
+      .filter(candidate => unrelated(candidate) && getComputedStyle(candidate).pointerEvents === "none" && paints(candidate));
+    const containsPoint = (candidate, x, y) => {
+      const paint = candidate.getBoundingClientRect();
+      let {left, top, right, bottom} = paint;
+      for (let parent = candidate.parentElement; parent instanceof Element; parent = parent.parentElement) {
+        const style = getComputedStyle(parent);
+        const clip = parent.getBoundingClientRect();
+        if (style.overflowX !== "visible") { left = Math.max(left, clip.left + parent.clientLeft); right = Math.min(right, clip.left + parent.clientLeft + parent.clientWidth); }
+        if (style.overflowY !== "visible") { top = Math.max(top, clip.top + parent.clientTop); bottom = Math.min(bottom, clip.top + parent.clientTop + parent.clientHeight); }
+      }
+      return x >= left && x < right && y >= top && y < bottom;
+    };
+    const visible = unclipped.some(([x, y]) => {
+      const stack = document.elementsFromPoint(x, y);
+      const ownLayer = stack.findIndex(candidate => candidate.contains(element) || element.contains(candidate));
+      return ownLayer >= 0 && !stack.slice(0, ownLayer).some(candidate => unrelated(candidate) && paints(candidate))
+        && !nonHitPaint.some(candidate => containsPoint(candidate, x, y));
+    });
+    const samples = unclipped.map(([x, y]) => ({x, y, backgroundX: x, backgroundY: y}));
+    for (const sample of samples) {
+      const index = points.findIndex(([x, y]) => x === sample.x && y === sample.y);
+      if (index === 0) sample.backgroundX -= width / 2 + 1;
+      if (index === 1) sample.backgroundX += width / 2 + 1;
+      if (index === 2) sample.backgroundY -= width / 2 + 1;
+      if (index === 3) sample.backgroundY += width / 2 + 1;
+    }
+    return {visible, reason: visible ? null : "outline paint needs observation", bounds, points,
+      paintProbe: visible ? null : {samples, color: parse(style.outlineColor), box: {left: box.left, top: box.top, right: box.right, bottom: box.bottom}, margin: offset + width + 2}};
   };
   // tabStops lists the enabled interactive elements in DOM order: inside an
   // open modal dialog only its own, outside closed details only summaries.
@@ -355,9 +394,18 @@ export async function observeContent(page, recordSelector) {
         && (globalThis.proofkitMatrix.parse(style.backgroundColor)[3] > 0 || style.backgroundImage !== "none"
           || element.matches("img, canvas, video, iframe, object, embed"));
     });
-    const listed = new Set([...document.querySelectorAll(".graph-records [data-graph-select]")]
+    const normalizeText = (text) => text.replace(/\s+/g, " ").trim();
+    const listed = new Map([...document.querySelectorAll(".graph-records [data-graph-select]")]
       .filter((element) => element.getClientRects().length > 0)
-      .map((element) => element.textContent.replace(/\s+/g, " ").trim()));
+      .map((element) => [element.dataset.graphSelect, element]));
+    const graphAlternate = (graphNode) => {
+      const alternate = listed.get(graphNode?.dataset.graphSelect);
+      return alternate !== undefined && [".graph-node-label", ".graph-node-identity"].every(selector => {
+        const original = graphNode.querySelector(selector);
+        const replacement = alternate.querySelector(selector);
+        return original !== null && replacement !== null && normalizeText(original.textContent) === normalizeText(replacement.textContent);
+      });
+    };
     const closedDetailsContent = (node) => {
       for (let details = node.parentElement?.closest("details"); details; details = details.parentElement?.closest("details")) {
         const summary = details.querySelector(":scope > summary");
@@ -385,8 +433,9 @@ export async function observeContent(page, recordSelector) {
         range.selectNodeContents(node);
         let rects = [...range.getClientRects()].filter((rect) => rect.width > 0 && rect.height > 0);
         if (rects.length === 0) {
-          const hiddenGraph = graphNode !== null && graphRegion !== null && getComputedStyle(graphRegion).display === "none";
-          if (!(hiddenGraph && listed.size > 0)) findings.push({text, problem: "not rendered"});
+          const hiddenGraph = graphNode !== null && graphRegion !== null && getComputedStyle(graphRegion).display === "none"
+            && matchMedia("(max-width: 48rem)").matches && graphAlternate(graphNode);
+          if (!hiddenGraph) findings.push({text, problem: "not rendered"});
           continue;
         }
         const lineRects = () => [...range.getClientRects()].filter((rect) => rect.width > 0 && rect.height > 0);
@@ -409,7 +458,7 @@ export async function observeContent(page, recordSelector) {
           }
         }
         if (clipped !== null) {
-          const clamped = graphNode !== null && graphRegion !== null && graphRegion.contains(graphNode) && [...listed].some((entry) => entry.includes(graphNode.querySelector(".graph-node-label")?.textContent?.trim() ?? "\u0000"));
+          const clamped = graphNode !== null && graphRegion !== null && graphRegion.contains(graphNode) && graphAlternate(graphNode);
           if (!clamped) findings.push({text, problem: "clipped", clipped});
           continue;
         }
@@ -540,7 +589,7 @@ export async function observeKeyboard(page, browserName) {
     } catch {
       throw new OracleFailure("keyboard", "the focused control did not reach the viewport", readiness);
     }
-    return page.evaluate(() => {
+    const observation = await page.evaluate(() => {
       const helpers = globalThis.proofkitMatrix;
       const element = document.activeElement;
       // Focus that left the document for the browser leaves either the body
@@ -548,6 +597,7 @@ export async function observeKeyboard(page, browserName) {
       if (!document.hasFocus() || !(element instanceof Element) || element === document.body || element === document.documentElement) return {stop: null, outside: true, tagName: element?.tagName ?? null};
       const token = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--focus-width"));
       const style = getComputedStyle(element);
+      const paintDecidable = helpers.undecidable(element) === null;
       const outlineWidth = Number.parseFloat(style.outlineWidth);
       const visibility = helpers.outlineVisible(element, style);
       const background = helpers.backgroundOf(element.parentElement ?? document.documentElement);
@@ -564,12 +614,38 @@ export async function observeKeyboard(page, browserName) {
         outlineStyle: style.outlineStyle,
         outlineWidth,
         token,
-        visible: helpers.undecidable(element) === null && visibility.visible,
+        visible: paintDecidable && visibility.visible,
+        paintDecidable,
+        viewport: {width: document.documentElement.clientWidth, height: document.documentElement.clientHeight},
         visibilityProblem: visibility.reason,
         visibilityGeometry: visibility,
         contrast: helpers.ratio(helpers.composite(outline, background), background),
       };
     });
+    const probe = observation.visibilityGeometry?.paintProbe;
+    if (probe && observation.paintDecidable && probe.color[3] === 1) {
+      // Hit-testing can see paint beneath an outline. Resolve only this
+      // ambiguity from a viewport-relative CSS-pixel capture, not paint order.
+      const viewport = observation.viewport;
+      const x = Math.max(0, Math.floor(probe.box.left - probe.margin));
+      const y = Math.max(0, Math.floor(probe.box.top - probe.margin));
+      const width = Math.min(viewport.width, Math.ceil(probe.box.right + probe.margin)) - x;
+      const height = Math.min(viewport.height, Math.ceil(probe.box.bottom + probe.margin)) - y;
+      const image = decodePNG(await page.screenshot({clip: {x, y, width, height}, scale: "css"}));
+      const samples = sampleFocusPaint(image, {x, y, width, height}, probe);
+      observation.visibilityGeometry.paintSamples = samples;
+      for (const {sample, ring, background, colorMatches} of samples) {
+        if (!colorMatches) continue;
+        const contrast = await page.evaluate(({ring, background}) => globalThis.proofkitMatrix.ratio(ring, background), {ring, background});
+        if (contrast >= 3) {
+          observation.visible = true;
+          observation.visibilityProblem = null;
+          observation.visibilityGeometry.paintObservation = {sample, ring, background, contrast};
+          break;
+        }
+      }
+    }
+    return observation;
   };
   const visited = [];
   // walk presses the key until focus reaches the target stop, collecting
@@ -581,6 +657,7 @@ export async function observeKeyboard(page, browserName) {
       const focus = await describeFocus();
       steps.push(focus);
       visited.push(focus);
+      if (!focus.outside && !focus.visible) throw new OracleFailure("keyboard", "a focused element has no visible focus indicator of the focus token's width with 3:1 contrast", focus);
       if (focus.stop === target) break;
     }
     return steps;

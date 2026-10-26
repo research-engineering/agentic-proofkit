@@ -115,7 +115,7 @@ func TestMatrixInventoryIsTheExactCellProduct(t *testing.T) {
 	for _, family := range []string{"static", "workspace"} {
 		tests := expectedMatrixProjectTests(family)
 		for _, engine := range visualEngines {
-			want := len(expectedMatrixCellTitles(family)) + len(matrixControlTitles) + len(matrixTaskTitles[family])
+			want := len(expectedMatrixCellTitles(family)) + len(matrixControlTitles) + len(matrixFamilyControlTitles[family]) + len(matrixTaskTitles[family])
 			if family == "static" && engine == "firefox" {
 				want++
 			}

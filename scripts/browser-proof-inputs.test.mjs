@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {execFileSync} from "node:child_process";
 import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {dirname, join, relative, resolve} from "node:path";
@@ -441,12 +442,14 @@ test("the module specifier scanner refuses a source it cannot advance through", 
 });
 
 test("every local JavaScript import is content-bound by the owner resolution", () => {
-  const {inputPaths} = loadBrowserProofInputResolution();
-  const admitted = new Set(inputPaths);
-  for (const path of inputPaths.filter((candidate) => candidate.endsWith(".mjs") || candidate.endsWith(".js"))) {
-    for (const specifier of localModuleSpecifiers(path)) {
-      const importedPath = resolveLocalModule(path, specifier);
-      assert(admitted.has(importedPath), `${path} imports omitted browser proof input ${importedPath}`);
+  for (const manifest of [browserProofInputManifestPath, "scripts/browser-visual-proof-inputs.v1.json", "scripts/browser-matrix-static-proof-inputs.v1.json", "scripts/browser-matrix-workspace-proof-inputs.v1.json"]) {
+    const {inputPaths} = JSON.parse(execFileSync("go", ["run", "./internal/tools/browserproofverify", "--manifest", manifest, "--resolve-inputs"], {encoding: "utf8"}));
+    const admitted = new Set(inputPaths);
+    for (const path of inputPaths.filter((candidate) => candidate.endsWith(".mjs") || candidate.endsWith(".js"))) {
+      for (const specifier of localModuleSpecifiers(path)) {
+        const importedPath = resolveLocalModule(path, specifier);
+        assert(admitted.has(importedPath), `${manifest}: ${path} imports omitted browser proof input ${importedPath}`);
+      }
     }
   }
 });

@@ -38,6 +38,14 @@ test("wrapped workspace identity keeps sticky panel controls below the product b
         return Math.abs(bounds.top - header.bottom) < 1 && control.top >= header.bottom;
       });
     })).toBe(true);
+    const focusTarget = page.locator('.view-controls [data-view="specifications"]');
+    await focusTarget.evaluate(element => element.blur());
+    await focusTarget.focus();
+    await expect.poll(() => page.evaluate(() => {
+      const header = document.querySelector(".product-bar").getBoundingClientRect();
+      const focusTop = document.activeElement.getBoundingClientRect().top;
+      return {visible: focusTop >= header.bottom, focusTop, headerBottom: header.bottom};
+    })).toMatchObject({visible: true});
   }
   await judgeSecurityNow(page, security);
 });

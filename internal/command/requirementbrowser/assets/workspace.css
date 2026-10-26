@@ -6,7 +6,11 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { background: var(--color-canvas); color: var(--color-text); }
+html {
+  background: var(--color-canvas);
+  color: var(--color-text);
+  scroll-padding-block-start: calc(var(--workspace-product-bar-height) + var(--space-8));
+}
 body {
   --navigation-width: var(--layout-navigation-width);
   --inspector-width: var(--layout-inspector-width);
@@ -120,7 +124,7 @@ summary .workspace-icon { margin-right: var(--space-8); }
 .status-badge[data-status="info"] { color: var(--color-info); background: var(--color-info-surface); }
 
 /* Main column, view tabs and authority boundary. */
-main { grid-column: 2; grid-row: 2; min-width: 0; padding: var(--space-24) var(--space-32) var(--space-48); scroll-margin-block-start: var(--workspace-product-bar-height); }
+main { grid-column: 2; grid-row: 2; min-width: 0; padding: var(--space-24) var(--space-32) var(--space-48); }
 nav { display: flex; flex-wrap: wrap; gap: var(--space-8); margin: var(--space-16) 0; min-width: 0; max-width: 100%; }
 .view-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--layout-tab-width)), 1fr)); gap: var(--space-8); margin: 0 0 var(--space-16); }
 .view-controls button { min-width: 0; padding-inline: var(--space-12); color: var(--color-text-muted); }

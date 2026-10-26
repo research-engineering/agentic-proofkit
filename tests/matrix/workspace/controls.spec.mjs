@@ -1,5 +1,7 @@
+import {expect} from "@playwright/test";
 import {modes, openWorkspaceView, test} from "../harness/matrix-harness.mjs";
 import {oracleControls} from "../harness/controls.mjs";
+import {contentOracle} from "../harness/oracles.mjs";
 
 // The oracle controls on the workspace Specifications tab, light, 1440.
 const mode = modes.find((candidate) => candidate.id === "1440");
@@ -12,3 +14,38 @@ const controls = oracleControls({
   blockedLoad: {source: "data:image/gif;base64,R0lGODlhAQABAAAAACw=", matches: (uri) => uri === "data"},
 });
 for (const [title, body] of controls) test(title, body);
+
+test("lost graph content requires its narrow breakpoint and exact alternate record", async ({page, matrixServers}) => {
+  const {records, expectedRecords} = await openWorkspaceView(page, matrixServers, "workspace-traceability", "light", mode);
+  const graph = page.getByRole("region", {name: "Traceability graph viewport", includeHidden: true});
+  await contentOracle(page, records, expectedRecords);
+  await graph.evaluate(element => {element.style.display = "none";});
+  await expect(contentOracle(page, records, expectedRecords)).rejects.toThrow("content: record text is lost");
+  await graph.evaluate(element => {element.style.removeProperty("display");});
+  await contentOracle(page, records, expectedRecords);
+  await page.setViewportSize({width: 768, height: 900});
+  await expect(page.locator("body")).toHaveAttribute("data-navigation-open", "false");
+  await expect(page.locator("body")).toHaveAttribute("data-inspector-open", "false");
+  await expect(graph).toBeHidden();
+  await contentOracle(page, records, expectedRecords);
+  const alternate = page.locator(".graph-records [data-graph-select]").first();
+  const original = await alternate.evaluate(element => ({id: element.dataset.graphSelect, label: element.querySelector(".graph-node-label").textContent}));
+  for (const field of ["identity", "label"]) {
+    await alternate.evaluate((element, field) => {
+      if (field === "identity") element.dataset.graphSelect = "missing:alternate";
+      else element.querySelector(".graph-node-label").textContent += " altered";
+    }, field);
+    await expect(contentOracle(page, records, expectedRecords)).rejects.toThrow("content: record text is lost");
+    await alternate.evaluate((element, original) => {
+      element.dataset.graphSelect = original.id;
+      element.querySelector(".graph-node-label").textContent = original.label;
+    }, original);
+    await contentOracle(page, records, expectedRecords);
+  }
+  await page.setViewportSize({width: 769, height: 900});
+  await expect(graph).toBeVisible();
+  await graph.evaluate(element => {element.style.display = "none";});
+  await expect(contentOracle(page, records, expectedRecords)).rejects.toThrow("content: record text is lost");
+  await graph.evaluate(element => {element.style.removeProperty("display");});
+  await contentOracle(page, records, expectedRecords);
+});

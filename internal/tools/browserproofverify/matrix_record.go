@@ -45,9 +45,14 @@ var (
 		"keyboard refuses an interactive element that Tab cannot reach",
 		"keyboard refuses an invisible focus indicator",
 		"keyboard refuses a clipped focus indicator",
+		"keyboard refuses an occluded focus indicator",
+		"keyboard refuses potential non-hit-tested focus occlusion",
 		"security refuses a page-initiated load that the CSP blocks",
 		"security refuses a console error",
 		"security refuses a document whose CSP differs from the exact policy",
+	}
+	matrixFamilyControlTitles = map[string][]string{
+		"workspace": {"lost graph content requires its narrow breakpoint and exact alternate record"},
 	}
 	matrixTaskTitles = map[string][]string{
 		"static": {
@@ -121,6 +126,9 @@ func expectedMatrixProjectTests(family string) map[string][]string {
 			ids = append(ids, fmt.Sprintf("%s/cells.spec.mjs::cells.spec.mjs > %s", root, title))
 		}
 		for _, title := range matrixControlTitles {
+			ids = append(ids, fmt.Sprintf("%s/controls.spec.mjs::controls.spec.mjs > %s", root, title))
+		}
+		for _, title := range matrixFamilyControlTitles[family] {
 			ids = append(ids, fmt.Sprintf("%s/controls.spec.mjs::controls.spec.mjs > %s", root, title))
 		}
 		for _, title := range matrixTaskTitles[family] {

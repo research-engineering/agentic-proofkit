@@ -274,6 +274,22 @@ export function oracleControls({open, container, blockedLoad}) {
     await keyboardOracle(page, testInfo.project.name);
   });
 
+  for (const [title, pointerEvents] of [["keyboard refuses an occluded focus indicator", "auto"], ["keyboard refuses potential non-hit-tested focus occlusion", "none"]]) {
+    test(title, async ({page, matrixServers}, testInfo) => {
+      await open(page, matrixServers);
+      await keyboardOracle(page, testInfo.project.name);
+      await page.evaluate(({id, pointerEvents}) => {
+        const overlay = document.createElement("div");
+        overlay.id = id;
+        Object.assign(overlay.style, {position: "fixed", inset: "0", backgroundColor: "black", zIndex: "999999", pointerEvents});
+        document.body.append(overlay);
+      }, {id: controlId, pointerEvents});
+      await expect(keyboardOracle(page, testInfo.project.name)).rejects.toThrow("keyboard: a focused element has no visible focus indicator");
+      await page.locator(`#${controlId}`).evaluate(element => element.remove());
+      await keyboardOracle(page, testInfo.project.name);
+    });
+  }
+
   test("security refuses a page-initiated load that the CSP blocks", async ({page, matrixServers, security}) => {
     await open(page, matrixServers);
     await page.evaluate(({selector, source}) => {

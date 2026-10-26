@@ -15,9 +15,11 @@
     "scripts/browser-proof-inputs.mjs",
     "scripts/diagnostic.mjs",
     "scripts/stable-json.mjs",
+    "tests/browser/focus-paint-oracle.mjs",
     "tests/matrix/harness",
     "tests/visual/environment-probe.mjs",
     "tests/visual/environment.json",
+    "tests/visual/exact-png.mjs",
     "tests/visual/fonts.conf"
   ]
 }
