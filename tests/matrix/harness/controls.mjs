@@ -77,34 +77,45 @@ export function oracleControls({open, container, blockedLoad}) {
     await page.evaluate(({selector, id}) => {
       const text = document.createElement("p");
       text.id = id;
-      text.textContent = "Contrast control text";
-      text.style.position = "relative";
+      text.textContent = "First line contrast\nSecond line contrast";
+      Object.assign(text.style, {position: "relative", whiteSpace: "pre-line"});
       document.querySelector(selector).prepend(text);
     }, {selector: container, id: controlId});
     const selector = `#${controlId}`;
     await axeOracle(page);
     await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: true}]);
     for (const pointerEvents of ["auto", "none"]) {
-      await page.locator(selector).evaluate((element, pointerEvents) => {
-        const cover = document.createElement("span");
-        Object.assign(cover.style, {position: "absolute", inset: "0", zIndex: "1", background: "rgb(255, 255, 255)", pointerEvents});
-        element.append(cover);
-      }, pointerEvents);
-      await expect(computedContrast(page, [selector]), pointerEvents).resolves.toMatchObject([{decided: false}]);
-      await expect(axeOracle(page), pointerEvents).rejects.toThrow("axe: the computed-contrast oracle cannot decide an incomplete color-contrast node");
-      if (pointerEvents === "none") {
-        await page.locator(selector).evaluate(element => {
+      for (const extent of ["full", "partial", "later-line"]) {
+        await page.locator(selector).evaluate((element, {pointerEvents, extent}) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const lines = [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0);
+          if (lines.length !== 2) throw new Error("the contrast control must have two actual text lines");
+          const line = lines[extent === "later-line" ? 1 : 0];
           const box = element.getBoundingClientRect();
-          const cover = element.querySelector("span");
-          Object.assign(cover.style, {position: "fixed", inset: "auto", left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`});
-          element.after(cover);
-        });
-        await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: false}]);
-        await page.locator(`${selector} + span`).evaluate(element => element.remove());
-      } else {
-        await page.locator(`${selector} span`).evaluate(element => element.remove());
+          const offset = extent === "partial" ? line.width / 2 : 0;
+          const cover = document.createElement("span");
+          Object.assign(cover.style, {position: "absolute", left: `${line.left - box.left + offset}px`, top: `${line.top - box.top}px`,
+            width: `${line.width - offset}px`, height: `${line.height}px`, zIndex: "1", background: "rgb(255, 255, 255)", pointerEvents});
+          element.append(cover);
+        }, {pointerEvents, extent});
+        const context = `${extent}, pointer-events:${pointerEvents}`;
+        await expect(computedContrast(page, [selector]), context).resolves.toMatchObject([{decided: false}]);
+        await expect(axeOracle(page), context).rejects.toThrow("axe: the computed-contrast oracle cannot decide an incomplete color-contrast node");
+        if (extent === "full" && pointerEvents === "none") {
+          await page.locator(`${selector} span`).evaluate(element => {
+            const box = element.getBoundingClientRect();
+            Object.assign(element.style, {position: "fixed", left: `${box.left}px`, top: `${box.top}px`});
+            element.parentElement.after(element);
+          });
+          await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: false}]);
+          await page.locator(`${selector} + span`).evaluate(element => element.remove());
+        } else {
+          await page.locator(`${selector} span`).evaluate(element => element.remove());
+        }
+        await expect(computedContrast(page, [selector]), context).resolves.toMatchObject([{decided: true}]);
+        await axeOracle(page);
       }
-      await axeOracle(page);
     }
     await page.locator(selector).evaluate(element => {
       const wrapper = document.createElement("span");
@@ -114,6 +125,39 @@ export function oracleControls({open, container, blockedLoad}) {
     await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: true}]);
     await axeOracle(page);
     await page.locator(selector).evaluate(element => element.remove());
+    await axeOracle(page);
+  });
+
+  test("contrast checks every text owner's threshold in either DOM order", async ({page, matrixServers}) => {
+    await open(page, matrixServers);
+    const selector = `#${controlId}`;
+    for (const reverse of [false, true]) {
+      await page.evaluate(({container, id, reverse}) => {
+        const text = document.createElement("p");
+        text.id = id;
+        text.style.backgroundColor = "rgb(255, 255, 255)";
+        const large = document.createElement("span");
+        large.textContent = "Passing large text. ";
+        Object.assign(large.style, {fontSize: "24px", fontWeight: "400", color: "rgb(140, 140, 140)"});
+        const normal = document.createElement("span");
+        normal.textContent = "Failing normal text.";
+        Object.assign(normal.style, {fontSize: "16px", fontWeight: "400", color: "rgb(120, 120, 120)"});
+        text.append(...(reverse ? [normal, large] : [large, normal]));
+        document.querySelector(container).prepend(text);
+      }, {container, id: controlId, reverse});
+      const [failed] = await computedContrast(page, [selector]);
+      expect(failed).toMatchObject({decided: true, fontSize: 16, large: false, required: 4.5});
+      expect(failed.ratio).toBeLessThan(4.5);
+      await page.locator(selector).evaluate(element => {
+        const normal = [...element.children].find(child => child.textContent === "Failing normal text.");
+        normal.style.color = "rgb(100, 100, 100)";
+      });
+      const [restored] = await computedContrast(page, [selector]);
+      expect(restored).toMatchObject({decided: true, fontSize: 24, large: true, required: 3});
+      expect(restored.ratio).toBeGreaterThanOrEqual(3);
+      expect(restored.ratio).toBeLessThan(4.5);
+      await page.locator(selector).evaluate(element => element.remove());
+    }
     await axeOracle(page);
   });
 

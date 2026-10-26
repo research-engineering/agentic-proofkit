@@ -247,7 +247,7 @@ async function renderSpecifications(offset = 0, filters = activeFilters, history
         title.textContent = requirement.requirementId;
         const heading = document.createElement("div");
         heading.className = "record-heading";
-        heading.append(title, statusBadge(requirement.lifecycleState, requirement.lifecycleState === "deferred" ? "warning" : "info"));
+        heading.append(title, statusBadge(requirement.lifecycleState, "info"));
         const boundary = document.createElement("details");
         boundary.className = "requirement-boundary";
         boundary.setAttribute("aria-label", `Boundary for ${requirement.requirementId}`);

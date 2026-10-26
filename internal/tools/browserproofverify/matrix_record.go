@@ -34,6 +34,7 @@ var (
 		"axe refuses an incomplete target-size result",
 		"axe refuses an incomplete color-contrast node that fails the computed-contrast oracle",
 		"contrast refuses opaque child paint and preserves transparent text wrappers",
+		"contrast checks every text owner's threshold in either DOM order",
 		"contrast refuses a placeholder below 4.5:1",
 		"contrast refuses a checkbox without a 3:1 boundary",
 		"reflow refuses a horizontally scrolling document",

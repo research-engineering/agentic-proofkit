@@ -102,7 +102,10 @@ func repositoryMatrixResolution(t *testing.T, kind proofKind) (string, proofInpu
 func TestMatrixRequiresChildPaintAndMobileIdentityControls(t *testing.T) {
 	for _, family := range []string{"static", "workspace"} {
 		tests := expectedMatrixProjectTests(family)
-		required := []string{"tests/matrix/" + family + "/controls.spec.mjs::controls.spec.mjs > contrast refuses opaque child paint and preserves transparent text wrappers"}
+		required := []string{
+			"tests/matrix/" + family + "/controls.spec.mjs::controls.spec.mjs > contrast refuses opaque child paint and preserves transparent text wrappers",
+			"tests/matrix/" + family + "/controls.spec.mjs::controls.spec.mjs > contrast checks every text owner's threshold in either DOM order",
+		}
 		if family == "workspace" {
 			required = append(required, "tests/matrix/workspace/tasks.spec.mjs::tasks.spec.mjs > a reader can use view controls below a tall mobile product identity")
 		}

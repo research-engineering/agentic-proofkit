@@ -88,6 +88,24 @@ const proofkitMatrix = (() => {
       && (parse(style.backgroundColor)[3] > 0 || style.backgroundImage !== "none"
         || element.matches("img, canvas, video, iframe, object, embed"));
   };
+  const revealLine = (owner, index, lineRects) => {
+    owner.scrollIntoView({block: "nearest", inline: "nearest"});
+    for (let ancestor = owner.parentElement; ancestor instanceof Element && ancestor !== document.body && ancestor !== document.documentElement; ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor);
+      const scrollsY = ["auto", "scroll"].includes(style.overflowY) && ancestor.scrollHeight > ancestor.clientHeight;
+      const scrollsX = ["auto", "scroll"].includes(style.overflowX) && ancestor.scrollWidth > ancestor.clientWidth;
+      if (!scrollsX && !scrollsY) continue;
+      const rect = lineRects()[index];
+      if (rect === undefined) return null;
+      const box = ancestor.getBoundingClientRect();
+      if (scrollsY) ancestor.scrollTop += rect.top + rect.height / 2 - (box.top + ancestor.clientTop + ancestor.clientHeight / 2);
+      if (scrollsX) ancestor.scrollLeft += rect.left + rect.width / 2 - (box.left + ancestor.clientLeft + ancestor.clientWidth / 2);
+    }
+    const rect = lineRects()[index];
+    if (rect === undefined) return null;
+    window.scrollBy(0, rect.top + rect.height / 2 - document.documentElement.clientHeight / 2);
+    return lineRects()[index] ?? null;
+  };
   // An outline does not participate in hit-testing. Its side midpoints must
   // escape clipping and unrelated paint, not hit the focused element itself.
   const outlineVisible = (element, style) => {
@@ -162,7 +180,7 @@ const proofkitMatrix = (() => {
       return element.hasAttribute("tabindex") && element.tabIndex >= 0;
     });
   };
-  return Object.freeze({parse, composite, luminance, ratio, undecidable, backgroundOf, opacityOf, paints, outlineVisible, tabStops});
+  return Object.freeze({parse, composite, luminance, ratio, undecidable, backgroundOf, opacityOf, paints, revealLine, outlineVisible, tabStops});
 })();
 Object.defineProperty(globalThis, "proofkitMatrix", {value: proofkitMatrix});
 `;
@@ -190,45 +208,64 @@ export async function runAxe(page) {
   return result;
 }
 
-// computedContrast decides one element's text contrast from computed styles:
-// the text color over the composite of the ancestors' background colors.
-// It refuses group opacity, which requires group compositing rather than
-// independent background/text fading, and refuses to decide when a background
-// image, filter or blend mode is in the chain, or when an
-// element with a background other than its ancestors is painted above the
-// text's first line.
+// Every text node owns its style and threshold; every live line must escape
+// overlapping paint. Unsupported compositing refuses a decision. One failing
+// unit refutes the target; a passing summary requires all units to pass.
 export async function computedContrast(page, selectors) {
   return page.evaluate((targets) => targets.map((selector) => {
     const helpers = globalThis.proofkitMatrix;
     const element = document.querySelector(selector);
     if (!(element instanceof Element)) return {selector, decided: false, reason: "target not found"};
-    const reason = helpers.undecidable(element);
-    if (reason !== null) return {selector, decided: false, reason};
-    const style = getComputedStyle(element);
-    const fontSize = Number.parseFloat(style.fontSize);
-    const bold = Number(style.fontWeight) >= 700;
-    const large = fontSize >= 24 || (bold && fontSize >= 18.66);
-    const background = helpers.backgroundOf(element);
-    const text = helpers.parse(style.color);
-    const ratio = helpers.ratio(helpers.composite(text, background), background);
-    element.scrollIntoView({block: "center", inline: "center"});
-    const range = document.createRange();
-    range.selectNodeContents(element);
-    const rect = [...range.getClientRects()].find((candidate) => candidate.width > 0 && candidate.height > 0);
-    if (rect === undefined) return {selector, decided: false, reason: "no rendered text box"};
-    const stack = document.elementsFromPoint(rect.left + Math.min(rect.width / 2, 4), rect.top + rect.height / 2);
-    const index = stack.findIndex((candidate) => candidate === element || candidate.contains(element));
-    if (index < 0) return {selector, decided: false, reason: "text is not hit-testable"};
-    const covering = stack.slice(0, index).filter((candidate) => !candidate.contains(element) && helpers.parse(getComputedStyle(candidate).backgroundColor)[3] > 0);
-    if (covering.length > 0) return {selector, decided: false, reason: "painted below " + covering[0].tagName};
-    const nonHitPaint = [...document.querySelectorAll("body *")].find(candidate => {
-      if (candidate.contains(element) || getComputedStyle(candidate).pointerEvents !== "none" || !helpers.paints(candidate)) return false;
-      return [...candidate.getClientRects()].some(box =>
-        Math.max(0, rect.left, box.left) < Math.min(document.documentElement.clientWidth, rect.right, box.right) &&
-        Math.max(0, rect.top, box.top) < Math.min(document.documentElement.clientHeight, rect.bottom, box.bottom));
-    });
-    if (nonHitPaint !== undefined) return {selector, decided: false, reason: "potential paint excluded from hit-testing on " + nonHitPaint.tagName};
-    return {selector, decided: true, ratio, large, required: large ? 3 : 4.5, fontSize, fontWeight: style.fontWeight};
+    const paintedBoxes = [...document.querySelectorAll("body *")].filter(helpers.paints);
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let summary = null;
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const owner = node.parentElement;
+      if (node.textContent.trim() === "" || owner.closest("script, style, template")) continue;
+      const reason = helpers.undecidable(owner);
+      if (reason !== null) return {selector, decided: false, reason};
+      const style = getComputedStyle(owner);
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const lineRects = () => [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0);
+      const count = lineRects().length;
+      if (count === 0 || style.visibility !== "visible") return {selector, decided: false, reason: "no visible text box"};
+      for (let line = 0; line < count; line += 1) {
+        const rect = helpers.revealLine(owner, line, lineRects);
+        if (rect === null) return {selector, decided: false, reason: "text geometry changed"};
+        const anchor = stack => stack.findIndex(candidate => candidate === owner || candidate.contains(owner));
+        const stack = document.elementsFromPoint(rect.left + Math.min(rect.width / 2, 4), rect.top + rect.height / 2);
+        if (anchor(stack) < 0) return {selector, decided: false, reason: "text is not hit-testable"};
+        for (const candidate of paintedBoxes) {
+          if (candidate.contains(owner)) continue;
+          for (const box of candidate.getClientRects()) {
+            const left = Math.max(0, rect.left, box.left);
+            const right = Math.min(document.documentElement.clientWidth, rect.right, box.right);
+            const top = Math.max(0, rect.top, box.top);
+            const bottom = Math.min(document.documentElement.clientHeight, rect.bottom, box.bottom);
+            if (right <= left || bottom <= top) continue;
+            if (getComputedStyle(candidate).pointerEvents === "none") {
+              return {selector, decided: false, reason: "potential paint excluded from hit-testing on " + candidate.tagName};
+            }
+            const overlap = document.elementsFromPoint((left + right) / 2, (top + bottom) / 2);
+            const ownLayer = anchor(overlap);
+            if (ownLayer < 0) return {selector, decided: false, reason: "overlapping text is not hit-testable"};
+            const paintLayer = overlap.indexOf(candidate);
+            if (paintLayer >= 0 && paintLayer < ownLayer) return {selector, decided: false, reason: "painted below " + candidate.tagName};
+          }
+        }
+      }
+      const fontSize = Number.parseFloat(style.fontSize);
+      const large = fontSize >= 24 || (Number(style.fontWeight) >= 700 && fontSize >= 18.66);
+      const background = helpers.backgroundOf(owner);
+      const text = helpers.parse(style.color);
+      const ratio = helpers.ratio(helpers.composite(text, background), background);
+      const observation = {selector, decided: true, ratio, large, required: large ? 3 : 4.5, fontSize, fontWeight: style.fontWeight};
+      if (!(ratio >= observation.required)) return observation;
+      if (summary === null || ratio / observation.required < summary.ratio / summary.required) summary = observation;
+    }
+    return summary ?? {selector, decided: false, reason: "no rendered text box"};
   }), selectors);
 }
 
@@ -458,26 +495,15 @@ export async function observeContent(page, recordSelector) {
         }
         // Each line box of the text is scrolled to the center of every
         // scrolling ancestor and of the viewport, then hit-tested there.
-        const reveal = (index) => {
-          owner.scrollIntoView({block: "nearest", inline: "nearest"});
-          for (let ancestor = owner.parentElement; ancestor instanceof Element && ancestor !== document.body && ancestor !== document.documentElement; ancestor = ancestor.parentElement) {
-            const style = getComputedStyle(ancestor);
-            const scrollsY = ["auto", "scroll"].includes(style.overflowY) && ancestor.scrollHeight > ancestor.clientHeight;
-            const scrollsX = ["auto", "scroll"].includes(style.overflowX) && ancestor.scrollWidth > ancestor.clientWidth;
-            if (!scrollsX && !scrollsY) continue;
-            const rect = lineRects()[index];
-            const box = ancestor.getBoundingClientRect();
-            if (scrollsY) ancestor.scrollTop += rect.top + rect.height / 2 - (box.top + ancestor.clientTop + ancestor.clientHeight / 2);
-            if (scrollsX) ancestor.scrollLeft += rect.left + rect.width / 2 - (box.left + ancestor.clientLeft + ancestor.clientWidth / 2);
-          }
-          const rect = lineRects()[index];
-          window.scrollBy(0, rect.top + rect.height / 2 - document.documentElement.clientHeight / 2);
-          return lineRects()[index];
-        };
         let painted = true;
         let probe = null;
         for (let index = 0; index < rects.length; index += 1) {
-          const rect = reveal(index);
+          const rect = globalThis.proofkitMatrix.revealLine(owner, index, lineRects);
+          if (rect === null) {
+            painted = false;
+            probe = {line: index, problem: "text geometry changed"};
+            break;
+          }
           const x = rect.left + Math.min(rect.width / 2, 6);
           const y = rect.top + rect.height / 2;
           const hit = document.elementFromPoint(x, y);
