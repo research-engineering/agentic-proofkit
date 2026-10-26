@@ -72,6 +72,38 @@ export function oracleControls({open, container, blockedLoad}) {
     await expect(axeOracle(page, reclassifyAsIncomplete)).rejects.toThrow("axe: an incomplete color-contrast node fails the computed-contrast oracle");
   });
 
+  test("contrast refuses opaque child paint and preserves transparent text wrappers", async ({page, matrixServers}) => {
+    await open(page, matrixServers);
+    await page.evaluate(({selector, id}) => {
+      const text = document.createElement("p");
+      text.id = id;
+      text.textContent = "Contrast control text";
+      text.style.position = "relative";
+      document.querySelector(selector).prepend(text);
+    }, {selector: container, id: controlId});
+    const selector = `#${controlId}`;
+    await axeOracle(page);
+    await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: true}]);
+    await page.locator(selector).evaluate(element => {
+      const cover = document.createElement("span");
+      Object.assign(cover.style, {position: "absolute", inset: "0", zIndex: "1", background: "rgb(255, 255, 255)"});
+      element.append(cover);
+    });
+    await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: false, reason: "painted below SPAN"}]);
+    await expect(axeOracle(page)).rejects.toThrow("axe: the computed-contrast oracle cannot decide an incomplete color-contrast node");
+    await page.locator(`${selector} span`).evaluate(element => element.remove());
+    await axeOracle(page);
+    await page.locator(selector).evaluate(element => {
+      const wrapper = document.createElement("span");
+      wrapper.textContent = element.textContent;
+      element.replaceChildren(wrapper);
+    });
+    await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: true}]);
+    await axeOracle(page);
+    await page.locator(selector).evaluate(element => element.remove());
+    await axeOracle(page);
+  });
+
   test("contrast refuses a placeholder below 4.5:1", async ({page, matrixServers}) => {
     await open(page, matrixServers);
     await page.evaluate(({selector, id}) => {

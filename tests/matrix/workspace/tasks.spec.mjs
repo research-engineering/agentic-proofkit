@@ -50,6 +50,29 @@ test("wrapped workspace identity keeps sticky panel controls below the product b
   await judgeSecurityNow(page, security);
 });
 
+test("a reader can use view controls below a tall mobile product identity", async ({page, matrixServers, security}) => {
+  await open(page, matrixServers);
+  const title = page.locator(".product-bar h1");
+  const original = await title.textContent();
+  for (const [width, height, identity, rootSize] of [[390, 640, "W".repeat(256), "200%"], [768, 900, "W".repeat(256), "200%"], [390, 640, original, "100%"], [1440, 900, original, "100%"]]) {
+    await page.setViewportSize({width, height});
+    await title.evaluate((element, value) => {element.textContent = value;}, identity);
+    await page.evaluate(size => {document.documentElement.style.fontSize = size;}, rootSize);
+    const target = page.locator('.view-controls [data-view="specifications"]');
+    await target.evaluate(element => element.blur());
+    await target.focus();
+    await expect.poll(() => target.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const topmost = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return box.top >= 0 && box.bottom <= innerHeight && box.left >= 0 && box.right <= innerWidth &&
+        (topmost === element || element.contains(topmost));
+    })).toBe(true);
+    await openTab(page, "Coverage", "coverage");
+    await openTab(page, "Specifications", "specifications");
+  }
+  await judgeSecurityNow(page, security);
+});
+
 test("a reader finds a requirement by searching the workspace", async ({page, matrixServers, security}) => {
   await open(page, matrixServers);
   await expect(page.locator("#workspace-content article")).toHaveCount(2);

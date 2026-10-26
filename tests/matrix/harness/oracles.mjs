@@ -217,7 +217,7 @@ export async function computedContrast(page, selectors) {
     const rect = [...range.getClientRects()].find((candidate) => candidate.width > 0 && candidate.height > 0);
     if (rect === undefined) return {selector, decided: false, reason: "no rendered text box"};
     const stack = document.elementsFromPoint(rect.left + Math.min(rect.width / 2, 4), rect.top + rect.height / 2);
-    const index = stack.findIndex((candidate) => candidate === element || element.contains(candidate) || candidate.contains(element));
+    const index = stack.findIndex((candidate) => candidate === element || candidate.contains(element));
     if (index < 0) return {selector, decided: false, reason: "text is not hit-testable"};
     const covering = stack.slice(0, index).filter((candidate) => !candidate.contains(element) && helpers.parse(getComputedStyle(candidate).backgroundColor)[3] > 0);
     if (covering.length > 0) return {selector, decided: false, reason: "painted below " + covering[0].tagName};

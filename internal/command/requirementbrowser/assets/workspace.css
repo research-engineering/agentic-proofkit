@@ -248,6 +248,8 @@ th, td { border: var(--border-width) solid var(--color-border); max-width: var(-
 th { background: var(--color-surface-subtle); color: var(--color-text-muted); }
 
 @media (max-width: 64rem) {
+  html { scroll-padding-block-start: var(--space-8); }
+  .product-bar { position: static; }
   body { grid-template-columns: minmax(0, 1fr); }
   body[data-modal-open="true"] { overflow: hidden; }
   main { grid-column: 1; padding: var(--space-16) var(--space-16) var(--space-48); }
