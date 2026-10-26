@@ -84,15 +84,28 @@ export function oracleControls({open, container, blockedLoad}) {
     const selector = `#${controlId}`;
     await axeOracle(page);
     await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: true}]);
-    await page.locator(selector).evaluate(element => {
-      const cover = document.createElement("span");
-      Object.assign(cover.style, {position: "absolute", inset: "0", zIndex: "1", background: "rgb(255, 255, 255)"});
-      element.append(cover);
-    });
-    await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: false, reason: "painted below SPAN"}]);
-    await expect(axeOracle(page)).rejects.toThrow("axe: the computed-contrast oracle cannot decide an incomplete color-contrast node");
-    await page.locator(`${selector} span`).evaluate(element => element.remove());
-    await axeOracle(page);
+    for (const pointerEvents of ["auto", "none"]) {
+      await page.locator(selector).evaluate((element, pointerEvents) => {
+        const cover = document.createElement("span");
+        Object.assign(cover.style, {position: "absolute", inset: "0", zIndex: "1", background: "rgb(255, 255, 255)", pointerEvents});
+        element.append(cover);
+      }, pointerEvents);
+      await expect(computedContrast(page, [selector]), pointerEvents).resolves.toMatchObject([{decided: false}]);
+      await expect(axeOracle(page), pointerEvents).rejects.toThrow("axe: the computed-contrast oracle cannot decide an incomplete color-contrast node");
+      if (pointerEvents === "none") {
+        await page.locator(selector).evaluate(element => {
+          const box = element.getBoundingClientRect();
+          const cover = element.querySelector("span");
+          Object.assign(cover.style, {position: "fixed", inset: "auto", left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`});
+          element.after(cover);
+        });
+        await expect(computedContrast(page, [selector])).resolves.toMatchObject([{decided: false}]);
+        await page.locator(`${selector} + span`).evaluate(element => element.remove());
+      } else {
+        await page.locator(`${selector} span`).evaluate(element => element.remove());
+      }
+      await axeOracle(page);
+    }
     await page.locator(selector).evaluate(element => {
       const wrapper = document.createElement("span");
       wrapper.textContent = element.textContent;

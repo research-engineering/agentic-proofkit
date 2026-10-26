@@ -82,6 +82,12 @@ const proofkitMatrix = (() => {
     for (let current = element; current instanceof Element; current = current.parentElement) opacity *= Number(getComputedStyle(current).opacity);
     return opacity;
   };
+  const paints = (element) => {
+    const style = getComputedStyle(element);
+    return style.visibility === "visible" && opacityOf(element) > 0
+      && (parse(style.backgroundColor)[3] > 0 || style.backgroundImage !== "none"
+        || element.matches("img, canvas, video, iframe, object, embed"));
+  };
   // An outline does not participate in hit-testing. Its side midpoints must
   // escape clipping and unrelated paint, not hit the focused element itself.
   const outlineVisible = (element, style) => {
@@ -110,12 +116,6 @@ const proofkitMatrix = (() => {
       [box.left + box.width / 2, box.top - middle], [box.left + box.width / 2, box.bottom + middle]];
     const unclipped = points.filter(([x, y]) => x >= bounds.left && x < bounds.right && y >= bounds.top && y < bounds.bottom);
     if (unclipped.length === 0) return {visible: false, reason: "outline is clipped", bounds, points};
-    const paints = (candidate) => {
-      const paint = getComputedStyle(candidate);
-      return paint.visibility === "visible" && opacityOf(candidate) > 0
-        && (parse(paint.backgroundColor)[3] > 0 || paint.backgroundImage !== "none"
-          || candidate.matches("img, canvas, video, iframe, object, embed"));
-    };
     const unrelated = (candidate) => !candidate.contains(element) && !element.contains(candidate);
     const modal = element.closest("dialog:modal");
     const nonHitPaint = [...(modal ?? document.body).querySelectorAll("*")]
@@ -162,7 +162,7 @@ const proofkitMatrix = (() => {
       return element.hasAttribute("tabindex") && element.tabIndex >= 0;
     });
   };
-  return Object.freeze({parse, composite, luminance, ratio, undecidable, backgroundOf, opacityOf, outlineVisible, tabStops});
+  return Object.freeze({parse, composite, luminance, ratio, undecidable, backgroundOf, opacityOf, paints, outlineVisible, tabStops});
 })();
 Object.defineProperty(globalThis, "proofkitMatrix", {value: proofkitMatrix});
 `;
@@ -221,6 +221,13 @@ export async function computedContrast(page, selectors) {
     if (index < 0) return {selector, decided: false, reason: "text is not hit-testable"};
     const covering = stack.slice(0, index).filter((candidate) => !candidate.contains(element) && helpers.parse(getComputedStyle(candidate).backgroundColor)[3] > 0);
     if (covering.length > 0) return {selector, decided: false, reason: "painted below " + covering[0].tagName};
+    const nonHitPaint = [...document.querySelectorAll("body *")].find(candidate => {
+      if (candidate.contains(element) || getComputedStyle(candidate).pointerEvents !== "none" || !helpers.paints(candidate)) return false;
+      return [...candidate.getClientRects()].some(box =>
+        Math.max(0, rect.left, box.left) < Math.min(document.documentElement.clientWidth, rect.right, box.right) &&
+        Math.max(0, rect.top, box.top) < Math.min(document.documentElement.clientHeight, rect.bottom, box.bottom));
+    });
+    if (nonHitPaint !== undefined) return {selector, decided: false, reason: "potential paint excluded from hit-testing on " + nonHitPaint.tagName};
     return {selector, decided: true, ratio, large, required: large ? 3 : 4.5, fontSize, fontWeight: style.fontWeight};
   }), selectors);
 }
@@ -380,12 +387,7 @@ export async function observeContent(page, recordSelector) {
     let texts = 0;
     // Background boxes can cover only part of a line or opt out of hit-testing.
     // Their geometry is an independent operand, not proof of pixel paint order.
-    const paintedBoxes = [...document.querySelectorAll("body *")].filter((element) => {
-      const style = getComputedStyle(element);
-      return style.visibility === "visible" && globalThis.proofkitMatrix.opacityOf(element) > 0
-        && (globalThis.proofkitMatrix.parse(style.backgroundColor)[3] > 0 || style.backgroundImage !== "none"
-          || element.matches("img, canvas, video, iframe, object, embed"));
-    });
+    const paintedBoxes = [...document.querySelectorAll("body *")].filter(globalThis.proofkitMatrix.paints);
     const normalizeText = (text) => text.replace(/\s+/g, " ").trim();
     const listed = new Map([...document.querySelectorAll(".graph-records [data-graph-select]")]
       .filter((element) => element.getClientRects().length > 0)
