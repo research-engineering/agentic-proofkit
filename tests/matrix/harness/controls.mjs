@@ -158,6 +158,21 @@ export function oracleControls({open, container, blockedLoad}) {
       expect(restored.ratio).toBeLessThan(4.5);
       await page.locator(selector).evaluate(element => element.remove());
     }
+    for (const [fontSize, fontWeight, required] of [[20, 700, 3], [20, 400, 4.5], [18, 700, 4.5]]) {
+      await page.evaluate(({container, id, fontSize, fontWeight}) => {
+        const text = document.createElement("p");
+        text.id = id;
+        text.textContent = "Threshold classification control";
+        Object.assign(text.style, {fontSize: `${fontSize}px`, fontWeight: String(fontWeight),
+          backgroundColor: "rgb(255, 255, 255)", color: "rgb(140, 140, 140)"});
+        document.querySelector(container).prepend(text);
+      }, {container, id: controlId, fontSize, fontWeight});
+      const [observed] = await computedContrast(page, [selector]);
+      expect(observed).toMatchObject({decided: true, fontSize, fontWeight: String(fontWeight), large: required === 3, required});
+      expect(observed.ratio).toBeGreaterThanOrEqual(3);
+      expect(observed.ratio).toBeLessThan(4.5);
+      await page.locator(selector).evaluate(element => element.remove());
+    }
     await axeOracle(page);
   });
 

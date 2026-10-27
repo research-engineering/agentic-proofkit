@@ -4,11 +4,21 @@ import test from "node:test";
 import {
   axeTargetSelector, documentSecurityHeaders, judgeAxe, judgeContent, judgeControlContrast,
   judgeDocumentHeaders, judgeKeyboard, judgeReflow, judgeSecurityEvents, OracleFailure, SecurityMonitor,
+  textContrastThreshold,
 } from "./oracles.mjs";
 
 function refuses(judge, observation, label) {
   assert.throws(() => judge(observation), OracleFailure, label);
 }
+
+test("text contrast classification separates regular size and both bold guards", () => {
+  for (const [size, weight, required] of [
+    [24, 400, 3], [23.99, 400, 4.5], [20, 700, 3], [20, 699, 4.5],
+    [18.66, 700, 3], [18.65, 700, 4.5], [18, 900, 4.5], [24, 699, 3],
+  ]) {
+    assert.equal(textContrastThreshold(size, weight), required, `${size}px/${weight}`);
+  }
+});
 
 test("axe decisions independently require every material rule operand", () => {
   const node = {target: ["#text"]};

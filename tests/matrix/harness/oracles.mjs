@@ -22,8 +22,13 @@ export class OracleFailure extends Error {
 // Shared in-page helpers. Each is installed by source text into the page,
 // because evaluated functions cannot close over module scope.
 
+export function textContrastThreshold(fontSize, fontWeight) {
+  return fontSize >= 24 || (fontWeight >= 700 && fontSize >= 18.66) ? 3 : 4.5;
+}
+
 const pageHelpers = String.raw`
 const proofkitMatrix = (() => {
+  const textContrastThreshold = ${textContrastThreshold.toString()};
   const parse = (value) => {
     if (value === "transparent") return [0, 0, 0, 0];
     // Pinned Firefox serializes some UA colors, such as its default
@@ -180,7 +185,7 @@ const proofkitMatrix = (() => {
       return element.hasAttribute("tabindex") && element.tabIndex >= 0;
     });
   };
-  return Object.freeze({parse, composite, luminance, ratio, undecidable, backgroundOf, opacityOf, paints, revealLine, outlineVisible, tabStops});
+  return Object.freeze({textContrastThreshold, parse, composite, luminance, ratio, undecidable, backgroundOf, opacityOf, paints, revealLine, outlineVisible, tabStops});
 })();
 Object.defineProperty(globalThis, "proofkitMatrix", {value: proofkitMatrix});
 `;
@@ -257,11 +262,11 @@ export async function computedContrast(page, selectors) {
         }
       }
       const fontSize = Number.parseFloat(style.fontSize);
-      const large = fontSize >= 24 || (Number(style.fontWeight) >= 700 && fontSize >= 18.66);
+      const required = helpers.textContrastThreshold(fontSize, Number(style.fontWeight));
       const background = helpers.backgroundOf(owner);
       const text = helpers.parse(style.color);
       const ratio = helpers.ratio(helpers.composite(text, background), background);
-      const observation = {selector, decided: true, ratio, large, required: large ? 3 : 4.5, fontSize, fontWeight: style.fontWeight};
+      const observation = {selector, decided: true, ratio, large: required === 3, required, fontSize, fontWeight: style.fontWeight};
       if (!(ratio >= observation.required)) return observation;
       if (summary === null || ratio / observation.required < summary.ratio / summary.required) summary = observation;
     }
