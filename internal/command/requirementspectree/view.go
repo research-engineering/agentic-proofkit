@@ -262,15 +262,15 @@ func html(view map[string]any, exports []browserdoc.ExportFile) string {
 		sourceKinds = append(sourceKinds, sourceRefKinds...)
 		nodeOverlayKinds := overlayKindsForNode(node)
 		overlayKinds = append(overlayKinds, nodeOverlayKinds...)
-		filters := []browserdoc.FilterValue{{Key: "node-kind", Value: nodeKind}}
+		filters := []browserdoc.FilterValue{{Key: "node-kind", Values: []string{nodeKind}}}
 		if len(roles) > 0 {
-			filters = append(filters, browserdoc.FilterValue{Key: "source-role", Value: roles[0]})
+			filters = append(filters, browserdoc.FilterValue{Key: "source-role", Values: roles})
 		}
 		if len(sourceRefKinds) > 0 {
-			filters = append(filters, browserdoc.FilterValue{Key: "source-kind", Value: sourceRefKinds[0]})
+			filters = append(filters, browserdoc.FilterValue{Key: "source-kind", Values: sourceRefKinds})
 		}
 		if len(nodeOverlayKinds) > 0 {
-			filters = append(filters, browserdoc.FilterValue{Key: "overlay-kind", Value: nodeOverlayKinds[0]})
+			filters = append(filters, browserdoc.FilterValue{Key: "overlay-kind", Values: nodeOverlayKinds})
 		}
 		search := browserdoc.SearchText(append([]string{
 			stringValue(node["nodeId"]),

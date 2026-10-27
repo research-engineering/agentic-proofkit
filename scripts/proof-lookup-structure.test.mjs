@@ -300,6 +300,34 @@ const declaredStreamDeltas = Object.freeze([Object.freeze({
     }
   });
 `,
+}), Object.freeze({
+  id: 'UI-FILTER-ARRAYS',
+  reason: 'The embedded matcher reads exact membership from the escaped array attribute.',
+  rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
+  replacements: Object.freeze([
+    Object.freeze({inside: false,
+      from: '      return value === "" || item.getAttribute("data-filter-" + filter.getAttribute("data-filter-key")) === value;',
+      to: '      return value === "" || JSON.parse(item.getAttribute("data-filter-" + filter.getAttribute("data-filter-key")) || "[]").includes(value);'}),
+  ]),
+}), Object.freeze({
+  id: 'UI-FILTER-COMPACT',
+  reason: 'Both compact cards and rows retain their singleton values in the shared array protocol.',
+  rows: Object.freeze(['compact-html', 'maliciousCompact-html']),
+  replacements: Object.freeze([
+    Object.freeze({inside: false, occurrences: 2, from: ' data-filter-surface="proofkit.surface"', to: ' data-filter-surface="[&#34;proofkit.surface&#34;]"'}),
+    Object.freeze({inside: false, occurrences: 2, from: ' data-filter-blocking="blocking"', to: ' data-filter-blocking="[&#34;blocking&#34;]"'}),
+    Object.freeze({inside: false, occurrences: 2, from: ' data-filter-invariant-role="contract"', to: ' data-filter-invariant-role="[&#34;contract&#34;]"'}),
+    Object.freeze({inside: false, occurrences: 2, from: ' data-filter-preconditioned="false"', to: ' data-filter-preconditioned="[&#34;false&#34;]"'}),
+  ]),
+}), Object.freeze({
+  id: 'UI-FILTER-STRUCTURED',
+  reason: 'Both structured cards and rows retain their singleton values in the shared array protocol.',
+  rows: Object.freeze(['structured-html']),
+  replacements: Object.freeze([
+    Object.freeze({inside: false, occurrences: 2, from: ' data-filter-owner="proofkit.test"', to: ' data-filter-owner="[&#34;proofkit.test&#34;]"'}),
+    Object.freeze({inside: false, occurrences: 2, from: ' data-filter-claim-level="blocking"', to: ' data-filter-claim-level="[&#34;blocking&#34;]"'}),
+    Object.freeze({inside: false, occurrences: 2, from: ' data-filter-proof-state="witness_backed"', to: ' data-filter-proof-state="[&#34;witness_backed&#34;]"'}),
+  ]),
 })]);
 const count = (text, needle) => text.split(needle).length - 1;
 // tableBreaks mirrors browserdoc's table cell break opportunities: in the text
@@ -363,10 +391,13 @@ function invertDelta(delta, stdout) {
   }
   if (delta.replacements !== undefined) {
     let current = stdout;
-    for (const {inside, from, to} of delta.replacements.toReversed()) {
-      const at = current.indexOf(to), start = current.indexOf('<style>'), end = current.indexOf('</style>');
-      if (count(current, to) !== 1 || inside !== (at > start && at + to.length <= end)) return null;
-      current = current.slice(0, at) + from + current.slice(at + to.length);
+    for (const {inside, from, to, occurrences = 1} of delta.replacements.toReversed()) {
+      const start = current.indexOf('<style>'), end = current.indexOf('</style>');
+      if (count(current, to) !== occurrences) return null;
+      for (let at = current.indexOf(to); at !== -1; at = current.indexOf(to, at + to.length)) {
+        if (inside !== (at > start && at + to.length <= end)) return null;
+      }
+      current = current.replaceAll(to, from);
     }
     // A delta with replacements and a replaced style first restores the
     // bytes outside the style, then the whole style.
@@ -439,24 +470,43 @@ test('lookup contracts conserve73actual predecessor process and rendered streams
 });
 
 test('the declared stream deltas are exact, positioned and limited to their rows', () => {
-  const [kernel, tokens, accessibility, redesign, hierarchy] = declaredStreamDeltas;
-  assert.deepEqual(declaredStreamDeltas.map(delta => delta.id), ['KERNEL-02', 'UI-DESIGN-01', 'UI-DESIGN-01-ACCESSIBILITY', 'UI-DESIGN-01-REDESIGN', 'UI-DESIGN-01-NAVIGATION']);
+  const [kernel, tokens, accessibility, redesign, hierarchy, arrays, compact, structured] = declaredStreamDeltas;
+  assert.deepEqual(declaredStreamDeltas.map(delta => delta.id), ['KERNEL-02', 'UI-DESIGN-01', 'UI-DESIGN-01-ACCESSIBILITY', 'UI-DESIGN-01-REDESIGN', 'UI-DESIGN-01-NAVIGATION', 'UI-FILTER-ARRAYS', 'UI-FILTER-COMPACT', 'UI-FILTER-STRUCTURED']);
   const rows = baseline.observations.filter(row => row.format === 'html');
-  for (const delta of declaredStreamDeltas) assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
+  for (const delta of [kernel, tokens, accessibility, redesign, hierarchy, arrays]) assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
+  assert.deepEqual([...compact.rows], ['compact-html', 'maliciousCompact-html']);
+  assert.deepEqual([...structured.rows], ['structured-html']);
   const row = rows[0];
-  const withHierarchy = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
+  const withArrays = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
     maxBuffer: 2 << 20}), row.name).stdout;
-  assert.ok(conservesPredecessor(row, withHierarchy), 'current stdout must carry every declared delta');
+  assert.ok(conservesPredecessor(row, withArrays), 'current stdout must carry every declared delta');
+  const earlier = [kernel, tokens, accessibility, redesign, hierarchy];
+  assert.equal(conservesPredecessor(row, withArrays, earlier), false, 'the array protocol must be declared');
+  for (const candidate of rows) {
+    const text = assertCLITransport(spawnWithInputFile(binary, candidate.argv, {input: candidate.input, encoding: 'utf8', timeout: 10000,
+      maxBuffer: 2 << 20}), candidate.name).stdout;
+    for (const delta of [arrays, candidate.name === 'structured-html' ? structured : compact]) {
+      for (const replacement of delta.replacements) {
+        for (const mutated of [text.replace(replacement.to, replacement.from), text.replace(replacement.to, replacement.to + replacement.to),
+          text.replace(replacement.to, '').replace('</style>', replacement.to + '</style>')]) {
+          assert.notEqual(mutated, text);
+          assert.equal(conservesPredecessor(candidate, mutated), false, 'array replacements cannot be missing, repeated or moved');
+        }
+      }
+    }
+  }
+  const withHierarchy = invertDelta(arrays, invertDelta(compact, withArrays));
+  assert.ok(withHierarchy !== null && conservesPredecessor(row, withHierarchy, earlier), 'restored stdout must carry every earlier delta');
   const legacy = [kernel, tokens, accessibility, redesign];
   assert.equal(conservesPredecessor(row, withHierarchy, legacy), false, 'the hierarchy change must be declared');
   const current = invertDelta(hierarchy, withHierarchy);
   assert.ok(current !== null, 'the hierarchy insertion must be exact');
-  assert.equal(conservesPredecessor(row, current), false, 'the hierarchy insertion must be present');
+  assert.equal(conservesPredecessor(row, current, earlier), false, 'the hierarchy insertion must be present');
   for (const mutated of [withHierarchy.replace(hierarchy.scriptInsertion, hierarchy.scriptInsertion + hierarchy.scriptInsertion),
     withHierarchy.replace(hierarchy.scriptInsertion, '').replace('</style>', hierarchy.scriptInsertion + '</style>'),
     withHierarchy.replace('if (!target) return;', 'if (!target)  return;')]) {
     assert.notEqual(mutated, withHierarchy);
-    assert.equal(conservesPredecessor(row, mutated), false, 'the hierarchy insertion cannot be repeated, moved or altered');
+    assert.equal(conservesPredecessor(row, mutated, earlier), false, 'the hierarchy insertion cannot be repeated, moved or altered');
   }
   // Earlier deltas are tested after removing only the exact new insertion.
   const conservesLegacy = (row, stdout, deltas = legacy) => conservesPredecessor(row, stdout, deltas);

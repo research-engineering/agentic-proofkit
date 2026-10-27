@@ -3,11 +3,36 @@ package browserdoc
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
+	"html"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
+
+func TestFilterAttributesPreserveEveryValueInCardsAndRows(t *testing.T) {
+	values := []string{"overview", "requirements", "quote\" brackets[,] & <tag>", "\u03bb"}
+	filters := []FilterValue{{Key: "source-role", Values: values}, {Key: "empty"}}
+	output := HTML(Document{
+		Cards: []Card{{ID: "node", Title: "Fixture", GroupID: "group", FilterValues: filters}},
+		Table: &Table{Columns: []Column{{Key: "id", Label: "ID"}}, Rows: []Row{{Cells: []Cell{{Key: "id", Value: Code("node")}}, FilterValues: filters}}},
+	})
+	attributes := regexp.MustCompile(` data-filter-source-role="([^"]*)"`).FindAllStringSubmatch(output, -1)
+	if len(attributes) != 2 || strings.Contains(output, " data-filter-empty=") {
+		t.Fatalf("expected one value set per card/row and no empty-set attribute, got %d sets", len(attributes))
+	}
+	for _, attribute := range attributes {
+		var decoded []string
+		if err := json.Unmarshal([]byte(html.UnescapeString(attribute[1])), &decoded); err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(decoded, values) {
+			t.Fatalf("filter value set lost meaning: got %q, want %q", decoded, values)
+		}
+	}
+}
 
 func TestScriptHashSourceCommitsToExactEmittedBytes(t *testing.T) {
 	source, err := os.ReadFile("browser.js")
@@ -147,8 +172,8 @@ func TestHTMLUsesTypedFragmentsAndEscapesCallerText(t *testing.T) {
 			),
 			SearchText: payload,
 			FilterValues: []FilterValue{{
-				Key:   `bad" onmouseover="x`,
-				Value: payload,
+				Key:    `bad" onmouseover="x`,
+				Values: []string{payload},
 			}},
 		}},
 		Table: &Table{
@@ -156,7 +181,7 @@ func TestHTMLUsesTypedFragmentsAndEscapesCallerText(t *testing.T) {
 			Rows: []Row{{
 				Cells:        []Cell{{Key: "value", Value: Text(payload)}},
 				SearchText:   payload,
-				FilterValues: []FilterValue{{Key: `bad" onmouseover="x`, Value: payload}},
+				FilterValues: []FilterValue{{Key: `bad" onmouseover="x`, Values: []string{payload}}},
 			}},
 		},
 		ExportFiles: []ExportFile{Export("HTML", "../unsafe/<script>.html", payload)},
@@ -216,8 +241,8 @@ func TestHTMLIsByteStable(t *testing.T) {
 		Authority: "presentation_only",
 		Filters:   []Filter{NewFilter("owner", "Owner", []string{"b", "a", "a"})},
 		Cards: []Card{
-			{ID: "REQ-2", Title: "Second", GroupID: "group", GroupLabel: "Group", Body: Text("body"), SearchText: "second", FilterValues: []FilterValue{{Key: "owner", Value: "b"}}},
-			{ID: "REQ-1", Title: "First", GroupID: "group", GroupLabel: "Group", Body: Text("body"), SearchText: "first", FilterValues: []FilterValue{{Key: "owner", Value: "a"}}},
+			{ID: "REQ-2", Title: "Second", GroupID: "group", GroupLabel: "Group", Body: Text("body"), SearchText: "second", FilterValues: []FilterValue{{Key: "owner", Values: []string{"b"}}}},
+			{ID: "REQ-1", Title: "First", GroupID: "group", GroupLabel: "Group", Body: Text("body"), SearchText: "first", FilterValues: []FilterValue{{Key: "owner", Values: []string{"a"}}}},
 		},
 		NonClaims: []string{"Presentation only."},
 	}

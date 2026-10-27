@@ -19,7 +19,7 @@
     const matchesSearch = query === "" || (searchKeys.get(item) || "").includes(query);
     const matchesFieldFilters = filters.every(filter => {
       const value = filter.value;
-      return value === "" || item.getAttribute("data-filter-" + filter.getAttribute("data-filter-key")) === value;
+      return value === "" || JSON.parse(item.getAttribute("data-filter-" + filter.getAttribute("data-filter-key")) || "[]").includes(value);
     });
     return matchesSearch && matchesFieldFilters;
   }

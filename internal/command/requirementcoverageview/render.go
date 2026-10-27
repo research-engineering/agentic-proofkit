@@ -127,7 +127,7 @@ func html(view map[string]any) string {
 		owners = append(owners, owner)
 		states = append(states, state)
 		classes = append(classes, class)
-		filters := []browserdoc.FilterValue{{Key: "owner", Value: owner}, {Key: "coverage-state", Value: state}, {Key: "evidence-class", Value: class}}
+		filters := []browserdoc.FilterValue{{Key: "owner", Values: []string{owner}}, {Key: "coverage-state", Values: []string{state}}, {Key: "evidence-class", Values: []string{class}}}
 		searchTerms := []string{
 			stringValue(requirement["requirementId"]),
 			stringValue(requirement["invariant"]),

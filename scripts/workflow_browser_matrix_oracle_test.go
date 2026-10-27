@@ -19,6 +19,7 @@ func TestBrowserStaticCollectorRetainsEveryOracleSuite(t *testing.T) {
 		"scripts/browser-proof-execution.test.mjs",
 		"scripts/browser-proof-inputs.test.mjs",
 		"scripts/browser-selection-authority.test.mjs",
+		"scripts/browser-static-filters.test.mjs",
 		"scripts/browser-visual-references.test.mjs",
 		"scripts/browser-workspace-requests.test.mjs",
 		"scripts/diagnostic-entrypoints.test.mjs",

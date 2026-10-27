@@ -52,6 +52,9 @@ func main() {
 	} else if len(os.Args) == 2 && os.Args[1] == "--static-tree" {
 		build = browserfixture.StaticTree
 		view = "spec-tree"
+	} else if len(os.Args) == 2 && os.Args[1] == "--static-filter-tree" {
+		build = browserfixture.StaticFilterTree
+		view = "spec-tree"
 	} else if len(os.Args) == 2 && os.Args[1] == "--static-proof" {
 		build = browserfixture.StaticProof
 		view = "proof"

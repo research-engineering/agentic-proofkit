@@ -374,7 +374,7 @@ func html(view map[string]any) string {
 		owners = append(owners, owner)
 		claimLevels = append(claimLevels, claim)
 		proofStates = append(proofStates, proofState)
-		filters := []browserdoc.FilterValue{{Key: "owner", Value: owner}, {Key: "claim-level", Value: claim}, {Key: "proof-state", Value: proofState}}
+		filters := []browserdoc.FilterValue{{Key: "owner", Values: []string{owner}}, {Key: "claim-level", Values: []string{claim}}, {Key: "proof-state", Values: []string{proofState}}}
 		search := browserdoc.SearchText(append([]string{
 			stringValue(requirement["requirementId"]),
 			owner,
@@ -459,7 +459,7 @@ func compactHTML(view map[string]any) string {
 		blockingValues = append(blockingValues, blocking)
 		invariantRoles = append(invariantRoles, invariantRole)
 		preconditionedValues = append(preconditionedValues, preconditioned)
-		filters := []browserdoc.FilterValue{{Key: "surface", Value: surface}, {Key: "blocking", Value: blocking}, {Key: "invariant-role", Value: invariantRole}, {Key: "preconditioned", Value: preconditioned}}
+		filters := []browserdoc.FilterValue{{Key: "surface", Values: []string{surface}}, {Key: "blocking", Values: []string{blocking}}, {Key: "invariant-role", Values: []string{invariantRole}}, {Key: "preconditioned", Values: []string{preconditioned}}}
 		routeSearch := compactRouteSearchValues(binding)
 		cards = append(cards, browserdoc.Card{
 			ID:           stringValue(binding["bindingRecordId"]),

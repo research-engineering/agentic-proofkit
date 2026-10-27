@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"html"
@@ -68,8 +69,8 @@ type Card struct {
 }
 
 type FilterValue struct {
-	Key   string
-	Value string
+	Key    string
+	Values []string
 }
 
 type Table struct {
@@ -551,7 +552,11 @@ func breakOpportunities(fragment string) string {
 func filterAttributes(values []FilterValue) string {
 	parts := make([]string, 0, len(values))
 	for _, filter := range values {
-		parts = append(parts, fmt.Sprintf(" data-filter-%s=\"%s\"", Escape(safeFilterKey(filter.Key)), Escape(filter.Value)))
+		if len(filter.Values) == 0 {
+			continue
+		}
+		encoded, _ := json.Marshal(filter.Values)
+		parts = append(parts, fmt.Sprintf(" data-filter-%s=\"%s\"", Escape(safeFilterKey(filter.Key)), Escape(string(encoded))))
 	}
 	return strings.Join(parts, "")
 }
