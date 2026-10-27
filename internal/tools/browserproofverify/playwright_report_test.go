@@ -3,11 +3,54 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 )
+
+func TestReportFileReaderPreservesWholeReportAndRefusesOversizeAndSymlink(t *testing.T) {
+	root := t.TempDir()
+	encoded := encodePlaywrightReport(t, validPlaywrightReport(root))
+	path := filepath.Join(root, "report.json")
+	if err := os.WriteFile(path, encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	content, err := readRunFile(path, int64(len(encoded)))
+	if err != nil || !bytes.Equal(content, encoded) {
+		t.Fatalf("complete report bytes changed: %v", err)
+	}
+	if _, err := admitPlaywrightReport(bytes.NewReader(content), root, "tests/browser", admittedBrowserTestPaths(), nil); err != nil {
+		t.Fatalf("complete report refused: %v", err)
+	}
+	if _, err := readRunFile(path, int64(len(encoded)-1)); err == nil {
+		t.Fatal("caller report bound was ignored")
+	}
+	if err := os.WriteFile(path, append(append([]byte{}, encoded...), []byte("trailing-invalid")...), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	content, err = readRunFile(path, maxPlaywrightReportBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admitPlaywrightReport(bytes.NewReader(content), root, "tests/browser", admittedBrowserTestPaths(), nil); err == nil {
+		t.Fatal("valid prefix concealed invalid report suffix")
+	}
+	if err := os.WriteFile(path, encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "linked-report.json")
+	if err := os.Symlink("report.json", link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readRunFile(link, maxPlaywrightReportBytes); err == nil {
+		t.Fatal("matching report bytes through symlink were admitted")
+	}
+	if content, err := readRunFile(path, maxPlaywrightReportBytes); err != nil || !bytes.Equal(content, encoded) {
+		t.Fatalf("restored complete report = %v", err)
+	}
+}
 
 func TestAdmitPlaywrightReportRequiresCleanEquivalentProjectExecutions(t *testing.T) {
 	root := t.TempDir()

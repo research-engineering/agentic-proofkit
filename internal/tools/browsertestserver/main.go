@@ -62,6 +62,9 @@ func main() {
 	} else if len(os.Args) == 2 && os.Args[1] == "--static-coverage" {
 		build = func() (map[string]any, error) { return browserfixture.CoverageInput("structured") }
 		view = "coverage"
+	} else if len(os.Args) == 2 && os.Args[1] == "--static-coverage-gap" {
+		build = browserfixture.CoverageGapInput
+		view = "coverage"
 	} else if len(os.Args) != 1 {
 		fatal(errors.New("unsupported browser fixture selector"))
 	}

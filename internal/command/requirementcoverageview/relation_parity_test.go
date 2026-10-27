@@ -118,24 +118,30 @@ func relationParityInput(t *testing.T, mode string) map[string]any {
 }
 
 func TestCoverageRelationFullOutputParity(t *testing.T) {
-	// Captured from the unindexed base-83eddaf owner with its current renderer.
-	// JSON, Markdown and exit codes match the earlier base-27fcb8e observations.
-	// HTML was re-captured when the shared stylesheet began hiding unmatched
-	// card groups; only that stylesheet rule changed the rendered bytes.
-	// "compact" was re-captured when compact Markdown/HTML began rendering
-	// declared witness routes; its JSON and exit-code projection is unchanged.
-	// HTML was re-captured when the single style element began holding the
-	// design-token stylesheet and a stylesheet that reads its tokens; only the
-	// style element's content changed the rendered bytes.
+	// The same eight inputs retain the JSON, exit and Markdown observations
+	// independently captured from main 3d760a1. Full-output hashes additionally
+	// bind the admitted HTML changes: styles, display controls, table wrapping
+	// a textual report-state badge and hierarchy navigation. Visual-only updates
+	// must retain protectedWants.
+	protectedWants := map[string]string{
+		"sparse":         "8c538adccaf293c5aa4ab392f6f2d581d34a6874cf195b1f009fe72ca2d0c173",
+		"dense":          "2bde9e9fa38f4de2f581462886a7aec9c74ebf9839144294432ac4dae02868f5",
+		"no-match":       "707dde2b594ff01302feefdbc9ebf46043c87cf8b5e499e5e211ac87027a2190",
+		"missing":        "926e3602a4a7656b73c723c1045127421adefb25e015738ba4479f81b5550a9c",
+		"failed":         "644cf6224c0f6582dc1c30ca1e50adc121a802fae5325aa82bdc40ea4edfa691",
+		"mixed-negative": "168f76dc99b4e372130daa4dafe38b3a71807bd3cee3ef01aeea6001498ace53",
+		"owner-scope":    "b44ce994f05b5a86a6692dbeb77244c79fbf07a499d2dbe9f611c8a3a97c5632",
+		"compact":        "c0a6930a61e5068f698064da83b26b5eb38fef0c985fc00729527cad8649e7da",
+	}
 	wants := map[string]string{
-		"sparse":         "d3bdbc9c1300d6ca7a02e4deaeacff5cf88cbafad0ffb5aba9318412f52bc24a",
-		"dense":          "f292ce5a452350fdce77e942144cd9ed9f66f8ad9d1ef9aea3515d553ff74898",
-		"no-match":       "72623c491e09c006703934d0aab7ee2382d3b3c2d08e9afc92adb7354939e479",
-		"missing":        "865ed9bc44443414ee70827f96ffad1fc5f91c80a7840cbe0bf90fffc24cbf55",
-		"failed":         "f0cc96e06ccb067c00e5e7d7f8846430d8216cb0cd26613ee9e40c5b546fcdc9",
-		"mixed-negative": "db947d4e61945a3185d0a4f9925c4a691a2c1452d77eff7f44aa6895805b30cc",
-		"owner-scope":    "7baeca97b85626bf9721edb3960dae11b5b5720c3ed6f2df487c03f1db4992c0",
-		"compact":        "df0917a3376a911b6e83792261ff53b8bfc8da861c19dad37535caafb2147446",
+		"sparse":         "fb67d62ee1a1db60d099ea8843d0834a791bb63680ad7e8e59e8682512c16449",
+		"dense":          "0a28706ede56f47692a9829eca8b109dae356c3adbe6f7f7ce3c14a1749551f4",
+		"no-match":       "f5185d667d94c72ccfff30ca972d563922a22a3e3334691f6417e1a1ac4c86af",
+		"missing":        "beaf20909664943199c239fba06e39206e5b39743cda76f7ed9860d13be50ff1",
+		"failed":         "8acdaa9b6938b5518e4d5bef3ff3970138616acdad5a28af94184607c3d43f36",
+		"mixed-negative": "68a8f19fa1645cbd0a3e1c704ae24077657a4ff9e5f71d8cebba8cac1ac5dc1f",
+		"owner-scope":    "97e2ea8b16f56405dc489ab79f52e5ebf90f6b1f8903ce770e2b422afe13ba1c",
+		"compact":        "0e266dc7d77f17f16befa17e78a57217e0e0ae0307a6b1e1b5380f5a9620d236",
 	}
 	for _, name := range []string{"sparse", "dense", "no-match", "missing", "failed", "mixed-negative", "owner-scope", "compact"} {
 		t.Run(name, func(t *testing.T) {
@@ -176,16 +182,24 @@ func TestCoverageRelationFullOutputParity(t *testing.T) {
 					}
 				}
 			}
-			encoded, err := json.Marshal([]any{view, code, markdown, html})
-			if err != nil {
-				t.Fatal(err)
+			if got := relationObservationDigest(t, []any{view, code, markdown}); got != protectedWants[name] {
+				t.Fatalf("protected JSON/exit/Markdown digest = %s", got)
 			}
-			got := fmt.Sprintf("%x", sha256.Sum256(encoded))
+			got := relationObservationDigest(t, []any{view, code, markdown, html})
 			if got != wants[name] {
 				t.Fatalf("full output digest = %s", got)
 			}
 		})
 	}
+}
+
+func relationObservationDigest(t *testing.T, value any) string {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fmt.Sprintf("%x", sha256.Sum256(encoded))
 }
 
 func queryScopedRelationInput(t *testing.T) map[string]any {

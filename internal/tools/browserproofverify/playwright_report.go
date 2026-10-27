@@ -26,17 +26,7 @@ type browserProjectExecution struct {
 }
 
 func writeAdmittedPlaywrightReport(root, reportPath string, kind proofKind) error {
-	info, err := os.Lstat(reportPath)
-	if err != nil {
-		return err
-	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return fmt.Errorf("playwright report must be a regular non-symlink file")
-	}
-	if info.Size() > maxPlaywrightReportBytes {
-		return fmt.Errorf("playwright report exceeds the input size limit")
-	}
-	raw, err := os.ReadFile(reportPath)
+	raw, err := readRunFile(reportPath, maxPlaywrightReportBytes)
 	if err != nil {
 		return err
 	}
@@ -52,11 +42,7 @@ func writeAdmittedPlaywrightReport(root, reportPath string, kind proofKind) erro
 	for _, path := range resolution.InputPaths {
 		admittedPaths[path] = struct{}{}
 	}
-	var expectedTests map[string][]string
-	if kind.isVisual() {
-		expectedTests = expectedVisualProjectTests()
-	}
-	projects, err := admitPlaywrightReport(bytes.NewReader(raw), root, manifest.TestRoot, admittedPaths, expectedTests)
+	projects, err := admitPlaywrightReport(bytes.NewReader(raw), root, manifest.TestRoot, admittedPaths, kind.expectedProjectTests())
 	if err != nil {
 		return err
 	}

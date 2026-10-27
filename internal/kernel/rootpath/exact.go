@@ -1,5 +1,5 @@
-// Package rootpath owns exact, platform-portable filesystem route lookup
-// beneath an already confined os.Root.
+// Package rootpath owns descriptor-confined regular-file traversal and exact,
+// platform-portable route lookup beneath an already confined os.Root.
 package rootpath
 
 import (

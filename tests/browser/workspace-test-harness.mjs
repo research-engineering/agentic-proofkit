@@ -1,7 +1,5 @@
-import {spawn, execFileSync} from "node:child_process";
-import {mkdtempSync, rmSync} from "node:fs";
-import {tmpdir} from "node:os";
-import {join} from "node:path";
+import {spawn} from "node:child_process";
+import {resolve} from "node:path";
 import {expect, test as base} from "@playwright/test";
 import {startBrowserServer} from "../../scripts/browser-proof-execution.mjs";
 
@@ -58,14 +56,10 @@ export const coverageTest = test.extend({
 });
 
 async function withFixture(selector, use) {
-  const directory = mkdtempSync(join(tmpdir(), "proofkit-browser-fixture-"));
-  try {
-    const binary = join(directory, "server");
-    execFileSync("go", ["build", "-o", binary, "./internal/tools/browsertestserver"], {stdio: "pipe"});
-    const server = await startBrowserServer(binary, {
-      spawnProcess: (path, args, options) => spawn(path, [selector, ...args], options),
-    });
-    try { await use(server.url); }
-    finally { await server.stop(); }
-  } finally { rmSync(directory, {recursive: true, force: true}); }
+  const binary = resolve(process.env.PROOFKIT_BROWSER_TEST_OUTPUT_DIR, "..", "server");
+  const server = await startBrowserServer(binary, {
+    spawnProcess: (path, args, options) => spawn(path, [selector, ...args], options),
+  });
+  try { await use(server.url); }
+  finally { await server.stop(); }
 }

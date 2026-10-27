@@ -173,6 +173,24 @@ the engine fixture fails with that version, which then goes into
 its captures are admitted as above. The same image runs natively on Apple
 Silicon; an emulated platform is always `unverified`.
 
+The accessibility matrix, `npm run browser:matrix`, is also separate from
+`npm run check`. It runs every view of the visual inventory, and the workspace
+panel dialogs, in Chromium, Firefox and WebKit, light and dark, at 320 and
+1440 CSS pixels, both also at a 200% root font size, and in a 720 CSS pixel
+viewport at device scale factor 2, through the axe, reflow, lost-content,
+keyboard, Unicode-selection and security oracles of `tests/matrix`, with their
+negative controls and reader tasks. Its two families,
+`npm run browser:matrix:static` and `npm run browser:matrix:workspace`, each
+write their own record below `artifacts/proofkit`. The
+`quality / browser design matrix` job runs both in the same digest-pinned image
+as the visual gate with `--require-reference-environment`, which fails before
+any browser launches outside the recorded environment. On another host the
+matrix runs and records the fields in which the host differs, and its results
+describe that host only. To reproduce the job, run the container command above
+with
+`npm run browser:matrix:static -- --require-reference-environment && npm run browser:matrix:workspace -- --require-reference-environment`
+in place of the visual gate.
+
 The composed `go:check` and CI source job both run `npm run go:deps`:
 `go mod tidy -diff` rejects manifest drift without rewriting `go.mod` or
 `go.sum`, then `go mod verify` checks the downloaded module cache. These are

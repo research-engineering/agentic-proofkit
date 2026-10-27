@@ -6,6 +6,7 @@ import {initializePanels} from "./workspace-panels.js";
 import {initializeNavigation} from "./workspace-navigation.js";
 import {fetchWorkspaceJSON, fetchWorkspaceResponse, workspaceFailure} from "./workspace-requests.js";
 import {renderCoveragePage} from "./workspace-coverage.js";
+import {statusBadge} from "./workspace-presentation.js";
 import {renderDiffPage} from "./workspace-diff.js";
 import {GRAPH_PAGE, renderGraphPage} from "./workspace-graph.js";
 import {initializeHandoffPreview} from "./workspace-handoff.js";
@@ -244,6 +245,9 @@ async function renderSpecifications(offset = 0, filters = activeFilters, history
         article.dataset.requirementId = requirement.requirementId;
         const title = document.createElement("h3");
         title.textContent = requirement.requirementId;
+        const heading = document.createElement("div");
+        heading.className = "record-heading";
+        heading.append(title, statusBadge(requirement.lifecycleState, "info"));
         const boundary = document.createElement("details");
         boundary.className = "requirement-boundary";
         boundary.setAttribute("aria-label", `Boundary for ${requirement.requirementId}`);
@@ -276,7 +280,7 @@ async function renderSpecifications(offset = 0, filters = activeFilters, history
           selectionState = transitionSelection(selectionState, {kind: "button", targets: [{anchorId, exactQuote: requirement.invariant, startCodePoint: 0, endCodePoint: [...requirement.invariant].length}]});
           announceSelection();
         });
-        article.append(title, invariant);
+        article.append(heading, invariant);
         if (requirement.deferral) {
           // Owner-declared deferral facts; the browser adds no lifecycle meaning.
           const deferral = document.createElement("dl");
@@ -551,6 +555,11 @@ const handoffPreview = initializeHandoffPreview(previewElement, packetView, stat
 const submit = /** @type {HTMLButtonElement} */ (submitElement);
 const selectedContext = /** @type {HTMLUListElement} */ (selectedContextElement);
 const clearSelectionButton = /** @type {HTMLButtonElement} */ (clearSelectionElement);
+// The empty state of the selected source text: shown while nothing is selected.
+const selectionEmpty = document.createElement("p");
+selectionEmpty.className = "selection-empty";
+selectionEmpty.textContent = "No text selected.";
+selectedContext.before(selectionEmpty);
 
 document.addEventListener("selectionchange", () => {
   const selection = window.getSelection();
@@ -592,6 +601,7 @@ function announceSelection() {
   selectedContext.replaceChildren();
   appendTextItems(selectedContext, selectionState.targets.map((target) => target.exactQuote));
   clearSelectionButton.disabled = selectionState.targets.length === 0;
+  selectionEmpty.hidden = selectionState.targets.length !== 0;
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
   status.textContent = selectionState.targets.length === 0 ? "No source-bound text selected." : `${selectionState.targets.length} source-bound target(s) selected.`;

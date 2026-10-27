@@ -15,6 +15,13 @@ import (
 
 type traversalHook func(componentIndex int)
 
+type routeSpelling uint8
+
+const (
+	nativeSpelling routeSpelling = iota
+	portableExactSpelling
+)
+
 type traversalOperations struct {
 	closeFD   func(int) error
 	closeFile func(*os.File) error
@@ -31,6 +38,13 @@ func nativeTraversalOperations() traversalOperations {
 // following a symlink in any route component.
 func OpenExactRegularFile(root *os.Root, relativePath string) (*os.File, error) {
 	return openExactRegularFile(root, relativePath, nil)
+}
+
+// OpenRegularFile uses native filesystem spelling without enumerating siblings.
+// Descriptor-relative traversal still rejects symlinks in every component.
+func OpenRegularFile(root *os.Root, relativePath string) (*os.File, error) {
+	file, _, err := openObservedRegularFileWithOperations(root, relativePath, nil, nativeTraversalOperations(), nativeSpelling)
+	return file, err
 }
 
 // OpenObservedExactRegularFile also returns a private route witness for a
@@ -50,6 +64,10 @@ func openExactRegularFileWithOperations(root *os.Root, relativePath string, hook
 }
 
 func openObservedExactRegularFileWithOperations(root *os.Root, relativePath string, hook traversalHook, operations traversalOperations) (*os.File, RouteObservation, error) {
+	return openObservedRegularFileWithOperations(root, relativePath, hook, operations, portableExactSpelling)
+}
+
+func openObservedRegularFileWithOperations(root *os.Root, relativePath string, hook traversalHook, operations traversalOperations, spelling routeSpelling) (*os.File, RouteObservation, error) {
 	if root == nil || relativePath == "" || path.IsAbs(relativePath) || path.Clean(relativePath) != relativePath {
 		return nil, RouteObservation{}, fmt.Errorf("exact root file route is invalid")
 	}
@@ -74,19 +92,21 @@ func openObservedExactRegularFileWithOperations(root *os.Root, relativePath stri
 	observation := RouteObservation{route: relativePath, components: make([]routeComponent, 0, len(components)+1)}
 	observation.components = append(observation.components, observeRouteComponent(base))
 	for index, component := range components {
-		_, exists, err := exactDirectoryEntry(current, component)
-		if err != nil {
-			if closeErr := closeTraversalFile(operations, current); closeErr != nil {
-				return nil, RouteObservation{}, closeErr
+		if spelling == portableExactSpelling {
+			_, exists, err := exactDirectoryEntry(current, component)
+			if err != nil {
+				if closeErr := closeTraversalFile(operations, current); closeErr != nil {
+					return nil, RouteObservation{}, closeErr
+				}
+				return nil, RouteObservation{}, err
 			}
-			return nil, RouteObservation{}, err
-		}
-		if !exists {
-			if closeErr := closeTraversalFile(operations, current); closeErr != nil {
-				return nil, RouteObservation{}, closeErr
+			if !exists {
+				if closeErr := closeTraversalFile(operations, current); closeErr != nil {
+					return nil, RouteObservation{}, closeErr
+				}
+				observation.terminal, observation.position = routeMissing, index
+				return nil, observation, fs.ErrNotExist
 			}
-			observation.terminal, observation.position = routeMissing, index
-			return nil, observation, fs.ErrNotExist
 		}
 		var expected unix.Stat_t
 		if err := unix.Fstatat(int(current.Fd()), component, &expected, unix.AT_SYMLINK_NOFOLLOW); err != nil {
@@ -94,6 +114,10 @@ func openObservedExactRegularFileWithOperations(root *os.Root, relativePath stri
 				return nil, RouteObservation{}, closeErr
 			}
 			if errors.Is(err, unix.ENOENT) {
+				if spelling == nativeSpelling {
+					observation.terminal, observation.position = routeMissing, index
+					return nil, observation, fs.ErrNotExist
+				}
 				return nil, RouteObservation{}, ErrRouteChanged
 			}
 			return nil, RouteObservation{}, fmt.Errorf("inspect exact root file route")

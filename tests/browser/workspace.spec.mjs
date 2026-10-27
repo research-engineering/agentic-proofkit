@@ -4,6 +4,7 @@ import {createServer} from "node:http";
 import {test} from "./workspace-test-harness.mjs";
 
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
+import {readGraphInk} from "./graph-geometry-oracle.mjs";
 
 import {admittedWorkspaceURL, emulateMediaInEffect, isWorkspaceNavigationResponse, navigateWorkspace, openWorkspace, reloadWorkspace, staticViewCSP} from "./workspace-navigation-harness.mjs";
 
@@ -1082,6 +1083,10 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
       }),
     }));
     expect(nativeGraph.routes.map(route => route.id), "complete native relation identities").toEqual(edgeIDs);
+    // Relations paint with the computed value of the graph ink design token,
+    // an opaque color.
+    const graphInk = await readGraphInk(page);
+    expect(graphInk).toMatch(/^rgb\(\d+, \d+, \d+\)$/);
     const boxes = nativeGraph.boxes;
     const boxesByID = new Map(boxes.map(box => [box.id, box]));
     expect([...boxesByID.keys()]).toEqual(nodeIDs);
@@ -1111,7 +1116,7 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
         const perimeter = Math.min(Math.abs(x - box.x), Math.abs(x - box.x - box.width), Math.abs(y - box.y), Math.abs(y - box.y - box.height)) <= tolerance;
         expect(inside && perimeter, `${role} endpoint of ${edge.edgeId} touches ${id}`).toBe(true);
       }
-      await expectCSS(route, {visibility: "visible", opacity: "1", stroke: "rgb(32, 37, 34)", "stroke-width": "1.5px", filter: "none", "clip-path": "none"});
+      await expectCSS(route, {visibility: "visible", opacity: "1", stroke: graphInk, "stroke-width": "1.5px", filter: "none", "clip-path": "none"});
     }
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
       const a = boxes[i], b = boxes[j];

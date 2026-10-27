@@ -147,7 +147,7 @@ func repoRelativePath(root, absolute string) (string, error) {
 }
 
 func validateBrowserWitnessPolicy(root, commandID string, expected []string) error {
-	raw, err := os.ReadFile(filepath.Join(root, "proofkit/witness-plan.json"))
+	raw, err := readRepositoryFile(root, "proofkit/witness-plan.json", maxBrowserSourceFileBytes)
 	if err != nil {
 		return err
 	}

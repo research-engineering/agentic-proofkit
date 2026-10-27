@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
@@ -77,24 +76,6 @@ func finalizeBrowserProofRun(root, runDirectory string, resultErr error) error {
 		return fmt.Errorf("clean browser proof run directory: %w", err)
 	}
 	return nil
-}
-
-func readRootedJSON(root, path string, maxBytes int64) (any, error) {
-	rootFS, err := os.OpenRoot(root)
-	if err != nil {
-		return nil, err
-	}
-	defer rootFS.Close()
-	localPath := filepath.FromSlash(path)
-	if err := admitRootedRegularFile(rootFS, localPath); err != nil {
-		return nil, err
-	}
-	file, err := rootFS.Open(localPath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	return admission.DecodeJSON(file, maxBytes)
 }
 
 func writeRootedJSON(root, path string, value any) error {

@@ -216,6 +216,37 @@ func TestVerifyRecordRejectsAuthorityFieldMutations(t *testing.T) {
 	}
 }
 
+func TestContentBoundInputsRejectSymlinkWithMatchingDigest(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "input")
+	if err := os.WriteFile(path, []byte("complete"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	resolution := fixtureResolution([]string{"input"})
+	record := fixtureRecord(t, root, resolution)
+	if err := verifyContentBoundInputs(root, record, resolution, "proof"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(path, filepath.Join(root, "target")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("target", path); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyContentBoundInputs(root, record, resolution, "proof"); err == nil || !strings.Contains(err.Error(), "symlinks are not admitted") {
+		t.Fatalf("matching bytes through symlink = %v", err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(filepath.Join(root, "target"), path); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyContentBoundInputs(root, record, resolution, "proof"); err != nil {
+		t.Fatalf("restored regular source: %v", err)
+	}
+}
+
 func fixtureResolution(paths []string) proofInputResolution {
 	return proofInputResolution{InputPaths: paths, ServerTarget: "./internal/tools/browserfixture", WriterPath: "scripts/browser-fixture.mjs"}
 }

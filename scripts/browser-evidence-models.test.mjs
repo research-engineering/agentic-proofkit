@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {summarizeDiffPage} from "../internal/command/requirementbrowser/assets/workspace-diff.js";
 import {GEOMETRY, GRAPH_PAGE, GRAPH_PLANES, graphPagePositions, visibleGraphPage} from "../internal/command/requirementbrowser/assets/workspace-graph.js";
-import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, graphNodeIntersections, normalizeGraphGeometry, segmentIntersectsRectangle, unrelatedCollinearOverlaps} from "../tests/browser/graph-geometry-oracle.mjs";
+import {readFileSync} from "node:fs";
+import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, graphInkFromTokens, graphNodeIntersections, normalizeGraphGeometry, segmentIntersectsRectangle, unrelatedCollinearOverlaps} from "../tests/browser/graph-geometry-oracle.mjs";
 import {resolveHandoffRequirement} from "../internal/command/requirementbrowser/assets/workspace-handoff.js";
 
 test("diff page classes partition changes while risk and lifecycle remain independent facets", () => {
@@ -238,7 +239,16 @@ test("graph DOM precision allowance neither relaxes pure geometry nor hides visi
   assert.throws(() => assertGraphGeometry(graph, observed, true), /DOM card width/);
 });
 
+test("graph ink is the computed rgb form of the design token's light value", () => {
+  const tokens = readFileSync(new URL("../internal/kernel/browserdoc/tokens.css", import.meta.url), "utf8");
+  assert.match(graphInkFromTokens(tokens), /^rgb\(\d{1,3}, \d{1,3}, \d{1,3}\)$/);
+  assert.equal(graphInkFromTokens("--color-text-muted: #0a10ff;\n--color-text-muted: #ffffff;"), "rgb(10, 16, 255)");
+  assert.throws(() => graphInkFromTokens("--color-text: #536166;"), /declares --color-text-muted/);
+});
+
 test("joint-scale DOM oracle retains physical evidence and rejects isolated projection drift", () => {
+  // The authored observations paint with the graph ink token's computed value.
+  const ink = graphInkFromTokens(readFileSync(new URL("../internal/kernel/browserdoc/tokens.css", import.meta.url), "utf8"));
   const fixture = {nodes: [{nodeId: "a", evidencePlane: spec}, {nodeId: "b", evidencePlane: spec}], edges: [{edgeId: "e", fromNodeId: "a", toNodeId: "b"}]};
   // Independent authored observations, not output from the production router.
   const physical = rootFont => {
@@ -249,8 +259,8 @@ test("joint-scale DOM oracle retains physical evidence and rejects isolated proj
       nodes: [48, 164].map((y, i) => ({id: i === 0 ? "a" : "b", x: 12 * scale, y: y * scale, width: 240 * scale, height: 96 * scale, placement: {left: 12 * scale, top: y * scale}})),
       routes: [{id: "e", points, physicalPoints: points.map(p => p.map(x => x * scale)), marker: "url(#graph-arrow)"}],
       marker: {viewBox: "0 0 10 10", markerUnits: "userSpaceOnUse", markerWidth: "6", markerHeight: "6", refX: "10", refY: "5", orient: "auto-start-reverse"},
-      markerPath: "M 0 0 L 10 5 L 0 10 z", markerFill: "rgb(32, 37, 34)", expectedInk: "rgb(32, 37, 34)",
-      paint: [{fill: "none", stroke: "rgb(32, 37, 34)", width: 1.5, join: "round", vectorEffect: "none"}],
+      markerPath: "M 0 0 L 10 5 L 0 10 z", markerFill: ink, expectedInk: ink,
+      paint: [{fill: "none", stroke: ink, width: 1.5, join: "round", vectorEffect: "none"}],
     };
   };
   const verify = value => { assertGraphGeometry(fixture, normalizeGraphGeometry(value), true); assertGraphPaint(value); };

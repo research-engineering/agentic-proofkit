@@ -83,6 +83,156 @@ const tokenDeltaReplacedStyle = [
   '@media (max-width:720px){main{padding:24px 12px 40px}.controls{grid-template-columns:1fr;position:static}dl{grid-template-columns:1fr}.summary,.controls,.exports,.card,.non-claims{border-radius:6px}}',
   '@media (prefers-color-scheme:dark){:root{background:#101418;color:#e6edf3}.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:#161b22;border-color:#30363d}.eyebrow,.result-count,dt,.hierarchy h2,.card-group>h2,.hierarchy span,.card-group>h2 span,th,.exports h2{color:#9da7b1}input[type=search],select,th{background:#0d1117}input[type=search],select,button{border-color:#8b949e}button{background:#21262d}button:hover{background:#30363d}code{background:#0d1117}details,th,td,.card-group>h2{border-color:#30363d}a{color:#58a6ff}}',
 ].join('');
+// The single style element before the redesign delta: the design-token
+// stylesheet and the browserdoc stylesheet of the accessibility delta.
+const redesignReplacedStyle = [
+  "/* Design tokens of the static views and the requirement-browser workspace. */",
+  ":root {",
+  "  /* Workspace palette. */",
+  "  --canvas: #ffffff;",
+  "  --surface: #f5f6f5;",
+  "  --active-surface: #e0f0e8;",
+  "  --text: #202522;",
+  "  --muted-text: #4d5952;",
+  "  --border: #77867d;",
+  "  --focus: #005fcc;",
+  "  --accent: #17613d;",
+  "  --plane-proof-coverage: #77589b;",
+  "  --plane-code-traceability: #387080;",
+  "  --plane-native-execution: #8a681a;",
+  "  --backdrop: #00000080;",
+  "  --transparent: transparent;",
+  "  /* Static view palette; the dark scheme uses the separate dark tokens. */",
+  "  --static-canvas: #f7f7f4;",
+  "  --static-text: #1f2428;",
+  "  --static-muted-text: #586069;",
+  "  --static-term-text: #4b5563;",
+  "  --static-link: #0969da;",
+  "  --static-surface: #fff;",
+  "  --static-border: #d8dee4;",
+  "  --static-control-border: #768390;",
+  "  --static-secondary-surface: #f6f8fa;",
+  "  --static-secondary-hover: #eef2f6;",
+  "  --static-code-surface: #f1f5f9;",
+  "  --static-shadow: 0 1px 2px rgba(31,35,40,.04);",
+  "  --static-dark-canvas: #101418;",
+  "  --static-dark-text: #e6edf3;",
+  "  --static-dark-surface: #161b22;",
+  "  --static-dark-border: #30363d;",
+  "  --static-dark-muted-text: #9da7b1;",
+  "  --static-dark-inset-surface: #0d1117;",
+  "  --static-dark-control-border: #8b949e;",
+  "  --static-dark-secondary-surface: #21262d;",
+  "  --static-dark-secondary-hover: #30363d;",
+  "  --static-dark-link: #58a6ff;",
+  "  /* Type scale and line heights. */",
+  "  --font-size-root: 100%;",
+  "  --font-size-12: .75rem;",
+  "  --font-size-13: .8125rem;",
+  "  --font-size-14: .875rem;",
+  "  --font-size-16: 1rem;",
+  "  --font-size-17: 1.0625rem;",
+  "  --font-size-18: 1.125rem;",
+  "  --font-size-20: 1.25rem;",
+  "  --line-height-body: 1.55;",
+  "  --line-height-loose: 1.65;",
+  "  --static-font-size-title: clamp(1.7rem,2.8vw,2.6rem);",
+  "  --static-font-size-heading: 1.05rem;",
+  "  --static-font-size-subheading: .95rem;",
+  "  --static-font-size-group: .88rem;",
+  "  --static-font-size-control: .92rem;",
+  "  --static-font-size-label: .78rem;",
+  "  --static-font-size-code: .9em;",
+  "  --static-line-height: 1.45;",
+  "  --static-line-height-title: 1.1;",
+  "  /* Spacing. */",
+  "  --space-2: .125rem;",
+  "  --space-4: .25rem;",
+  "  --space-6: .375rem;",
+  "  --space-8: .5rem;",
+  "  --space-10: .625rem;",
+  "  --space-12: .75rem;",
+  "  --space-16: 1rem;",
+  "  --space-20: 1.25rem;",
+  "  --space-24: 1.5rem;",
+  "  --space-48: 3rem;",
+  "  --static-space-2: 2px;",
+  "  --static-space-4: 4px;",
+  "  --static-space-6: 6px;",
+  "  --static-space-8: 8px;",
+  "  --static-space-10: 10px;",
+  "  --static-space-12: 12px;",
+  "  --static-space-14: 14px;",
+  "  --static-space-16: 16px;",
+  "  --static-space-18: 18px;",
+  "  --static-space-20: 20px;",
+  "  --static-space-22: 22px;",
+  "  --static-space-24: 24px;",
+  "  --static-space-32: 32px;",
+  "  --static-space-40: 40px;",
+  "  --static-space-56: 56px;",
+  "  --static-code-padding-block: .1em;",
+  "  --static-code-padding-inline: .3em;",
+  "  /* Radii and border widths. */",
+  "  --radius-4: 4px;",
+  "  --radius-6: 6px;",
+  "  --radius-8: 8px;",
+  "  --border-width: 1px;",
+  "  --border-width-quote: 2px;",
+  "  --border-width-plane: 4px;",
+  "  /* Focus indicator and target sizes. */",
+  "  --focus-width: 3px;",
+  "  --focus-offset: 2px;",
+  "  --target-size: 2.75rem;",
+  "  --icon-size: 1.25rem;",
+  "  --icon-stroke-width: 2;",
+  "  --checkbox-size: 1.125rem;",
+  "  /* Layout widths and heights. */",
+  "  --layout-navigation-width: 17rem;",
+  "  --layout-inspector-width: 20rem;",
+  "  --layout-panel-width: 24rem;",
+  "  --layout-panel-max-share: 32%;",
+  "  --layout-product-bar-height: 4.25rem;",
+  "  --layout-reading-width: 75ch;",
+  "  --layout-question-height: 9rem;",
+  "  --layout-graph-height: 42rem;",
+  "  --layout-cell-width: 24rem;",
+  "  --viewport-height: 100vh;",
+  "  --dynamic-viewport-height: 100dvh;",
+  "  --static-page-width: 1120px;",
+  "  --static-hierarchy-column: 220px;",
+  "  --static-term-column-min: 140px;",
+  "  --static-term-column-max: 220px;",
+  "  --static-control-column: 160px;",
+  "  --static-offscreen: -10000px;",
+  "  --static-scroll-margin: 86px;",
+  "  /* Breakpoints; media conditions repeat these values, which CSS cannot read from tokens. */",
+  "  --breakpoint-bar: 24rem;",
+  "  --breakpoint-graph: 48rem;",
+  "  --breakpoint-panels: 64rem;",
+  "  --breakpoint-static: 720px;",
+  "}",
+  "@media (prefers-color-scheme: dark) {",
+  "  :root {",
+  "    --canvas: #181c19;",
+  "    --surface: #222824;",
+  "    --active-surface: #30483b;",
+  "    --text: #f0f4f1;",
+  "    --muted-text: #c4cec7;",
+  "    --border: #87998e;",
+  "    --focus: #84adff;",
+  "    --accent: #a1dbba;",
+  "  }",
+  "}",
+  "@media (forced-colors: active) {",
+  "  :root {",
+  "    --forced-border: CanvasText;",
+  "    --forced-focus: Highlight;",
+  "    --forced-ink: CanvasText;",
+  "  }",
+  "}",
+  ":root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;line-height:var(--static-line-height);background:var(--static-canvas);color:var(--static-text)}body{margin:0;overflow-wrap:anywhere}main{max-width:var(--static-page-width);margin:0 auto;padding:var(--static-space-32) var(--static-space-20) var(--static-space-56)}header{margin-bottom:var(--static-space-20)}h1{font-size:var(--static-font-size-title);line-height:var(--static-line-height-title);margin:0}h2{font-size:var(--static-font-size-heading);margin:0 0 var(--static-space-12)}h3{font-size:var(--static-font-size-subheading);margin:var(--static-space-18) 0 var(--static-space-8)}.eyebrow{font-size:var(--static-font-size-label);font-weight:700;letter-spacing:0;text-transform:uppercase;color:var(--static-muted-text);margin:0 0 var(--static-space-8)}a{color:var(--static-link);text-decoration:none}a:hover{text-decoration:underline}:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:var(--focus-offset)}.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:var(--static-surface);border:var(--border-width) solid var(--static-border);border-radius:var(--radius-8);box-shadow:var(--static-shadow)}.summary{padding:var(--static-space-16);margin-bottom:var(--static-space-16)}.hierarchy{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--static-hierarchy-column),1fr));gap:var(--static-space-14);padding:var(--static-space-16);margin-bottom:var(--static-space-16)}.hierarchy section{min-width:0}.hierarchy h2,.card-group>h2{font-size:var(--static-font-size-group);text-transform:uppercase;letter-spacing:0;color:var(--static-muted-text);margin:0 0 var(--static-space-10)}.hierarchy ul{margin:0;padding-left:var(--static-space-18)}.hierarchy li{margin:var(--static-space-4) 0}.hierarchy span,.card-group>h2 span{font-weight:400;color:var(--static-muted-text)}dl{display:grid;grid-template-columns:minmax(var(--static-term-column-min),var(--static-term-column-max)) 1fr;gap:var(--static-space-8) var(--static-space-14);margin:0}dt{font-weight:700;color:var(--static-term-text)}dd{margin:0;min-width:0}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--static-font-size-code);background:var(--static-code-surface);border-radius:var(--radius-4);padding:var(--static-code-padding-block) var(--static-code-padding-inline)}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--static-control-column),1fr));gap:var(--static-space-10);align-items:end;padding:var(--static-space-14);margin-bottom:var(--static-space-10);position:sticky;top:0;z-index:1}.control{display:grid;gap:var(--static-space-6);min-width:0}.search-label{position:absolute;left:var(--static-offscreen)}input[type=search],select{width:100%;box-sizing:border-box;border:var(--border-width) solid var(--static-control-border);border-radius:var(--radius-6);padding:var(--static-space-8) var(--static-space-10);background:var(--static-surface);color:inherit}.toggle{font-size:var(--static-font-size-control)}.exports{display:flex;flex-wrap:wrap;gap:var(--static-space-10);align-items:center;padding:var(--static-space-14);margin-bottom:var(--static-space-10)}.exports h2{font-size:var(--static-font-size-group);text-transform:uppercase;letter-spacing:0;color:var(--static-muted-text);margin:0 var(--static-space-8) 0 0}button{border:var(--border-width) solid var(--static-control-border);border-radius:var(--radius-6);background:var(--static-secondary-surface);color:inherit;padding:var(--static-space-8) var(--static-space-10);cursor:pointer}button:hover{background:var(--static-secondary-hover)}.result-count{margin:var(--static-space-12) var(--static-space-2);color:var(--static-muted-text)}.cards{display:grid;gap:var(--static-space-18)}.cards[hidden]{display:none}.card-group[hidden]{display:none}.card-group{display:grid;gap:var(--static-space-12);scroll-margin-top:var(--static-scroll-margin)}.card-group>h2{border-bottom:var(--border-width) solid var(--static-border);padding-bottom:var(--static-space-8)}.card{padding:var(--static-space-18)}.proofkit-id{display:inline-block;margin-right:var(--static-space-8);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--static-font-size-code)}html[data-show-ids=false] .proofkit-id{display:none}.proofkit-title{font-weight:700}details{border:var(--border-width) solid var(--static-border);border-radius:var(--radius-6);margin-top:var(--static-space-12);padding:var(--static-space-10) var(--static-space-12)}summary{cursor:pointer;font-weight:700}.table-view{padding:0;overflow:auto}table{width:100%;border-collapse:collapse;font-size:var(--static-font-size-control)}th,td{border-bottom:var(--border-width) solid var(--static-border);padding:var(--static-space-10) var(--static-space-12);text-align:left;vertical-align:top}th{position:sticky;top:0;background:var(--static-secondary-surface);font-size:var(--static-font-size-label);text-transform:uppercase;letter-spacing:0;color:var(--static-muted-text)}.non-claims{margin-top:var(--static-space-18);padding:var(--static-space-18)}ul{margin:var(--static-space-8) 0 0;padding-left:var(--static-space-22)}@media (max-width:720px){main{padding:var(--static-space-24) var(--static-space-12) var(--static-space-40)}.controls{grid-template-columns:1fr;position:static}dl{grid-template-columns:1fr}.summary,.controls,.exports,.card,.non-claims{border-radius:var(--radius-6)}}@media (prefers-color-scheme:dark){:root{background:var(--static-dark-canvas);color:var(--static-dark-text)}.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:var(--static-dark-surface);border-color:var(--static-dark-border)}.eyebrow,.result-count,dt,.hierarchy h2,.card-group>h2,.hierarchy span,.card-group>h2 span,th,.exports h2{color:var(--static-dark-muted-text)}input[type=search],select,th{background:var(--static-dark-inset-surface)}input[type=search],select,button{border-color:var(--static-dark-control-border)}button{background:var(--static-dark-secondary-surface)}button:hover{background:var(--static-dark-secondary-hover)}code{background:var(--static-dark-inset-surface)}details,th,td,.card-group>h2{border-color:var(--static-dark-border)}a{color:var(--static-dark-link);text-decoration:underline}}",
+].join('\n');
 const declaredStreamDeltas = Object.freeze([Object.freeze({
   id: 'KERNEL-02',
   reason: 'The shared browserdoc stylesheet hides card groups without a matching record.',
@@ -95,11 +245,134 @@ const declaredStreamDeltas = Object.freeze([Object.freeze({
   rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
   styleSHA256: '24a618da1cb7e81b0dfa7e0c8d51d49bcfa06938419eae7af9b60dc2ccf4735d',
   replacedStyle: tokenDeltaReplacedStyle,
+}), Object.freeze({
+  id: 'UI-DESIGN-01-ACCESSIBILITY',
+  reason: 'The rendered table is a labelled keyboard-focusable scrolling region, and the style adds a focus indicator, lets filter toggles wrap, underlines dark-scheme links and declares the panel width share token.',
+  rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
+  // Each replacement occurs exactly once, inside or outside the only style
+  // element as declared; inverting it restores the predecessor bytes.
+  replacements: Object.freeze([
+    Object.freeze({inside: true, from: '  --layout-panel-width: 24rem;\n', to: '  --layout-panel-width: 24rem;\n  --layout-panel-max-share: 32%;\n'}),
+    Object.freeze({inside: true, from: 'a:hover{text-decoration:underline}', to: 'a:hover{text-decoration:underline}:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:var(--focus-offset)}'}),
+    Object.freeze({inside: true, from: '.toggle{white-space:nowrap;font-size:var(--static-font-size-control)}', to: '.toggle{font-size:var(--static-font-size-control)}'}),
+    Object.freeze({inside: true, from: '.table-view{padding:0;overflow:hidden}.table-scroll{overflow:auto}', to: '.table-view{padding:0;overflow:auto}'}),
+    Object.freeze({inside: true, from: 'a{color:var(--static-dark-link)}}', to: 'a{color:var(--static-dark-link);text-decoration:underline}}'}),
+    Object.freeze({inside: false, from: '<section class="table-view" data-proofkit-table-section aria-label="Rendered table" hidden>\n<div class="table-scroll">\n<table>', to: '<section class="table-view" data-proofkit-table-section role="region" aria-label="Rendered table" tabindex="0" hidden>\n<table>'}),
+    Object.freeze({inside: false, from: '</table>\n</div>\n</section>', to: '</table>\n</section>'}),
+  ]),
+}), Object.freeze({
+  id: 'UI-DESIGN-01-REDESIGN',
+  reason: 'One visual design: the style element holds the redesigned token and browserdoc stylesheets, the two display toggles form one labelled filter group, and table cells break only at their line-break opportunities.',
+  rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
+  // Every table cell carries exactly the <wbr> break opportunities of
+  // tableBreaks, and no <wbr> is anywhere else.
+  tableBreaks: true,
+  styleSHA256: 'c43c1241e88dd61e22253e326cfb733dbf995cf5626f5b8a9633d2bf1d505cfa',
+  replacedStyle: redesignReplacedStyle,
+  // Each replacement occurs exactly once outside the only style element.
+  replacements: Object.freeze([
+    Object.freeze({inside: false, from: '<label class="toggle"><input id="proofkit-show-ids" type="checkbox" checked> Show IDs</label>\n<label class="toggle"><input id="proofkit-open-details" type="checkbox"> Open details</label>', to: '<div class="control" role="group" aria-labelledby="proofkit-display-label"><span class="control-label" id="proofkit-display-label">Display</span><div class="toggles"><label class="toggle"><input id="proofkit-show-ids" type="checkbox" checked> Show IDs</label><label class="toggle"><input id="proofkit-open-details" type="checkbox"> Open details</label></div></div>'}),
+  ]),
+}), Object.freeze({
+  id: 'UI-DESIGN-01-NAVIGATION',
+  reason: 'Hierarchy navigation reveals its card-group target, and keyboard focus scrolls into the viewport only when outside it.',
+  rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
+  scriptAnchor: '  search.addEventListener("input", applyFilters);\n',
+  scriptInsertion: String.raw`  for (const link of document.querySelectorAll('.hierarchy a[href^="#"]')) {
+    link.addEventListener("click", () => {
+      const target = document.getElementById((link.getAttribute("href") || "").slice(1));
+      if (!target) return;
+      if (viewMode) viewMode.value = "cards";
+      applyFilters();
+      if (target.closest("[hidden]")) {
+        search.value = "";
+        for (const filter of filters) filter.value = "";
+        applyFilters();
+      }
+    });
+  }
+  document.addEventListener("focusin", (event) => {
+    const focused = event.target;
+    if (!(focused instanceof HTMLElement) || focused === document.body || focused === document.documentElement) return;
+    const box = focused.getBoundingClientRect();
+    if (box.top < 0 || box.bottom > document.documentElement.clientHeight || box.left < 0 || box.right > document.documentElement.clientWidth) {
+      focused.scrollIntoView({block: "nearest", inline: "nearest"});
+    }
+  });
+`,
 })]);
 const count = (text, needle) => text.split(needle).length - 1;
+// tableBreaks mirrors browserdoc's table cell break opportunities: in the text
+// of a cell's HTML, outside tags and character references, a <wbr> after each
+// of "/", ".", "_", "-" and ":" that a letter follows, and inside a run of
+// more than 24 letters and decimal digits after every 12th of them.
+function tableBreaks(fragment) {
+  let result = '', text = [];
+  const flush = () => {
+    for (let index = 0; index < text.length;) {
+      let run = index;
+      while (run < text.length && /^[\p{L}\p{Nd}]$/u.test(text[run])) run++;
+      if (run > index) {
+        for (let at = index; at < run; at++) {
+          result += text[at];
+          if (run - index > 24 && (at - index + 1) % 12 === 0 && at + 1 < run) result += '<wbr>';
+        }
+        index = run;
+        continue;
+      }
+      result += text[index];
+      if ('/._-:'.includes(text[index]) && index + 1 < text.length && /^\p{L}$/u.test(text[index + 1])) result += '<wbr>';
+      index++;
+    }
+    text = [];
+  };
+  for (let index = 0; index < fragment.length;) {
+    if (fragment[index] === '<' || fragment[index] === '&') {
+      let end = fragment.indexOf(fragment[index] === '<' ? '>' : ';', index);
+      if (end < 0) end = fragment.length - 1;
+      flush();
+      result += fragment.slice(index, end + 1);
+      index = end + 1;
+      continue;
+    }
+    const character = String.fromCodePoint(fragment.codePointAt(index));
+    text.push(character);
+    index += character.length;
+  }
+  flush();
+  return result;
+}
+const tableCells = /<td>([\s\S]*?)<\/td>/g;
 // Returns the stream before one delta, or null when the bytes do not carry
 // exactly that delta at exactly that position.
 function invertDelta(delta, stdout) {
+  if (count(stdout, '<style>') !== 1 || count(stdout, '</style>') !== 1 || stdout.indexOf('</style>') < stdout.indexOf('<style>')) return null;
+  if (delta.scriptInsertion !== undefined) {
+    const at = stdout.indexOf(delta.scriptAnchor + delta.scriptInsertion);
+    const start = stdout.indexOf('<script>'), end = stdout.indexOf('</script>');
+    if (count(stdout, '<script>') !== 1 || count(stdout, '</script>') !== 1 || count(stdout, delta.scriptInsertion) !== 1 ||
+      at <= start || at + delta.scriptAnchor.length + delta.scriptInsertion.length > end) return null;
+    return stdout.slice(0, at + delta.scriptAnchor.length) + stdout.slice(at + delta.scriptAnchor.length + delta.scriptInsertion.length);
+  }
+  if (delta.tableBreaks) {
+    // The break opportunities go first: every <wbr> lies in a table cell,
+    // exactly where tableBreaks puts it, and none is missing.
+    const stripped = stdout.replace(tableCells, (cell, content) => `<td>${content.replaceAll('<wbr>', '')}</td>`);
+    if (stripped.includes('<wbr>') || stripped.replace(tableCells, (cell, content) => `<td>${tableBreaks(content)}</td>`) !== stdout) return null;
+    stdout = stripped;
+  }
+  if (delta.replacements !== undefined) {
+    let current = stdout;
+    for (const {inside, from, to} of delta.replacements.toReversed()) {
+      const at = current.indexOf(to), start = current.indexOf('<style>'), end = current.indexOf('</style>');
+      if (count(current, to) !== 1 || inside !== (at > start && at + to.length <= end)) return null;
+      current = current.slice(0, at) + from + current.slice(at + to.length);
+    }
+    // A delta with replacements and a replaced style first restores the
+    // bytes outside the style, then the whole style.
+    if (delta.replacedStyle === undefined) return current;
+    stdout = current;
+  }
   const style = stdout.indexOf('<style>'), styleEnd = stdout.indexOf('</style>');
   if (count(stdout, '<style>') !== 1 || count(stdout, '</style>') !== 1 || styleEnd < style) return null;
   if (delta.replacedStyle !== undefined) {
@@ -166,27 +439,81 @@ test('lookup contracts conserve73actual predecessor process and rendered streams
 });
 
 test('the declared stream deltas are exact, positioned and limited to their rows', () => {
-  const [kernel, tokens] = declaredStreamDeltas;
-  assert.deepEqual(declaredStreamDeltas.map(delta => delta.id), ['KERNEL-02', 'UI-DESIGN-01']);
+  const [kernel, tokens, accessibility, redesign, hierarchy] = declaredStreamDeltas;
+  assert.deepEqual(declaredStreamDeltas.map(delta => delta.id), ['KERNEL-02', 'UI-DESIGN-01', 'UI-DESIGN-01-ACCESSIBILITY', 'UI-DESIGN-01-REDESIGN', 'UI-DESIGN-01-NAVIGATION']);
   const rows = baseline.observations.filter(row => row.format === 'html');
   for (const delta of declaredStreamDeltas) assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   const row = rows[0];
-  const current = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
+  const withHierarchy = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
     maxBuffer: 2 << 20}), row.name).stdout;
-  assert.ok(conservesPredecessor(row, current), 'current stdout must carry exactly the declared deltas');
-  // The design-token delta: the style element moved, a second style element
-  // and one changed byte outside the style each break conservation.
-  const element = current.slice(current.indexOf('<style>'), current.indexOf('</style>') + '</style>'.length);
-  const moved = current.replace(element, '').replace('</body>', element + '</body>');
-  const second = current.replace('</head>', '<style></style></head>');
-  const outside = current.replace('<main', '<main ');
-  const inside = current.replace('</style>', ' </style>');
-  for (const [name, mutated] of [['style moved', moved], ['second style', second], ['byte outside the style', outside], ['byte inside the style', inside]]) {
+  assert.ok(conservesPredecessor(row, withHierarchy), 'current stdout must carry every declared delta');
+  const legacy = [kernel, tokens, accessibility, redesign];
+  assert.equal(conservesPredecessor(row, withHierarchy, legacy), false, 'the hierarchy change must be declared');
+  const current = invertDelta(hierarchy, withHierarchy);
+  assert.ok(current !== null, 'the hierarchy insertion must be exact');
+  assert.equal(conservesPredecessor(row, current), false, 'the hierarchy insertion must be present');
+  for (const mutated of [withHierarchy.replace(hierarchy.scriptInsertion, hierarchy.scriptInsertion + hierarchy.scriptInsertion),
+    withHierarchy.replace(hierarchy.scriptInsertion, '').replace('</style>', hierarchy.scriptInsertion + '</style>'),
+    withHierarchy.replace('if (!target) return;', 'if (!target)  return;')]) {
+    assert.notEqual(mutated, withHierarchy);
+    assert.equal(conservesPredecessor(row, mutated), false, 'the hierarchy insertion cannot be repeated, moved or altered');
+  }
+  // Earlier deltas are tested after removing only the exact new insertion.
+  const conservesLegacy = (row, stdout, deltas = legacy) => conservesPredecessor(row, stdout, deltas);
+  assert.ok(conservesLegacy(row, current), 'current stdout must carry exactly the earlier deltas');
+  // The redesign delta: one changed byte inside the style, the toggle group
+  // not replaced, repeated or moved into the style, and one changed byte
+  // outside the style each break conservation; without the delta the current
+  // stream does not conserve the corpus.
+  assert.equal(conservesLegacy(row, current, [kernel, tokens, accessibility]), false, 'the redesign must be declared');
+  const group = redesign.replacements[0];
+  const styleByte = current.replace('</style>', ' </style>');
+  const groupNotReplaced = current.replace(group.to, group.from);
+  const groupRepeated = current.replace(group.to, group.to + group.to);
+  const groupInStyle = current.replace(group.to, group.from).replace('</style>', group.to + '</style>');
+  const outsideByte = current.replace('<main', '<main ');
+  // A break opportunity outside a table cell, one where tableBreaks puts none
+  // and a missing one each break conservation too.
+  assert.ok(current.includes('<td>') && current.includes('<wbr>'), 'the table cells carry break opportunities');
+  const breakOutsideCell = current.replace('</h1>', '<wbr></h1>');
+  const breakAfterLetter = current.replace(/<td>([^<&]*?\p{L})(\p{L})/u, '<td>$1<wbr>$2');
+  const breakMissing = current.replace('<wbr>', '');
+  for (const [name, mutated] of [['byte inside the style', styleByte], ['toggle group not replaced', groupNotReplaced], ['toggle group repeated', groupRepeated], ['toggle group inside the style', groupInStyle], ['byte outside the style', outsideByte],
+    ['break opportunity outside a table cell', breakOutsideCell], ['break opportunity where tableBreaks puts none', breakAfterLetter], ['break opportunity missing', breakMissing]]) {
     assert.notEqual(mutated, current, name);
-    assert.equal(conservesPredecessor(row, mutated), false, name);
+    assert.equal(conservesLegacy(row, mutated), false, name);
+  }
+  // The accessibility delta, checked in the stream before the redesign: a
+  // missing, repeated or relocated replacement and the region markup without
+  // its focusability each break conservation.
+  const beforeRedesign = invertDelta(redesign, current);
+  assert.ok(beforeRedesign !== null && conservesPredecessor(row, beforeRedesign, [kernel, tokens, accessibility]), 'the predecessor stream must carry exactly the card-group, design-token and accessibility deltas');
+  const accessible = [kernel, tokens, accessibility];
+  const table = accessibility.replacements.at(-2);
+  const region = beforeRedesign.replace(table.to, table.from);
+  const repeated = beforeRedesign.replace('.toggle{font-size:', '.toggle{font-size:var(--static-font-size-control)}.toggle{font-size:');
+  const relocated = beforeRedesign.replace(accessibility.replacements[1].to, accessibility.replacements[1].from).replace('<main', '<main data-a="a:hover{text-decoration:underline}:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:var(--focus-offset)}"');
+  const unfocusable = beforeRedesign.replace('aria-label="Rendered table" tabindex="0" hidden>', 'aria-label="Rendered table" hidden>');
+  for (const [name, mutated] of [['table markup not replaced', region], ['toggle rule repeated', repeated], ['focus rule outside the style', relocated], ['region not focusable', unfocusable]]) {
+    assert.notEqual(mutated, beforeRedesign, name);
+    assert.equal(conservesPredecessor(row, mutated, accessible), false, name);
+  }
+  // The design-token delta, checked in the stream before the accessibility
+  // delta: the style element moved, a second style element and one changed
+  // byte outside the style each break conservation.
+  const afterTokens = invertDelta(accessibility, beforeRedesign);
+  assert.ok(afterTokens !== null && conservesPredecessor(row, afterTokens, [kernel, tokens]), 'the predecessor stream must carry exactly the card-group and design-token deltas');
+  const element = afterTokens.slice(afterTokens.indexOf('<style>'), afterTokens.indexOf('</style>') + '</style>'.length);
+  const moved = afterTokens.replace(element, '').replace('</body>', element + '</body>');
+  const second = afterTokens.replace('</head>', '<style></style></head>');
+  const outside = afterTokens.replace('<main', '<main ');
+  const inside = afterTokens.replace('</style>', ' </style>');
+  for (const [name, mutated] of [['style moved', moved], ['second style', second], ['byte outside the style', outside], ['byte inside the style', inside]]) {
+    assert.notEqual(mutated, afterTokens, name);
+    assert.equal(conservesPredecessor(row, mutated, [kernel, tokens]), false, name);
   }
   // The card-group delta, checked in the stream before the design-token delta.
-  const beforeTokens = invertDelta(tokens, current);
+  const beforeTokens = invertDelta(tokens, afterTokens);
   assert.ok(beforeTokens !== null && conservesPredecessor(row, beforeTokens, [kernel]), 'the replaced style must carry exactly the card-group delta');
   const rule = kernel.insertion;
   const twice = beforeTokens.replace(kernel.anchor + rule, kernel.anchor + rule + rule);

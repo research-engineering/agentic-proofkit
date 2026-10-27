@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import {execFileSync} from "node:child_process";
 import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {dirname, join, relative, resolve} from "node:path";
 import test from "node:test";
+import {fileURLToPath} from "node:url";
 
 import {createScanner, LanguageVariant, SyntaxKind} from "typescript/unstable/ast";
 
@@ -422,13 +424,33 @@ test("workspace navigation owns waiter rejection before a delayed trigger", asyn
   assert.equal(barrier.length, 1);
 });
 
+test("the module specifier scanner refuses a source it cannot advance through", () => {
+  const directory = mkdtempSync(join(tmpdir(), "proofkit-module-scan-"));
+  try {
+    const stuck = join(directory, "stuck.mjs");
+    // A "#" after a template substitution and one inside a regular
+    // expression literal both stop the context-free scanner.
+    for (const source of ["const b = `${a}#`;", "const b = /#/.test(a);"]) {
+      writeFileSync(stuck, `import {a} from "./a.mjs";\n${source}\n`);
+      assert.throws(() => localModuleSpecifiers(stuck), /does not scan: the module scanner stopped advancing/, source);
+    }
+    const plain = join(directory, "plain.mjs");
+    writeFileSync(plain, "import {a} from \"./a.mjs\";\nconst b = a + \": #\";\n");
+    assert.deepEqual(localModuleSpecifiers(plain), ["./a.mjs"]);
+  } finally {
+    rmSync(directory, {recursive: true, force: true});
+  }
+});
+
 test("every local JavaScript import is content-bound by the owner resolution", () => {
-  const {inputPaths} = loadBrowserProofInputResolution();
-  const admitted = new Set(inputPaths);
-  for (const path of inputPaths.filter((candidate) => candidate.endsWith(".mjs") || candidate.endsWith(".js"))) {
-    for (const specifier of localModuleSpecifiers(path)) {
-      const importedPath = resolveLocalModule(path, specifier);
-      assert(admitted.has(importedPath), `${path} imports omitted browser proof input ${importedPath}`);
+  for (const manifest of [browserProofInputManifestPath, "scripts/browser-visual-proof-inputs.v1.json", "scripts/browser-matrix-static-proof-inputs.v1.json", "scripts/browser-matrix-workspace-proof-inputs.v1.json"]) {
+    const {inputPaths} = JSON.parse(execFileSync("go", ["run", "./internal/tools/browserproofverify", "--manifest", manifest, "--resolve-inputs"], {encoding: "utf8"}));
+    const admitted = new Set(inputPaths);
+    for (const path of inputPaths.filter((candidate) => candidate.endsWith(".mjs") || candidate.endsWith(".js"))) {
+      for (const specifier of localModuleSpecifiers(path)) {
+        const importedPath = resolveLocalModule(path, specifier);
+        assert(admitted.has(importedPath), `${manifest}: ${path} imports omitted browser proof input ${importedPath}`);
+      }
     }
   }
 });
@@ -471,6 +493,79 @@ test("materialized execution snapshot rejects escaping destination paths", () =>
     assert.throws(() => materializeInputSnapshot([join(root, "input.txt")], root, join(root, "execution")), /repository-relative/);
   } finally {
     rmSync(root, {recursive: true, force: true});
+  }
+});
+
+test("both input readers refuse incomplete or replaced descriptor bytes before publication", () => {
+  const program = `
+    import assert from "node:assert/strict";
+    import fs from "node:fs";
+    import {syncBuiltinESMExports} from "node:module";
+    import {tmpdir} from "node:os";
+    import {join} from "node:path";
+    const [operation, fault] = process.argv.slice(1);
+    const root = fs.mkdtempSync(join(tmpdir(), "proofkit-input-read-"));
+    const input = join(root, "input.txt");
+    const destination = join(root, "copy");
+    const original = {open: fs.openSync, read: fs.readFileSync, close: fs.closeSync};
+    let descriptorReads = 0;
+    let descriptorCloses = 0;
+    let inputDescriptor;
+    let replaced = false;
+    try {
+      fs.writeFileSync(input, "complete");
+      if (fault === "symlink") {
+        fs.renameSync(input, join(root, "target"));
+        fs.symlinkSync("target", input);
+      }
+      fs.openSync = (path, ...args) => {
+        const acquisition = path === input && typeof args[0] === "number" && (args[0] & fs.constants.O_NOFOLLOW) !== 0;
+        if (acquisition && fault === "replacement" && !replaced) {
+          replaced = true;
+          fs.renameSync(input, join(root, "old"));
+          fs.writeFileSync(input, "replaced");
+        }
+        const fd = original.open(path, ...args);
+        if (acquisition) inputDescriptor = fd;
+        return fd;
+      };
+      fs.readFileSync = (path, ...args) => {
+        const content = original.read(path, ...args);
+        if (path !== inputDescriptor) return content;
+        descriptorReads += 1;
+        if (fault === "short") return content.subarray(0, 1);
+        if (fault === "mutation") {
+          fs.writeFileSync(input, "replaced");
+          fs.utimesSync(input, 1, 1);
+        }
+        return content;
+      };
+      fs.closeSync = (fd) => {
+        if (fd === inputDescriptor) { descriptorCloses += 1; inputDescriptor = undefined; }
+        return original.close(fd);
+      };
+      syncBuiltinESMExports();
+      const readers = await import("./browser-proof-inputs.mjs");
+      const invoke = () => operation === "materialize"
+        ? readers.materializeInputSnapshot(["input.txt"], root, destination)
+        : readers.snapshotInputAssets([input]);
+      if (fault === "none") {
+        assert.equal(invoke().length, 1);
+        assert.equal(descriptorReads, 1);
+        if (operation === "materialize") assert.equal(original.read(join(destination, "input.txt"), "utf8"), "complete");
+      } else {
+        assert.throws(invoke, /complete regular non-symlink file/);
+        assert.equal(fs.existsSync(join(destination, "input.txt")), false);
+      }
+      assert.equal(descriptorCloses, fault === "symlink" ? 0 : 1);
+    } finally {
+      fs.rmSync(root, {recursive: true, force: true});
+    }
+  `;
+  for (const operation of ["snapshot", "materialize"]) {
+    for (const fault of ["none", "short", "replacement", "mutation", "symlink"]) {
+      execFileSync(process.execPath, ["--input-type=module", "-e", program, operation, fault], {cwd: dirname(fileURLToPath(import.meta.url)), stdio: "pipe"});
+    }
   }
 });
 
@@ -547,7 +642,16 @@ function passingProjectExecutions() {
 function localModuleSpecifiers(path) {
   const scanner = createScanner(true, LanguageVariant.Standard, readFileSync(path, "utf8"));
   const tokens = [];
+  // This context-free scanner does not rescan template continuations or
+  // regular expression literals, so it can read a "#" outside a string or
+  // template: after a template substitution, inside a regular expression or
+  // bare. When no identifier start follows that "#", it returns an empty
+  // private identifier without advancing, forever; refuse such a source
+  // instead of collecting tokens until the heap is exhausted.
+  let end = -1;
   for (let kind = scanner.scan(); kind !== SyntaxKind.EndOfFile; kind = scanner.scan()) {
+    if (scanner.getTokenEnd() <= end) throw new Error(`${path} does not scan: the module scanner stopped advancing at offset ${end}`);
+    end = scanner.getTokenEnd();
     tokens.push({kind, value: scanner.getTokenValue()});
   }
   const result = [];

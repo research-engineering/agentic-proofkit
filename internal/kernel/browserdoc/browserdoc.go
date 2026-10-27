@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 type Fragment struct {
@@ -230,6 +232,20 @@ func Section(title string, values ...Fragment) Fragment {
 	return Fragment{html: strings.Join(parts, "\n")}
 }
 
+// statusTones maps a state word to the tone of its badge. The badge always
+// shows the state as text, so the tone never carries the state alone; a state
+// outside this table gets the neutral info tone.
+var statusTones = map[string]string{"passed": "passed", "failed": "failed", "blocked": "blocked", "warning": "warning"}
+
+// Status renders a state as a badge whose text is the state itself.
+func Status(value string) Fragment {
+	tone, ok := statusTones[value]
+	if !ok {
+		tone = "info"
+	}
+	return Fragment{html: "<span class=\"status-badge\" data-status=\"" + tone + "\">" + Escape(value) + "</span>"}
+}
+
 func Summary(label string, value string, code bool) SummaryItem {
 	if code {
 		return SummaryItem{Label: label, Value: Code(value)}
@@ -376,8 +392,7 @@ func controls(filters []Filter, hasTable bool) string {
 		parts = append(parts, "<div class=\"control\"><label for=\"proofkit-view-mode\">View</label><select id=\"proofkit-view-mode\"><option value=\"cards\">Cards</option><option value=\"table\">Table</option></select></div>")
 	}
 	parts = append(parts,
-		"<label class=\"toggle\"><input id=\"proofkit-show-ids\" type=\"checkbox\" checked> Show IDs</label>",
-		"<label class=\"toggle\"><input id=\"proofkit-open-details\" type=\"checkbox\"> Open details</label>",
+		"<div class=\"control\" role=\"group\" aria-labelledby=\"proofkit-display-label\"><span class=\"control-label\" id=\"proofkit-display-label\">Display</span><div class=\"toggles\"><label class=\"toggle\"><input id=\"proofkit-show-ids\" type=\"checkbox\" checked> Show IDs</label><label class=\"toggle\"><input id=\"proofkit-open-details\" type=\"checkbox\"> Open details</label></div></div>",
 	)
 	for _, filter := range filters {
 		key := safeFilterKey(filter.Key)
@@ -439,8 +454,7 @@ func browserCard(card Card) string {
 
 func table(input Table) string {
 	parts := []string{
-		"<section class=\"table-view\" data-proofkit-table-section aria-label=\"Rendered table\" hidden>",
-		"<div class=\"table-scroll\">",
+		"<section class=\"table-view\" data-proofkit-table-section role=\"region\" aria-label=\"Rendered table\" tabindex=\"0\" hidden>",
 		"<table>",
 		"<thead>",
 		"<tr>",
@@ -452,7 +466,7 @@ func table(input Table) string {
 	for _, row := range input.Rows {
 		parts = append(parts, tableRow(row, input.Columns))
 	}
-	parts = append(parts, "</tbody>", "</table>", "</div>", "</section>")
+	parts = append(parts, "</tbody>", "</table>", "</section>")
 	return strings.Join(parts, "\n")
 }
 
@@ -463,10 +477,75 @@ func tableRow(row Row, columns []Column) string {
 	}
 	parts := []string{fmt.Sprintf("<tr data-proofkit-table-row data-search=\"%s\"%s>", Escape(row.SearchText), filterAttributes(row.FilterValues))}
 	for _, column := range columns {
-		parts = append(parts, "<td>"+cells[column.Key]+"</td>")
+		parts = append(parts, "<td>"+breakOpportunities(cells[column.Key])+"</td>")
 	}
 	parts = append(parts, "</tr>")
 	return strings.Join(parts, "\n")
+}
+
+// Table cells hold identifiers such as requirement IDs, dotted names, paths
+// and digests. A cell breaks only at the line-break opportunities that
+// breakOpportunities adds to its text, never inside a word: after each of
+// "/", ".", "_", "-" and ":" that a letter follows, and inside a run of more
+// than tableBreakRun letters and digits after every tableBreakStep of them.
+const (
+	tableBreakSeparators = "/._-:"
+	tableBreakRun        = 24
+	tableBreakStep       = 12
+)
+
+// breakOpportunities inserts <wbr> into the text of an HTML fragment that
+// browserdoc rendered; tags and character references pass through unchanged
+// and end a run.
+func breakOpportunities(fragment string) string {
+	var builder strings.Builder
+	text := []rune{}
+	flush := func() {
+		for index := 0; index < len(text); {
+			run := index
+			for run < len(text) && (unicode.IsLetter(text[run]) || unicode.IsDigit(text[run])) {
+				run++
+			}
+			for offset, character := range text[index:run] {
+				builder.WriteRune(character)
+				if run-index > tableBreakRun && (offset+1)%tableBreakStep == 0 && index+offset+1 < run {
+					builder.WriteString("<wbr>")
+				}
+			}
+			if run > index {
+				index = run
+				continue
+			}
+			builder.WriteRune(text[index])
+			if strings.ContainsRune(tableBreakSeparators, text[index]) && index+1 < len(text) && unicode.IsLetter(text[index+1]) {
+				builder.WriteString("<wbr>")
+			}
+			index++
+		}
+		text = text[:0]
+	}
+	for index := 0; index < len(fragment); {
+		var end int
+		switch fragment[index] {
+		case '<':
+			end = strings.IndexByte(fragment[index:], '>')
+		case '&':
+			end = strings.IndexByte(fragment[index:], ';')
+		default:
+			character, size := utf8.DecodeRuneInString(fragment[index:])
+			text = append(text, character)
+			index += size
+			continue
+		}
+		if end < 0 {
+			end = len(fragment) - index - 1
+		}
+		flush()
+		builder.WriteString(fragment[index : index+end+1])
+		index += end + 1
+	}
+	flush()
+	return builder.String()
 }
 
 func filterAttributes(values []FilterValue) string {
@@ -556,57 +635,91 @@ func stableSuffix(value string) string {
 
 // css returns the static view stylesheet. Every color and size is a token of
 // TokenStylesheet, which HTML emits before it in the same style element; the
-// dark color scheme keeps its own rules on the separate dark tokens.
+// palette tokens switch with the color scheme, so the stylesheet has no
+// color-scheme rules of its own.
 func css() string {
 	return strings.Join([]string{
-		":root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;line-height:var(--static-line-height);background:var(--static-canvas);color:var(--static-text)}",
+		":root{color-scheme:light dark;font-family:var(--font-family-sans);font-size:var(--font-size-root);line-height:var(--line-height-body);background:var(--color-canvas);color:var(--color-text)}",
 		"body{margin:0;overflow-wrap:anywhere}",
-		"main{max-width:var(--static-page-width);margin:0 auto;padding:var(--static-space-32) var(--static-space-20) var(--static-space-56)}",
-		"header{margin-bottom:var(--static-space-20)}",
-		"h1{font-size:var(--static-font-size-title);line-height:var(--static-line-height-title);margin:0}",
-		"h2{font-size:var(--static-font-size-heading);margin:0 0 var(--static-space-12)}",
-		"h3{font-size:var(--static-font-size-subheading);margin:var(--static-space-18) 0 var(--static-space-8)}",
-		".eyebrow{font-size:var(--static-font-size-label);font-weight:700;letter-spacing:0;text-transform:uppercase;color:var(--static-muted-text);margin:0 0 var(--static-space-8)}",
-		"a{color:var(--static-link);text-decoration:none}a:hover{text-decoration:underline}",
-		".summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:var(--static-surface);border:var(--border-width) solid var(--static-border);border-radius:var(--radius-8);box-shadow:var(--static-shadow)}",
-		".summary{padding:var(--static-space-16);margin-bottom:var(--static-space-16)}",
-		".hierarchy{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--static-hierarchy-column),1fr));gap:var(--static-space-14);padding:var(--static-space-16);margin-bottom:var(--static-space-16)}",
-		".hierarchy section{min-width:0}",
-		".hierarchy h2,.card-group>h2{font-size:var(--static-font-size-group);text-transform:uppercase;letter-spacing:0;color:var(--static-muted-text);margin:0 0 var(--static-space-10)}",
-		".hierarchy ul{margin:0;padding-left:var(--static-space-18)}",
-		".hierarchy li{margin:var(--static-space-4) 0}.hierarchy span,.card-group>h2 span{font-weight:400;color:var(--static-muted-text)}",
-		"dl{display:grid;grid-template-columns:minmax(var(--static-term-column-min),var(--static-term-column-max)) 1fr;gap:var(--static-space-8) var(--static-space-14);margin:0}",
-		"dt{font-weight:700;color:var(--static-term-text)}",
+		"main{display:grid;gap:var(--space-16);max-width:var(--layout-page-width);margin:0 auto;padding:var(--space-32) var(--space-24) var(--space-48)}",
+		"main>*{min-width:0;margin:0}",
+		"header{display:grid;gap:var(--space-4);padding-bottom:var(--space-8)}",
+		"h1{margin:0;font-size:var(--font-size-2xl);line-height:var(--line-height-tight)}",
+		"h2,h3{margin:0;line-height:var(--line-height-tight)}",
+		"h2{font-size:var(--font-size-lg)}",
+		"h3{font-size:var(--font-size-md)}",
+		".eyebrow,.hierarchy h2,.exports h2,.non-claims h2{margin:0;font-size:var(--font-size-sm);font-weight:700;letter-spacing:var(--letter-spacing-caps);text-transform:uppercase;color:var(--color-text-muted)}",
+		".eyebrow{color:var(--color-accent)}",
+		"a{color:var(--color-accent);text-decoration:underline}a:hover{color:var(--color-accent-hover)}",
+		":focus-visible{outline:var(--focus-width) solid var(--color-focus);outline-offset:var(--focus-offset)}",
+		".card{background:var(--color-surface);border:var(--border-width) solid var(--color-border);border-radius:var(--radius-8);box-shadow:var(--shadow-raised)}",
+		".summary,.hierarchy,.controls,.exports{border-bottom:var(--border-width) solid var(--color-border)}",
+		".table-view{border:var(--border-width) solid var(--color-border);border-radius:var(--radius-8);background:var(--color-surface)}",
+		".summary{padding:var(--space-4) var(--space-24)}",
+		"dl{display:grid;grid-template-columns:var(--layout-term-width) minmax(0,1fr);gap:var(--space-8) var(--space-16);margin:0}",
+		"dt{font-weight:600;color:var(--color-text-muted)}",
 		"dd{margin:0;min-width:0}",
-		"code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--static-font-size-code);background:var(--static-code-surface);border-radius:var(--radius-4);padding:var(--static-code-padding-block) var(--static-code-padding-inline)}",
-		".controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--static-control-column),1fr));gap:var(--static-space-10);align-items:end;padding:var(--static-space-14);margin-bottom:var(--static-space-10);position:sticky;top:0;z-index:1}",
-		".control{display:grid;gap:var(--static-space-6);min-width:0}",
-		".search-label{position:absolute;left:var(--static-offscreen)}",
-		"input[type=search],select{width:100%;box-sizing:border-box;border:var(--border-width) solid var(--static-control-border);border-radius:var(--radius-6);padding:var(--static-space-8) var(--static-space-10);background:var(--static-surface);color:inherit}",
-		".toggle{white-space:nowrap;font-size:var(--static-font-size-control)}",
-		".exports{display:flex;flex-wrap:wrap;gap:var(--static-space-10);align-items:center;padding:var(--static-space-14);margin-bottom:var(--static-space-10)}",
-		".exports h2{font-size:var(--static-font-size-group);text-transform:uppercase;letter-spacing:0;color:var(--static-muted-text);margin:0 var(--static-space-8) 0 0}",
-		"button{border:var(--border-width) solid var(--static-control-border);border-radius:var(--radius-6);background:var(--static-secondary-surface);color:inherit;padding:var(--static-space-8) var(--static-space-10);cursor:pointer}button:hover{background:var(--static-secondary-hover)}",
-		".result-count{margin:var(--static-space-12) var(--static-space-2);color:var(--static-muted-text)}",
-		".cards{display:grid;gap:var(--static-space-18)}",
+		".summary dl{gap:0}",
+		".summary dt,.summary dd{padding:var(--space-12) 0;border-top:var(--border-width) solid var(--color-border)}",
+		".summary dt{padding-right:var(--space-16)}",
+		".summary dt:has(+dd>details:first-child){padding-top:calc(var(--space-12) + var(--space-8) + var(--border-width))}",
+		".summary dt:first-of-type,.summary dt:first-of-type+dd{border-top:0}",
+		".hierarchy{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--layout-hierarchy-width)),1fr));gap:var(--space-24);padding:var(--space-20) var(--space-24)}",
+		".hierarchy section{display:grid;align-content:start;gap:var(--space-12);min-width:0}",
+		".hierarchy ul{list-style:none;margin:0;padding:0}",
+		".hierarchy li+li{margin-top:var(--space-8)}",
+		".hierarchy span{color:var(--color-text-muted);font-size:var(--font-size-sm)}",
+		".hierarchy p{margin:0}",
+		"code{font-family:var(--font-family-mono);font-size:var(--font-size-code);background:var(--color-surface-subtle);border:var(--border-width) solid var(--color-border);border-radius:var(--radius-4);padding:0 var(--space-4)}",
+		"code:empty{display:none}",
+		".controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--layout-control-width)),1fr));gap:var(--space-16);padding:var(--space-20) var(--space-24)}",
+		".control{display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:var(--space-8);min-width:0}",
+		".control>label,.control-label{align-self:end;font-size:var(--font-size-sm);font-weight:600}",
+		"input[type=search],select{width:100%;height:var(--target-size);box-sizing:border-box;border:var(--border-width) solid var(--color-border-strong);border-radius:var(--radius-6);padding:0 var(--space-12);background:var(--color-surface);color:inherit;font:inherit}",
+		".toggles{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4) var(--space-16);min-height:var(--target-size)}",
+		".toggle{display:inline-flex;align-items:center;gap:var(--space-8);min-height:var(--target-size-min)}",
+		"input::placeholder{color:var(--color-text-muted);opacity:1}",
+		"input[type=checkbox]{width:var(--target-checkbox-size);height:var(--target-checkbox-size);margin:0;accent-color:var(--color-accent)}",
+		"input[type=checkbox]:not(:focus-visible){outline:var(--border-width) solid var(--color-border-strong);outline-offset:0}",
+		".exports{display:flex;flex-wrap:wrap;gap:var(--space-12);align-items:center;padding:var(--space-16) var(--space-24)}",
+		".exports h2{margin-right:var(--space-8)}",
+		"button{min-height:var(--target-size);border:var(--border-width) solid var(--color-border-strong);border-radius:var(--radius-6);background:var(--color-surface);color:var(--color-text);padding:0 var(--space-16);font:inherit;font-size:var(--font-size-sm);font-weight:600;cursor:pointer}button:hover{background:var(--color-surface-hover)}",
+		".result-count{color:var(--color-text-muted);font-size:var(--font-size-sm)}",
+		".cards{display:grid;gap:var(--space-32)}",
 		".cards[hidden]{display:none}",
 		".card-group[hidden]{display:none}",
-		".card-group{display:grid;gap:var(--static-space-12);scroll-margin-top:var(--static-scroll-margin)}",
-		".card-group>h2{border-bottom:var(--border-width) solid var(--static-border);padding-bottom:var(--static-space-8)}",
-		".card{padding:var(--static-space-18)}",
-		".proofkit-id{display:inline-block;margin-right:var(--static-space-8);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--static-font-size-code)}",
+		".card-group{display:grid;gap:var(--space-12);scroll-margin-top:var(--layout-scroll-margin)}",
+		".card-group>h2{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8);font-size:var(--font-size-md);padding-bottom:var(--space-8);border-bottom:var(--border-width) solid var(--color-border)}",
+		".card-group>h2 span{padding:0 var(--space-8);border-radius:var(--radius-4);background:var(--color-surface-subtle);color:var(--color-text-muted);font-size:var(--font-size-sm);font-weight:600;line-height:var(--line-height-body)}",
+		".card{padding:var(--space-20) var(--space-24)}",
+		".card>*{margin:0}",
+		".card>*+*{margin-top:var(--space-16)}",
+		".card>h3+*{margin-top:var(--space-8)}",
+		".card>h2{display:grid;gap:var(--space-4)}",
+		".proofkit-id{display:block;font-family:var(--font-family-mono);font-size:var(--font-size-sm);font-weight:400;color:var(--color-text-muted)}",
 		"html[data-show-ids=false] .proofkit-id{display:none}",
 		".proofkit-title{font-weight:700}",
-		"details{border:var(--border-width) solid var(--static-border);border-radius:var(--radius-6);margin-top:var(--static-space-12);padding:var(--static-space-10) var(--static-space-12)}",
-		"summary{cursor:pointer;font-weight:700}",
-		".table-view{padding:0;overflow:hidden}",
-		".table-scroll{overflow:auto}",
-		"table{width:100%;border-collapse:collapse;font-size:var(--static-font-size-control)}",
-		"th,td{border-bottom:var(--border-width) solid var(--static-border);padding:var(--static-space-10) var(--static-space-12);text-align:left;vertical-align:top}",
-		"th{position:sticky;top:0;background:var(--static-secondary-surface);font-size:var(--static-font-size-label);text-transform:uppercase;letter-spacing:0;color:var(--static-muted-text)}",
-		".non-claims{margin-top:var(--static-space-18);padding:var(--static-space-18)}",
-		"ul{margin:var(--static-space-8) 0 0;padding-left:var(--static-space-22)}",
-		"@media (max-width:720px){main{padding:var(--static-space-24) var(--static-space-12) var(--static-space-40)}.controls{grid-template-columns:1fr;position:static}dl{grid-template-columns:1fr}.summary,.controls,.exports,.card,.non-claims{border-radius:var(--radius-6)}}",
-		"@media (prefers-color-scheme:dark){:root{background:var(--static-dark-canvas);color:var(--static-dark-text)}.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:var(--static-dark-surface);border-color:var(--static-dark-border)}.eyebrow,.result-count,dt,.hierarchy h2,.card-group>h2,.hierarchy span,.card-group>h2 span,th,.exports h2{color:var(--static-dark-muted-text)}input[type=search],select,th{background:var(--static-dark-inset-surface)}input[type=search],select,button{border-color:var(--static-dark-control-border)}button{background:var(--static-dark-secondary-surface)}button:hover{background:var(--static-dark-secondary-hover)}code{background:var(--static-dark-inset-surface)}details,th,td,.card-group>h2{border-color:var(--static-dark-border)}a{color:var(--static-dark-link)}}",
+		".scenario-block{display:grid;gap:var(--space-8)}",
+		"details{border-bottom:var(--border-width) solid var(--color-border)}",
+		"summary{min-height:var(--target-size);box-sizing:border-box;padding:var(--space-8) var(--space-16);cursor:pointer;font-weight:600}",
+		"details[open]>summary{border-bottom:var(--border-width) solid var(--color-border)}",
+		"details>:not(summary){margin:var(--space-12) var(--space-16)}",
+		".status-badge{display:inline-block;padding:0 var(--space-8);font-family:var(--font-family-sans);border:var(--border-width) solid var(--color-transparent);border-radius:var(--radius-4);font-size:var(--font-size-sm);font-weight:600;line-height:var(--line-height-body)}",
+		".status-badge[data-status=passed]{color:var(--color-passed);background:var(--color-passed-surface)}",
+		".status-badge[data-status=failed]{color:var(--color-failed);background:var(--color-failed-surface)}",
+		".status-badge[data-status=blocked]{color:var(--color-blocked);background:var(--color-blocked-surface)}",
+		".status-badge[data-status=warning]{color:var(--color-warning);background:var(--color-warning-surface)}",
+		".status-badge[data-status=info]{color:var(--color-info);background:var(--color-info-surface)}",
+		".table-view{max-height:var(--layout-table-height);padding:0;overflow:auto}",
+		"table{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--font-size-sm)}",
+		"th,td{border-bottom:var(--border-width) solid var(--color-border);padding:var(--space-12);text-align:left;vertical-align:top}",
+		"td{min-width:var(--layout-cell-min-width);overflow-wrap:break-word}",
+		"th{position:sticky;top:0;z-index:1;background:var(--color-surface-subtle);color:var(--color-text-muted);font-weight:700;overflow-wrap:normal}",
+		"tbody tr:last-child td{border-bottom:0}",
+		".non-claims{display:grid;gap:var(--space-12);padding:var(--space-20) var(--space-24);border-top:var(--border-width) solid var(--color-border)}",
+		"ul{margin:0;padding-left:var(--space-20)}",
+		"li+li{margin-top:var(--space-4)}",
+		"@media (max-width:48rem){main{padding:var(--space-20) var(--space-12) var(--space-32)}h1{font-size:var(--font-size-xl)}.summary,.hierarchy,.controls,.exports,.card,.non-claims{padding-left:var(--space-12);padding-right:var(--space-12)}summary{padding-left:var(--space-12);padding-right:var(--space-12)}details>:not(summary){margin-left:var(--space-8);margin-right:var(--space-8)}details details>:not(summary){margin-left:0;margin-right:0}ul{padding-left:var(--space-16)}dl{grid-template-columns:minmax(0,1fr);gap:var(--space-4)}dd+dt{margin-top:var(--space-8)}.summary dl{gap:0}.summary dt{padding-bottom:var(--space-4)}.summary dt:has(+dd>details:first-child){padding-top:var(--space-12)}.summary dd{border-top:0;padding-top:0}}",
+		"@media (forced-colors:active){:focus-visible{outline-color:var(--forced-focus)}.status-badge{border-color:var(--forced-border)}}",
 	}, "")
 }

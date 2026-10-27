@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "proofKind": "proofkit.browser-matrix-workspace-proof-inputs",
+  "serverTarget": "./internal/tools/browsertestserver",
+  "testRoot": "tests/matrix/workspace",
+  "writerPath": "scripts/write-browser-matrix-proof.mjs",
+  "paths": [
+    "go.mod",
+    "go.sum",
+    "package-lock.json",
+    "package.json",
+    "playwright.matrix.config.mjs",
+    "proofkit/witness-plan.json",
+    "scripts/browser-proof-execution.mjs",
+    "scripts/browser-proof-inputs.mjs",
+    "scripts/diagnostic.mjs",
+    "scripts/stable-json.mjs",
+    "tests/matrix/harness",
+    "tests/visual/environment-probe.mjs",
+    "tests/visual/environment.json",
+    "tests/visual/fonts.conf"
+  ]
+}

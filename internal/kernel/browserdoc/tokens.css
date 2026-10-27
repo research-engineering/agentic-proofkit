@@ -1,138 +1,137 @@
 /* Design tokens of the static views and the requirement-browser workspace. */
 :root {
-  /* Workspace palette. */
-  --canvas: #ffffff;
-  --surface: #f5f6f5;
-  --active-surface: #e0f0e8;
-  --text: #202522;
-  --muted-text: #4d5952;
-  --border: #77867d;
-  --focus: #005fcc;
-  --accent: #17613d;
-  --plane-proof-coverage: #77589b;
-  --plane-code-traceability: #387080;
-  --plane-native-execution: #8a681a;
-  --backdrop: #00000080;
-  --transparent: transparent;
-  /* Static view palette; the dark scheme uses the separate dark tokens. */
-  --static-canvas: #f7f7f4;
-  --static-text: #1f2428;
-  --static-muted-text: #586069;
-  --static-term-text: #4b5563;
-  --static-link: #0969da;
-  --static-surface: #fff;
-  --static-border: #d8dee4;
-  --static-control-border: #768390;
-  --static-secondary-surface: #f6f8fa;
-  --static-secondary-hover: #eef2f6;
-  --static-code-surface: #f1f5f9;
-  --static-shadow: 0 1px 2px rgba(31,35,40,.04);
-  --static-dark-canvas: #101418;
-  --static-dark-text: #e6edf3;
-  --static-dark-surface: #161b22;
-  --static-dark-border: #30363d;
-  --static-dark-muted-text: #9da7b1;
-  --static-dark-inset-surface: #0d1117;
-  --static-dark-control-border: #8b949e;
-  --static-dark-secondary-surface: #21262d;
-  --static-dark-secondary-hover: #30363d;
-  --static-dark-link: #58a6ff;
-  /* Type scale and line heights. */
+  /* Palette: neutral surfaces and text with one deep blue-green accent. Every
+     palette token has a light value here and a dark value below. */
+  --color-canvas: #f3f5f5;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #eef2f2;
+  --color-surface-hover: #e6ecec;
+  --color-border: #d4dcdd;
+  --color-border-strong: #6b7c81;
+  --color-text: #192124;
+  --color-text-muted: #536166;
+  --color-accent: #0c6670;
+  --color-accent-hover: #09515a;
+  --color-accent-subtle: #e0efef;
+  --color-on-accent: #ffffff;
+  --color-focus: #0c6670;
+  --color-backdrop: #0f171a99;
+  --color-transparent: transparent;
+  /* Status: text and surface of each state; a state is always also named in
+     text. */
+  --color-passed: #1b6b3a;
+  --color-passed-surface: #e3f3e7;
+  --color-failed: #b3261e;
+  --color-failed-surface: #fce8e6;
+  --color-blocked: #8f3c0b;
+  --color-blocked-surface: #fbeadc;
+  --color-warning: #7a5300;
+  --color-warning-surface: #fbf0d2;
+  --color-info: #1d5a9b;
+  --color-info-surface: #e5eef8;
+  /* Traceability evidence planes. */
+  --color-plane-proof-coverage: #77589b;
+  --color-plane-code-traceability: #387080;
+  --color-plane-native-execution: #8a681a;
+  /* One shadow system: raised surfaces and overlays. */
+  --shadow-raised: 0 1px 2px #1921240f, 0 1px 3px #19212414;
+  --shadow-overlay: 0 8px 24px #19212429, 0 2px 6px #1921241a;
+  /* Type: system stacks and a rem scale whose steps above the body size grow
+     by 1.2. */
+  --font-family-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   --font-size-root: 100%;
-  --font-size-12: .75rem;
-  --font-size-13: .8125rem;
-  --font-size-14: .875rem;
-  --font-size-16: 1rem;
-  --font-size-17: 1.0625rem;
-  --font-size-18: 1.125rem;
-  --font-size-20: 1.25rem;
-  --line-height-body: 1.55;
-  --line-height-loose: 1.65;
-  --static-font-size-title: clamp(1.7rem,2.8vw,2.6rem);
-  --static-font-size-heading: 1.05rem;
-  --static-font-size-subheading: .95rem;
-  --static-font-size-group: .88rem;
-  --static-font-size-control: .92rem;
-  --static-font-size-label: .78rem;
-  --static-font-size-code: .9em;
-  --static-line-height: 1.45;
-  --static-line-height-title: 1.1;
-  /* Spacing. */
-  --space-2: .125rem;
+  --font-size-xs: .75rem;
+  --font-size-sm: .875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.2rem;
+  --font-size-xl: 1.44rem;
+  --font-size-2xl: 1.728rem;
+  --font-size-code: .875em;
+  --line-height-tight: 1.25;
+  --line-height-body: 1.5;
+  --letter-spacing-caps: 0;
+  /* Spacing on a 4 px grid. */
   --space-4: .25rem;
-  --space-6: .375rem;
   --space-8: .5rem;
-  --space-10: .625rem;
   --space-12: .75rem;
   --space-16: 1rem;
   --space-20: 1.25rem;
   --space-24: 1.5rem;
+  --space-32: 2rem;
   --space-48: 3rem;
-  --static-space-2: 2px;
-  --static-space-4: 4px;
-  --static-space-6: 6px;
-  --static-space-8: 8px;
-  --static-space-10: 10px;
-  --static-space-12: 12px;
-  --static-space-14: 14px;
-  --static-space-16: 16px;
-  --static-space-18: 18px;
-  --static-space-20: 20px;
-  --static-space-22: 22px;
-  --static-space-24: 24px;
-  --static-space-32: 32px;
-  --static-space-40: 40px;
-  --static-space-56: 56px;
-  --static-code-padding-block: .1em;
-  --static-code-padding-inline: .3em;
   /* Radii and border widths. */
   --radius-4: 4px;
   --radius-6: 6px;
   --radius-8: 8px;
   --border-width: 1px;
-  --border-width-quote: 2px;
-  --border-width-plane: 4px;
+  --border-width-indicator: 3px;
   /* Focus indicator and target sizes. */
-  --focus-width: 3px;
+  --focus-width: 2px;
   --focus-offset: 2px;
-  --target-size: 2.75rem;
-  --icon-size: 1.25rem;
-  --icon-stroke-width: 2;
-  --checkbox-size: 1.125rem;
+  --target-size-min: 1.5rem;
+  --target-size: 2.5rem;
+  --target-checkbox-size: 1.125rem;
+  --target-icon-size: 1.25rem;
+  --target-icon-stroke-width: 2;
   /* Layout widths and heights. */
+  --layout-page-width: 80rem;
+  --layout-reading-width: 75ch;
+  --layout-term-width: 13rem;
+  --layout-control-width: 13rem;
+  --layout-tab-width: 8rem;
+  --layout-heading-min-width: 7rem;
+  --layout-hierarchy-width: 15rem;
   --layout-navigation-width: 17rem;
   --layout-inspector-width: 20rem;
   --layout-panel-width: 24rem;
-  --layout-product-bar-height: 4.25rem;
-  --layout-reading-width: 75ch;
+  --layout-panel-max-share: 32%;
+  --layout-product-bar-height: 4rem;
   --layout-question-height: 9rem;
   --layout-graph-height: 42rem;
+  --layout-table-height: 75vh;
   --layout-cell-width: 24rem;
-  --viewport-height: 100vh;
-  --dynamic-viewport-height: 100dvh;
-  --static-page-width: 1120px;
-  --static-hierarchy-column: 220px;
-  --static-term-column-min: 140px;
-  --static-term-column-max: 220px;
-  --static-control-column: 160px;
-  --static-offscreen: -10000px;
-  --static-scroll-margin: 86px;
+  --layout-cell-min-width: 4rem;
+  --layout-scroll-margin: 6rem;
+  --layout-viewport-height: 100vh;
+  --layout-dynamic-viewport-height: 100dvh;
   /* Breakpoints; media conditions repeat these values, which CSS cannot read from tokens. */
   --breakpoint-bar: 24rem;
-  --breakpoint-graph: 48rem;
+  --breakpoint-compact: 48rem;
   --breakpoint-panels: 64rem;
-  --breakpoint-static: 720px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --canvas: #181c19;
-    --surface: #222824;
-    --active-surface: #30483b;
-    --text: #f0f4f1;
-    --muted-text: #c4cec7;
-    --border: #87998e;
-    --focus: #84adff;
-    --accent: #a1dbba;
+    --color-canvas: #0e1416;
+    --color-surface: #151d20;
+    --color-surface-subtle: #1b2528;
+    --color-surface-hover: #233033;
+    --color-border: #2b383c;
+    --color-border-strong: #7d9095;
+    --color-text: #e2e9ea;
+    --color-text-muted: #a2b1b5;
+    --color-accent: #5ec4c1;
+    --color-accent-hover: #86d8d5;
+    --color-accent-subtle: #123a3c;
+    --color-on-accent: #0b1b1d;
+    --color-focus: #5ec4c1;
+    --color-backdrop: #000000b3;
+    --color-transparent: transparent;
+    --color-passed: #7dd39a;
+    --color-passed-surface: #14301e;
+    --color-failed: #ff9b90;
+    --color-failed-surface: #3b1714;
+    --color-blocked: #f5b07a;
+    --color-blocked-surface: #3a2312;
+    --color-warning: #efcb6a;
+    --color-warning-surface: #332a10;
+    --color-info: #90bdf2;
+    --color-info-surface: #13263a;
+    --color-plane-proof-coverage: #b79ad8;
+    --color-plane-code-traceability: #6fb3c4;
+    --color-plane-native-execution: #d3b25f;
+    --shadow-raised: 0 1px 2px #00000066, 0 1px 3px #0000004d;
+    --shadow-overlay: 0 8px 24px #000000a6, 0 2px 6px #00000066;
   }
 }
 @media (forced-colors: active) {

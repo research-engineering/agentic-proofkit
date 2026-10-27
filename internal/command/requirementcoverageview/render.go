@@ -171,7 +171,7 @@ func html(view map[string]any) string {
 		Title:     "Requirement Coverage View: " + stringValue(view["viewInputId"]),
 		Authority: stringValue(view["authority"]),
 		SummaryItems: []browserdoc.SummaryItem{
-			browserdoc.Summary("Coverage report state", stringValue(view["state"]), false),
+			{Label: "Coverage report state", Value: browserdoc.Status(stringValue(view["state"]))},
 			browserdoc.Summary("Caller-declared completeness scope", stringValue(view["completenessDeclaration"]), false),
 			browserdoc.Summary("Requirements", fmt.Sprint(intValue(view["requirementCoverageCount"])), false),
 			browserdoc.Summary("Owner invariants", fmt.Sprint(intValue(view["ownerInvariantCoverageCount"])), false),

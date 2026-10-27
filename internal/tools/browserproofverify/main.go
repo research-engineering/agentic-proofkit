@@ -20,6 +20,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/repositorysnapshot"
 )
 
 var proofNonClaims = []string{
@@ -29,6 +30,8 @@ var proofNonClaims = []string{
 	"A dirty-tree record is content-bound only to its listed assets; sourceRevision is contextual.",
 	"This record does not independently authenticate or sandbox the same-user proof runner, external toolchain packages, or browser binaries.",
 }
+
+const requireReferenceEnvironmentVariable = "PROOFKIT_BROWSER_REQUIRE_REFERENCE_ENVIRONMENT"
 
 const usage = "usage: browserproofverify [--manifest PATH] [--resolve-inputs | --run [--require-reference-environment] | --admit-playwright-report PATH | --admit-references --from RUN_DIRECTORY]"
 
@@ -64,7 +67,7 @@ func main() {
 		err = writeCurrentInputResolution(root, kind)
 	case len(arguments) == 1 && arguments[0] == "--run":
 		err = runBrowserProof(root, kind, false)
-	case len(arguments) == 2 && arguments[0] == "--run" && arguments[1] == "--require-reference-environment" && kind.admitsState("unverified"):
+	case len(arguments) == 2 && arguments[0] == "--run" && arguments[1] == "--require-reference-environment" && kind.ReferenceEnvironment:
 		err = runBrowserProof(root, kind, true)
 	case len(arguments) == 3 && arguments[0] == "--admit-references" && arguments[1] == "--from" && kind.isVisual():
 		err = writeVisualReferenceInventory(root, arguments[2])
@@ -89,7 +92,7 @@ func verifyCurrentProof(root string, kind proofKind) error {
 	if err != nil {
 		return err
 	}
-	value, err := readRootedJSON(root, kind.RecordPath, 8<<20)
+	value, err := readRepositoryJSON(root, kind.RecordPath, 8<<20)
 	if err != nil {
 		return err
 	}
@@ -97,8 +100,11 @@ func verifyCurrentProof(root string, kind proofKind) error {
 }
 
 func verifyKindRecord(root string, kind proofKind, value any, resolution proofInputResolution, revision, state string) error {
-	if kind.isVisual() {
+	switch {
+	case kind.isVisual():
 		return verifyVisualRecord(root, value, resolution, revision, state)
+	case kind.isMatrix():
+		return verifyMatrixRecord(root, kind, value, resolution, revision, state)
 	}
 	return verifyRecord(root, value, resolution, revision, state)
 }
@@ -148,6 +154,11 @@ func runBrowserProof(root string, kind proofKind, requireReferenceEnvironment bo
 	environment := withEnvironmentValue(os.Environ(), proofInputResolutionEnvironment, strings.TrimSpace(string(encoded)))
 	environment = withEnvironmentValue(environment, browserRunDirectoryEnvironment, runPaths.RunDirectory)
 	environment = withEnvironmentValue(environment, browserProofCandidateEnvironment, runPaths.CandidatePath)
+	if requireReferenceEnvironment {
+		// A matrix writer refuses to launch a browser outside the recorded
+		// reference environment; the visual writer launches none there anyway.
+		environment = withEnvironmentValue(environment, requireReferenceEnvironmentVariable, "true")
+	}
 	command.Env = environment
 	command.Stdout = os.Stdout
 	stderr := diagnostic.NewStderrCapture()
@@ -158,7 +169,7 @@ func runBrowserProof(root string, kind proofKind, requireReferenceEnvironment bo
 		}
 		return fmt.Errorf("run browser proof writer: %w", err)
 	}
-	value, err := readRootedJSON(root, runPaths.CandidatePath, 8<<20)
+	value, err := readRepositoryJSON(root, runPaths.CandidatePath, 8<<20)
 	if err != nil {
 		return fmt.Errorf("read browser proof candidate: %w", err)
 	}
@@ -308,6 +319,11 @@ func verifyContentBoundInputs(root string, record map[string]any, expectedResolu
 		return fmt.Errorf("%s assets do not match the input set", label)
 	}
 	identityAssets := make([]any, 0, len(assets))
+	rootFS, err := os.OpenRoot(root)
+	if err != nil {
+		return fmt.Errorf("open browser proof input root failed")
+	}
+	defer rootFS.Close()
 	for index, rawAsset := range assets {
 		asset, ok := rawAsset.(map[string]any)
 		if !ok || admit.KnownKeys(asset, []string{"path", "sha256"}, label+" asset") != nil || asset["path"] != expectedResolution.InputPaths[index] {
@@ -321,7 +337,7 @@ func verifyContentBoundInputs(root string, record map[string]any, expectedResolu
 		if err != nil {
 			return err
 		}
-		content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
+		_, content, err := repositorysnapshot.ReadRegularFile(rootFS, path, maxBrowserSourceFileBytes)
 		if err != nil {
 			return err
 		}

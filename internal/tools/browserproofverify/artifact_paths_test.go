@@ -120,7 +120,7 @@ func TestWriteRootedJSONPreservesExactPrettyEncodingAndMode(t *testing.T) {
 	if info.Mode().Perm() != 0o644 {
 		t.Fatalf("mode=%v, want 0644", info.Mode())
 	}
-	value, err := readRootedJSON(root, runtimeProofKind().RecordPath, 1024)
+	value, err := readRepositoryJSON(root, runtimeProofKind().RecordPath, 1024)
 	if err != nil {
 		t.Fatal(err)
 	}
