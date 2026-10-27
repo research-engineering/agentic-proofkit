@@ -170,7 +170,7 @@ func ReadRegularFile(root *os.Root, path string, maxBytes int64) (fs.FileInfo, [
 	if info.Size() > maxBytes {
 		return nil, nil, fmt.Errorf("repository snapshot source entry exceeds resource limit")
 	}
-	file, err := rootpath.OpenExactRegularFile(root, path)
+	file, err := rootpath.OpenRegularFile(root, path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open repository snapshot source entry failed")
 	}
