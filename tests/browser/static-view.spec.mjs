@@ -7,6 +7,49 @@ import {emulateMediaInEffect, openWorkspace} from "./workspace-navigation-harnes
 const heading = "Requirement Source View: browser.fixture.requirements";
 const treeHeading = "Requirement Spec Tree View: browser.fixture.tree";
 
+test("static filters preserve every node role, source kind and overlay in cards and table", async ({staticFilterTreeURL, page}) => {
+  await openWorkspace(page, staticFilterTreeURL, treeHeading, "static-view");
+  const all = ["spec.root", "spec.module"];
+  const cases = [
+    {fields: {}, ids: all},
+    {fields: {"Node kind": "meta_spec"}, ids: ["spec.root"]},
+    {fields: {"Node kind": "module_spec"}, ids: ["spec.module"]},
+    {fields: {"Source role": "requirements"}, ids: all},
+    {fields: {"Source role": "overview"}, ids: ["spec.root"]},
+    {fields: {"Source kind": "source_id"}, ids: all},
+    {fields: {"Source kind": "path_digest"}, ids: ["spec.root"]},
+    {fields: {"Overlay kind": "source"}, ids: ["spec.root"]},
+    {fields: {"Overlay kind": "rendered_view"}, ids: ["spec.root"]},
+    {fields: {"Source role": "requirements", "Source kind": "path_digest", "Overlay kind": "source"}, ids: ["spec.root"]},
+    {fields: {"Overlay kind": "source"}, query: "Unrelated module", ids: []},
+    {fields: {}, ids: all},
+  ];
+  for (const mode of ["cards", "table"]) {
+    await page.getByLabel("View", {exact: true}).selectOption(mode);
+    for (const item of cases) {
+      for (const label of ["Node kind", "Source role", "Source kind", "Overlay kind"]) {
+        await page.getByLabel(label, {exact: true}).selectOption(item.fields[label] ?? "");
+      }
+      await page.getByRole("searchbox").fill(item.query ?? "");
+      const records = page.locator(mode === "cards" ? "[data-proofkit-card]:visible .proofkit-id" : "[data-proofkit-table-row]:visible td:first-child");
+      await expect(records, JSON.stringify({mode, ...item})).toHaveText(item.ids);
+      await expect(page.locator("#proofkit-visible-count")).toHaveText(String(item.ids.length));
+    }
+    const kind = page.getByLabel("Node kind", {exact: true});
+    await expect(kind).toHaveAccessibleName("Node kind");
+    await kind.focus();
+    await kind.selectOption("module_spec");
+    await expect(kind).toBeFocused();
+    await expect(page.locator("#proofkit-visible-count")).toHaveText("1");
+    await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Source role", {exact: true})).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(kind).toBeFocused();
+    await kind.selectOption("");
+    await expect(page.locator("#proofkit-visible-count")).toHaveText("2");
+  }
+});
+
 test("static CSP admits the exact embedded script and blocks a different inline script with an allowed control", async ({staticViewURL, page, request}) => {
   const actual = await request.get(staticViewURL);
   expect(actual.status()).toBe(200);

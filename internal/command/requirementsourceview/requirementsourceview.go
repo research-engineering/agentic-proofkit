@@ -237,10 +237,10 @@ func html(view map[string]any) string {
 		searchParts = append(searchParts, linked.linkedIDs...)
 		search := browserdoc.SearchText(searchParts)
 		filters := []browserdoc.FilterValue{
-			{Key: "owner", Value: owner},
-			{Key: "claim-level", Value: claim},
-			{Key: "risk-class", Value: risk},
-			{Key: "lifecycle", Value: lifecycle},
+			{Key: "owner", Values: []string{owner}},
+			{Key: "claim-level", Values: []string{claim}},
+			{Key: "risk-class", Values: []string{risk}},
+			{Key: "lifecycle", Values: []string{lifecycle}},
 		}
 		group := groups[stringValue(requirement["requirementId"])]
 		cards = append(cards, browserdoc.Card{

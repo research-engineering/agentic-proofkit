@@ -121,8 +121,8 @@ func TestCoverageRelationFullOutputParity(t *testing.T) {
 	// The same eight inputs retain the JSON, exit and Markdown observations
 	// independently captured from main 3d760a1. Full-output hashes additionally
 	// bind the admitted HTML changes: styles, display controls, table wrapping
-	// a textual report-state badge and hierarchy navigation. Visual-only updates
-	// must retain protectedWants.
+	// a textual report-state badge, hierarchy navigation and filter value sets.
+	// HTML representation updates must retain protectedWants.
 	protectedWants := map[string]string{
 		"sparse":         "8c538adccaf293c5aa4ab392f6f2d581d34a6874cf195b1f009fe72ca2d0c173",
 		"dense":          "2bde9e9fa38f4de2f581462886a7aec9c74ebf9839144294432ac4dae02868f5",
@@ -134,14 +134,14 @@ func TestCoverageRelationFullOutputParity(t *testing.T) {
 		"compact":        "c0a6930a61e5068f698064da83b26b5eb38fef0c985fc00729527cad8649e7da",
 	}
 	wants := map[string]string{
-		"sparse":         "fb67d62ee1a1db60d099ea8843d0834a791bb63680ad7e8e59e8682512c16449",
-		"dense":          "0a28706ede56f47692a9829eca8b109dae356c3adbe6f7f7ce3c14a1749551f4",
-		"no-match":       "f5185d667d94c72ccfff30ca972d563922a22a3e3334691f6417e1a1ac4c86af",
-		"missing":        "beaf20909664943199c239fba06e39206e5b39743cda76f7ed9860d13be50ff1",
-		"failed":         "8acdaa9b6938b5518e4d5bef3ff3970138616acdad5a28af94184607c3d43f36",
-		"mixed-negative": "68a8f19fa1645cbd0a3e1c704ae24077657a4ff9e5f71d8cebba8cac1ac5dc1f",
-		"owner-scope":    "97e2ea8b16f56405dc489ab79f52e5ebf90f6b1f8903ce770e2b422afe13ba1c",
-		"compact":        "0e266dc7d77f17f16befa17e78a57217e0e0ae0307a6b1e1b5380f5a9620d236",
+		"sparse":         "a304737604f94fe2300557f397b75b817335714f2ca018925151c5bc150cc2f9",
+		"dense":          "6457fbedbf9e58455ee8f338c44babffb2ed9506e6cb6143e0bbbe18a9048a74",
+		"no-match":       "c4a346556ef348cf55db03479efe55a40b6bf01cb1e77db1df5d450ee603c177",
+		"missing":        "edefaad640b708ad1c382a3e4de14e6727c5c95fdf0797d8aae4f4e76a0018f4",
+		"failed":         "7601fb5e0efab903c4480b68d5ed0c24ea08fff0acf774c3acfd5b45d8776a9c",
+		"mixed-negative": "edc4918194e6dda22dc8f49a64d3cff739e96aba5ecbcfeeac0f608219656c3e",
+		"owner-scope":    "fe41d445bc2d4bef1cba56b1f969d8e15f9f282ea529b2a16b4e34df0385e06b",
+		"compact":        "b975cf6e96f21948a5e133f19e7836405c0beca85e42c1e7eb886ba7b895e1fd",
 	}
 	for _, name := range []string{"sparse", "dense", "no-match", "missing", "failed", "mixed-negative", "owner-scope", "compact"} {
 		t.Run(name, func(t *testing.T) {
