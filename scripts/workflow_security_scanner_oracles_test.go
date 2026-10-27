@@ -19,7 +19,7 @@ type securityScannerPermissionExpectation struct {
 	providerJobs        map[string]map[string]string
 }
 
-const expectedCodeQLCommit = "24c54180a607b1449ed407dd24f251e4e9147c8d"
+const expectedCodeQLCommit = "9b3254085494b55a0f7c4c2b3d2d52cc712ce370"
 
 func validateCodeQLActionPins(workflow githubWorkflow, expected map[string]int) error {
 	observed := map[string]int{}
