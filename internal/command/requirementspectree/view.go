@@ -280,6 +280,7 @@ func html(view map[string]any, exports []browserdoc.ExportFile) string {
 		}, append(sourceRefIDs(anyArray(node["sourceRefs"])), overlayIDs(anyArray(node["overlays"]))...)...))
 		cards = append(cards, browserdoc.Card{
 			ID:           stringValue(node["nodeId"]),
+			AnchorID:     nodeFragmentID(stringValue(node["nodeId"])),
 			Title:        stringValue(node["label"]),
 			GroupID:      "kind:" + nodeKind,
 			GroupLabel:   "Kind: " + nodeKind,
@@ -463,10 +464,14 @@ func treeHierarchy(nodes []any) []browserdoc.HierarchyItem {
 		items = append(items, browserdoc.HierarchyItem{
 			Label:  strings.Repeat("  ", depth-1) + stringValue(node["label"]),
 			Detail: stringValue(node["nodeKind"]),
-			Href:   "#" + browserdoc.FragmentID("kind:"+stringValue(node["nodeKind"])),
+			Href:   "#" + nodeFragmentID(stringValue(node["nodeId"])),
 		})
 	}
 	return items
+}
+
+func nodeFragmentID(nodeID string) string {
+	return browserdoc.FragmentID("node:" + nodeID)
 }
 
 func countHierarchy(nodes []any, key string, anchorPrefix string) []browserdoc.HierarchyItem {

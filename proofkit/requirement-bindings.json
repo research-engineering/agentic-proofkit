@@ -2766,6 +2766,57 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "scenarioId": "proofkit.spec-proof-core.spec-tree-node-navigation",
+      "witnessId": "proofkit.spec-tree-node-navigation.native-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementspectree/navigation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestTreeHierarchyResolvesEachNamedNode",
+          "command": "go test ./internal/command/requirementspectree -run '^TestTreeHierarchyResolvesEachNamedNode$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "scenarioId": "proofkit.spec-proof-core.spec-tree-node-navigation",
+      "witnessId": "proofkit.spec-tree-node-navigation.browser-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/static-view.spec.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "scenarioId": "proofkit.spec-proof-core.browserdoc-optional-card-anchor",
+      "witnessId": "proofkit.browserdoc.optional-card-anchor-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/browserdoc/anchor_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCardAnchorIsOptionalAndEscaped",
+          "command": "go test ./internal/kernel/browserdoc -run '^TestCardAnchorIsOptionalAndEscaped$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
       "scenarioId": "proofkit.spec-proof-core.browserdoc-safe-fragments",
       "witnessId": "proofkit.browserdoc.safe-fragment-and-download-falsifier",
       "witnessKind": "contract",

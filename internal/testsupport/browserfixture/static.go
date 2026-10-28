@@ -58,8 +58,14 @@ func StaticFilterTree() (map[string]any, error) {
 	tree["nodes"] = append(tree["nodes"].([]any), map[string]any{
 		"nodeId": "spec.module", "nodeKind": "module_spec", "label": "Unrelated module", "displayOrder": json.Number("1"), "callerAnnotations": []any{},
 		"sourceRefs": []any{map[string]any{"sourceRefId": "spec.module.requirements", "sourceRefKind": "source_id", "sourceRole": "requirements", "sourceId": "filter.module.requirements"}},
+	}, map[string]any{
+		"nodeId": "spec.module.second", "nodeKind": "module_spec", "label": "Second module", "displayOrder": json.Number("2"), "callerAnnotations": []any{},
+		"sourceRefs": []any{map[string]any{"sourceRefId": "spec.module.second.requirements", "sourceRefKind": "source_id", "sourceRole": "requirements", "sourceId": "filter.module.second.requirements"}},
 	})
-	tree["edges"] = []any{map[string]any{"parentNodeId": "spec.root", "childNodeId": "spec.module"}}
+	tree["edges"] = []any{
+		map[string]any{"parentNodeId": "spec.root", "childNodeId": "spec.module"},
+		map[string]any{"parentNodeId": "spec.root", "childNodeId": "spec.module.second"},
+	}
 	return tree, nil
 }
 
