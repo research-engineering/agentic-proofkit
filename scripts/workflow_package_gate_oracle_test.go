@@ -867,6 +867,22 @@ func TestCIRequiredAggregateRejectsExecutionOverrides(t *testing.T) {
 			},
 		},
 		{
+			name: "obsolete source job timeout",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["source-quality"]
+				job.TimeoutMinutes = 20
+				workflow.Jobs["source-quality"] = job
+			},
+		},
+		{
+			name: "oversized source job timeout",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["source-quality"]
+				job.TimeoutMinutes = 31
+				workflow.Jobs["source-quality"] = job
+			},
+		},
+		{
 			name: "workflow name",
 			mutate: func(workflow *githubWorkflow) {
 				workflow.Name = "shadow"
@@ -2128,7 +2144,7 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		runner         string
 		timeoutMinutes int
 	}{
-		"source-quality":             {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 20},
+		"source-quality":             {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 30},
 		"platform-smoke":             {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 12},
 		"platform-smoke-intel":       {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 20},
 		"platform-smoke-linux-arm64": {name: "quality / platform smoke / linux-arm64", runner: "ubuntu-24.04-arm", timeoutMinutes: 15},
