@@ -60,6 +60,7 @@ type Filter struct {
 
 type Card struct {
 	ID           string
+	AnchorID     string
 	Title        string
 	GroupID      string
 	GroupLabel   string
@@ -445,6 +446,9 @@ func cards(items []Card) string {
 
 func browserCard(card Card) string {
 	attributes := filterAttributes(card.FilterValues)
+	if card.AnchorID != "" {
+		attributes = " id=\"" + Escape(card.AnchorID) + "\"" + attributes
+	}
 	return strings.Join([]string{
 		fmt.Sprintf("<article class=\"card\" data-proofkit-card data-search=\"%s\"%s>", Escape(card.SearchText), attributes),
 		fmt.Sprintf("<h2><span class=\"proofkit-id\">%s</span><span class=\"proofkit-title\">%s</span></h2>", Escape(card.ID), Escape(card.Title)),

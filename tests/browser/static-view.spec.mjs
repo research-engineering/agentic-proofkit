@@ -9,11 +9,11 @@ const treeHeading = "Requirement Spec Tree View: browser.fixture.tree";
 
 test("static filters preserve every node role, source kind and overlay in cards and table", async ({staticFilterTreeURL, page}) => {
   await openWorkspace(page, staticFilterTreeURL, treeHeading, "static-view");
-  const all = ["spec.root", "spec.module"];
+  const all = ["spec.root", "spec.module", "spec.module.second"];
   const cases = [
     {fields: {}, ids: all},
     {fields: {"Node kind": "meta_spec"}, ids: ["spec.root"]},
-    {fields: {"Node kind": "module_spec"}, ids: ["spec.module"]},
+    {fields: {"Node kind": "module_spec"}, ids: ["spec.module", "spec.module.second"]},
     {fields: {"Source role": "requirements"}, ids: all},
     {fields: {"Source role": "overview"}, ids: ["spec.root"]},
     {fields: {"Source kind": "source_id"}, ids: all},
@@ -40,14 +40,47 @@ test("static filters preserve every node role, source kind and overlay in cards 
     await kind.focus();
     await kind.selectOption("module_spec");
     await expect(kind).toBeFocused();
-    await expect(page.locator("#proofkit-visible-count")).toHaveText("1");
+    await expect(page.locator("#proofkit-visible-count")).toHaveText("2");
     await page.keyboard.press("Tab");
     await expect(page.getByLabel("Source role", {exact: true})).toBeFocused();
     await page.keyboard.press("Shift+Tab");
     await expect(kind).toBeFocused();
     await kind.selectOption("");
-    await expect(page.locator("#proofkit-visible-count")).toHaveText("2");
+    await expect(page.locator("#proofkit-visible-count")).toHaveText("3");
   }
+});
+
+test("static hierarchy reveals the named sibling and preserves kind-group navigation", async ({staticFilterTreeURL, page}) => {
+  await openWorkspace(page, staticFilterTreeURL, treeHeading, "static-view");
+  const hierarchy = page.locator(".hierarchy");
+  const link = hierarchy.getByRole("link", {name: "Second module", exact: true});
+  const href = await link.getAttribute("href");
+  expect(href).toMatch(/^#proofkit-/);
+  const target = page.locator(href);
+  await expect(target.locator("h2 > .proofkit-id")).toHaveText("spec.module.second");
+  await page.getByRole("searchbox").fill("Unrelated module");
+  await expect(target).toBeHidden();
+  await expect(page.locator("#proofkit-visible-count")).toHaveText("1");
+  await link.click();
+  await expect(target).toBeVisible();
+  await expect(page.getByRole("searchbox")).toHaveValue("");
+  await expect(page.locator("#proofkit-visible-count")).toHaveText("3");
+
+  await page.getByLabel("View", {exact: true}).selectOption("table");
+  await page.getByLabel("Node kind", {exact: true}).selectOption("meta_spec");
+  await link.click();
+  await expect(page.getByLabel("View", {exact: true})).toHaveValue("cards");
+  await expect(page.getByLabel("Node kind", {exact: true})).toHaveValue("");
+  await expect(target).toBeVisible();
+
+  const groupLink = hierarchy.getByRole("link", {name: "module_spec", exact: true});
+  const group = page.locator(await groupLink.getAttribute("href"));
+  await page.getByRole("searchbox").fill("no-such-node");
+  await expect(group).toBeHidden();
+  await groupLink.click();
+  await expect(group).toBeVisible();
+  await expect(group.locator("[data-proofkit-card] > h2 > .proofkit-id")).toHaveText(["spec.module", "spec.module.second"]);
+  await expect(page.getByRole("searchbox")).toHaveValue("");
 });
 
 test("static CSP admits the exact embedded script and blocks a different inline script with an allowed control", async ({staticViewURL, page, request}) => {

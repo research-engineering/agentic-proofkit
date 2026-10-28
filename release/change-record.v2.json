@@ -183,6 +183,10 @@
       "summary": "Remote reading of specification views is documented as a consumer hosting concern: publish the existing --format html exports from a consumer-owned static host behind a consumer-owned access gateway, use rendered-artifact-freshness for hosted copies and secret-scan as an advisory byte check. requirement-browser-server and view keep serving only literal loopback hosts."
     },
     {
+      "changeId": "proofkit.browser.spec-tree-node-navigation",
+      "summary": "Static specification-tree hierarchy links target the named node's own escaped card anchor rather than its kind group. Navigation reveals that node through the existing Cards and hidden-target filter reset, while Node kinds links retain their group targets. Other renderers without an explicit internal card anchor keep their prior markup; JSON, Markdown, caller node IDs and CLI contract identities are unchanged."
+    },
+    {
       "changeId": "proofkit.toolchain.runtime-and-build-updates",
       "summary": "Release binaries are built with Go 1.27.3 instead of 1.27.1, whose crypto/x509 fix removes the reachable standard-library vulnerability GO-2026-6809 that govulncheck reports for 1.27.2, and bundle golang.org/x/mod 0.42.0, golang.org/x/net 0.61.0, golang.org/x/sys 0.49.0, golang.org/x/text 0.43.0 and github.com/mattn/go-isatty 0.0.24; no runtime module was added or removed. LICENSE now also names the Go standard library among the bundled BSD-3-Clause components; its reproduced Go Authors notice already covered it. The development and CI toolchain moves to npm 12.2.0, Node 26.11.1, CPython 3.15.0, Playwright 1.63.0 and axe-core 4.14.0 with pinned GitHub Actions, and the Python launcher's POSIX path imports neither subprocess nor typing."
     }
