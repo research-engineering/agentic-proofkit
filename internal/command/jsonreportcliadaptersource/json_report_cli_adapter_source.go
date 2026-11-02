@@ -79,13 +79,13 @@ func (bundle Bundle) JSONValue() map[string]any {
 		"sourceFileName":  sourceFileName,
 		"source":          source,
 		"sourceSha256":    digest.SHA256TextRef(source),
-		"exportedSymbols": stringsToAny(exportedSymbols),
+		"exportedSymbols": admit.StringSliceToAny(exportedSymbols),
 		"summary": map[string]any{
 			"exportedSymbolCount": len(exportedSymbols),
 			"lineCount":           sourceLineCount(source),
 			"publicContract":      publicContract,
 		},
-		"nonClaims": stringsToAny(nonClaims),
+		"nonClaims": admit.StringSliceToAny(nonClaims),
 	}
 }
 
@@ -102,14 +102,6 @@ func TypeScriptSource() string {
 		"__PROOFKIT_COMMAND_ROUTE_TOKEN_PATTERN__", strings.ReplaceAll(commandroute.TokenPattern, "/", `\/`),
 		"__PROOFKIT_COMMAND_ROUTE_ERROR__", strconv.Quote(fmt.Sprintf("agentic-proofkit command route must contain %d to %d canonical tokens", commandroute.MinimumTokens, commandroute.MaximumTokens)),
 	).Replace(typeScriptSourceTemplate)
-}
-
-func stringsToAny(values []string) []any {
-	out := make([]any, 0, len(values))
-	for _, value := range values {
-		out = append(out, value)
-	}
-	return out
 }
 
 func sourceLineCount(source string) int {

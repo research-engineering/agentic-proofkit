@@ -150,7 +150,7 @@ func buildReport(input registryInput) report.Record {
 	if len(failures) > 0 {
 		state = "failed"
 	}
-	nonClaims := append(append([]any{}, stringsToAny(registryNonClaims)...), stringsToAny(input.NonClaims)...)
+	nonClaims := append(append([]any{}, admit.StringSliceToAny(registryNonClaims)...), admit.StringSliceToAny(input.NonClaims)...)
 	return report.Record{
 		SchemaVersion: 1,
 		ReportKind:    reportKind,
@@ -1053,14 +1053,6 @@ func shellLikeTokens(command string) []string {
 	}
 	flush()
 	return tokens
-}
-
-func stringsToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
 }
 
 func uniqueText(values []string) []string {

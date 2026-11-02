@@ -453,7 +453,7 @@ func admitInput(raw any, failures *[]string) (Input, error) {
 	if err != nil {
 		return Input{}, err
 	}
-	nonClaims, err := sortedTextFromAny(append(anyStrings(defaultNonClaims), nonClaimValues...), "nonClaims")
+	nonClaims, err := sortedTextFromAny(append(admit.StringSliceToAny(defaultNonClaims), nonClaimValues...), "nonClaims")
 	if err != nil {
 		return Input{}, err
 	}
@@ -1087,14 +1087,6 @@ func mapKeys(values map[string]struct{}) []string {
 
 func bindingSortKey(binding Binding) string {
 	return binding.RequirementID + "\x00" + binding.ScenarioID + "\x00" + binding.WitnessID
-}
-
-func anyStrings(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
 }
 
 func valueOrEmptyArray(value any) any {

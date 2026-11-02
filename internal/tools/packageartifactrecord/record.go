@@ -149,11 +149,11 @@ func Read(root string) (Record, error) {
 
 func Write(root string, record Record) error {
 	value := map[string]any{
-		"argv":                   stringsToAny(record.Argv),
+		"argv":                   admit.StringSliceToAny(record.Argv),
 		"artifactSnapshotDigest": record.ArtifactSnapshotDigest,
 		"commandId":              record.CommandID,
 		"environmentDigest":      record.EnvironmentDigest,
-		"executionArgv":          stringsToAny(record.ExecutionArgv),
+		"executionArgv":          admit.StringSliceToAny(record.ExecutionArgv),
 		"exitCode":               record.ExitCode,
 		"finishedAt":             record.FinishedAt,
 		"schemaVersion":          record.SchemaVersion,
@@ -650,12 +650,4 @@ func equalStrings(left []string, right []string) bool {
 		}
 	}
 	return true
-}
-
-func stringsToAny(values []string) []any {
-	out := make([]any, 0, len(values))
-	for _, value := range values {
-		out = append(out, value)
-	}
-	return out
 }

@@ -280,7 +280,7 @@ func build(input Input) Result {
 			rule("changed_path_set.duplicates", statusWhen(len(duplicatePaths) == 0, "passed", "warning"), messageWhen(len(duplicatePaths) == 0, "no duplicate changed path evidence", "duplicate changed path evidence was deduplicated")),
 			rule("changed_path_set.preexisting_failures", statusWhen(len(input.PreexistingFailures) == 0, "passed", "failed"), messageWhen(len(input.PreexistingFailures) == 0, "no caller preexisting failures", "caller supplied preexisting failures")),
 		},
-		NonClaims: stringsToAny(input.NonClaims),
+		NonClaims: admit.StringSliceToAny(input.NonClaims),
 	}
 	return Result{ChangedPaths: changedPaths, ChangedPathSetHash: hash, DuplicatePaths: duplicatePaths, ExitCode: exitCode, Failures: failures, InvalidPaths: invalidPaths, Report: record, SourceSummaries: sourceSummaries}
 }
@@ -353,7 +353,7 @@ func sourceInputs(raw any) ([]SourceInput, error) {
 }
 
 func changedPathsHash(paths []string) string {
-	value := map[string]any{"changedPaths": stringsToAny(paths), "schemaVersion": 1}
+	value := map[string]any{"changedPaths": admit.StringSliceToAny(paths), "schemaVersion": 1}
 	encoded, err := stablejson.Marshal(value)
 	if err != nil {
 		panic(err)
@@ -484,14 +484,6 @@ func stringArray(raw any, context string) ([]string, error) {
 		result = append(result, text)
 	}
 	return result, nil
-}
-
-func stringsToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
 }
 
 func statusWhen(condition bool, yes string, no string) string {

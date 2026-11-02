@@ -535,3 +535,11 @@ func compactJSON(t *testing.T, value any) string {
 	}
 	return string(encoded)
 }
+
+func stringSliceToAny(values []string) []any {
+	result := make([]any, 0, len(values))
+	for _, value := range values {
+		result = append(result, value)
+	}
+	return result
+}

@@ -3,6 +3,7 @@ package gradualadoption
 import (
 	"fmt"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
@@ -90,7 +91,7 @@ func BootstrapMaterializationManifest(result BootstrapResult) (map[string]any, e
 		"files":        files,
 		"manifestId":   result.Record.ReportID + ".materialization-manifest",
 		"manifestKind": "proofkit.gradual-adoption-bootstrap-materialization-manifest",
-		"nextCommands": stringSliceAny(result.NextCommands),
+		"nextCommands": admit.StringSliceToAny(result.NextCommands),
 		"nonClaims": []any{
 			"Bootstrap materialization manifests do not write files.",
 			"Bootstrap materialization manifests do not prove files exist in the consuming repository.",
@@ -107,12 +108,4 @@ func BootstrapMaterializationManifest(result BootstrapResult) (map[string]any, e
 			"state":      result.Record.State,
 		},
 	}, nil
-}
-
-func stringSliceAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
 }

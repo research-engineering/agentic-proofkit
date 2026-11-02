@@ -154,13 +154,13 @@ func build(input input) (map[string]any, int) {
 		obligations = append(obligations, map[string]any{
 			"bindingRecordId":                   base.BindingRecordID,
 			"blockingStatus":                    base.BlockingStatus,
-			"changeReasons":                     stringsToAny(reasons),
-			"commands":                          stringsToAny(base.Commands),
+			"changeReasons":                     admit.StringSliceToAny(reasons),
+			"commands":                          admit.StringSliceToAny(base.Commands),
 			"declaredMutationResistanceClaimId": base.DeclaredMutationResistanceClaimID,
 			"declaredWitnessRoutes":             declaredWitnessRouteValues(base.DeclaredWitnessRoutes),
 			"preconditioned":                    base.Preconditioned,
 			"requirementId":                     base.RequirementID,
-			"requiredEnvironmentClasses":        stringsToAny(base.RequiredEnvironmentClasses),
+			"requiredEnvironmentClasses":        admit.StringSliceToAny(base.RequiredEnvironmentClasses),
 			"scenarioId":                        base.ScenarioID,
 			"surfaceId":                         base.SurfaceID,
 			"witnessRoutes":                     witnessRouteValues(witnessRoutesByRecordID[recordID]),
@@ -204,13 +204,13 @@ func build(input input) (map[string]any, int) {
 	return map[string]any{
 		"baseCommit":            input.BaseCommit,
 		"baseRef":               input.BaseRef,
-		"changedPaths":          stringsToAny(input.ChangedPaths),
-		"changedRequirementIds": stringsToAny(input.ChangedRequirementIDs),
-		"failures":              stringsToAny(failures),
+		"changedPaths":          admit.StringSliceToAny(input.ChangedPaths),
+		"changedRequirementIds": admit.StringSliceToAny(input.ChangedRequirementIDs),
+		"failures":              admit.StringSliceToAny(failures),
 		"headCommit":            headCommit,
 		"headRef":               input.HeadRef,
 		"impactState":           impactState,
-		"nonClaims":             stringsToAny(input.NonClaims),
+		"nonClaims":             admit.StringSliceToAny(input.NonClaims),
 		"obligations":           mapsToAny(obligations),
 		"schemaVersion":         2,
 		"unboundProofChanges":   unboundProofChanges,
@@ -728,11 +728,11 @@ func declaredWitnessRouteValues(routes []declaredWitnessRoute) []any {
 	for _, route := range routes {
 		result = append(result, map[string]any{
 			"bindingRecordId":      route.BindingRecordID,
-			"environmentClasses":   stringsToAny(route.EnvironmentClasses),
+			"environmentClasses":   admit.StringSliceToAny(route.EnvironmentClasses),
 			"resolutionOrderIndex": route.ResolutionOrderIndex,
 			"role":                 route.Role,
 			"selector":             route.Selector,
-			"verifyCommands":       stringsToAny(route.VerifyCommands),
+			"verifyCommands":       admit.StringSliceToAny(route.VerifyCommands),
 			"witnessRouteId":       route.WitnessRouteID,
 		})
 	}
@@ -985,14 +985,6 @@ func sortedSetValues(values map[string]struct{}) []string {
 		result = append(result, value)
 	}
 	sort.Strings(result)
-	return result
-}
-
-func stringsToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
 	return result
 }
 

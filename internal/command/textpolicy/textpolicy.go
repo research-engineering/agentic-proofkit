@@ -118,7 +118,7 @@ func Evaluate(raw any) (Result, error) {
 			"missingSkippedFileCount": missingSkippedCount,
 		},
 		Diagnostics: []report.Diagnostic{
-			{Key: "failures", Value: stringsToAny(failures)},
+			{Key: "failures", Value: admit.StringSliceToAny(failures)},
 		},
 		RuleResults: []report.RuleResult{
 			{
@@ -130,7 +130,7 @@ func Evaluate(raw any) (Result, error) {
 				},
 			},
 		},
-		NonClaims: stringsToAny(nonClaims),
+		NonClaims: admit.StringSliceToAny(nonClaims),
 	}
 	return Result{
 		BinarySkippedCount:  binarySkippedCount,
@@ -340,12 +340,4 @@ func policySummary(policy Policy) map[string]any {
 		"rejectTrailingWhitespace": policy.RejectTrailingWhitespace,
 		"requireFinalNewline":      policy.RequireFinalNewline,
 	}
-}
-
-func stringsToAny(values []string) []any {
-	out := make([]any, 0, len(values))
-	for _, value := range values {
-		out = append(out, value)
-	}
-	return out
 }

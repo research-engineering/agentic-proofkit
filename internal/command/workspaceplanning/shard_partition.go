@@ -78,9 +78,9 @@ func buildShardPartition(input shardInput) map[string]any {
 			seenExecutions[target.Name] = struct{}{}
 		}
 		shards = append(shards, map[string]any{
-			"dependencyClosurePackageNames": stringsToAny(packageNodeNames(closure)),
-			"executionPackageNames":         stringsToAny(packageNodeNames(executionTargets)),
-			"rootPackageNames":              stringsToAny(packageNodeNames(roots)),
+			"dependencyClosurePackageNames": admit.StringSliceToAny(packageNodeNames(closure)),
+			"executionPackageNames":         admit.StringSliceToAny(packageNodeNames(executionTargets)),
+			"rootPackageNames":              admit.StringSliceToAny(packageNodeNames(roots)),
 			"shardIndex":                    index,
 			"shardLabel":                    fmt.Sprintf("%d-of-%d", index+1, input.ShardTotal),
 			"shardTotal":                    input.ShardTotal,
@@ -102,10 +102,10 @@ func buildShardPartition(input shardInput) map[string]any {
 		})
 	}
 	return map[string]any{
-		"failures":         stringsToAny(failures),
+		"failures":         admit.StringSliceToAny(failures),
 		"packageShards":    map[string]any{"include": matrix},
 		"rootPackageCount": len(rootSet),
-		"rootPackageNames": stringsToAny(keysInObservedOrder(rootNames)),
+		"rootPackageNames": admit.StringSliceToAny(keysInObservedOrder(rootNames)),
 		"schemaVersion":    1,
 		"shardTotal":       input.ShardTotal,
 		"shards":           mapsToAny(shards),
