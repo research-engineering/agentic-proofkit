@@ -1,9 +1,11 @@
 package requirementauthoringplan
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
@@ -59,27 +61,79 @@ func TestGroupedAuthoringDoesNotClaimUnperformedComparison(t *testing.T) {
 }
 
 func TestGroupedAuthoringPreservesEveryCandidateSourceRefusal(t *testing.T) {
-	input := sharedOwnerInput()
-	candidate := input["candidateRequirementSource"].(map[string]any)
-	for _, raw := range candidate["groups"].([]any)[0].(map[string]any)["members"].([]any) {
-		raw.(map[string]any)["fields"].(map[string]any)["proofBindingRefs"] = []any{}
+	for _, policy := range []string{"missing binding", "missing impact review", "inactive replacement"} {
+		t.Run(policy, func(t *testing.T) {
+			input := sharedOwnerInput()
+			candidate := input["candidateRequirementSource"].(map[string]any)
+			members := candidate["groups"].([]any)[0].(map[string]any)["members"].([]any)
+			for index, raw := range members {
+				fields := raw.(map[string]any)["fields"].(map[string]any)
+				switch policy {
+				case "missing binding":
+					fields["proofBindingRefs"] = []any{}
+				case "missing impact review":
+					fields["updatePolicy"].(map[string]any)["requiresImpactDeclaration"] = false
+				case "inactive replacement":
+					fields["claimLevel"] = "advisory"
+					fields["lifecycle"] = map[string]any{"state": "deprecated", "evidenceRefs": []any{"proof.lifecycle"}}
+					if index == 0 {
+						fields["lifecycle"] = map[string]any{"state": "superseded", "evidenceRefs": []any{"proof.lifecycle"}, "replacementRequirementIds": []any{"REQ-PROOFKIT-AUTHORING-001"}}
+					}
+				}
+			}
+			expected, err := requirementsourceadmission.Evaluate(candidate)
+			wantFailures := 2
+			if policy == "inactive replacement" {
+				wantFailures = 1
+			}
+			if err != nil || expected.ExitCode != 1 || len(expected.Failures) != wantFailures {
+				t.Fatalf("source refusal fixture is ineffective: %v %#v", err, expected)
+			}
+			before := cloneObject(input)
+			output, exit, err := Build(input)
+			if err != nil || exit != 1 || output["state"] != "failed" || output["nonAuthoritativeAdmissionPreview"] != nil {
+				t.Fatalf("candidate source refusal changed: exit=%d err=%v", exit, err)
+			}
+			assertStableJSONEqual(t, "caller input", before, input)
+			want := []any{map[string]any{"key": "failure.001", "value": "candidate next source must pass requirement-source-admission"}}
+			for index, failure := range expected.Failures {
+				want = append(want, map[string]any{"key": fmt.Sprintf("failure.%03d", index+2), "value": "candidate next source admission failed: " + failure})
+			}
+			var diagnostics any
+			for _, raw := range output["ruleResults"].([]any) {
+				rule := raw.(map[string]any)
+				if rule["ruleId"] == "proofkit.requirement-authoring-plan.candidate-source-admission" {
+					diagnostics = rule["diagnostics"]
+				}
+			}
+			assertStableJSONEqual(t, "exact source diagnostics", want, diagnostics)
+			if output["summary"].(map[string]any)["failureCount"] != len(expected.Failures)+2 {
+				t.Fatal("failure count must include each source reason, its summary and the skipped transition exactly once")
+			}
+			assertAuthoringRuleStatus(t, output, "candidate-source-admission", "failed")
+			assertAuthoringRuleStatus(t, output, "transition-admission", "skipped")
+			assertAuthoringRuleStatus(t, output, "composition", "skipped")
+		})
 	}
-	expected, err := requirementsourceadmission.Evaluate(candidate)
-	if err != nil || expected.ExitCode != 1 || len(expected.Failures) != 2 {
-		t.Fatalf("source refusal fixture is ineffective: %v %#v", err, expected)
+}
+
+func TestGroupedAuthoringRejectsSecretIdentifiersBeforeSourceFailure(t *testing.T) {
+	for _, field := range []string{"requirementId", "replacementRequirementIds"} {
+		t.Run(field, func(t *testing.T) {
+			input := validInput()
+			marker := "REQ-gh" + "p_" + strings.Repeat("a", 24)
+			member := candidateMember(input)
+			if field == "requirementId" {
+				member[field] = marker
+			} else {
+				member["fields"].(map[string]any)["lifecycle"] = map[string]any{"state": "superseded", "evidenceRefs": []any{"proof.lifecycle"}, field: []any{marker}}
+			}
+			output, exit, err := Build(input)
+			if err == nil || exit != 1 || output != nil || !strings.Contains(err.Error(), "invalid_id") || strings.Contains(err.Error(), marker) {
+				t.Fatalf("secret-shaped %s must be refused without echo before a report exists", field)
+			}
+		})
 	}
-	before := cloneObject(input)
-	output, exit, err := Build(input)
-	if err != nil || exit != 1 || output["state"] != "failed" || output["nonAuthoritativeAdmissionPreview"] != nil {
-		t.Fatalf("candidate source refusal changed: exit=%d err=%v", exit, err)
-	}
-	assertStableJSONEqual(t, "caller input", before, input)
-	for _, failure := range expected.Failures {
-		assertOutputContains(t, output, "candidate next source admission failed: "+failure)
-	}
-	assertAuthoringRuleStatus(t, output, "candidate-source-admission", "failed")
-	assertAuthoringRuleStatus(t, output, "transition-admission", "skipped")
-	assertAuthoringRuleStatus(t, output, "composition", "skipped")
 }
 
 func assertAuthoringRuleStatus(t *testing.T, output map[string]any, suffix, state string) {
