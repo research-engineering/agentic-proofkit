@@ -10,7 +10,7 @@
   "impact|output|direct": "sha256:ddbfad41159ba4c8c08670994b39241892880bf2a896cbe1eeb503af375b1e78",
   "impact|output|union": "sha256:d3b4848f700afc3812a5d3373993bee45cbf34dbd58dff87f5043bda881a63a1",
   "pilot-admission|input|union": "sha256:624b82695dac5d92a6baa05a0b7bc71d4a417a1456f18d4e298faf57025480f1",
-  "pilot-admission|output|union": "sha256:645d5e8eabc4da9d741abcfac7f29c2a3cedbf7cc9e124646344e31d0b5fd21e",
+  "pilot-admission|output|union": "sha256:9fcb952565f87ddc1046cbdf1b18f94b5a3b71d0df6fb5083d2c7a7721b38b2b",
   "proof-slice|input|union": "sha256:3287540a54b5ea82b264b94758ccc2cfd358cc643e79d4c9bd5b75eeded388f4",
   "proof-slice|output|union": "sha256:402d51c65aeb13a669be536cfaefd5687815d6eb8d0bfd3a615542d3e48afccd",
   "requirement-bindings|input|union": "sha256:66182b568432f3b5e4efb3fecd556bb773b1c3b04a8f010f6f4296d6dbfe34f6",
