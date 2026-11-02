@@ -57,14 +57,6 @@ func stringArrayFromAny(raw any) []string {
 	return result
 }
 
-func stringsToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
-}
-
 func mapsToAny(values []map[string]any) []any {
 	result := make([]any, 0, len(values))
 	for _, value := range values {
@@ -76,7 +68,7 @@ func mapsToAny(values []map[string]any) []any {
 func pathNodesJSON(values []packagePathNode) []any {
 	result := []any{}
 	for _, item := range values {
-		result = append(result, map[string]any{"dirName": item.DirName, "name": item.Name, "workspaceDependencies": stringsToAny(item.WorkspaceDependencies)})
+		result = append(result, map[string]any{"dirName": item.DirName, "name": item.Name, "workspaceDependencies": admit.StringSliceToAny(item.WorkspaceDependencies)})
 	}
 	return result
 }

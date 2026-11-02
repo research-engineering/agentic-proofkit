@@ -30,12 +30,12 @@ func buildChangedPlan(input changedPlanInput) map[string]any {
 		roots = directRoots
 	}
 	return map[string]any{
-		"changedPaths":           stringsToAny(input.ChangedPaths),
-		"directRootPackageNames": stringsToAny(packageNames(directRoots)),
+		"changedPaths":           admit.StringSliceToAny(input.ChangedPaths),
+		"directRootPackageNames": admit.StringSliceToAny(packageNames(directRoots)),
 		"directRoots":            pathNodesJSON(directRoots),
-		"escalationReasons":      stringsToAny(escalationReasons),
+		"escalationReasons":      admit.StringSliceToAny(escalationReasons),
 		"fullWorkspace":          fullWorkspace,
-		"rootPackageNames":       stringsToAny(packageNames(roots)),
+		"rootPackageNames":       admit.StringSliceToAny(packageNames(roots)),
 		"roots":                  pathNodesJSON(roots),
 		"schemaVersion":          1,
 	}

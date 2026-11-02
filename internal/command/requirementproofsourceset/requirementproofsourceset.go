@@ -145,9 +145,9 @@ func Build(raw any) (any, int, error) {
 	}
 	sort.Strings(inputPaths)
 	output := map[string]any{
-		"inputPaths":        stringSliceToAny(inputPaths),
+		"inputPaths":        admit.StringSliceToAny(inputPaths),
 		"projectionKind":    "proofkit.requirement-proof-source-set." + input.Projection.Kind,
-		"selectedSourceIds": stringSliceToAny(project(sources, func(row sourceRow) string { return row.SourceID })),
+		"selectedSourceIds": admit.StringSliceToAny(project(sources, func(row sourceRow) string { return row.SourceID })),
 		"sourceCount":       len(sources),
 		"sourceSetCount":    len(allSources),
 		"schemaVersion":     json.Number("2"),
@@ -654,7 +654,7 @@ func resolverProjection(raw map[string]any, envelope Envelope) (map[string]any, 
 		"normalization_profile": compactproofcontract.NormalizationProfile,
 		"non_claims":            raw["non_claims"],
 		"schema_version":        json.Number("2"),
-		"surface_columns":       stringSliceToAny(compactproofcontract.SurfaceColumns()),
+		"surface_columns":       admit.StringSliceToAny(compactproofcontract.SurfaceColumns()),
 		"surfaces":              projectedSurfaces,
 		"witness_columns":       raw["witness_columns"],
 	}, nil
@@ -684,16 +684,16 @@ func combineCanonicalContracts(payloads []map[string]any, envelope Envelope) (ma
 func canonicalContract(envelope Envelope, surfaces any, bindings any) map[string]any {
 	return map[string]any{
 		"authority_state":       envelope.AuthorityState,
-		"binding_columns":       stringSliceToAny(envelope.BindingColumns),
+		"binding_columns":       admit.StringSliceToAny(envelope.BindingColumns),
 		"bindings":              bindings,
 		"contract_id":           envelope.ContractID,
 		"contract_kind":         envelope.ContractKind,
-		"non_claims":            stringSliceToAny(envelope.NonClaims),
+		"non_claims":            admit.StringSliceToAny(envelope.NonClaims),
 		"normalization_profile": envelope.NormalizationProfile,
 		"schema_version":        json.Number("2"),
-		"surface_columns":       stringSliceToAny(envelope.SurfaceColumns),
+		"surface_columns":       admit.StringSliceToAny(envelope.SurfaceColumns),
 		"surfaces":              surfaces,
-		"witness_columns":       stringSliceToAny(envelope.WitnessColumns),
+		"witness_columns":       admit.StringSliceToAny(envelope.WitnessColumns),
 	}
 }
 
@@ -805,14 +805,6 @@ func project[T any](values []T, fn func(T) string) []string {
 	result := make([]string, 0, len(values))
 	for _, value := range values {
 		result = append(result, fn(value))
-	}
-	return result
-}
-
-func stringSliceToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
 	}
 	return result
 }

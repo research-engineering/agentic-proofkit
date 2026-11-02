@@ -912,7 +912,7 @@ func buildUnknownGoal(input routeInput, renderer cliexec.Renderer) map[string]an
 		"selectedRouteFamily": string(routeFamilyUnknown),
 		"state":               stateBlockedUnknownGoal,
 		"stopConditions":      []any{"Stop before running a Proofkit command until the caller supplies a known goal."},
-		"callerNonClaims":     toAnySlice(input.CallerNonClaims),
+		"callerNonClaims":     admit.StringSliceToAny(input.CallerNonClaims),
 		"guidanceSlice":       guidanceSliceReport(input.Goal, spec),
 		"summary": map[string]any{
 			"availableCommandCount": 0,
@@ -937,7 +937,7 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 	}
 	return map[string]any{
 		"diagnostics":         diagnostics(input, state, missing),
-		"escalations":         toAnySlice(spec.Escalations),
+		"escalations":         admit.StringSliceToAny(spec.Escalations),
 		"nextCommands":        nextCommands,
 		"nonClaims":           mergedNonClaims(input.CallerNonClaims),
 		"omitted":             omittedReports(spec.NextCommands, input.AvailableInputs),
@@ -948,8 +948,8 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 		"schemaVersion":       reportSchemaVersion,
 		"selectedRouteFamily": string(spec.RouteFamily),
 		"state":               state,
-		"stopConditions":      toAnySlice(spec.StopConditions),
-		"callerNonClaims":     toAnySlice(input.CallerNonClaims),
+		"stopConditions":      admit.StringSliceToAny(spec.StopConditions),
+		"callerNonClaims":     admit.StringSliceToAny(input.CallerNonClaims),
 		"guidanceSlice":       guidanceSliceReport(input.Goal, spec),
 		"summary": map[string]any{
 			"availableCommandCount": len(availableCommands),
@@ -1102,16 +1102,8 @@ func sortedKeys(values map[string]struct{}) []any {
 	return result
 }
 
-func toAnySlice(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
-}
-
 func mergedNonClaims(caller []string) []any {
-	return toAnySlice(sortedUniqueStrings(append(append([]string{}, anyStrings(nonClaims)...), caller...)))
+	return admit.StringSliceToAny(sortedUniqueStrings(append(append([]string{}, anyStrings(nonClaims)...), caller...)))
 }
 
 func anyStrings(values []any) []string {
@@ -1173,7 +1165,7 @@ func guidanceSliceReport(goal string, spec routeSpec) map[string]any {
 		},
 		"routeFamily":     string(spec.RouteFamily),
 		"lookupOnly":      true,
-		"nonClaims":       toAnySlice(spec.SliceNonClaims),
+		"nonClaims":       admit.StringSliceToAny(spec.SliceNonClaims),
 		"sliceId":         "proofkit.agent-route.slice." + strings.ReplaceAll(goal, "_", "-"),
 		"sliceSummary":    spec.SliceSummary,
 		"sourceAuthority": "derived_from_maintained_owner_surfaces",

@@ -564,7 +564,7 @@ func buildPlan(input input) (map[string]any, error) {
 	}
 	gaps := scaffoldGaps(input)
 	provenance := scaffoldProvenance(input)
-	nonClaims, err := sortedUniqueText(anyStrings(append(append([]string{}, scaffoldNonClaims...), input.NonClaims...)), "repo-profile scaffold nonClaims", false)
+	nonClaims, err := sortedUniqueText(admit.StringSliceToAny(append(append([]string{}, scaffoldNonClaims...), input.NonClaims...)), "repo-profile scaffold nonClaims", false)
 	if err != nil {
 		return nil, err
 	}
@@ -829,14 +829,6 @@ func sortedUniquePaths(raw []any, context string, allowEmpty bool) ([]string, er
 		return nil, fmt.Errorf("%s must not be empty", context)
 	}
 	return values, nil
-}
-
-func anyStrings(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
 }
 
 func anyArray(value any) []any {

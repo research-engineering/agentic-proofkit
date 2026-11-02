@@ -329,7 +329,7 @@ func (contract Contract) ResolverProjection(options ResolverOptions) (map[string
 		"conformanceProofContract": contract.ConformanceProjection(),
 		"contractId":               contract.contractID,
 		"environmentClasses":       contract.resolverEnvironmentClasses(bindings, routes),
-		"localEnvironmentPolicy":   map[string]any{"authority": "caller_provided", "localEnvironmentClasses": stringSliceToAny(localClasses)},
+		"localEnvironmentPolicy":   map[string]any{"authority": "caller_provided", "localEnvironmentClasses": admit.StringSliceToAny(localClasses)},
 		"nonClaims":                resolverNonClaims(contract.nonClaims),
 		"projectionKind":           "proofkit.requirement-proof-route-resolver",
 		"scenarios":                resolverScenarios(bindings),
@@ -390,11 +390,11 @@ func (contract Contract) ConformanceProjection() map[string]any {
 			"declaredMutationResistanceClaimId": binding.declaredMutationResistanceClaimID,
 			"invariantRole":                     binding.invariantRole,
 			"ownedInvariant":                    binding.ownedInvariant,
-			"requiredEnvironmentClasses":        stringSliceToAny(binding.requiredEnvironmentClasses),
+			"requiredEnvironmentClasses":        admit.StringSliceToAny(binding.requiredEnvironmentClasses),
 			"requirementId":                     binding.requirementID,
 			"scenarioId":                        binding.scenarioID,
 			"surfaceId":                         binding.surfaceID,
-			"verifyCommands":                    stringSliceToAny(binding.verifyCommands),
+			"verifyCommands":                    admit.StringSliceToAny(binding.verifyCommands),
 			"witnessRefs": []any{
 				witnessReference(binding.falsificationWitnessRouteID, FalsificationWitnessRole, binding.falsificationWitness),
 				witnessReference(binding.positiveWitnessRouteID, PositiveWitnessRole, binding.positiveWitness),
@@ -404,8 +404,8 @@ func (contract Contract) ConformanceProjection() map[string]any {
 	surfaces := make([]any, 0, len(contract.surfaces))
 	for _, surface := range contract.surfaces {
 		surfaces = append(surfaces, map[string]any{
-			"preconditionedEnvironmentClasses": stringSliceToAny(surface.preconditionedEnvironmentClasses),
-			"requiredEnvironmentClasses":       stringSliceToAny(surface.requiredEnvironmentClasses),
+			"preconditionedEnvironmentClasses": admit.StringSliceToAny(surface.preconditionedEnvironmentClasses),
+			"requiredEnvironmentClasses":       admit.StringSliceToAny(surface.requiredEnvironmentClasses),
 			"surfaceId":                        surface.surfaceID,
 		})
 	}
@@ -575,11 +575,11 @@ func admitWitness(raw any, context string, columns map[string]int) (Witness, err
 
 func witnessReference(routeID, role string, witness Witness) map[string]any {
 	return map[string]any{
-		"environmentClasses":   stringSliceToAny(witness.environmentClasses),
+		"environmentClasses":   admit.StringSliceToAny(witness.environmentClasses),
 		"resolutionOrderIndex": witness.resolutionOrderIndex,
 		"role":                 role,
 		"selector":             witness.selector,
-		"verifyCommands":       stringSliceToAny(witness.verifyCommands),
+		"verifyCommands":       admit.StringSliceToAny(witness.verifyCommands),
 		"witnessRouteId":       routeID,
 	}
 }
@@ -613,7 +613,7 @@ func (contract Contract) resolverBindings(localClasses []string) ([]any, []Witne
 			"invariantRole":                     binding.invariantRole,
 			"ownedInvariant":                    binding.ownedInvariant,
 			"preconditioned":                    resolverPreconditioned(surface, binding.DeclaredEnvironmentClasses(), localClasses),
-			"requiredEnvironmentClasses":        stringSliceToAny(binding.requiredEnvironmentClasses),
+			"requiredEnvironmentClasses":        admit.StringSliceToAny(binding.requiredEnvironmentClasses),
 			"requirementId":                     binding.requirementID,
 			"scenarioId":                        binding.scenarioID,
 			"surfaceId":                         binding.surfaceID,
@@ -621,7 +621,7 @@ func (contract Contract) resolverBindings(localClasses []string) ([]any, []Witne
 				"falsification": resolverWitness(bindingRoutes[0]),
 				"positive":      resolverWitness(bindingRoutes[1]),
 			},
-			"verifyCommands": stringSliceToAny(binding.verifyCommands),
+			"verifyCommands": admit.StringSliceToAny(binding.verifyCommands),
 		})
 	}
 	sort.Slice(routes, func(left, right int) bool { return routes[left].RouteID < routes[right].RouteID })
@@ -630,11 +630,11 @@ func (contract Contract) resolverBindings(localClasses []string) ([]any, []Witne
 
 func resolverWitness(route WitnessRoute) map[string]any {
 	return map[string]any{
-		"environmentClasses":   stringSliceToAny(route.EnvironmentClasses),
+		"environmentClasses":   admit.StringSliceToAny(route.EnvironmentClasses),
 		"resolutionOrderIndex": route.ResolutionOrder,
 		"role":                 route.Role,
 		"selector":             route.Selector,
-		"verifyCommandRefs":    stringSliceToAny(route.VerifyCommands),
+		"verifyCommandRefs":    admit.StringSliceToAny(route.VerifyCommands),
 		"witnessRouteId":       route.RouteID,
 	}
 }
@@ -670,8 +670,8 @@ func resolverSurfaces(surfaces []Surface, bindings []any) []any {
 	result := make([]any, 0, len(surfaces))
 	for _, surface := range surfaces {
 		result = append(result, map[string]any{
-			"bindingRecordIds": stringSliceToAny(sortedUnique(bindingIDsBySurface[surface.surfaceID])),
-			"requirementIds":   stringSliceToAny(sortedUnique(requirementIDsBySurface[surface.surfaceID])),
+			"bindingRecordIds": admit.StringSliceToAny(sortedUnique(bindingIDsBySurface[surface.surfaceID])),
+			"requirementIds":   admit.StringSliceToAny(sortedUnique(requirementIDsBySurface[surface.surfaceID])),
 			"surfaceId":        surface.surfaceID,
 		})
 	}
@@ -700,14 +700,14 @@ func witnessRoutesValue(routes []WitnessRoute) []any {
 	for _, route := range routes {
 		result = append(result, map[string]any{
 			"bindingRecordId":      route.BindingRecordID,
-			"environmentClasses":   stringSliceToAny(route.EnvironmentClasses),
+			"environmentClasses":   admit.StringSliceToAny(route.EnvironmentClasses),
 			"requirementId":        route.Identity.RequirementID,
 			"resolutionOrderIndex": route.ResolutionOrder,
 			"role":                 route.Role,
 			"scenarioId":           route.Identity.ScenarioID,
 			"selector":             route.Selector,
 			"surfaceId":            route.Identity.SurfaceID,
-			"verifyCommandRefs":    stringSliceToAny(route.VerifyCommands),
+			"verifyCommandRefs":    admit.StringSliceToAny(route.VerifyCommands),
 			"witnessRouteId":       route.RouteID,
 		})
 	}
@@ -758,10 +758,10 @@ func (contract Contract) resolverCommands(bindings []any, routes []WitnessRoute)
 	for _, command := range commands {
 		fact := byCommand[command]
 		out = append(out, map[string]any{
-			"environmentClasses": stringSliceToAny(keys(fact.EnvironmentClasses)),
-			"bindingRecordIds":   stringSliceToAny(keys(fact.BindingRecordIDs)),
+			"environmentClasses": admit.StringSliceToAny(keys(fact.EnvironmentClasses)),
+			"bindingRecordIds":   admit.StringSliceToAny(keys(fact.BindingRecordIDs)),
 			"verifyCommandRef":   command,
-			"witnessRouteIds":    stringSliceToAny(keys(fact.WitnessRouteIDs)),
+			"witnessRouteIds":    admit.StringSliceToAny(keys(fact.WitnessRouteIDs)),
 		})
 	}
 	return out
@@ -813,10 +813,10 @@ func (contract Contract) resolverEnvironmentClasses(bindings []any, routes []Wit
 	for _, class := range classes {
 		fact := byClass[class]
 		out = append(out, map[string]any{
-			"bindingRecordIds": stringSliceToAny(keys(fact.BindingRecordIDs)),
+			"bindingRecordIds": admit.StringSliceToAny(keys(fact.BindingRecordIDs)),
 			"environmentClass": class,
-			"surfaceIds":       stringSliceToAny(keys(fact.SurfaceIDs)),
-			"witnessRouteIds":  stringSliceToAny(keys(fact.WitnessRouteIDs)),
+			"surfaceIds":       admit.StringSliceToAny(keys(fact.SurfaceIDs)),
+			"witnessRouteIds":  admit.StringSliceToAny(keys(fact.WitnessRouteIDs)),
 		})
 	}
 	return out
@@ -831,7 +831,7 @@ func resolverNonClaims(nonClaims []string) []any {
 		"Requirement proof route declarations do not prove freshness, authenticity, trust, assurance, merge approval, rollout, or production readiness.",
 		"Consumers own local environment-class policy supplied to the preconditioned projection.",
 	)
-	return stringSliceToAny(sortedUnique(merged))
+	return admit.StringSliceToAny(sortedUnique(merged))
 }
 
 func admitScopedScenarioID(value string, surfaceID string, context string) (string, error) {
@@ -1108,14 +1108,6 @@ func sortedUnique(values []string) []string {
 			result = append(result, value)
 		}
 		previous = value
-	}
-	return result
-}
-
-func stringSliceToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
 	}
 	return result
 }

@@ -129,7 +129,7 @@ func Build(input Input) map[string]any {
 	if len(boundsViolations) > 0 {
 		bounds["fanout"] = "wide_or_full_gate_required"
 		bounds["boundsViolationCount"] = len(boundsViolations)
-		bounds["boundsViolations"] = stringsToAny(boundsViolations)
+		bounds["boundsViolations"] = admit.StringSliceToAny(boundsViolations)
 	}
 	costContract := map[string]any{
 		"affectedRequirementCount":   nil,
@@ -667,7 +667,7 @@ func sanitizeValue(value any) any {
 		}
 		return result
 	case []string:
-		return stringsToAny(sanitizeStringList(typed))
+		return admit.StringSliceToAny(sanitizeStringList(typed))
 	case map[string]any:
 		return sanitizeMap(typed)
 	case map[string]string:
@@ -749,14 +749,6 @@ func sanitizeStringList(values []string) []string {
 func intValue(raw any) (int, bool) {
 	value, ok := raw.(int)
 	return value, ok
-}
-
-func stringsToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
 }
 
 func sortMaps(values []map[string]any, key string) []map[string]any {

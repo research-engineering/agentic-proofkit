@@ -60,9 +60,9 @@ type PlanningHint struct {
 func (hint PlanningHint) JSONValue() map[string]any {
 	return map[string]any{
 		"presetId":                  hint.PresetID,
-		"primaryLanguages":          stringsToAny(hint.PrimaryLanguages),
-		"starterEnvironmentClasses": stringsToAny(hint.StarterEnvironmentClasses),
-		"starterWitnessKinds":       stringsToAny(hint.StarterWitnessKinds),
+		"primaryLanguages":          admit.StringSliceToAny(hint.PrimaryLanguages),
+		"starterEnvironmentClasses": admit.StringSliceToAny(hint.StarterEnvironmentClasses),
+		"starterWitnessKinds":       admit.StringSliceToAny(hint.StarterWitnessKinds),
 	}
 }
 
@@ -140,7 +140,7 @@ func BuildWithRenderer(presetID string, renderer cliexec.Renderer) (report.Recor
 		Summary: map[string]any{
 			"expectedFileCount":            len(preset.ExpectedFiles),
 			"presetId":                     presetID,
-			"primaryLanguages":             stringsToAny(preset.PrimaryLanguages),
+			"primaryLanguages":             admit.StringSliceToAny(preset.PrimaryLanguages),
 			"starterEnvironmentClassCount": len(preset.StarterEnvironmentClasses),
 			"starterWitnessKindCount":      len(preset.StarterWitnessKinds),
 		},
@@ -157,10 +157,10 @@ func BuildWithRenderer(presetID string, renderer cliexec.Renderer) (report.Recor
 			{
 				Key: "preset",
 				Value: map[string]any{
-					"expectedFiles":         stringsToAny(preset.ExpectedFiles),
+					"expectedFiles":         admit.StringSliceToAny(preset.ExpectedFiles),
 					"purpose":               preset.Purpose,
-					"starterProofLikePaths": stringsToAny(preset.StarterProofLikePaths),
-					"suggestedCommands":     stringsToAny(preset.SuggestedCommands),
+					"starterProofLikePaths": admit.StringSliceToAny(preset.StarterProofLikePaths),
+					"suggestedCommands":     admit.StringSliceToAny(preset.SuggestedCommands),
 				},
 			},
 		},
@@ -259,12 +259,4 @@ func renderCommands(renderer cliexec.Renderer, commands [][]string) []string {
 		rendered = append(rendered, renderer.DisplayCommand(command...))
 	}
 	return rendered
-}
-
-func stringsToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
 }

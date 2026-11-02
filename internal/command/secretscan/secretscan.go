@@ -126,7 +126,7 @@ func Build(raw any) (report.Record, int, error) {
 				},
 			},
 		},
-		NonClaims: stringsToAny(nonClaims),
+		NonClaims: admit.StringSliceToAny(nonClaims),
 	}
 	return record, exitCode, nil
 }
@@ -382,14 +382,6 @@ func suppressionsToAny(values []suppressionRecord) []any {
 			"reason":        value.Reason,
 			"suppressionId": value.SuppressionID,
 		})
-	}
-	return out
-}
-
-func stringsToAny(values []string) []any {
-	out := make([]any, 0, len(values))
-	for _, value := range values {
-		out = append(out, value)
 	}
 	return out
 }

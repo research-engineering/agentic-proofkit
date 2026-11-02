@@ -282,7 +282,7 @@ func buildOutput(input input) map[string]any {
 		"reportId":                   input.ProjectionID,
 		"state":                      "passed",
 		"summary":                    summaryValue(input, edges),
-		"knownPackageNames":          stringsToAny(packageNames(input.Packages)),
+		"knownPackageNames":          admit.StringSliceToAny(packageNames(input.Packages)),
 		"root":                       rootValue(input.Root),
 		"packages":                   packagesValue(input.Packages),
 		"manifestSources":            manifestSourcesValue(input),
@@ -290,7 +290,7 @@ func buildOutput(input input) map[string]any {
 		"changedPackagePlanPackages": planningPackageValues(input.Packages),
 		"shardPartitionPackages":     shardPackageValues(input.Packages),
 		"diagnostics":                []any{},
-		"nonClaims":                  stringsToAny(append(append([]string{}, commandNonClaims...), input.NonClaims...)),
+		"nonClaims":                  admit.StringSliceToAny(append(append([]string{}, commandNonClaims...), input.NonClaims...)),
 	}
 }
 
@@ -350,8 +350,8 @@ func manifestSourcesValue(input input) map[string]any {
 func packageUniverseValue(input input, edges []workspaceEdge) map[string]any {
 	return map[string]any{
 		"rootPackageName":          input.Root.Manifest.Name,
-		"packageNames":             stringsToAny(packageNames(input.Packages)),
-		"packageDirNames":          stringsToAny(packageDirNames(input.Packages)),
+		"packageNames":             admit.StringSliceToAny(packageNames(input.Packages)),
+		"packageDirNames":          admit.StringSliceToAny(packageDirNames(input.Packages)),
 		"workspaceDependencyEdges": workspaceEdgesValue(edges),
 	}
 }
@@ -362,7 +362,7 @@ func planningPackageValues(values []manifestRecord) []any {
 		result = append(result, map[string]any{
 			"name":                  item.Manifest.Name,
 			"dirName":               item.DirName,
-			"workspaceDependencies": stringsToAny(workspaceDependencies(item, values)),
+			"workspaceDependencies": admit.StringSliceToAny(workspaceDependencies(item, values)),
 		})
 	}
 	return result
@@ -373,7 +373,7 @@ func shardPackageValues(values []manifestRecord) []any {
 	for _, item := range values {
 		result = append(result, map[string]any{
 			"name":                  item.Manifest.Name,
-			"workspaceDependencies": stringsToAny(workspaceDependencies(item, values)),
+			"workspaceDependencies": admit.StringSliceToAny(workspaceDependencies(item, values)),
 		})
 	}
 	return result
@@ -562,12 +562,4 @@ func uniqueStrings(values []string) []string {
 		}
 	}
 	return append([]string{}, result...)
-}
-
-func stringsToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
 }

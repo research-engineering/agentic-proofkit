@@ -160,12 +160,12 @@ func build(input input) (map[string]any, int) {
 	return map[string]any{
 		"blockers":             blockersToAny(blockers),
 		"migrationId":          input.MigrationID,
-		"nonClaims":            stringsToAny(nonClaims),
+		"nonClaims":            admit.StringSliceToAny(nonClaims),
 		"parityEvidenceRefs":   parityEvidenceToAny(input.ParityEvidenceRefs),
 		"phases":               phasesToAny(buildPhases(input, admittedRetirementCandidates)),
 		"planKind":             planKind,
 		"planState":            planState,
-		"retainedOwners":       stringsToAny(input.RetainedOwners),
+		"retainedOwners":       admit.StringSliceToAny(input.RetainedOwners),
 		"retirementCandidates": retirementCandidatesToAny(input.RetirementCandidates),
 		"schemaVersion":        1,
 		"sourceProofOwners":    sourceOwnersToAny(input.SourceProofOwners),
@@ -275,8 +275,8 @@ func actionsForPhase(phase string, input input, admittedRetirementCandidates []r
 func action(suffix string, instruction string, evidenceRefs []string, commandIDs []string) map[string]any {
 	return map[string]any{
 		"actionId":     actionIDPrefix + suffix,
-		"commandIds":   stringsToAny(sortedUnique(evidenceOrCommandIDs(commandIDs))),
-		"evidenceRefs": stringsToAny(sortedUnique(evidenceOrCommandIDs(evidenceRefs))),
+		"commandIds":   admit.StringSliceToAny(sortedUnique(evidenceOrCommandIDs(commandIDs))),
+		"evidenceRefs": admit.StringSliceToAny(sortedUnique(evidenceOrCommandIDs(evidenceRefs))),
 		"instruction":  instruction,
 		"nonClaim":     actionNonClaim,
 		"owner":        consumerRepositoryOwner,
@@ -672,14 +672,6 @@ func sortedUnique(values []string) []string {
 	return result
 }
 
-func stringsToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
-}
-
 func sourceOwnerPaths(values []sourceProofOwner) []string {
 	result := []string{}
 	for _, value := range values {
@@ -722,7 +714,7 @@ func blockersToAny(values []blockerItem) []any {
 			"nonClaim":         value.NonClaim,
 			"ownerId":          value.OwnerID,
 			"reason":           value.Reason,
-			"requiredEvidence": stringsToAny(value.RequiredEvidence),
+			"requiredEvidence": admit.StringSliceToAny(value.RequiredEvidence),
 		})
 	}
 	return result

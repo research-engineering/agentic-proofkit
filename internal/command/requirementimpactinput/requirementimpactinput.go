@@ -272,12 +272,12 @@ func compose(input input) (map[string]any, error) {
 		obligations = append(obligations, map[string]any{
 			"bindingRecordId":                   binding.BindingRecordID,
 			"blockingStatus":                    binding.BlockingStatus,
-			"commands":                          stringsToAny(binding.Commands),
+			"commands":                          admit.StringSliceToAny(binding.Commands),
 			"declaredMutationResistanceClaimId": binding.DeclaredMutationResistanceClaimID,
 			"declaredWitnessRoutes":             declaredWitnessRouteValues(binding.DeclaredWitnessRoutes),
 			"preconditioned":                    binding.Preconditioned,
 			"requirementId":                     binding.RequirementID,
-			"requiredEnvironmentClasses":        stringsToAny(binding.RequiredEnvironmentClasses),
+			"requiredEnvironmentClasses":        admit.StringSliceToAny(binding.RequiredEnvironmentClasses),
 			"scenarioId":                        binding.ScenarioID,
 			"surfaceId":                         binding.SurfaceID,
 		})
@@ -290,16 +290,16 @@ func compose(input input) (map[string]any, error) {
 		"baseCommit":                 input.BaseCommit,
 		"headRef":                    input.HeadRef,
 		"headCommit":                 nullableTextValue(input.HeadCommit),
-		"changedPaths":               stringsToAny(changed.ChangedPaths),
-		"changedRequirementIds":      stringsToAny(uniqueSorted(changedRequirementIDs)),
-		"changedBindingRecordIds":    stringsToAny(uniqueSorted(changedBindingIDs)),
+		"changedPaths":               admit.StringSliceToAny(changed.ChangedPaths),
+		"changedRequirementIds":      admit.StringSliceToAny(uniqueSorted(changedRequirementIDs)),
+		"changedBindingRecordIds":    admit.StringSliceToAny(uniqueSorted(changedBindingIDs)),
 		"changedWitnessPathCoverage": witnessCoverageValues(changedWitnessCoverage),
 		"generatedArtifactRules":     generatedArtifactRuleValues(input.GeneratedArtifactRules),
-		"ignoredProofLikePaths":      stringsToAny(input.ProofLikePolicy.IgnoredProofLikePaths),
-		"nonClaims":                  stringsToAny(uniqueSorted(append(append([]string{}, input.NonClaims...), input.ProofLikePolicy.NonClaims...))),
+		"ignoredProofLikePaths":      admit.StringSliceToAny(input.ProofLikePolicy.IgnoredProofLikePaths),
+		"nonClaims":                  admit.StringSliceToAny(uniqueSorted(append(append([]string{}, input.NonClaims...), input.ProofLikePolicy.NonClaims...))),
 		"obligationCatalog":          obligations,
-		"preexistingFailures":        stringsToAny(failures),
-		"proofLikePaths":             stringsToAny(proofLikePaths),
+		"preexistingFailures":        admit.StringSliceToAny(failures),
+		"proofLikePaths":             admit.StringSliceToAny(proofLikePaths),
 	}
 	if input.UnboundProofChangeRationale != "" {
 		output["unboundProofChangeRationale"] = input.UnboundProofChangeRationale
@@ -685,23 +685,23 @@ func fullBindingFingerprint(binding compactproofcontract.Binding, surface compac
 		"positiveWitness":                   witnessFingerprintValue(positiveWitness),
 		"bindingRecordId":                   binding.RecordID(),
 		"requirementId":                     binding.RequirementID(),
-		"requiredEnvironmentClasses":        stringsToAny(binding.RequiredEnvironmentClasses()),
+		"requiredEnvironmentClasses":        admit.StringSliceToAny(binding.RequiredEnvironmentClasses()),
 		"scenarioId":                        binding.ScenarioID(),
 		"surface": map[string]any{
-			"preconditionedEnvironmentClasses": stringsToAny(surface.PreconditionedEnvironmentClasses()),
-			"requiredEnvironmentClasses":       stringsToAny(surface.RequiredEnvironmentClasses()),
+			"preconditionedEnvironmentClasses": admit.StringSliceToAny(surface.PreconditionedEnvironmentClasses()),
+			"requiredEnvironmentClasses":       admit.StringSliceToAny(surface.RequiredEnvironmentClasses()),
 			"surfaceId":                        surface.ID(),
 		},
-		"verifyCommands": stringsToAny(binding.VerifyCommands()),
+		"verifyCommands": admit.StringSliceToAny(binding.VerifyCommands()),
 	})
 }
 
 func witnessFingerprintValue(witness compactproofcontract.Witness) map[string]any {
 	return map[string]any{
-		"environmentClasses":   stringsToAny(witness.EnvironmentClasses()),
+		"environmentClasses":   admit.StringSliceToAny(witness.EnvironmentClasses()),
 		"resolutionOrderIndex": witness.ResolutionOrderIndex(),
 		"selector":             witness.Selector(),
-		"verifyCommands":       stringsToAny(witness.VerifyCommands()),
+		"verifyCommands":       admit.StringSliceToAny(witness.VerifyCommands()),
 	}
 }
 
@@ -746,7 +746,7 @@ func safePath(raw any, context string) (string, error) {
 func changedPathSourceValues(sources []changedpathset.SourceInput) []any {
 	result := make([]any, 0, len(sources))
 	for _, source := range sources {
-		result = append(result, map[string]any{"sourceId": source.SourceID, "paths": stringsToAny(source.Paths)})
+		result = append(result, map[string]any{"sourceId": source.SourceID, "paths": admit.StringSliceToAny(source.Paths)})
 	}
 	return result
 }
@@ -756,7 +756,7 @@ func generatedArtifactRuleValues(rules []generatedArtifactRule) []any {
 	for _, rule := range rules {
 		result = append(result, map[string]any{
 			"generatedPath":      rule.GeneratedPath,
-			"sourcePathPatterns": stringsToAny(rule.SourcePathPatterns),
+			"sourcePathPatterns": admit.StringSliceToAny(rule.SourcePathPatterns),
 		})
 	}
 	return result
@@ -790,11 +790,11 @@ func declaredWitnessRouteValues(routes []compactproofcontract.WitnessRoute) []an
 	for _, route := range routes {
 		result = append(result, map[string]any{
 			"bindingRecordId":      route.BindingRecordID,
-			"environmentClasses":   stringsToAny(route.EnvironmentClasses),
+			"environmentClasses":   admit.StringSliceToAny(route.EnvironmentClasses),
 			"resolutionOrderIndex": route.ResolutionOrder,
 			"role":                 route.Role,
 			"selector":             route.Selector,
-			"verifyCommands":       stringsToAny(route.VerifyCommands),
+			"verifyCommands":       admit.StringSliceToAny(route.VerifyCommands),
 			"witnessRouteId":       route.RouteID,
 		})
 	}
@@ -895,13 +895,5 @@ func sortedSetValues(values map[string]struct{}) []string {
 		result = append(result, value)
 	}
 	sort.Strings(result)
-	return result
-}
-
-func stringsToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
 	return result
 }

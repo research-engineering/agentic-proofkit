@@ -11,6 +11,44 @@ import (
 	"unicode/utf8"
 )
 
+func TestStringSliceToAnyPreservesValuesAndIndependentStorage(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		values []string
+		want   []any
+	}{
+		{"nil", nil, []any{}},
+		{"empty", []string{}, []any{}},
+		{"single", []string{"value"}, []any{"value"}},
+		{"ordered duplicates", []string{"z", "a", "z", ""}, []any{"z", "a", "z", ""}},
+		{"literal strings", []string{"\u03bb\U0001f680", "line\n\x00", "password=synthetic-fixture-value"}, []any{"\u03bb\U0001f680", "line\n\x00", "password=synthetic-fixture-value"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			before := slices.Clone(tt.values)
+			got := StringSliceToAny(tt.values)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("StringSliceToAny() = %#v, want %#v", got, tt.want)
+			}
+			if !reflect.DeepEqual(tt.values, before) {
+				t.Fatal("conversion mutated input")
+			}
+			if len(got) == 0 {
+				return
+			}
+			again := StringSliceToAny(tt.values)
+			first := tt.values[0]
+			tt.values[0] = "changed input"
+			if got[0] != first {
+				t.Fatal("input mutation changed result")
+			}
+			got[0] = "changed result"
+			if tt.values[0] != "changed input" || again[0] != first {
+				t.Fatal("result mutation changed input or another result")
+			}
+		})
+	}
+}
+
 func TestSHA512IntegrityRequiresCanonical64ByteEncoding(t *testing.T) {
 	zero := "sha512-" + strings.Repeat("A", 86) + "=="
 	for _, tt := range []struct {

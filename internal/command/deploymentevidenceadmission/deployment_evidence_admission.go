@@ -123,11 +123,11 @@ func Build(raw any) (report.Record, int, error) {
 			"requiredFactKindCount": len(input.Policy.RequiredFactKinds),
 		},
 		Diagnostics: []report.Diagnostic{
-			{Key: "blockedReasons", Value: stringSliceToAny(blockedReasons)},
-			{Key: "failures", Value: stringSliceToAny(failures)},
+			{Key: "blockedReasons", Value: admit.StringSliceToAny(blockedReasons)},
+			{Key: "failures", Value: admit.StringSliceToAny(failures)},
 		},
 		RuleResults: deploymentEvidenceRuleResults(state, blockedReasons, failures),
-		NonClaims:   stringSliceToAny(sortedStrings(append(append([]string{}, boundaryNonClaims...), input.NonClaims...))),
+		NonClaims:   admit.StringSliceToAny(sortedStrings(append(append([]string{}, boundaryNonClaims...), input.NonClaims...))),
 	}
 	if state == "passed" {
 		return record, 0, nil
@@ -510,13 +510,13 @@ func deploymentEvidenceRuleResults(state string, blockedReasons []string, failur
 			RuleID:      "proofkit.deployment-evidence-admission.safety",
 			Status:      safetyStatus,
 			Message:     safetyMessage,
-			Diagnostics: []report.Diagnostic{{Key: "failures", Value: stringSliceToAny(failures)}},
+			Diagnostics: []report.Diagnostic{{Key: "failures", Value: admit.StringSliceToAny(failures)}},
 		},
 		{
 			RuleID:      "proofkit.deployment-evidence-admission.shape",
 			Status:      shapeStatus,
 			Message:     shapeMessage,
-			Diagnostics: []report.Diagnostic{{Key: "blockedReasons", Value: stringSliceToAny(blockedReasons)}},
+			Diagnostics: []report.Diagnostic{{Key: "blockedReasons", Value: admit.StringSliceToAny(blockedReasons)}},
 		},
 	}
 }
@@ -821,14 +821,6 @@ func uniqueSorted(values []string) []string {
 func sortedStrings(values []string) []string {
 	sort.Strings(values)
 	return values
-}
-
-func stringSliceToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
-	}
-	return result
 }
 
 func toSet(values []string) map[string]struct{} {

@@ -112,13 +112,13 @@ func (command Command) JSONValue() map[string]any {
 		})
 	}
 	return map[string]any{
-		"argv":            stringSliceToAny(command.Argv),
+		"argv":            admit.StringSliceToAny(command.Argv),
 		"cachePolicy":     command.CachePolicy,
 		"credentialClass": command.CredentialClass,
 		"cwd":             command.Cwd,
 		"environment": map[string]any{
-			"allowlist": stringSliceToAny(command.Environment.Allowlist),
-			"classes":   stringSliceToAny(command.Environment.Classes),
+			"allowlist": admit.StringSliceToAny(command.Environment.Allowlist),
+			"classes":   admit.StringSliceToAny(command.Environment.Classes),
 			"inherit":   command.Environment.Inherit,
 		},
 		"exitCodePolicy": map[string]any{
@@ -150,10 +150,10 @@ func (vocabulary Vocabulary) ProjectionFor(command Command) map[string]any {
 			continue
 		}
 		policies = append(policies, map[string]any{
-			"cachePolicies":     stringSliceToAny(policy.CachePolicies),
-			"credentialClasses": stringSliceToAny(policy.CredentialClasses),
+			"cachePolicies":     admit.StringSliceToAny(policy.CachePolicies),
+			"credentialClasses": admit.StringSliceToAny(policy.CredentialClasses),
 			"environmentClass":  policy.EnvironmentClass,
-			"networkPolicies":   stringSliceToAny(policy.NetworkPolicies),
+			"networkPolicies":   admit.StringSliceToAny(policy.NetworkPolicies),
 		})
 	}
 	credentialClasses := []any{}
@@ -177,7 +177,7 @@ func (plan Plan) JSONValue() map[string]any {
 	parallelGroups := make([]any, 0, len(plan.ParallelGroups))
 	for _, group := range plan.ParallelGroups {
 		parallelGroups = append(parallelGroups, map[string]any{
-			"commandIds":    stringSliceToAny(group.CommandIDs),
+			"commandIds":    admit.StringSliceToAny(group.CommandIDs),
 			"parallelGroup": group.ParallelGroup,
 		})
 	}
@@ -828,14 +828,6 @@ func join(values []string) string {
 	result := values[0]
 	for _, value := range values[1:] {
 		result += ", " + value
-	}
-	return result
-}
-
-func stringSliceToAny(values []string) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, value)
 	}
 	return result
 }

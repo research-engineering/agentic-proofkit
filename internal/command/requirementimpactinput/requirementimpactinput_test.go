@@ -887,3 +887,11 @@ func assertObligationHasReason(t *testing.T, report map[string]any, bindingRecor
 	}
 	t.Fatalf("report lacks obligation for %s: %#v", bindingRecordID, report["obligations"])
 }
+
+func stringsToAny(values []string) []any {
+	result := make([]any, 0, len(values))
+	for _, value := range values {
+		result = append(result, value)
+	}
+	return result
+}

@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/conformanceprofile"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 )
 
@@ -32,7 +33,7 @@ func runConformanceProfile(args []string, stdin io.Reader, stdout io.Writer, std
 	}
 	if options.list {
 		profiles, err := conformanceprofile.List(input)
-		return writeJSON(map[string]any{"profiles": stringSliceToAny(profiles)}, 0, err, stdout, stderr)
+		return writeJSON(map[string]any{"profiles": admit.StringSliceToAny(profiles)}, 0, err, stdout, stderr)
 	}
 	result, err := conformanceprofile.BuildProfile(input, options.profileID)
 	if err != nil {
