@@ -109,6 +109,9 @@ func buildOutput(input input) (map[string]any, int) {
 		sourceFailures = append(sourceFailures, "candidate next source admission error: "+sourceErr.Error())
 	} else if sourceResult.ExitCode != 0 {
 		sourceFailures = append(sourceFailures, "candidate next source must pass requirement-source-admission")
+		for _, failure := range sourceResult.Failures {
+			sourceFailures = append(sourceFailures, "candidate next source admission failed: "+failure)
+		}
 	}
 	if transitionErr != nil {
 		transitionFailures = append(transitionFailures, "candidate transition admission error: "+transitionErr.Error())

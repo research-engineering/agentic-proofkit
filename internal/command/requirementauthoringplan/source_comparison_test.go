@@ -6,6 +6,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
 )
 
@@ -51,6 +52,30 @@ func TestGroupedAuthoringDoesNotClaimUnperformedComparison(t *testing.T) {
 	output, exit, err := Build(input)
 	if err != nil || exit != 1 || output["sourceComparisonState"] != "skipped_source_admission" || output["changedSourcePlanes"] != nil || output["nonAuthoritativeAdmissionPreview"] != nil {
 		t.Fatalf("unavailable source comparison became evidence: %v %#v", err, output)
+	}
+	assertAuthoringRuleStatus(t, output, "candidate-source-admission", "failed")
+	assertAuthoringRuleStatus(t, output, "transition-admission", "skipped")
+	assertAuthoringRuleStatus(t, output, "composition", "skipped")
+}
+
+func TestGroupedAuthoringPreservesEveryCandidateSourceRefusal(t *testing.T) {
+	input := sharedOwnerInput()
+	candidate := input["candidateRequirementSource"].(map[string]any)
+	for _, raw := range candidate["groups"].([]any)[0].(map[string]any)["members"].([]any) {
+		raw.(map[string]any)["fields"].(map[string]any)["proofBindingRefs"] = []any{}
+	}
+	expected, err := requirementsourceadmission.Evaluate(candidate)
+	if err != nil || expected.ExitCode != 1 || len(expected.Failures) != 2 {
+		t.Fatalf("source refusal fixture is ineffective: %v %#v", err, expected)
+	}
+	before := cloneObject(input)
+	output, exit, err := Build(input)
+	if err != nil || exit != 1 || output["state"] != "failed" || output["nonAuthoritativeAdmissionPreview"] != nil {
+		t.Fatalf("candidate source refusal changed: exit=%d err=%v", exit, err)
+	}
+	assertStableJSONEqual(t, "caller input", before, input)
+	for _, failure := range expected.Failures {
+		assertOutputContains(t, output, "candidate next source admission failed: "+failure)
 	}
 	assertAuthoringRuleStatus(t, output, "candidate-source-admission", "failed")
 	assertAuthoringRuleStatus(t, output, "transition-admission", "skipped")

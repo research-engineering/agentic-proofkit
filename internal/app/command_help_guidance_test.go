@@ -1,6 +1,7 @@
 package app
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -66,6 +67,34 @@ func TestRootHelpNamesTheBootstrapRoute(t *testing.T) {
 	status, next := strings.Index(bootstrap, "Run status --repo-root"), strings.Index(bootstrap, "Run next --repo-root")
 	if code != 0 || diagnostic != "" || status < 0 || next < status {
 		t.Fatalf("named bootstrap does not start with status then next: exit=%d %q", code, diagnostic)
+	}
+}
+
+func TestRootHelpPresentsStartBeforeCompleteCommandInventory(t *testing.T) {
+	for _, args := range [][]string{nil, {"help"}, {"--help"}, {"-h"}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			code, help, diagnostic := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{})
+			if code != 0 || diagnostic != "" {
+				t.Fatalf("root help exit=%d stderr=%q", code, diagnostic)
+			}
+			start := strings.Index(help, "\nStart here:")
+			families := strings.Index(help, "\nDiscover command families:")
+			commands := strings.Index(help, "\nCommands:\n")
+			if start < 0 || families <= start || commands <= families {
+				t.Fatal("root help must present bootstrap and family navigation before the command inventory")
+			}
+			inventory, _, found := strings.Cut(help[commands+len("\nCommands:\n"):], "\n\n")
+			if !found {
+				t.Fatal("command inventory lacks its section boundary")
+			}
+			want := make([]string, len(commandDescriptors))
+			for i, descriptor := range commandDescriptors {
+				want[i] = "  " + commandUsageLine(descriptor)
+			}
+			if !reflect.DeepEqual(strings.Split(inventory, "\n"), want) {
+				t.Fatal("root help changed the complete ordered command inventory")
+			}
+		})
 	}
 }
 

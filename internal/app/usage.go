@@ -11,19 +11,24 @@ func usage() string {
 }
 
 func usageWithRenderer(renderer cliexec.Renderer) string {
-	lines := []string{"Usage:", "  agentic-proofkit [--json-layout pretty|compact] <command> [arguments]", "", "Commands:"}
+	integration, _ := commandDescriptorFor("integration-source")
+	lines := []string{
+		"Usage:",
+		"  agentic-proofkit [--json-layout pretty|compact] <command> [arguments]",
+		"",
+		"Start here: the agent bootstrap, then the project's next action:",
+		"  " + renderer.DisplayCommand("integration", "source") + " --tool <" + strings.Join(integration.flagValueChoices["--tool"], "|") + "> --format text",
+		"  " + renderer.DisplayCommand("next") + " --repo-root <path>",
+		"",
+		"Discover command families:",
+		"  " + renderer.DisplayCommand("help", "families"),
+		"",
+		"Commands:",
+	}
 	for _, descriptor := range commandDescriptors {
 		lines = append(lines, "  "+commandUsageLine(descriptor))
 	}
-	integration, _ := commandDescriptorFor("integration-source")
 	lines = append(lines,
-		"",
-		"Start here: the agent bootstrap, then the project's next action:",
-		"  "+renderer.DisplayCommand("integration", "source")+" --tool <"+strings.Join(integration.flagValueChoices["--tool"], "|")+"> --format text",
-		"  "+renderer.DisplayCommand("next")+" --repo-root <path>",
-		"",
-		"Discover command families:",
-		"  "+renderer.DisplayCommand("help", "families"),
 		"",
 		"The Go runtime is the primary CLI implementation. CLI/JSON is the public cross-language contract.",
 	)

@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "b860276b9301edf34a819e66d70b1f3451d03193ffed4af0a070188eff85c0a0"
+	cliContractPublicABISHA256               = "1c99c30b526439151e0d93c61f826fba64ec46633f96fc28557c5e2b57557010"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1554,6 +1554,9 @@ func mutateDescriptor(name string, mutate func(*commandDescriptor)) []commandDes
 }
 
 func helpLineForCommand(help string, command string) string {
+	if _, catalog, ok := strings.Cut(help, "\nCommands:\n"); ok {
+		help, _, _ = strings.Cut(catalog, "\n\n")
+	}
 	prefix := "  agentic-proofkit " + command
 	for _, line := range strings.Split(help, "\n") {
 		if line == prefix || strings.HasPrefix(line, prefix+" ") || strings.HasPrefix(line, prefix+"\t") {
@@ -1571,6 +1574,8 @@ func TestHelpLineRequiresExactCommandRoute(t *testing.T) {
 		{"tab", "  agentic-proofkit help\t--help", "help", "  agentic-proofkit help\t--help"},
 		{"hyphenated neighbor", "  agentic-proofkit registry-consumer-proof-input-compose --input <path|->", "registry-consumer", ""},
 		{"character neighbor", "  agentic-proofkit helper", "help", ""},
+		{"guidance before catalog", "Start here:\n  agentic-proofkit next --repo-root <path>\n\nCommands:\n  agentic-proofkit next [--color <auto|never>] --repo-root <path>\n\nEnd", "next", "  agentic-proofkit next [--color <auto|never>] --repo-root <path>"},
+		{"missing catalog entry", "Start here:\n  agentic-proofkit next --repo-root <path>\n\nCommands:\n  agentic-proofkit help\n\nEnd", "next", ""},
 	} {
 		t.Run(item.name, func(t *testing.T) {
 			if got := helpLineForCommand(item.help, item.command); got != item.want {

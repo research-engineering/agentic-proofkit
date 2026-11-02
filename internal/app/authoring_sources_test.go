@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 )
 
 func TestAuthoringInputGuideIsLazy(t *testing.T) {
@@ -18,6 +20,47 @@ func TestAuthoringInputGuideIsLazy(t *testing.T) {
 	_, output := receiptHelpTemplate(t, "requirement-authoring-plan")
 	if strings.Count(output, "Requirement authoring input guide:") != 1 {
 		t.Fatal("targeted authoring help lost its unique guide")
+	}
+}
+
+func TestAuthoringSourceRefusalExplainsMissingBindingCLI(t *testing.T) {
+	packet, _ := receiptHelpTemplate(t, "requirement-authoring-plan")
+	materialization := adoptionHelpPacket(t, t.TempDir(), "audit-from-code")
+	source := materialization["requirementSources"].([]any)[0].(map[string]any)
+	current := cloneMap(t, source)
+	current["groups"] = []any{}
+	packet["currentRequirementSource"] = current
+	packet["candidateRequirementSource"] = source
+	removeBinding := func(fields map[string]any) {
+		if _, owns := fields["proofBindingRefs"]; owns {
+			fields["proofBindingRefs"] = []any{}
+		}
+	}
+	profiles, _ := source["profiles"].([]any)
+	for _, raw := range profiles {
+		removeBinding(raw.(map[string]any)["fields"].(map[string]any))
+	}
+	for _, raw := range source["groups"].([]any) {
+		for _, member := range raw.(map[string]any)["members"].([]any) {
+			removeBinding(member.(map[string]any)["fields"].(map[string]any))
+		}
+	}
+	expected, err := requirementsourceadmission.Evaluate(source)
+	if err != nil || expected.ExitCode != 1 || len(expected.Failures) == 0 {
+		t.Fatalf("missing-binding fixture did not reach source policy: %v", err)
+	}
+	code, output, diagnostic := executeAgentWorkflowCLI(t, []string{"requirement-authoring-plan", "--input", "-"}, bytes.NewReader(adoptionHelpJSON(t, packet)), PresentationCapabilities{})
+	if code != 1 || diagnostic != "" {
+		t.Fatalf("source policy refusal exit=%d stderr=%q", code, diagnostic)
+	}
+	report := decodeCLIJSON(t, output).(map[string]any)
+	if report["state"] != "failed" || report["nonAuthoritativeAdmissionPreview"] != nil || report["sourceComparisonState"] != "skipped_source_admission" {
+		t.Fatal("source policy refusal became an admitted preview or comparison")
+	}
+	for _, failure := range expected.Failures {
+		if !strings.Contains(output, "candidate next source admission failed: "+failure) {
+			t.Fatalf("CLI lost the source owner's refusal: %s", failure)
+		}
 	}
 }
 
