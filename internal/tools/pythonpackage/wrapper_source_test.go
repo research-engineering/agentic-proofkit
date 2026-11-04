@@ -44,7 +44,8 @@ func TestVerifyWheelRecordBindsEveryWrapperSource(t *testing.T) {
 						found := false
 						for index := range entries {
 							if entries[index].Path == "agentic_proofkit/"+changed {
-								entries[index].Content = []byte("raise SystemExit(77)\n")
+								entries[index].Content = append([]byte(nil), entries[index].Content...)
+								entries[index].Content[2] ^= 0x20
 								found = true
 							}
 						}
