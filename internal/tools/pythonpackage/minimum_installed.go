@@ -89,7 +89,7 @@ func verifyMinimumInstalledPython() error {
 	if err != nil {
 		return err
 	}
-	if err := minimumCheckWheelWrappers(wheel, root); err != nil {
+	if err := verifyWheelWrappers(wheel, root); err != nil {
 		return err
 	}
 	pip, err := artifactfile.ReadBounded(root, minimumPipFile, 2<<20)

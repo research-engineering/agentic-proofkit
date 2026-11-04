@@ -1,7 +1,6 @@
 package main
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -384,34 +383,6 @@ func minimumValidateSnapshot(snapshot minimumSnapshot) error {
 	}
 	if snapshot.Files["artifacts/pypi/"+snapshot.Wheel.Filename] != snapshot.Wheel.Sha256 || snapshot.Files[native.BinaryPath] != snapshot.Wheel.BinarySha256 || snapshot.Files[minimumPipFile] != minimumPipSHA256 {
 		return fmt.Errorf("minimum snapshot digests disagree with wheel or installer pins")
-	}
-	return nil
-}
-
-func minimumCheckWheelWrappers(wheel []byte, sourceRoot string) error {
-	archive, err := zip.NewReader(bytes.NewReader(wheel), int64(len(wheel)))
-	if err != nil {
-		return err
-	}
-	for _, name := range []string{"__init__.py", "__main__.py", "cli.py"} {
-		expected, err := artifactfile.ReadBounded(sourceRoot, "python/agentic_proofkit/"+name, maximumWheelTextEntryBytes)
-		if err != nil {
-			return err
-		}
-		matches := 0
-		for _, entry := range archive.File {
-			if entry.Name != "agentic_proofkit/"+name {
-				continue
-			}
-			content, err := readZipFile(entry)
-			if err != nil || !bytes.Equal(content, expected) {
-				return fmt.Errorf("minimum wheel wrapper differs from current source")
-			}
-			matches++
-		}
-		if matches != 1 {
-			return fmt.Errorf("minimum wheel wrapper must occur exactly once")
-		}
 	}
 	return nil
 }
