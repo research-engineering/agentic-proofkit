@@ -520,6 +520,65 @@ func readPackageScriptsForTest(t *testing.T) map[string]string {
 	return manifest.Scripts
 }
 
+func TestGoFormattingGatePropagatesFormatterFailures(t *testing.T) {
+	shell, err := exec.LookPath("sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := readPackageScriptsForTest(t)["go:fmt"]
+	run := func(t *testing.T, command string, formatter string, exists bool) (bool, string, string) {
+		t.Helper()
+		root := t.TempDir()
+		root, err := filepath.EvalSymlinks(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if exists {
+			if err := os.WriteFile(filepath.Join(root, "gofmt"), []byte("#!/bin/sh\n"+formatter), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		process := exec.Command(shell, "-c", command)
+		process.Dir = root
+		process.Env = []string{"PATH=" + root, "PROOFKIT_TEST_ROOT=" + root}
+		var stdout, stderr strings.Builder
+		process.Stdout, process.Stderr = &stdout, &stderr
+		err = process.Run()
+		if err != nil {
+			var exit *exec.ExitError
+			if !errors.As(err, &exit) {
+				t.Fatalf("format gate did not execute: %v", err)
+			}
+		}
+		return err == nil, stdout.String(), stderr.String()
+	}
+	for _, item := range []struct {
+		name, formatter, stderr string
+		exists, passes          bool
+	}{
+		{name: "formatted", formatter: "test \"$PWD\" = \"$PROOFKIT_TEST_ROOT\" && test \"$#\" -eq 4 && test \"$1\" = -l && test \"$2\" = cmd && test \"$3\" = internal && test \"$4\" = scripts\n", exists: true, passes: true},
+		{name: "unformatted", formatter: "printf 'cmd/unformatted.go\\n'\nexit 0\n", exists: true},
+		{name: "silent failure", formatter: "exit 2\n", exists: true},
+		{name: "syntax failure", formatter: "printf 'synthetic syntax failure\\n' >&2\nexit 2\n", stderr: "synthetic syntax failure\n", exists: true},
+		{name: "partial output failure", formatter: "printf 'cmd/unformatted.go\\n'\nexit 2\n", exists: true},
+		{name: "missing formatter"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			got, stdout, stderr := run(t, script, item.formatter, item.exists)
+			if got != item.passes {
+				t.Fatalf("format gate passed = %v, want %v", got, item.passes)
+			}
+			if stdout != "" || (item.exists && stderr != item.stderr) {
+				t.Fatalf("format gate stdout=%q stderr=%q, want empty stdout and stderr=%q", stdout, stderr, item.stderr)
+			}
+		})
+	}
+	const masked = `test -z "$(gofmt -l cmd internal scripts)"`
+	if passed, _, _ := run(t, masked, "exit 2\n", true); !passed {
+		t.Fatal("predecessor control no longer reproduces masked formatter failure")
+	}
+}
+
 func validateGoDependencyGate(scripts map[string]string, workflow githubWorkflow) error {
 	if scripts["go:deps"] != "go mod tidy -diff && go mod verify" {
 		return errors.New("go:deps must fail closed on non-mutating tidy and module verification")
