@@ -118,29 +118,30 @@ func relationParityInput(t *testing.T, mode string) map[string]any {
 }
 
 func TestCoverageRelationFullOutputParity(t *testing.T) {
-	// The same eight inputs retain the JSON, exit and Markdown observations
-	// independently captured from main 3d760a1. Full-output hashes additionally
+	// The same eight inputs retain the JSON, exit and human observations
+	// independently captured from main 3d760a1, except the unsupported selector
+	// absence sentence removed from baseline 5459a33. Full-output hashes also
 	// bind the admitted HTML changes: styles, display controls, table wrapping
 	// a textual report-state badge, hierarchy navigation and filter value sets.
 	// HTML representation updates must retain protectedWants.
 	protectedWants := map[string]string{
-		"sparse":         "8c538adccaf293c5aa4ab392f6f2d581d34a6874cf195b1f009fe72ca2d0c173",
-		"dense":          "2bde9e9fa38f4de2f581462886a7aec9c74ebf9839144294432ac4dae02868f5",
-		"no-match":       "707dde2b594ff01302feefdbc9ebf46043c87cf8b5e499e5e211ac87027a2190",
-		"missing":        "926e3602a4a7656b73c723c1045127421adefb25e015738ba4479f81b5550a9c",
-		"failed":         "644cf6224c0f6582dc1c30ca1e50adc121a802fae5325aa82bdc40ea4edfa691",
-		"mixed-negative": "168f76dc99b4e372130daa4dafe38b3a71807bd3cee3ef01aeea6001498ace53",
-		"owner-scope":    "b44ce994f05b5a86a6692dbeb77244c79fbf07a499d2dbe9f611c8a3a97c5632",
+		"sparse":         "41ece738e6c5deb55588190878ff0ac7055ea61f2e09f9beede556908fb696ad",
+		"dense":          "ba318512d3954a1de0c944fa7f16338b0fa368596817facd04b9d6ed5ec173e2",
+		"no-match":       "469f58a23bf746277f57295ec012e3e0b2dcdf050cd08a2fd9d80c592c086cad",
+		"missing":        "a1408a780c70744b4312b73522405fc702f3c60fec6b17ba29bd374da891bf04",
+		"failed":         "b1f18a6b7765f7d2d170aee7435a0824abf1381e4698f1d1d3b023ecf06f130c",
+		"mixed-negative": "40c12bc4e4ca6a93ceb48d748cb1269e176e964e34e4186e6adc8e97a8da5234",
+		"owner-scope":    "bd1f5d2c8aa6ec3fcb56b784c8d1df8cedba529775ac943dede87c0afc4559fb",
 		"compact":        "c0a6930a61e5068f698064da83b26b5eb38fef0c985fc00729527cad8649e7da",
 	}
 	wants := map[string]string{
-		"sparse":         "a304737604f94fe2300557f397b75b817335714f2ca018925151c5bc150cc2f9",
-		"dense":          "6457fbedbf9e58455ee8f338c44babffb2ed9506e6cb6143e0bbbe18a9048a74",
-		"no-match":       "c4a346556ef348cf55db03479efe55a40b6bf01cb1e77db1df5d450ee603c177",
-		"missing":        "edefaad640b708ad1c382a3e4de14e6727c5c95fdf0797d8aae4f4e76a0018f4",
-		"failed":         "7601fb5e0efab903c4480b68d5ed0c24ea08fff0acf774c3acfd5b45d8776a9c",
-		"mixed-negative": "edc4918194e6dda22dc8f49a64d3cff739e96aba5ecbcfeeac0f608219656c3e",
-		"owner-scope":    "fe41d445bc2d4bef1cba56b1f969d8e15f9f282ea529b2a16b4e34df0385e06b",
+		"sparse":         "8ac5287acfcdb15a14571e1203f133e63388a54cf1710737b78ff5c29b0b0eb5",
+		"dense":          "aece2404a8cf7955761bacdaee1314e0496edd27c7b64c79469e7db624ae3a0b",
+		"no-match":       "35b98b4fb392bd23a9ca9f80676a831828b6d4c6ebb3e1addd6687b44f425ac6",
+		"missing":        "cfc6a2d405398ad2814cc3026a660ab61f82782c47dca045e202e3c7691189b5",
+		"failed":         "d6fc87ee6ee3df83b55232ff4d9560504713e3d576fdf061247c26ae65bf5a9a",
+		"mixed-negative": "75fd5d70a2279fc0eab1f78f7fe1c82246b29c37d1134231c5195070bc0883fc",
+		"owner-scope":    "849e22e3cc1a7fbc9c723e91a69af33cea258612367edd8f67c1825d84f45bf6",
 		"compact":        "b975cf6e96f21948a5e133f19e7836405c0beca85e42c1e7eb886ba7b895e1fd",
 	}
 	for _, name := range []string{"sparse", "dense", "no-match", "missing", "failed", "mixed-negative", "owner-scope", "compact"} {

@@ -10,9 +10,9 @@
       "width": 1440
     },
     {
-      "height": 2061,
+      "height": 2029,
       "id": "chromium/static-coverage-cards.dark.1440",
-      "rgbaSHA256": "ddc34f8077947765851569cce79e2fccac850007e693dce364666adda5eb9fb2",
+      "rgbaSHA256": "095cf5184f04a11a8149229f3773ec69b7fad78617f446c2b73068439c832265",
       "width": 1440
     },
     {
@@ -22,9 +22,9 @@
       "width": 320
     },
     {
-      "height": 2061,
+      "height": 2029,
       "id": "chromium/static-coverage-cards.light.1440",
-      "rgbaSHA256": "3e2829b5e33035948d9bba1b00d3750a1b7f3a671a2cacb752c2f546a7d2e29b",
+      "rgbaSHA256": "bf79d1de19446b0fac9caa24b47b1af03b66f75829164d628b7f45a049bdadcd",
       "width": 1440
     },
     {
@@ -346,9 +346,9 @@
       "width": 320
     },
     {
-      "height": 2077,
+      "height": 2045,
       "id": "firefox/static-coverage-cards.dark.1440",
-      "rgbaSHA256": "7fa709dc1b6eca7b53fe39fc762c8c74888564024e94836b4ee35537cbfe07bd",
+      "rgbaSHA256": "057d47ff2e786e2a925c9380ccbd15c47197680255ddef35eeb944dd14ce7d12",
       "width": 1440
     },
     {
@@ -358,9 +358,9 @@
       "width": 320
     },
     {
-      "height": 2077,
+      "height": 2045,
       "id": "firefox/static-coverage-cards.light.1440",
-      "rgbaSHA256": "d7954c7b3e260d757bfd4bd5f95ae8da2e313e340b1cc459537b2885b0564343",
+      "rgbaSHA256": "73978822911cbd813084e720a02f28d6b59b0d75f6dd38f7c09c4c144995ed62",
       "width": 1440
     },
     {
@@ -682,9 +682,9 @@
       "width": 320
     },
     {
-      "height": 2061,
+      "height": 2029,
       "id": "webkit/static-coverage-cards.dark.1440",
-      "rgbaSHA256": "27d10e7e50b8fb369e73fabb2b84422f0c4e8d82feeecdbdb86a43f35c5d02bc",
+      "rgbaSHA256": "bd75c561661396029dd4c909ef67e60c1a597b2eaf17a8b9a0882232a0d1caab",
       "width": 1440
     },
     {
@@ -694,9 +694,9 @@
       "width": 320
     },
     {
-      "height": 2061,
+      "height": 2029,
       "id": "webkit/static-coverage-cards.light.1440",
-      "rgbaSHA256": "fc19a93e13f27c962f83ab840f438138bf0797699ded40fabac44e1d9ea71b9c",
+      "rgbaSHA256": "9eccc5b53ebac8d99a239b30c5e02c543dcc900cde57d22323e8f8da6aa9a604",
       "width": 1440
     },
     {
