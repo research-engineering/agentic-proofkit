@@ -180,6 +180,7 @@ func TestSyntaxErrorKeepsMessageAndLocatesRejectedByte(t *testing.T) {
 		{name: "CRLF ends one line", input: "{\r\n\"a\":1,\r\n7}", message: "invalid JSON input: object key must be a string", offset: 11, line: 3, column: 1},
 		{name: "bare CR ends one line", input: "[1,\rtruth]", message: "invalid JSON input: unexpected token", offset: 4, line: 2, column: 1},
 		{name: "short mismatched literal stays at token start", input: "tx", message: "invalid JSON input: unexpected token", offset: 0, line: 1, column: 1},
+		{name: "incomplete literal before LF is not at EOF", input: "tr\n", message: "invalid JSON input: unexpected token", offset: 0, line: 1, column: 1},
 		{name: "standard decoder rejection", input: "{\"n\":01}", message: "invalid JSON input: invalid character '1' after object key:value pair", offset: 6, line: 1, column: 7},
 		{name: "invalid UTF-8 byte after scalars", input: "[\"\u00e9\xff\"]", message: "invalid JSON input: source must be valid UTF-8", offset: 4, line: 1, column: 4},
 		{name: "invalid escape selects the escaped byte", input: `["bad\q"]`, message: "invalid JSON input: invalid string token", offset: 6, line: 1, column: 7},
