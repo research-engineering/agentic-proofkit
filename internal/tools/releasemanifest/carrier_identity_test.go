@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -45,7 +46,7 @@ func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
 		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
 		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), "binary")
 		_, err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
-		if err == nil || !strings.Contains(err.Error(), "contains duplicate entries") {
+		if err == nil || !strings.Contains(err.Error(), "duplicate tar entry") {
 			t.Fatalf("duplicate npm binary was not rejected: %v", err)
 		}
 	})
@@ -54,10 +55,49 @@ func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
 		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
 		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), "metadata")
 		_, err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
-		if err == nil || !strings.Contains(err.Error(), "contains duplicate entries") {
+		if err == nil || !strings.Contains(err.Error(), "duplicate tar entry") {
 			t.Fatalf("duplicate npm metadata entry was not rejected: %v", err)
 		}
 	})
+}
+
+func TestCrossCarrierTraversalCountsPAXMetadata(t *testing.T) {
+	for _, count := range []int{1, 1024} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
+			path := filepath.Join(packageDir, records[0].Filename)
+			writeNPMCarrierWithMetadata(t, path, "", count)
+			info, err := os.Stat(path)
+			if err != nil || info.Size() >= 256<<20 {
+				t.Fatalf("metadata fixture must fit compressed budget: %v", err)
+			}
+			_, err = verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+			if count == 1 {
+				if err != nil {
+					t.Fatalf("valid PAX carrier rejected: %v", err)
+				}
+			} else if err == nil || !strings.Contains(err.Error(), "expanded byte limit") {
+				t.Fatalf("PAX traversal did not reject by its physical byte budget: %v", err)
+			}
+		})
+	}
+}
+
+func TestCrossCarrierTraversalRequiresGzipIntegrity(t *testing.T) {
+	packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
+	path := filepath.Join(packageDir, records[0].Filename)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content[len(content)-8] ^= 1
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+	if !errors.Is(err, gzip.ErrChecksum) {
+		t.Fatalf("carrier CRC failure was not propagated: %v", err)
+	}
 }
 
 func writeCarrierFixture(t *testing.T, mutatedWheelSuffix string) (string, string, []packRecord, *pythonPackageSet) {
@@ -91,12 +131,26 @@ func writeCarrierFixture(t *testing.T, mutatedWheelSuffix string) (string, strin
 
 func writeNPMCarrier(t *testing.T, path string, duplicate string) {
 	t.Helper()
+	writeNPMCarrierWithMetadata(t, path, duplicate, 0)
+}
+
+func writeNPMCarrierWithMetadata(t *testing.T, path string, duplicate string, metadataEntries int) {
+	t.Helper()
 	file, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	gzipWriter := gzip.NewWriter(file)
 	tarWriter := tar.NewWriter(gzipWriter)
+	if metadataEntries > 0 {
+		comment := strings.Repeat("m", 600<<10)
+		for index := range metadataEntries {
+			header := tar.Header{Name: fmt.Sprintf("package/pax-%d", index), Mode: 0o644, Typeflag: tar.TypeReg, Format: tar.FormatPAX, PAXRecords: map[string]string{"comment": comment}}
+			if err := tarWriter.WriteHeader(&header); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 	if duplicate == "metadata" {
 		for range 2 {
 			content := []byte("metadata")

@@ -5001,6 +5001,176 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.npm-archive-header-bounds",
+      "witnessId": "proofkit.package-archive.header-bounds-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packagearchive/archive_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestConsumerHeaderGuardPrecedesBody",
+          "command": "go test ./internal/tools/packagearchive -run '^TestConsumerHeaderGuardPrecedesBody$'"
+        },
+        {
+          "selector": "TestGzipCompressedLimitIsInclusiveAndPrecedesDecode",
+          "command": "go test ./internal/tools/packagearchive -run '^TestGzipCompressedLimitIsInclusiveAndPrecedesDecode$'"
+        },
+        {
+          "selector": "TestHeaderInclusiveSizes",
+          "command": "go test ./internal/tools/packagearchive -run '^TestHeaderInclusiveSizes$'"
+        },
+        {
+          "selector": "TestHeaderRefusalsPrecedeBody",
+          "command": "go test ./internal/tools/packagearchive -run '^TestHeaderRefusalsPrecedeBody$'"
+        },
+        {
+          "selector": "TestInvalidLimitsDoNotRead",
+          "command": "go test ./internal/tools/packagearchive -run '^TestInvalidLimitsDoNotRead$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.npm-archive-framing-topology",
+      "witnessId": "proofkit.package-archive.framing-topology-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packagearchive/framing_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBodyVisitorErrorsAndAdmissionPrecedePayload",
+          "command": "go test ./internal/tools/packagearchive -run '^TestBodyVisitorErrorsAndAdmissionPrecedePayload$'"
+        },
+        {
+          "selector": "TestBodyVisitorPreservesUnreadPayloadAndEntryOrder",
+          "command": "go test ./internal/tools/packagearchive -run '^TestBodyVisitorPreservesUnreadPayloadAndEntryOrder$'"
+        },
+        {
+          "selector": "TestGzipTrailerErrorsCannotHideBehindTarTerminator",
+          "command": "go test ./internal/tools/packagearchive -run '^TestGzipTrailerErrorsCannotHideBehindTarTerminator$'"
+        },
+        {
+          "selector": "TestRegularEntriesFormOneFileTree",
+          "command": "go test ./internal/tools/packagearchive -run '^TestRegularEntriesFormOneFileTree$'"
+        },
+        {
+          "selector": "TestSingleTarFramingPreservesZeroPaddingAndGzipMembers",
+          "command": "go test ./internal/tools/packagearchive -run '^TestSingleTarFramingPreservesZeroPaddingAndGzipMembers$'"
+        },
+        {
+          "selector": "TestTailSharesInclusiveExpandedBudget",
+          "command": "go test ./internal/tools/packagearchive -run '^TestTailSharesInclusiveExpandedBudget$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.package-verifier-archive-admission",
+      "witnessId": "proofkit.package-verifier.archive-admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/archive_input_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestArchiveExpandedBudgetIncludesMetadata",
+          "command": "go test ./internal/tools/packageverify -run '^TestArchiveExpandedBudgetIncludesMetadata$'"
+        },
+        {
+          "selector": "TestArchiveGzipEntrypointPreservesCardinalityBoundary",
+          "command": "go test ./internal/tools/packageverify -run '^TestArchiveGzipEntrypointPreservesCardinalityBoundary$'"
+        },
+        {
+          "selector": "TestArchiveGzipEntrypointRejectsExpandedOverflowBeforeMissingBody",
+          "command": "go test ./internal/tools/packageverify -run '^TestArchiveGzipEntrypointRejectsExpandedOverflowBeforeMissingBody$'"
+        },
+        {
+          "selector": "TestRootPackageRetainsCompleteGzipFraming",
+          "command": "go test ./internal/tools/packageverify -run '^TestRootPackageRetainsCompleteGzipFraming$'"
+        },
+        {
+          "selector": "TestRootPackageWorkspaceHeaderPrecedesMissingBody",
+          "command": "go test ./internal/tools/packageverify -run '^TestRootPackageWorkspaceHeaderPrecedesMissingBody$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.release-closeout-archive-admission",
+      "witnessId": "proofkit.release-closeout.archive-admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasecloseoutinput/archive_input_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCloseoutNPMArchiveCardinality",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestCloseoutNPMArchiveCardinality$'"
+        },
+        {
+          "selector": "TestCloseoutNPMArchiveTopology",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestCloseoutNPMArchiveTopology$'"
+        },
+        {
+          "selector": "TestCloseoutNPMEntrySizeBoundaries",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestCloseoutNPMEntrySizeBoundaries$'"
+        },
+        {
+          "selector": "TestCloseoutNPMExpandedBoundary",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestCloseoutNPMExpandedBoundary$'"
+        },
+        {
+          "selector": "TestCloseoutNPMRejectsInvalidCompressedInputs",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestCloseoutNPMRejectsInvalidCompressedInputs$'"
+        },
+        {
+          "selector": "TestValidPackRecordsRejectsHashMatchingMalformedArchives",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestValidPackRecordsRejectsHashMatchingMalformedArchives$'"
+        },
+        {
+          "selector": "TestValidPackRecordsRequiresCompleteSingleArchive",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestValidPackRecordsRequiresCompleteSingleArchive$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.release-closeout-archive-file-admission",
+      "witnessId": "proofkit.release-closeout.archive-file-admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasecloseoutinput/archive_input_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNPMArchiveFIFORejectedWithoutBlocking",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestNPMArchiveFIFORejectedWithoutBlocking$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.release-metadata-archive-framing-bounds",
+      "witnessId": "proofkit.release-manifest.archive-framing-bounds-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasemanifest/carrier_identity_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCrossCarrierTraversalCountsPAXMetadata",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestCrossCarrierTraversalCountsPAXMetadata$'"
+        },
+        {
+          "selector": "TestCrossCarrierTraversalRequiresGzipIntegrity",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestCrossCarrierTraversalRequiresGzipIntegrity$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "scenarioId": "proofkit.supply-chain-quality.npm-python-carrier-binary-byte-identity",
       "witnessId": "proofkit.package-verifier.platform-binary-byte-identity-falsifier",
       "witnessKind": "contract",

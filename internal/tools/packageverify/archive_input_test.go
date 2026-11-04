@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -55,7 +56,7 @@ func TestArchiveGzipEntrypointRejectsExpandedOverflowBeforeMissingBody(t *testin
 				t.Fatal(err)
 			}
 			for index := 0; index < 3; index++ {
-				if _, err := writer.Write(archiveHeader(t, "package/expanded", 128<<20)); err != nil {
+				if _, err := writer.Write(archiveHeader(t, fmt.Sprintf("package/expanded-%d", index), 128<<20)); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := io.CopyN(writer, archiveZeroStream{}, 128<<20); err != nil {
@@ -177,7 +178,7 @@ func TestArchiveTruncationIsNotSuccess(t *testing.T) {
 func TestArchiveDefaultCardinalityLimit(t *testing.T) {
 	var archive bytes.Buffer
 	for index := 0; index < 4096; index++ {
-		archive.Write(archiveHeader(t, "package/data", 0))
+		archive.Write(archiveHeader(t, fmt.Sprintf("package/data-%d", index), 0))
 	}
 	positive := append(append([]byte{}, archive.Bytes()...), make([]byte, 1024)...)
 	entries, err := tarEntryHeadersFromGzip(bytes.NewReader(positive))
@@ -196,7 +197,7 @@ func TestArchiveDefaultCardinalityLimit(t *testing.T) {
 func TestArchiveGzipEntrypointPreservesCardinalityBoundary(t *testing.T) {
 	var headers bytes.Buffer
 	for index := 0; index < 4096; index++ {
-		headers.Write(archiveHeader(t, "package/data", 0))
+		headers.Write(archiveHeader(t, fmt.Sprintf("package/data-%d", index), 0))
 	}
 	for _, test := range []struct {
 		name string
@@ -254,6 +255,60 @@ func TestPackageArchiveReadBoundsBeforeHashing(t *testing.T) {
 	} {
 		if err := run(); err == nil || !strings.Contains(err.Error(), "resource limit") {
 			t.Fatalf("archive bound did not precede hashing: %v", err)
+		}
+	}
+}
+
+func TestRootPackageRetainsCompleteGzipFraming(t *testing.T) {
+	root := t.TempDir()
+	withWorkingDirectory(t, root)
+	entries := map[string]string{}
+	for _, name := range requiredRootEntries() {
+		entries[name] = "fixture"
+	}
+	entries[workspaceImageEntry] = string(workspacePNG(t, 4, 3))
+	valid := mustReadBytes(t, writePackageTarball(t, entries))
+	for _, corrupt := range []bool{false, true} {
+		content := bytes.Clone(valid)
+		if corrupt {
+			content[len(content)-8] ^= 1
+		}
+		name := "framing-proof.tgz"
+		writeFileBytes(t, filepath.Join(root, "artifacts/package", name), content)
+		_, err := verifyRootPackage(packRecord{Filename: name, Name: rootPackageName, Version: "1.2.3", Integrity: testNPMIntegrity(content), Shasum: testSHA1(content)})
+		if corrupt && !errors.Is(err, gzip.ErrChecksum) || !corrupt && err != nil {
+			t.Fatalf("root package framing: corrupt=%v err=%v", corrupt, err)
+		}
+	}
+}
+
+func TestRootPackageWorkspaceHeaderPrecedesMissingBody(t *testing.T) {
+	root := t.TempDir()
+	withWorkingDirectory(t, root)
+	for _, size := range []int64{maxWorkspaceImageBytes, maxWorkspaceImageBytes + 1} {
+		var compressed bytes.Buffer
+		writer := gzip.NewWriter(&compressed)
+		if _, err := writer.Write(archiveHeader(t, workspaceImageEntry, size)); err != nil {
+			t.Fatal(err)
+		}
+		if size == maxWorkspaceImageBytes {
+			if _, err := io.CopyN(writer, archiveZeroStream{}, size+1024); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatal(err)
+		}
+		content := compressed.Bytes()
+		name := "header-proof.tgz"
+		writeFileBytes(t, filepath.Join(root, "artifacts/package", name), content)
+		_, err := verifyRootPackage(packRecord{Filename: name, Name: rootPackageName, Version: "1.2.3", Integrity: testNPMIntegrity(content), Shasum: testSHA1(content)})
+		want := "workspace image requires bounded non-empty bytes and mode 0644"
+		if size == maxWorkspaceImageBytes {
+			want = "missing required entry"
+		}
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("root package header: size=%d err=%v want=%s", size, err, want)
 		}
 	}
 }

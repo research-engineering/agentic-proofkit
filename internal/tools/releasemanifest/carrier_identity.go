@@ -1,7 +1,6 @@
 package main
 
 import (
-	"archive/tar"
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
@@ -14,6 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packagearchive"
 )
 
 const (
@@ -95,62 +95,46 @@ func extractNPMCarrierBinaries(path string, scratch string) (map[string]extracte
 		return nil, err
 	}
 	defer gzipReader.Close()
-	tarReader := tar.NewReader(gzipReader)
 	expected := make(map[string]string, len(releaseplatform.Targets()))
 	for _, target := range releaseplatform.Targets() {
 		expected[target.PackageTarEntry] = target.PlatformSuffix
 	}
 	binaries := make(map[string]extractedCarrierBinary, len(expected))
-	seenNames := make(map[string]struct{})
 	var totalSize int64
-	entryCount := 0
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
+	validate := func(entry packagearchive.Entry) error {
+		if entry.Size > maxCarrierArchiveBytes-totalSize {
+			return fmt.Errorf("npm package carrier exceeds the uncompressed byte limit")
 		}
-		if err != nil {
-			return nil, err
-		}
-		entryCount++
-		if entryCount > maxCarrierArchiveEntries {
-			return nil, fmt.Errorf("npm package carrier exceeds the entry limit")
-		}
-		if _, duplicate := seenNames[header.Name]; duplicate {
-			return nil, fmt.Errorf("npm package carrier contains duplicate entries")
-		}
-		seenNames[header.Name] = struct{}{}
-		if header.Size < 0 || header.Size > maxCarrierArchiveBytes-totalSize {
-			return nil, fmt.Errorf("npm package carrier exceeds the uncompressed byte limit")
-		}
-		totalSize += header.Size
-		platformSuffix, wanted := expected[header.Name]
+		totalSize += entry.Size
+		return nil
+	}
+	visit := func(entry packagearchive.Entry, body io.Reader) error {
+		platformSuffix, wanted := expected[entry.Name]
 		if !wanted {
-			continue
-		}
-		if _, duplicate := binaries[platformSuffix]; duplicate {
-			return nil, fmt.Errorf("npm package carrier duplicates a release-platform binary")
-		}
-		if header.Typeflag != tar.TypeReg {
-			return nil, fmt.Errorf("npm package carrier release-platform binary is not a regular file")
-		}
-		if header.Size > maxCarrierBinaryBytes {
-			return nil, fmt.Errorf("package carrier binary exceeds the byte limit")
+			return nil
 		}
 		destination := filepath.Join(scratch, platformSuffix)
 		binary, err := os.OpenFile(destination, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		written, copyErr := io.CopyN(binary, tarReader, header.Size)
+		written, copyErr := io.CopyN(binary, body, entry.Size)
 		closeErr := binary.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
-			return nil, err
+			return err
 		}
-		if written != header.Size {
-			return nil, fmt.Errorf("package carrier binary size differs from its archive header")
+		if written != entry.Size {
+			return fmt.Errorf("package carrier binary size differs from its archive header")
 		}
 		binaries[platformSuffix] = extractedCarrierBinary{path: destination, size: written}
+		return nil
+	}
+	entries, err := packagearchive.BoundedEntries(gzipReader, packagearchive.MaxExpandedBytes, maxCarrierArchiveEntries, validate, visit)
+	if err != nil {
+		return nil, err
+	}
+	if err := packagearchive.VerifyPlatformClosure(entries); err != nil {
+		return nil, err
 	}
 	if len(binaries) != len(expected) {
 		return nil, fmt.Errorf("npm package carrier lacks exact release-platform binary closure")

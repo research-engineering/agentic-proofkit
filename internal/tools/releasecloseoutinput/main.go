@@ -33,8 +33,10 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packagearchive"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/retainedevidence"
@@ -1601,47 +1603,31 @@ func validPackRecords(root string, path string, manifest packageJSON) bool {
 }
 
 func packRecordBytesMatch(root string, record packRecord) bool {
-	return packRecordBytesMatchWithin(root, record, maxNPMTarballBytes)
+	return verifyPackRecordBytesWithin(root, record, maxNPMTarballBytes) == nil
 }
 
-func packRecordBytesMatchWithin(root string, record packRecord, maxBytes int64) bool {
-	if maxBytes <= 0 {
-		return false
-	}
+func verifyPackRecordBytesWithin(root string, record packRecord, maxBytes int64) error {
 	if filepath.Base(record.Filename) != record.Filename || filepath.Clean(record.Filename) != record.Filename || !filepath.IsLocal(record.Filename) {
-		return false
+		return fmt.Errorf("invalid npm archive filename")
 	}
 	relativePath := filepath.Join("artifacts", "package", record.Filename)
-	rootHandle, err := os.OpenRoot(root)
+	content, err := artifactfile.ReadBounded(root, filepath.ToSlash(relativePath), maxBytes)
 	if err != nil {
-		return false
+		return err
 	}
-	defer rootHandle.Close()
-	if !artifactDirectoriesAdmitted(rootHandle, relativePath) {
-		return false
+	if len(content) == 0 {
+		return fmt.Errorf("npm archive is empty")
 	}
-	before, err := rootHandle.Lstat(relativePath)
-	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxBytes {
-		return false
+	sha1Sum := sha1.Sum(content)
+	sha512Sum := sha512.Sum512(content)
+	if hex.EncodeToString(sha1Sum[:]) != record.Shasum || "sha512-"+base64.StdEncoding.EncodeToString(sha512Sum[:]) != record.Integrity {
+		return fmt.Errorf("npm archive digest mismatch")
 	}
-	file, err := rootHandle.Open(relativePath)
+	entries, err := packagearchive.GzipHeaders(content, maxBytes, nil)
 	if err != nil {
-		return false
+		return err
 	}
-	defer file.Close()
-	opened, err := file.Stat()
-	if err != nil || !os.SameFile(before, opened) || !opened.Mode().IsRegular() {
-		return false
-	}
-	sha1Hash := sha1.New()
-	sha512Hash := sha512.New()
-	written, err := io.Copy(io.MultiWriter(sha1Hash, sha512Hash), io.LimitReader(file, maxBytes+1))
-	if err != nil || written != before.Size() || hex.EncodeToString(sha1Hash.Sum(nil)) != record.Shasum || "sha512-"+base64.StdEncoding.EncodeToString(sha512Hash.Sum(nil)) != record.Integrity {
-		return false
-	}
-	after, statErr := file.Stat()
-	pathAfter, pathErr := rootHandle.Lstat(relativePath)
-	return statErr == nil && pathErr == nil && pathAfter.Mode()&os.ModeSymlink == 0 && os.SameFile(before, after) && os.SameFile(after, pathAfter) && before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
+	return packagearchive.VerifyPlatformClosure(entries)
 }
 
 func artifactDirectoriesAdmitted(root *os.Root, path string) bool {
