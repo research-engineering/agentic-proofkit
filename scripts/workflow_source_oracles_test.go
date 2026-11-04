@@ -549,8 +549,9 @@ func TestGoFormattingGatePropagatesFormatterFailures(t *testing.T) {
 		name, formatter string
 		exists, passes  bool
 	}{
-		{name: "formatted", formatter: "exit 0\n", exists: true, passes: true},
+		{name: "formatted", formatter: "test \"$#\" -eq 4 && test \"$1\" = -l && test \"$2\" = cmd && test \"$3\" = internal && test \"$4\" = scripts\n", exists: true, passes: true},
 		{name: "unformatted", formatter: "printf 'cmd/unformatted.go\\n'\nexit 0\n", exists: true},
+		{name: "silent failure", formatter: "exit 2\n", exists: true},
 		{name: "syntax failure", formatter: "printf 'synthetic syntax failure\\n' >&2\nexit 2\n", exists: true},
 		{name: "partial output failure", formatter: "printf 'cmd/unformatted.go\\n'\nexit 2\n", exists: true},
 		{name: "missing formatter"},
