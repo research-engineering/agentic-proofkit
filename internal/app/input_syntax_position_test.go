@@ -119,6 +119,9 @@ func TestInputSyntaxRejectionReportsLocationOutsidePredecessorOwners(t *testing.
 		{"{} {}", "invalid JSON input: multiple JSON values", " at line 1, column 4 (byte offset 3)"},
 		{"{", "invalid JSON input: unterminated object", " at line 1, column 2 (byte offset 1)"},
 		{"", "invalid JSON input: unexpected end", " at line 1, column 1 (byte offset 0)"},
+		{"tru", "invalid JSON input: unexpected token", " at line 1, column 4 (byte offset 3)"},
+		{"fals", "invalid JSON input: unexpected token", " at line 1, column 5 (byte offset 4)"},
+		{"nul", "invalid JSON input: unexpected token", " at line 1, column 4 (byte offset 3)"},
 		{"{\n  \"\u00e9\u20ac\U0001F600\": [1 2]\n}", "invalid JSON input: array values must be separated by comma", " at line 2, column 13 (byte offset 20)"},
 	}
 	// A generic-runner command and a dedicated-runner command.

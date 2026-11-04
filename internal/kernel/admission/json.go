@@ -474,6 +474,10 @@ func (scanner *jsonKeyScanner) parseNumberLike() {
 
 func (scanner *jsonKeyScanner) consumeLiteral(literal string) error {
 	if !bytes.HasPrefix(scanner.source[scanner.index:], []byte(literal)) {
+		remaining := scanner.source[scanner.index:]
+		if len(remaining) < len(literal) && bytes.Equal(remaining, []byte(literal[:len(remaining)])) {
+			return scanner.fail(len(scanner.source), "unexpected token")
+		}
 		return scanner.fail(scanner.index, "unexpected token")
 	}
 	scanner.index += len(literal)

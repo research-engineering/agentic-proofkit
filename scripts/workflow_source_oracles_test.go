@@ -520,6 +520,53 @@ func readPackageScriptsForTest(t *testing.T) map[string]string {
 	return manifest.Scripts
 }
 
+func TestGoFormattingGatePropagatesFormatterFailures(t *testing.T) {
+	shell, err := exec.LookPath("sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := readPackageScriptsForTest(t)["go:fmt"]
+	run := func(t *testing.T, command string, formatter string, exists bool) bool {
+		t.Helper()
+		root := t.TempDir()
+		if exists {
+			if err := os.WriteFile(filepath.Join(root, "gofmt"), []byte("#!/bin/sh\n"+formatter), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		process := exec.Command(shell, "-c", command)
+		process.Env = []string{"PATH=" + root}
+		_, err := process.CombinedOutput()
+		if err != nil {
+			var exit *exec.ExitError
+			if !errors.As(err, &exit) {
+				t.Fatalf("format gate did not execute: %v", err)
+			}
+		}
+		return err == nil
+	}
+	for _, item := range []struct {
+		name, formatter string
+		exists, passes  bool
+	}{
+		{name: "formatted", formatter: "exit 0\n", exists: true, passes: true},
+		{name: "unformatted", formatter: "printf 'cmd/unformatted.go\\n'\nexit 0\n", exists: true},
+		{name: "syntax failure", formatter: "printf 'synthetic syntax failure\\n' >&2\nexit 2\n", exists: true},
+		{name: "partial output failure", formatter: "printf 'cmd/unformatted.go\\n'\nexit 2\n", exists: true},
+		{name: "missing formatter"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			if got := run(t, script, item.formatter, item.exists); got != item.passes {
+				t.Fatalf("format gate passed = %v, want %v", got, item.passes)
+			}
+		})
+	}
+	const masked = `test -z "$(gofmt -l cmd internal scripts)"`
+	if !run(t, masked, "exit 2\n", true) {
+		t.Fatal("predecessor control no longer reproduces masked formatter failure")
+	}
+}
+
 func validateGoDependencyGate(scripts map[string]string, workflow githubWorkflow) error {
 	if scripts["go:deps"] != "go mod tidy -diff && go mod verify" {
 		return errors.New("go:deps must fail closed on non-mutating tidy and module verification")

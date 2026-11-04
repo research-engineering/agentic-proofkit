@@ -209,3 +209,39 @@ func TestSyntaxErrorKeepsMessageAndLocatesRejectedByte(t *testing.T) {
 		t.Fatalf("resource limit error = %v, want an unlocated non-syntax rejection", err)
 	}
 }
+
+func TestSyntaxErrorLocatesTruncatedLiteralsAtEndOfInput(t *testing.T) {
+	for _, literal := range []string{"true", "false", "null"} {
+		for length := 1; length < len(literal); length++ {
+			input := literal[:length]
+			_, err := DecodeJSON(strings.NewReader(input), 1024)
+			var syntax *SyntaxError
+			if !errors.As(err, &syntax) {
+				t.Fatalf("truncated literal %q error = %v, want *SyntaxError", input, err)
+			}
+			if syntax.Offset != length || syntax.Line != 1 || syntax.Column != length+1 {
+				t.Fatalf("truncated literal %q position = %d:%d:%d, want %d:1:%d", input, syntax.Offset, syntax.Line, syntax.Column, length, length+1)
+			}
+			if err.Error() != "invalid JSON input: unexpected token" {
+				t.Fatalf("truncated literal %q changed diagnostic: %v", input, err)
+			}
+		}
+		if _, err := DecodeJSON(strings.NewReader(literal), 1024); err != nil {
+			t.Fatalf("complete literal %q was rejected: %v", literal, err)
+		}
+	}
+	for _, item := range []struct {
+		input                string
+		offset, line, column int
+	}{
+		{input: "{\"\u00e9\":tru", offset: 9, line: 1, column: 9},
+		{input: "[\r\n  fals", offset: 9, line: 2, column: 7},
+		{input: "{\"x\":\r  nul", offset: 11, line: 2, column: 6},
+	} {
+		_, err := DecodeJSON(strings.NewReader(item.input), 1024)
+		var syntax *SyntaxError
+		if !errors.As(err, &syntax) || syntax.Offset != item.offset || syntax.Line != item.line || syntax.Column != item.column {
+			t.Fatalf("nested literal position = %+v, want byte %d line %d column %d", syntax, item.offset, item.line, item.column)
+		}
+	}
+}
