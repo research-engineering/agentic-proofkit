@@ -142,7 +142,38 @@ func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) 
 	if err := verifyWheelArchive(wheelPath, wheel, manifest, target, record.BinarySha256, license, contract); err != nil {
 		return nil, err
 	}
+	if err := verifyWheelWrappers(wheel, "."); err != nil {
+		return nil, err
+	}
 	return wheel, nil
+}
+
+func verifyWheelWrappers(wheel []byte, sourceRoot string) error {
+	archive, err := zip.NewReader(bytes.NewReader(wheel), int64(len(wheel)))
+	if err != nil {
+		return err
+	}
+	for _, name := range []string{"__init__.py", "__main__.py", "cli.py"} {
+		expected, err := artifactfile.ReadBounded(sourceRoot, "python/agentic_proofkit/"+name, maximumWheelTextEntryBytes)
+		if err != nil {
+			return err
+		}
+		matches := 0
+		for _, entry := range archive.File {
+			if entry.Name != "agentic_proofkit/"+name {
+				continue
+			}
+			content, err := readZipFile(entry)
+			if err != nil || !bytes.Equal(content, expected) {
+				return fmt.Errorf("wheel wrapper differs from current source")
+			}
+			matches++
+		}
+		if matches != 1 {
+			return fmt.Errorf("wheel wrapper must occur exactly once")
+		}
+	}
+	return nil
 }
 
 func readBoundedWheel(path string) ([]byte, error) {

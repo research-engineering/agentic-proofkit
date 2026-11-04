@@ -32,6 +32,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def ensure_executable(path: Path) -> None:
+    if os.name != "nt" and os.access(path, os.X_OK):
+        return
     mode = path.stat().st_mode
     wanted = mode | stat.S_IXUSR
     if os.name != "nt":

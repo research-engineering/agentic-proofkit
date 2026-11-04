@@ -39,9 +39,13 @@ func TestPOSIXWrapperExecPreservesProcessIdentityAndSignals(t *testing.T) {
 	for _, item := range []struct{ name, path string }{
 		{"selected", python}, {"real", realPython}, {"symlink", symlink}, {"exec-shim", shim},
 	} {
-		t.Run(item.name, func(t *testing.T) {
-			assertPOSIXWrapperLifecycle(t, item.path)
-		})
+		for _, mode := range []struct{ before, after os.FileMode }{
+			{0o755, 0o755}, {0o750, 0o750}, {0o644, 0o755},
+		} {
+			t.Run(fmt.Sprintf("%s/%04o", item.name, mode.before), func(t *testing.T) {
+				assertPOSIXWrapperLifecycle(t, item.path, mode.before, mode.after)
+			})
+		}
 	}
 }
 
@@ -66,7 +70,7 @@ func executedPython(t *testing.T, launcher string) string {
 	return path
 }
 
-func assertPOSIXWrapperLifecycle(t *testing.T, python string) {
+func assertPOSIXWrapperLifecycle(t *testing.T, python string, beforeMode, afterMode os.FileMode) {
 	t.Helper()
 	expectedPython := executedPython(t, python)
 	root := t.TempDir()
@@ -106,7 +110,10 @@ with open(profile_path, "w", encoding="utf-8") as handle:
 while True:
     time.sleep(0.1)
 `
-	if err := os.WriteFile(binary, []byte(fakeBinary), 0o755); err != nil {
+	if err := os.WriteFile(binary, []byte(fakeBinary), beforeMode); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(binary, beforeMode); err != nil {
 		t.Fatal(err)
 	}
 	pidFile := filepath.Join(root, "child.pid")
@@ -132,6 +139,13 @@ while True:
 	pid := waitForPID(t, pidFile, command.Process.Pid)
 	if pid != command.Process.Pid {
 		t.Fatalf("wrapper pid=%d embedded CLI pid=%d, want exec-preserved identity", command.Process.Pid, pid)
+	}
+	info, err := os.Stat(binary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != afterMode {
+		t.Fatalf("wrapper executable mode=%04o, want %04o", got, afterMode)
 	}
 	profile := waitForFile(t, profileFile)
 	profileLines := strings.Split(strings.TrimSuffix(profile, "\n"), "\n")
