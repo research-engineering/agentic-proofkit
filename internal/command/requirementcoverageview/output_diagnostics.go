@@ -139,7 +139,7 @@ func admitRetainedUnknownReferenceDiagnostics(record map[string]any, failures []
 	for _, raw := range record["requirementCoverage"].([]any) {
 		row := raw.(map[string]any)
 		knownRequirements[stringValue(row["requirementId"])] = struct{}{}
-		for _, witness := range append(stringArray(row["witnessRefs"]), stringArray(row["witnessSelectors"])...) {
+		for _, witness := range stringArray(row["witnessRefs"]) {
 			knownWitnesses[witness] = struct{}{}
 		}
 		for _, rawRoute := range anyArray(row["declaredWitnessRoutes"]) {

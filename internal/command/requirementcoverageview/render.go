@@ -48,7 +48,6 @@ func markdown(view map[string]any) string {
 		} else {
 			lines = append(lines,
 				"- Witnesses: "+markdownfmt.CodeListOrNone(stringArray(requirement["witnessRefs"])),
-				"- Witness selectors: "+markdownfmt.CodeListOrNone(stringArray(requirement["witnessSelectors"])),
 			)
 		}
 		lines = append(lines,
@@ -221,7 +220,6 @@ func requirementBody(requirement map[string]any) browserdoc.Fragment {
 	} else {
 		definitions = append(definitions,
 			browserdoc.Definition("Witness refs", browserdoc.ListOrNone(stringArray(requirement["witnessRefs"]), true)),
-			browserdoc.Definition("Witness selectors", browserdoc.ListOrNone(stringArray(requirement["witnessSelectors"]), true)),
 		)
 	}
 	return browserdoc.Concat(
