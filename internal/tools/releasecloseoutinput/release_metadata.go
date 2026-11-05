@@ -16,13 +16,19 @@ type releaseManifestEvidence struct {
 	sha256 string
 }
 
-func readReleaseManifest(root string) releaseManifestEvidence {
+func readReleaseJSON[T any](root, path string) (T, []byte, error) {
 	const maximumBytes = 16 << 20
-	content, err := artifactfile.ReadBounded(root, "artifacts/release/release-manifest.json", maximumBytes)
+	content, err := artifactfile.ReadBounded(root, path, maximumBytes)
 	if err != nil {
-		return releaseManifestEvidence{}
+		var zero T
+		return zero, nil, err
 	}
-	record, err := admission.DecodeTypedJSON[releaseManifest](bytes.NewReader(content), maximumBytes)
+	record, err := admission.DecodeTypedJSON[T](bytes.NewReader(content), maximumBytes)
+	return record, content, err
+}
+
+func readReleaseManifest(root string) releaseManifestEvidence {
+	record, content, err := readReleaseJSON[releaseManifest](root, "artifacts/release/release-manifest.json")
 	if err != nil {
 		return releaseManifestEvidence{}
 	}

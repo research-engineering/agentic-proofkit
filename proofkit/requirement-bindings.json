@@ -4745,7 +4745,7 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-002",
-      "scenarioId": "proofkit.supply-chain-quality.release-sbom",
+      "scenarioId": "proofkit.supply-chain-quality.release-sbom-artifact-subject-admission",
       "witnessId": "proofkit.release-sbom.artifact-subject-admission",
       "witnessKind": "contract",
       "witnessPath": "internal/tools/releasemanifest/sbom_subjects_test.go",
@@ -4756,6 +4756,25 @@
         }
       ],
       "commandIds": ["proofkit.go-test", "proofkit.package-artifact"],
+      "environmentClasses": ["local-go", "local-go-python"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-002",
+      "scenarioId": "proofkit.supply-chain-quality.release-sbom-closeout-subject-admission",
+      "witnessId": "proofkit.release-sbom.closeout-subject-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasecloseoutinput/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildInputFailsClosedForEachBlockingEvidenceClass",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputFailsClosedForEachBlockingEvidenceClass$'"
+        },
+        {
+          "selector": "TestBuildInputProducesAdmittedSatisfiedCloseout",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputProducesAdmittedSatisfiedCloseout$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test", "proofkit.package-gate"],
       "environmentClasses": ["local-go", "local-go-python"]
     },
     {
@@ -5181,8 +5200,8 @@
       "witnessPath": "internal/tools/releasecloseoutinput/archive_input_unix_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestNPMArchiveFIFORejectedWithoutBlocking",
-          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestNPMArchiveFIFORejectedWithoutBlocking$'"
+          "selector": "TestBuildInputRejectsNPMArchiveFIFOWithoutBlocking",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputRejectsNPMArchiveFIFOWithoutBlocking$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

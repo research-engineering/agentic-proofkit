@@ -20,7 +20,7 @@ func verifyPackRecords(root string, path string, manifest packageJSON) (map[stri
 	if !ok {
 		return nil, false
 	}
-	records, err := readTypedJSON[[]packRecord](root, path)
+	records, _, err := readReleaseJSON[[]packRecord](root, path)
 	if err != nil || len(records) != 1 {
 		return nil, false
 	}

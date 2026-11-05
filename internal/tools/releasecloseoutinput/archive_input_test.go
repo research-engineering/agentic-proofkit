@@ -78,12 +78,16 @@ func npmArchive(t *testing.T, headers []tar.Header) []byte {
 	var out bytes.Buffer
 	gzipWriter := gzip.NewWriter(&out)
 	writer := tar.NewWriter(gzipWriter)
-	for _, header := range headers {
+	for index, header := range headers {
 		if err := writer.WriteHeader(&header); err != nil {
 			t.Fatal(err)
 		}
 		if header.Typeflag == tar.TypeReg {
-			if _, err := io.CopyN(writer, npmZeroStream{}, header.Size); err != nil {
+			if header.Size == 1 {
+				if _, err := writer.Write([]byte{byte(index)}); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := io.CopyN(writer, npmZeroStream{}, header.Size); err != nil {
 				t.Fatal(err)
 			}
 		}

@@ -87,11 +87,18 @@ func TestCompleteFixtureCopiesAreIsolated(t *testing.T) {
 }
 
 func TestBuildInputRejectsSymlinkedReleaseMetadata(t *testing.T) {
-	for _, name := range []string{"release-manifest.json", "release-notes.md", "sbom.cdx.json", "checksums.sha256"} {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range []struct{ path, artifactCriterion string }{
+		{path: "artifacts/release/release-manifest.json"},
+		{path: "artifacts/release/release-notes.md"},
+		{path: "artifacts/release/sbom.cdx.json"},
+		{path: "artifacts/release/checksums.sha256"},
+		{path: "artifacts/package/npm-pack.json", artifactCriterion: "proofkit.release_closeout.package_artifacts"},
+		{path: "artifacts/pypi/python-packages.json", artifactCriterion: "proofkit.release_closeout.python_wrappers"},
+	} {
+		t.Run(filepath.Base(tc.path), func(t *testing.T) {
 			root := completeFixture(t)
-			local := filepath.Join(root, "artifacts", "release", name)
-			outside := filepath.Join(t.TempDir(), name)
+			local := filepath.Join(root, tc.path)
+			outside := filepath.Join(t.TempDir(), "foreign")
 			content, err := os.ReadFile(local)
 			if err != nil {
 				t.Fatal(err)
@@ -108,8 +115,11 @@ func TestBuildInputRejectsSymlinkedReleaseMetadata(t *testing.T) {
 				t.Fatal(err)
 			}
 			assertCriterionStatus(t, input, "proofkit.release_closeout.manifest_and_sbom", "missing_evidence")
+			if tc.artifactCriterion != "" {
+				assertCriterionStatus(t, input, tc.artifactCriterion, "missing_evidence")
+			}
 			wantChannelScope := "satisfied"
-			if name == "release-manifest.json" {
+			if tc.path == "artifacts/release/release-manifest.json" {
 				wantChannelScope = "missing_evidence"
 			}
 			assertCriterionStatus(t, input, "proofkit.release_closeout.channel_scope", wantChannelScope)
@@ -484,16 +494,25 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			mutate: func(root string) {
 				path := filepath.Join(root, "artifacts", "release", "sbom.cdx.json")
 				bom := readJSONMap(t, path)
-				for _, raw := range bom["components"].([]any) {
-					component := raw.(map[string]any)
-					if component["bom-ref"] == "file:dist/platform/linux-x64/agentic-proofkit" {
-						component["hashes"].([]any)[0].(map[string]any)["content"] = strings.Repeat("f", 64)
-						writeJSON(t, path, bom)
-						writeCloseoutArchiveChecksums(t, root)
-						return
-					}
+				closeoutSBOMSubjectHash(t, bom, "file:dist/platform/linux-x64/agentic-proofkit")["content"] = strings.Repeat("f", 64)
+				writeJSON(t, path, bom)
+				writeCloseoutArchiveChecksums(t, root)
+			},
+		},
+		{
+			name:        "swapped SBOM binary subjects with matching external checksums",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				path := filepath.Join(root, "artifacts", "release", "sbom.cdx.json")
+				bom := readJSONMap(t, path)
+				first := closeoutSBOMSubjectHash(t, bom, "file:dist/platform/linux-arm64/agentic-proofkit")
+				second := closeoutSBOMSubjectHash(t, bom, "file:dist/platform/linux-x64/agentic-proofkit")
+				if first["content"] == second["content"] {
+					t.Fatal("fixture must distinguish platform binary digests")
 				}
-				t.Fatal("fixture is missing its Linux x64 subject")
+				first["content"], second["content"] = second["content"], first["content"]
+				writeJSON(t, path, bom)
+				writeCloseoutArchiveChecksums(t, root)
 			},
 		},
 		{
@@ -1681,15 +1700,14 @@ func writeCloseoutArchiveChecksums(t *testing.T, root string) {
 
 func writeCloseoutSBOM(t *testing.T, root string, npmBytes []byte, wheelDigest string) {
 	t.Helper()
-	// The four tar fixture members each contain one zero byte.
-	binaryDigest := fmt.Sprintf("%x", sha256.Sum256([]byte{0}))
+	binaryDigest := func(payload byte) string { return fmt.Sprintf("%x", sha256.Sum256([]byte{payload})) }
 	subjects := []struct{ path, digest, kind string }{
 		{"artifacts/package/" + testNPMTarballName, fmt.Sprintf("%x", sha256.Sum256(npmBytes)), "application"},
 		{"artifacts/pypi/" + testPythonWheelName, wheelDigest, "application"},
-		{"dist/platform/darwin-arm64/agentic-proofkit", binaryDigest, "file"},
-		{"dist/platform/darwin-x64/agentic-proofkit", binaryDigest, "file"},
-		{"dist/platform/linux-arm64/agentic-proofkit", binaryDigest, "file"},
-		{"dist/platform/linux-x64/agentic-proofkit", binaryDigest, "file"},
+		{"dist/platform/darwin-arm64/agentic-proofkit", binaryDigest(1), "file"},
+		{"dist/platform/darwin-x64/agentic-proofkit", binaryDigest(2), "file"},
+		{"dist/platform/linux-arm64/agentic-proofkit", binaryDigest(3), "file"},
+		{"dist/platform/linux-x64/agentic-proofkit", binaryDigest(4), "file"},
 	}
 	components := make([]any, 0, len(subjects))
 	for _, subject := range subjects {
@@ -1702,6 +1720,18 @@ func writeCloseoutSBOM(t *testing.T, root string, npmBytes []byte, wheelDigest s
 	writeJSON(t, filepath.Join(root, "artifacts", "release", "sbom.cdx.json"), map[string]any{
 		"bomFormat": "CycloneDX", "specVersion": "1.6", "components": components,
 	})
+}
+
+func closeoutSBOMSubjectHash(t *testing.T, bom map[string]any, ref string) map[string]any {
+	t.Helper()
+	for _, raw := range bom["components"].([]any) {
+		component := raw.(map[string]any)
+		if component["bom-ref"] == ref {
+			return component["hashes"].([]any)[0].(map[string]any)
+		}
+	}
+	t.Fatalf("fixture is missing SBOM subject %q", ref)
+	return nil
 }
 
 func writePythonWheelFixture(t *testing.T, root string, extraHeaders ...zip.FileHeader) (string, string) {

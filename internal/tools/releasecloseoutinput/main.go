@@ -1603,7 +1603,7 @@ func artifactDirectoriesAdmitted(root *os.Root, path string) bool {
 }
 
 func readPythonPackageSet(root string, path string, manifest packageJSON) ([]pythonWheel, bool) {
-	packages, err := readTypedJSON[pythonPackageSet](root, path)
+	packages, _, err := readReleaseJSON[pythonPackageSet](root, path)
 	if err != nil || packages.PackageName != pythonPackageName || packages.PackageVersion != manifest.Version || len(packages.Packages) == 0 {
 		return nil, false
 	}
