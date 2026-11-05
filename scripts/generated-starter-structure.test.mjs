@@ -63,7 +63,7 @@ const adapterImportsPredecessor = `import { closeSync, fstatSync, fsyncSync, lst
 import { randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 `;
-const adapterImportsCurrent = `import { closeSync, fstatSync, fsyncSync, lstatSync, mkdirSync, mkdtempSync, openSync, readSync, realpathSync, renameSync, rmdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+const adapterImportsCurrent = `import { closeSync, constants, fstatSync, fsyncSync, lstatSync, mkdirSync, mkdtempSync, openSync, readSync, realpathSync, renameSync, rmdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -258,11 +258,29 @@ adapterStdinDelta("PHYSICAL-OUTPUT-ROOT", adapterBundleRows,
 adapterStdinDelta("OUTPUT-ROOT-BINDING", adapterBundleRows,
   jsonText("  return {argument: relative(root, filePath), filePath};"),
   jsonText("  return {argument: relative(root, filePath), filePath, cwd: root};")),
+Object.freeze({
+  id: "ADAPTER-NONBLOCKING-INPUT",
+  reason: "POSIX file acquisition must not block before regular-file admission.",
+  rows: adapterBundleRows,
+  predecessor: jsonText('  const fd = openSync(filePath, "r");'),
+  current: jsonText(`  // A FIFO without a writer must not block before descriptor admission.
+  const flags = process.platform === "win32" ? "r" : constants.O_RDONLY | constants.O_NONBLOCK;
+  const fd = openSync(filePath, flags);`),
+  occurrences: 1,
+}),
+Object.freeze({
+  id: "ADAPTER-ARGV-SNAPSHOT",
+  reason: "Argument admission and execution must consume one owned snapshot.",
+  rows: adapterBundleRows,
+  predecessor: jsonText("prepared = prepareOutputArgs(options.cwd, args);"),
+  current: jsonText("prepared = prepareOutputArgs(options.cwd, [...args]);"),
+  occurrences: 1,
+}),
 adapterStdinDelta("SHA256", adapterBundleRows,
   "sha256:e9089d40688aa25c2565633825244c55bcadab85b65c74242ef871cedc2c6533",
-  "sha256:434d4b3a03096288ae895711ba0626e7e705fdc7724cfcba3e7306d8ce5ec06b"),
-adapterStdinDelta("LINE-COUNT", ["adapter-default", "adapter-explicit-json"], "\"lineCount\": 1124", "\"lineCount\": 1224"),
-adapterStdinDelta("LINE-COUNT-COMPACT", ["adapter-compact"], "\"lineCount\":1124", "\"lineCount\":1224"),
+  "sha256:cb547ed0459b5c2a24d8a4946bef4919cf8354e9c85bdd89db5c59427d088f09"),
+adapterStdinDelta("LINE-COUNT", ["adapter-default", "adapter-explicit-json"], "\"lineCount\": 1124", "\"lineCount\": 1226"),
+adapterStdinDelta("LINE-COUNT-COMPACT", ["adapter-compact"], "\"lineCount\":1124", "\"lineCount\":1226"),
 ]);
 const count = (text, needle) => text.split(needle).length - 1;
 // Returns the predecessor stdout implied by the declared deltas of a row, or null
@@ -403,7 +421,7 @@ test("starter schema does not launder native-only hash line-count and rendered-c
 
 test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
   const delta = declaredStreamDeltas.find(item => item.id === "PILOT-D10");
-  assert.equal(declaredStreamDeltas.length, 18);
+  assert.equal(declaredStreamDeltas.length, 20);
   const rows = baseline.observations.filter(row => delta.rows.includes(row.name));
   assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   const current = invoke(rows[0]).stdout;
@@ -420,9 +438,9 @@ test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
   assert.equal(conservesPredecessor(unlisted, unlistedCurrent + delta.current), false, "delta applied to an unlisted row");
 });
 
-test("the ADAPTER-STDIN-FILE deltas are exact and limited to the adapter bundle rows", () => {
-  const deltas = declaredStreamDeltas.filter(item => item.id.startsWith("ADAPTER-STDIN-FILE-"));
-  assert.equal(deltas.length, 16);
+test("the adapter deltas are exact and limited to the adapter bundle rows", () => {
+  const deltas = declaredStreamDeltas.filter(item => item.id.startsWith("ADAPTER-"));
+  assert.equal(deltas.length, 18);
   const rows = baseline.observations.filter(row => adapterBundleRows.includes(row.name));
   assert.deepEqual(rows.map(row => row.name), [...adapterBundleRows]);
   for (const row of rows) {
@@ -431,7 +449,7 @@ test("the ADAPTER-STDIN-FILE deltas are exact and limited to the adapter bundle 
     assert.equal(source.includes(adapterTransportCurrent), true, `${row.name}/file transport`);
     assert.equal(source.includes("input: options.inputMode"), false, `${row.name}/no spawnSync input option`);
     const applied = deltas.filter(item => item.rows.includes(row.name));
-    assert.equal(applied.length, 15, row.name);
+    assert.equal(applied.length, 17, row.name);
     for (const delta of applied) {
       const reverted = current.replace(delta.current, delta.predecessor);
       assert.notEqual(reverted, current, `${row.name}/${delta.id}`);

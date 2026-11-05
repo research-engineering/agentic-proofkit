@@ -42,9 +42,10 @@ func ProofBindingEntryNonClaims() []string {
 // NormalizedProjection is the owner-owned projection used by downstream
 // commands that need the flattened direct inventory and its source-set envelope.
 type NormalizedProjection struct {
-	Envelope  map[string]any
-	Inventory map[string]any
-	Result    Result
+	Envelope              map[string]any
+	Inventory             map[string]any
+	Result                Result
+	RouteResolutionOrders map[string]int
 }
 
 func admitNormalizedInventoryID(raw any, context string) (string, error) {
@@ -145,11 +146,13 @@ func AdmitNormalizedProjection(raw any, directInventory any, context string) (No
 		return NormalizedProjection{}, fmt.Errorf("%s projectionKind and projectionSummary must be present together", context)
 	}
 	var projectionSummary map[string]any
+	var routeOrders map[string]int
 	if projectionKind != "" {
 		if projectionKind != ProofBindingProjectionKind {
 			return NormalizedProjection{}, fmt.Errorf("%s projectionKind is unsupported", context)
 		}
-		projectionSummary, err = admitProofBindingProjectionSummary(record["projectionSummary"], result.Inventory.Entries, context+" projectionSummary")
+		routeOrders = make(map[string]int, len(result.Inventory.Entries))
+		projectionSummary, err = admitProofBindingProjectionSummary(record["projectionSummary"], result.Inventory.Entries, routeOrders, context+" projectionSummary")
 		if err != nil {
 			return NormalizedProjection{}, err
 		}
@@ -173,10 +176,10 @@ func AdmitNormalizedProjection(raw any, directInventory any, context string) (No
 	if projectionSummary != nil {
 		envelope["projectionSummary"] = projectionSummary
 	}
-	return NormalizedProjection{Envelope: envelope, Inventory: InventoryValue(result.Inventory), Result: result}, nil
+	return NormalizedProjection{Envelope: envelope, Inventory: InventoryValue(result.Inventory), Result: result, RouteResolutionOrders: routeOrders}, nil
 }
 
-func admitProofBindingProjectionSummary(raw any, entries []Entry, context string) (map[string]any, error) {
+func admitProofBindingProjectionSummary(raw any, entries []Entry, routeOrders map[string]int, context string) (map[string]any, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("%s must be an object", context)
@@ -207,7 +210,7 @@ func admitProofBindingProjectionSummary(raw any, entries []Entry, context string
 	if commandRefCount != len(sortedUnique(commandRefs)) {
 		return nil, fmt.Errorf("%s commandRefCount must equal unique nested inventory commandRefs", context)
 	}
-	mappings, err := admitRouteEntryMappings(record["routeEntryMappings"], entriesByID, context+" routeEntryMappings")
+	mappings, err := admitRouteEntryMappings(record["routeEntryMappings"], entriesByID, routeOrders, context+" routeEntryMappings")
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +225,7 @@ func admitProofBindingProjectionSummary(raw any, entries []Entry, context string
 	}, nil
 }
 
-func admitRouteEntryMappings(raw any, entriesByID map[string]Entry, context string) ([]any, error) {
+func admitRouteEntryMappings(raw any, entriesByID map[string]Entry, routeOrders map[string]int, context string) ([]any, error) {
 	values, ok := raw.([]any)
 	if !ok {
 		return nil, fmt.Errorf("%s must be an array", context)
@@ -325,6 +328,7 @@ func admitRouteEntryMappings(raw any, entriesByID map[string]Entry, context stri
 		if entry.EvidenceClass != EvidenceClassProofRouteCandidate || entry.Falsifier != nil || entry.Oracle != nil || len(entry.OwnerInvariantRefs) != 0 || len(entry.QualityFindings) != 0 || !slices.Equal(entry.NonClaims, proofBindingEntryNonClaims) {
 			return nil, fmt.Errorf("%s nested inventory entry must retain exact proof-route-candidate semantics", mappingContext)
 		}
+		routeOrders[witnessRouteID] = resolutionOrderIndex
 		result = append(result, map[string]any{
 			"bindingRecordId":      bindingRecordID,
 			"requirementId":        requirementID,

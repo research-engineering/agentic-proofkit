@@ -61,27 +61,42 @@ func admitCompositeInput(raw any) (compositeInput, error) {
 		return compositeInput{}, err
 	}
 	var inventoryResult *testevidenceinventory.Result
-	if record["testEvidenceInventory"] != nil {
+	if record["normalizedTestEvidenceInventory"] != nil {
+		normalized, err := testevidenceinventory.AdmitNormalizedProjection(record["normalizedTestEvidenceInventory"], record["testEvidenceInventory"], "requirement coverage view normalizedTestEvidenceInventory")
+		if err != nil {
+			return compositeInput{}, err
+		}
+		if err := admitDerivedResolutionOrder(proof, normalized.RouteResolutionOrders); err != nil {
+			return compositeInput{}, err
+		}
+		inventoryResult = &normalized.Result
+	} else if record["testEvidenceInventory"] != nil {
 		result, err := testevidenceinventory.Evaluate(record["testEvidenceInventory"])
 		if err != nil {
 			return compositeInput{}, err
 		}
 		inventoryResult = &result
 	}
-	if record["normalizedTestEvidenceInventory"] != nil {
-		normalized, err := testevidenceinventory.AdmitNormalizedProjection(record["normalizedTestEvidenceInventory"], record["testEvidenceInventory"], "requirement coverage view normalizedTestEvidenceInventory")
-		if err != nil {
-			return compositeInput{}, err
-		}
-		if inventoryResult == nil {
-			inventoryResult = &normalized.Result
-		}
-	}
 	return compositeInput{
 		CoverageUniverse: universe, Inventory: inventoryResult,
 		LocalEnvironmentPolicy: policy, OwnerInvariantRegistry: registry,
 		Proof: proof, Source: sourceResult.Source, ViewInputID: viewInputID,
 	}, nil
+}
+
+func admitDerivedResolutionOrder(proof proofProjection, derivedOrders map[string]int) error {
+	if proof.Mode != "compact" || len(derivedOrders) == 0 {
+		return nil
+	}
+	// Route identity does not include the order, and the two route sets need not match.
+	for _, requirement := range proof.Requirements {
+		for _, route := range requirement.DeclaredWitnessRoutes {
+			if order, exists := derivedOrders[route.WitnessRouteID]; exists && order != route.ResolutionOrder {
+				return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory projectionSummary routeEntryMappings resolutionOrderIndex must match compactProofContract for witnessRouteId %s", route.WitnessRouteID)
+			}
+		}
+	}
+	return nil
 }
 
 func buildProofProjection(structured any, compact any, policy *localEnvironmentPolicy, source requirementsourceadmission.Source) (proofProjection, error) {

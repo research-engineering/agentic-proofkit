@@ -397,8 +397,14 @@ func surfacesValue(values []surface) []any {
 }
 
 func observedTestSurfaceID(ownerID string, sourcePath string) string {
+	const prefix = "surface.observed_test."
 	sum := sha256.Sum256([]byte(ownerID + "\x00" + sourcePath))
-	return "surface.observed_test." + ruleFragment(ownerID) + "." + letters(sum[:8])
+	suffix := letters(sum[:8])
+	readable := prefix + ruleFragment(ownerID) + "." + suffix
+	if len(readable) <= admit.MaxRuleIDBytes {
+		return readable
+	}
+	return prefix + suffix
 }
 
 func letters(raw []byte) string {
