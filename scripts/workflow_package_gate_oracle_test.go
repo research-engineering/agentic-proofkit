@@ -1983,9 +1983,8 @@ test "${translated:-0}" = "0"
 `
 }
 
-// Both Darwin architectures run the same owner step list. Only the first
-// step's expected architecture and the job topology (name, runner label,
-// timeout) distinguish arm64 from x86_64. The Linux arm64 job runs the same
+// Both Darwin architectures run the same test suite. Intel needs a longer
+// package timeout for the native adapter and CLI contract tests. Linux arm64 runs the same
 // setup, invariant packages and platform smoke after its own architecture
 // check, then the CPython 3.11.0 installed smoke over a fresh release wheel set.
 func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
@@ -2014,10 +2013,14 @@ func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
 			Run:  requiredDarwinArchitectureShell(architecture),
 		})
 		expected = append(expected, platformSmokeSetupSteps()...)
+		goTests := "npm run go:test"
+		if jobID == "platform-smoke-intel" {
+			goTests += " -- -timeout=20m"
+		}
 		expected = append(expected,
 			githubStep{Name: "Run Darwin filesystem and process invariants", Run: requiredPlatformInvariantCommand},
 			githubStep{Name: "Install pinned Go test dependencies", Run: "npm ci --ignore-scripts"},
-			githubStep{Name: "Run full native Go tests", Run: "npm run go:test"},
+			githubStep{Name: "Run full native Go tests", Run: goTests},
 			githubStep{Name: "Run platform smoke", Run: requiredPlatformSmokeShell},
 		)
 	}
@@ -2157,7 +2160,7 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 	}{
 		"source-quality":             {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 30},
 		"platform-smoke":             {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 30},
-		"platform-smoke-intel":       {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 30},
+		"platform-smoke-intel":       {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 45},
 		"platform-smoke-linux-arm64": {name: "quality / platform smoke / linux-arm64", runner: "ubuntu-24.04-arm", timeoutMinutes: 30},
 		"browser-runtime":            {name: "quality / browser runtime", runner: "ubuntu-24.04", timeoutMinutes: 20},
 		"browser-visual":             {name: "quality / browser visual references", runner: "ubuntu-24.04-arm", timeoutMinutes: 20},

@@ -239,7 +239,7 @@ jobs:
   platform-smoke-intel:
     name: quality / platform smoke / macos-15-intel
     runs-on: macos-15-intel
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Verify native Darwin architecture
         run: |
@@ -282,7 +282,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Run full native Go tests
-        run: npm run go:test
+        run: npm run go:test -- -timeout=20m
 
       - name: Run platform smoke
         run: |
