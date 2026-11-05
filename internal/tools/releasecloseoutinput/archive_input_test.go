@@ -16,20 +16,35 @@ import (
 )
 
 func TestWheelCriterionRejectsUnsafeNonBinaryEntries(t *testing.T) {
+	const entryLimit = 4096
+	regular := func(name string) zip.FileHeader {
+		header := zip.FileHeader{Name: name, Method: zip.Store}
+		header.SetMode(0o644)
+		return header
+	}
+	extra := regular("agentic_proofkit/extra.py")
+	symlink := extra
+	symlink.SetMode(os.ModeSymlink | 0o777)
+	// The fixture adds one executable member; all other entries are unique.
+	bounded := make([]zip.FileHeader, entryLimit)
+	for i := range bounded {
+		bounded[i] = regular(fmt.Sprintf("agentic_proofkit/data/%d", i))
+	}
 	for _, test := range []struct {
-		name, member, want string
-		mode               os.FileMode
+		name, want string
+		extras     []zip.FileHeader
 	}{
-		{"regular", "agentic_proofkit/extra.py", "satisfied", 0o644},
-		{"symlink", "agentic_proofkit/extra.py", "missing_evidence", os.ModeSymlink | 0o777},
-		{"noncanonical", "agentic_proofkit//extra.py", "missing_evidence", 0o644},
-		{"file ancestor", "agentic_proofkit/bin", "missing_evidence", 0o644},
+		{"regular", "satisfied", []zip.FileHeader{extra}},
+		{"symlink", "missing_evidence", []zip.FileHeader{symlink}},
+		{"noncanonical", "missing_evidence", []zip.FileHeader{regular("agentic_proofkit//extra.py")}},
+		{"file ancestor", "missing_evidence", []zip.FileHeader{regular("agentic_proofkit/bin")}},
+		{"duplicate non-binary", "missing_evidence", []zip.FileHeader{extra, extra}},
+		{"exact entry limit", "satisfied", bounded[:entryLimit-1]},
+		{"over entry limit", "missing_evidence", bounded},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
-			header := zip.FileHeader{Name: test.member, Method: zip.Store}
-			header.SetMode(test.mode)
-			wheel, binary := writePythonWheelFixture(t, root, header)
+			wheel, binary := writePythonWheelFixture(t, root, test.extras...)
 			writeJSON(t, filepath.Join(root, "artifacts/pypi/python-packages.json"), map[string]any{
 				"packageName": testPythonPackageName, "packageVersion": "1.2.3",
 				"packages": []any{map[string]any{"binarySha256": binary, "filename": testPythonWheelName, "name": testPythonPackageName, "sha256": wheel, "version": "1.2.3"}},

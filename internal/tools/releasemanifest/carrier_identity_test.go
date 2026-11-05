@@ -105,25 +105,28 @@ func TestCrossCarrierTraversalRequiresGzipIntegrity(t *testing.T) {
 func TestWheelCarrierChecksTopologyAndSameLengthContent(t *testing.T) {
 	expectedPath := filepath.Join(t.TempDir(), "expected")
 	writeFile(t, expectedPath, "binary-a")
+	extra := zip.FileHeader{Name: "agentic_proofkit/extra.py", Method: zip.Store}
+	extra.SetMode(0o644)
+	symlink := extra
+	symlink.SetMode(os.ModeSymlink | 0o777)
 	for _, test := range []struct {
 		name, content string
-		unsafe, equal bool
+		extras        []zip.FileHeader
+		equal         bool
+		wantError     string
 	}{
-		{"matching", "binary-a", false, true},
-		{"different bytes", "binary-b", false, false},
-		{"unsafe member", "binary-a", true, false},
+		{"matching", "binary-a", []zip.FileHeader{extra}, true, ""},
+		{"different bytes", "binary-b", nil, false, ""},
+		{"unsafe member", "binary-a", []zip.FileHeader{symlink}, false, "canonical regular ZIP entries"},
+		{"duplicate member", "binary-a", []zip.FileHeader{extra, extra}, false, "duplicate ZIP entries"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			var extras []zip.FileHeader
-			if test.unsafe {
-				extra := zip.FileHeader{Name: "agentic_proofkit/extra.py", Method: zip.Store}
-				extra.SetMode(os.ModeSymlink | 0o777)
-				extras = append(extras, extra)
-			}
 			path := filepath.Join(t.TempDir(), "carrier.whl")
-			writeWheelCarrier(t, path, []byte(test.content), extras...)
+			writeWheelCarrier(t, path, []byte(test.content), test.extras...)
 			equal, _, err := wheelCarrierBinaryEquals(path, extractedCarrierBinary{path: expectedPath, size: int64(len("binary-a"))})
-			if equal != test.equal || (err != nil) != test.unsafe {
+			if equal != test.equal ||
+				(test.wantError == "" && err != nil) ||
+				(test.wantError != "" && (err == nil || !strings.Contains(err.Error(), test.wantError))) {
 				t.Fatalf("wheel carrier equal=%v err=%v", equal, err)
 			}
 		})
