@@ -140,8 +140,8 @@ jobs:
           go test -count=1 -c -o "$RUNNER_TEMP/proofkit-fsync.test" ./internal/kernel/repositorytransaction
           TMPDIR="$RUNNER_TEMP/proofkit-fsync" strace -f -yy -e trace=fsync -o "$RUNNER_TEMP/proofkit-fsync.log" \
             "$RUNNER_TEMP/proofkit-fsync.test" -test.run '^TestApplyCommitsAndRepeatedPlanIsAlreadySatisfied$'
-          rg 'fsync\([^<]*<[^>]+/proofkit-fsync/[^>]+/\.agentic-proofkit>\) += 0' "$RUNNER_TEMP/proofkit-fsync.log" >/dev/null
-          rg 'fsync\([^<]*<[^>]+/proofkit-fsync/[^>]+/\.agentic-proofkit/[^>]+/journal\.tmp>\) += 0' "$RUNNER_TEMP/proofkit-fsync.log" >/dev/null
+          grep -E 'fsync\([^<]*<[^>]+/proofkit-fsync/[^>]+/\.agentic-proofkit>\) += 0' "$RUNNER_TEMP/proofkit-fsync.log" >/dev/null
+          grep -E 'fsync\([^<]*<[^>]+/proofkit-fsync/[^>]+/\.agentic-proofkit/[^>]+/journal\.tmp>\) += 0' "$RUNNER_TEMP/proofkit-fsync.log" >/dev/null
 
       - name: Run Go vet
         run: npm run go:vet
