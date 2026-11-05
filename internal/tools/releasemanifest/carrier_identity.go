@@ -29,11 +29,12 @@ type pythonWheelIdentity struct {
 }
 
 func verifyCrossCarrierBinaryIdentity(packageDir string, pythonDir string, localRecords []packRecord, pythonPackages *pythonPackageSet) (identities map[string]pythonWheelIdentity, returnErr error) {
-	if pythonPackages == nil {
-		return nil, nil
-	}
 	if len(localRecords) != 1 {
 		return nil, fmt.Errorf("cross-carrier identity requires exactly one npm package artifact")
+	}
+	npmPath := filepath.Join(packageDir, localRecords[0].Filename)
+	if pythonPackages == nil {
+		return nil, readNPMCarrier(npmPath, nil)
 	}
 	scratch, err := os.MkdirTemp("", "proofkit-carrier-binaries-")
 	if err != nil {
@@ -42,7 +43,7 @@ func verifyCrossCarrierBinaryIdentity(packageDir string, pythonDir string, local
 	defer func() {
 		returnErr = errors.Join(returnErr, os.RemoveAll(scratch))
 	}()
-	npmBinaries, err := extractNPMCarrierBinaries(filepath.Join(packageDir, localRecords[0].Filename), scratch)
+	npmBinaries, err := extractNPMCarrierBinaries(npmPath, scratch)
 	if err != nil {
 		return nil, fmt.Errorf("decode npm package carrier: %w", err)
 	}
@@ -84,22 +85,17 @@ type extractedCarrierBinary struct {
 	size int64
 }
 
-func extractNPMCarrierBinaries(path string, scratch string) (map[string]extractedCarrierBinary, error) {
+func readNPMCarrier(path string, visit func(packagearchive.Entry, io.Reader) error) error {
 	file, err := openBoundedCarrier(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer file.Close()
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer gzipReader.Close()
-	expected := make(map[string]string, len(releaseplatform.Targets()))
-	for _, target := range releaseplatform.Targets() {
-		expected[target.PackageTarEntry] = target.PlatformSuffix
-	}
-	binaries := make(map[string]extractedCarrierBinary, len(expected))
 	var totalSize int64
 	validate := func(entry packagearchive.Entry) error {
 		if entry.Size > maxCarrierArchiveBytes-totalSize {
@@ -108,7 +104,20 @@ func extractNPMCarrierBinaries(path string, scratch string) (map[string]extracte
 		totalSize += entry.Size
 		return nil
 	}
-	visit := func(entry packagearchive.Entry, body io.Reader) error {
+	entries, err := packagearchive.BoundedEntries(gzipReader, packagearchive.MaxExpandedBytes, maxCarrierArchiveEntries, validate, visit)
+	if err != nil {
+		return err
+	}
+	return packagearchive.VerifyPlatformClosure(entries)
+}
+
+func extractNPMCarrierBinaries(path string, scratch string) (map[string]extractedCarrierBinary, error) {
+	expected := make(map[string]string, len(releaseplatform.Targets()))
+	for _, target := range releaseplatform.Targets() {
+		expected[target.PackageTarEntry] = target.PlatformSuffix
+	}
+	binaries := make(map[string]extractedCarrierBinary, len(expected))
+	err := readNPMCarrier(path, func(entry packagearchive.Entry, body io.Reader) error {
 		platformSuffix, wanted := expected[entry.Name]
 		if !wanted {
 			return nil
@@ -128,12 +137,8 @@ func extractNPMCarrierBinaries(path string, scratch string) (map[string]extracte
 		}
 		binaries[platformSuffix] = extractedCarrierBinary{path: destination, size: written}
 		return nil
-	}
-	entries, err := packagearchive.BoundedEntries(gzipReader, packagearchive.MaxExpandedBytes, maxCarrierArchiveEntries, validate, visit)
+	})
 	if err != nil {
-		return nil, err
-	}
-	if err := packagearchive.VerifyPlatformClosure(entries); err != nil {
 		return nil, err
 	}
 	if len(binaries) != len(expected) {
@@ -155,64 +160,34 @@ func wheelCarrierBinaryEquals(path string, expected extractedCarrierBinary) (boo
 		return false, "", err
 	}
 	defer reader.Close()
-	if len(reader.File) > maxCarrierArchiveEntries {
-		return false, "", fmt.Errorf("python wheel carrier exceeds the entry limit")
+	entries, err := packagearchive.AdmitZIPEntries(reader.File, maxCarrierArchiveEntries)
+	if err != nil {
+		return false, "", err
 	}
-	seen := map[string]struct{}{}
-	found := false
-	equal := false
-	binarySHA256 := ""
-	for _, entry := range reader.File {
-		if _, duplicate := seen[entry.Name]; duplicate {
-			return false, "", fmt.Errorf("python wheel carrier contains duplicate entries")
-		}
-		seen[entry.Name] = struct{}{}
-		if entry.Name != wheelBinaryEntry {
-			continue
-		}
-		if entry.Mode()&os.ModeSymlink != 0 || !entry.FileInfo().Mode().IsRegular() {
-			return false, "", fmt.Errorf("python wheel carrier binary is not a regular file")
-		}
-		if entry.UncompressedSize64 > uint64(maxCarrierBinaryBytes) {
-			return false, "", fmt.Errorf("python wheel carrier binary exceeds the byte limit")
-		}
-		if found {
-			return false, "", fmt.Errorf("python wheel carrier contains duplicate embedded binaries")
-		}
-		found = true
-		if int64(entry.UncompressedSize64) != expected.size {
-			continue
-		}
-		member, err := entry.Open()
-		if err != nil {
-			return false, "", err
-		}
-		expectedFile, err := os.Open(expected.path)
-		if err != nil {
-			member.Close()
-			return false, "", err
-		}
-		hash := sha256.New()
-		equal, err = equalCarrierStreams(io.TeeReader(member, hash), expectedFile)
-		memberCloseErr := member.Close()
-		expectedCloseErr := expectedFile.Close()
-		if err != nil {
-			return false, "", err
-		}
-		if memberCloseErr != nil {
-			return false, "", memberCloseErr
-		}
-		if expectedCloseErr != nil {
-			return false, "", expectedCloseErr
-		}
-		if equal {
-			binarySHA256 = hex.EncodeToString(hash.Sum(nil))
-		}
-	}
+	entry, found := entries[wheelBinaryEntry]
 	if !found {
 		return false, "", fmt.Errorf("python wheel carrier lacks its embedded binary")
 	}
-	return equal, binarySHA256, nil
+	if entry.UncompressedSize64 > uint64(maxCarrierBinaryBytes) {
+		return false, "", fmt.Errorf("python wheel carrier binary exceeds the byte limit")
+	}
+	if int64(entry.UncompressedSize64) != expected.size {
+		return false, "", nil
+	}
+	member, err := entry.Open()
+	if err != nil {
+		return false, "", err
+	}
+	expectedFile, err := os.Open(expected.path)
+	if err != nil {
+		return false, "", errors.Join(err, member.Close())
+	}
+	hash := sha256.New()
+	equal, err := equalCarrierStreams(io.TeeReader(member, hash), expectedFile)
+	if err := errors.Join(err, member.Close(), expectedFile.Close()); err != nil || !equal {
+		return false, "", err
+	}
+	return true, hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func equalCarrierStreams(left io.Reader, right io.Reader) (bool, error) {

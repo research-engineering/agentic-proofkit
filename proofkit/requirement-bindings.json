@@ -5130,6 +5130,10 @@
         {
           "selector": "TestValidPackRecordsRequiresCompleteSingleArchive",
           "command": "go test ./internal/tools/releasecloseoutinput -run '^TestValidPackRecordsRequiresCompleteSingleArchive$'"
+        },
+        {
+          "selector": "TestWheelCriterionRejectsUnsafeNonBinaryEntries",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestWheelCriterionRejectsUnsafeNonBinaryEntries$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -5164,6 +5168,10 @@
         {
           "selector": "TestCrossCarrierTraversalRequiresGzipIntegrity",
           "command": "go test ./internal/tools/releasemanifest -run '^TestCrossCarrierTraversalRequiresGzipIntegrity$'"
+        },
+        {
+          "selector": "TestReleaseManifestRejectsCorruptNPMOnlyCarrier",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestReleaseManifestRejectsCorruptNPMOnlyCarrier$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -5194,6 +5202,10 @@
         {
           "selector": "TestCrossCarrierBinaryIdentityReadsFinalArchives",
           "command": "go test ./internal/tools/releasemanifest -run '^TestCrossCarrierBinaryIdentityReadsFinalArchives$'"
+        },
+        {
+          "selector": "TestWheelCarrierChecksTopologyAndSameLengthContent",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestWheelCarrierChecksTopologyAndSameLengthContent$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

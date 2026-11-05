@@ -1688,37 +1688,30 @@ func pythonWheelBytesMatch(rootPath string, wheel pythonWheel) bool {
 		return false
 	}
 	reader, err := zip.NewReader(file, before.Size())
-	if err != nil || len(reader.File) > maxPythonWheelEntries {
+	if err != nil {
 		return false
 	}
-	seen := make(map[string]struct{}, len(reader.File))
-	found := false
-	for _, entry := range reader.File {
-		if _, duplicate := seen[entry.Name]; duplicate {
-			return false
-		}
-		seen[entry.Name] = struct{}{}
-		if entry.Name != pythonWheelBinaryEntry {
-			continue
-		}
-		if found || entry.Mode()&os.ModeSymlink != 0 || !entry.FileInfo().Mode().IsRegular() || entry.UncompressedSize64 > uint64(maxPythonBinaryBytes) {
-			return false
-		}
-		found = true
-		member, err := entry.Open()
-		if err != nil {
-			return false
-		}
-		binaryHash := sha256.New()
-		binarySize, copyErr := io.Copy(binaryHash, io.LimitReader(member, maxPythonBinaryBytes+1))
-		closeErr := member.Close()
-		if copyErr != nil || closeErr != nil || binarySize != int64(entry.UncompressedSize64) || hex.EncodeToString(binaryHash.Sum(nil)) != wheel.BinarySha256 {
-			return false
-		}
+	entries, err := packagearchive.AdmitZIPEntries(reader.File, maxPythonWheelEntries)
+	if err != nil {
+		return false
+	}
+	entry, found := entries[pythonWheelBinaryEntry]
+	if !found || entry.UncompressedSize64 > uint64(maxPythonBinaryBytes) {
+		return false
+	}
+	member, err := entry.Open()
+	if err != nil {
+		return false
+	}
+	binaryHash := sha256.New()
+	binarySize, copyErr := io.Copy(binaryHash, io.LimitReader(member, maxPythonBinaryBytes+1))
+	closeErr := member.Close()
+	if copyErr != nil || closeErr != nil || binarySize != int64(entry.UncompressedSize64) || hex.EncodeToString(binaryHash.Sum(nil)) != wheel.BinarySha256 {
+		return false
 	}
 	after, statErr := file.Stat()
 	pathAfter, pathErr := root.Lstat(relativePath)
-	return found && statErr == nil && pathErr == nil && pathAfter.Mode()&os.ModeSymlink == 0 && os.SameFile(before, after) && os.SameFile(after, pathAfter) && before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
+	return statErr == nil && pathErr == nil && pathAfter.Mode()&os.ModeSymlink == 0 && os.SameFile(before, after) && os.SameFile(after, pathAfter) && before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
 }
 
 func releaseChecksumInventoriesMatch(root string, manifest packageJSON) bool {

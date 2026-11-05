@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"fmt"
@@ -13,6 +14,33 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packagearchive"
 )
+
+func TestWheelCriterionRejectsUnsafeNonBinaryEntries(t *testing.T) {
+	for _, test := range []struct {
+		name, member, want string
+		mode               os.FileMode
+	}{
+		{"regular", "agentic_proofkit/extra.py", "satisfied", 0o644},
+		{"symlink", "agentic_proofkit/extra.py", "missing_evidence", os.ModeSymlink | 0o777},
+		{"noncanonical", "agentic_proofkit//extra.py", "missing_evidence", 0o644},
+		{"file ancestor", "agentic_proofkit/bin", "missing_evidence", 0o644},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			header := zip.FileHeader{Name: test.member, Method: zip.Store}
+			header.SetMode(test.mode)
+			wheel, binary := writePythonWheelFixture(t, root, header)
+			writeJSON(t, filepath.Join(root, "artifacts/pypi/python-packages.json"), map[string]any{
+				"packageName": testPythonPackageName, "packageVersion": "1.2.3",
+				"packages": []any{map[string]any{"binarySha256": binary, "filename": testPythonWheelName, "name": testPythonPackageName, "sha256": wheel, "version": "1.2.3"}},
+			})
+			result := pythonArtifactCriterion(root, packageJSON{Version: "1.2.3"})
+			if result.Status != test.want {
+				t.Fatalf("wheel topology criterion = %q, want %q", result.Status, test.want)
+			}
+		})
+	}
+}
 
 // Literal owner expectations avoid using the production platform projection as
 // both fixture generator and the only acceptance oracle.

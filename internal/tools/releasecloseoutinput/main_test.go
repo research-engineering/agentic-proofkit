@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -1565,7 +1566,7 @@ func populateCompleteFixture(t *testing.T, root string) {
 	writeLocalSelfEvidence(t, root, execution)
 }
 
-func writePythonWheelFixture(t *testing.T, root string) (string, string) {
+func writePythonWheelFixture(t *testing.T, root string, extraHeaders ...zip.FileHeader) (string, string) {
 	t.Helper()
 	path := filepath.Join(root, "artifacts", "pypi", testPythonWheelName)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -1585,6 +1586,15 @@ func writePythonWheelFixture(t *testing.T, root string) (string, string) {
 	binary := []byte("fixture-binary")
 	if _, err := member.Write(binary); err != nil {
 		t.Fatal(err)
+	}
+	for _, header := range extraHeaders {
+		member, err := wheel.CreateHeader(&header)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := io.WriteString(member, "extra wheel member"); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := wheel.Close(); err != nil {
 		t.Fatal(err)

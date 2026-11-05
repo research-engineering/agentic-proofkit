@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"path/filepath"
+	"path"
 	"sort"
 	"strings"
 
@@ -107,7 +107,7 @@ func BoundedEntries(reader io.Reader, maximumBytes int64, maximumEntries int, va
 	}
 }
 
-func verifyFileTree(seen map[string]struct{}) error {
+func verifyFileTree[V any](seen map[string]V) error {
 	names := make([]string, 0, len(seen))
 	for name := range seen {
 		names = append(names, name)
@@ -117,7 +117,7 @@ func verifyFileTree(seen map[string]struct{}) error {
 		prefix := name + "/"
 		index := sort.SearchStrings(names, prefix)
 		if index < len(names) && strings.HasPrefix(names[index], prefix) {
-			return fmt.Errorf("root package contains conflicting file paths")
+			return fmt.Errorf("package archive contains conflicting file paths")
 		}
 	}
 	return nil
@@ -146,12 +146,14 @@ func finishArchive(limited *io.LimitedReader) error {
 	}
 }
 
+func canonicalEntryPath(name string) bool {
+	return name != "" && name != "." && name != ".." &&
+		!strings.HasPrefix(name, "/") && !strings.HasPrefix(name, "../") &&
+		!strings.ContainsAny(name, "\x00\\") && path.Clean(name) == name
+}
+
 func VerifyHeader(entry Entry) error {
-	if entry.Name == "" || strings.Contains(entry.Name, "\x00") || strings.HasPrefix(entry.Name, "/") || strings.Contains(entry.Name, "\\") {
-		return fmt.Errorf("root package contains unsafe tar entry path %q", entry.Name)
-	}
-	cleaned := filepath.ToSlash(filepath.Clean(entry.Name))
-	if cleaned != entry.Name || cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") || strings.Contains(cleaned, "/../") {
+	if !canonicalEntryPath(entry.Name) {
 		return fmt.Errorf("root package contains unsafe tar entry path %q", entry.Name)
 	}
 	if !strings.HasPrefix(entry.Name, "package/") {
