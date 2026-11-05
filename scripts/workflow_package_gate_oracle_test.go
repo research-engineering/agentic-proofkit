@@ -21,7 +21,7 @@ const mergeSatisfyingProducerEnv = "PROOFKIT_MERGE_SATISFYING_PRODUCER"
 
 const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild current && ./dist/agentic-proofkit --help >/dev/null && go run ./internal/tools/pythonpackage build-current && go run ./internal/tools/pythonpackage verify-current"
 const setupVerifiedNPMActionSHA256 = "e5b863b6c0c9fac02ed3e00708d760cb3bc3ef6dc33c138b6ca13670d5895339"
-const ciSourceQualityStepInventorySHA256 = "20e94f4ab8563fb287e128b88d5844d8707156d635fc03fb8c4be351776e5b3e"
+const ciSourceQualityStepInventorySHA256 = "a705023e9dc89284b1e8a61b29bd2ef2b87fcc3a68f1681b8afc09b9934276e7"
 const ciBrowserRuntimeStepInventorySHA256 = "c157f7ee933119596eecbce7dd03478c84389736fd99248ef884e338f24d9ee4"
 const ciBrowserVisualStepInventorySHA256 = "6f19d5ff18a70bcff69441bdbf8a783b8e0ec9456c971cfb4df3c75e688b741a"
 const ciBrowserMatrixStepInventorySHA256 = "05461faaee041a60936e63dfd20484068ac04d1b91504fbddad78fec80056c6f"
