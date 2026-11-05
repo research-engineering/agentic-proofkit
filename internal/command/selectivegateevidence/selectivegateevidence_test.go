@@ -797,3 +797,27 @@ func assertFailedRuleDiagnostic(t *testing.T, result Result, ruleID string, want
 	}
 	t.Fatalf("missing rule %s", ruleID)
 }
+
+func TestBuildRejectsMissingDerivedPublicAPIRoute(t *testing.T) {
+	input := validEvidenceInput()
+	evidencePlan(input)["publicApiContractTouched"] = true
+	_, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "public-api obligation is missing") {
+		t.Fatalf("Build() error=%v, want missing public API route", err)
+	}
+}
+
+func TestBuildRejectsProducerReceiptReuseAcrossCommands(t *testing.T) {
+	input := validEvidenceInput()
+	plan := evidencePlan(input)
+	plan["requiredCommands"] = append(plan["requiredCommands"].([]any), map[string]any{
+		"id": "proofkit.go-test", "command": "go test ./other", "reason": "A separate planned test command.",
+	})
+	receipt := selectiveReceiptRecord()
+	receipt["command"] = "go test ./other"
+	input["receipts"] = append(input["receipts"].([]any), receipt)
+	result, err := Build(input)
+	if err != nil || result.ExitCode != 1 || result.Report.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%q err=%v, want failed", result.ExitCode, result.Report.State, err)
+	}
+}

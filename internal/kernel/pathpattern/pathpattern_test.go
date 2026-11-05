@@ -8,7 +8,7 @@ func TestMatchesAllRootNamesUsesTheCompiledWildcardLanguage(t *testing.T) {
 		want    bool
 	}{
 		{"*", true}, {"**", true}, {"**/*", true}, {"**/**", true},
-		{"***", true}, {"****/*", true}, {"**/**/**", true},
+		{"***", true}, {"****/*", false}, {"**/**/**", true},
 		{"docs/**", false}, {"*.go", false}, {"*/*", false},
 		{"*/**", false}, {"**/*/*", false}, {"***/*", false}, {"x", false},
 	} {
@@ -39,6 +39,10 @@ func TestMatchAdmitsRepoRelativeGlobSemantics(t *testing.T) {
 		want    bool
 	}{
 		{"docs", "docs/a.md", true},
+		{"stable*", "stablejson/x.go", true},
+		{"a**/b", "ab", false},
+		{"a**/b", "abc/b/x.go", true},
+		{"a**/b", "abc/def/b", false},
 		{"docs/*.md", "docs/a.md", true},
 		{"docs/*.md", "docs/nested/a.md", false},
 		{"docs/**/*.md", "docs/a.md", true},

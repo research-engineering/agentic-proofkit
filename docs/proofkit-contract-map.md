@@ -9,7 +9,10 @@ Owner: `proofkit`.
 This map helps consuming repositories choose the smallest Proofkit CLI command
 or JSON contract without loading the full README or source tree. It is not an
 exhaustive schema reference. The canonical command inventory is
-`proofkit/cli-contract.v2.json`.
+`proofkit/cli-contract.v2.json`. The process contract publishes flag operand
+counts and the standalone `--version` invocation. Released binaries report
+the version embedded from the package manifest. Source builds report
+`(devel)`.
 
 In a command direction, `childDefinitionBindings` binds `pathSegments` to the
 one shipped `definitionRef` and its digest; `*` means each array element.
@@ -34,6 +37,8 @@ identity parsing and cross-record references. Parent commands publish their
 own structural schemas with the same native-semantic limits. The installed
 machine-contract resource is bounded to 8 MiB; this does not raise other
 package entry limits.
+The source JSON keeps one compact command or definition per line so a Git diff
+shows which records changed.
 
 Each structural variant `schema` is a self-contained JSON Schema document.
 A repeated object subschema of its root resource is shared when it contains no
@@ -62,6 +67,21 @@ route, and an input class recorded as absent means only that no indicator of
 that class is reachable from the route. The schemas never become semantic or
 policy authority; native admission remains authoritative and may refuse values
 a schema admits.
+
+A fresh scaffold routes its generated witness input to `witness-plan` and
+marks requirement bindings as caller content. The workflow accepts a
+`bootstrap_witness_plan` reference for that first step. A `witness_plan`
+reference continues to name a scheduler-plan input.
+
+Repository-relative path selectors are anchored to the repository root. A
+matched directory selects its descendants. Within a segment `*` matches
+characters other than a slash. A complete `**` segment may cross directory
+boundaries.
+
+For temporary endpoint evidence, provide `policy.endpointEvaluationTime` as an
+RFC 3339 UTC timestamp. An expiry must be strictly later than the supplied
+instant. Admission uses that declared instant and does not fetch endpoint or
+clock evidence.
 
 `receipt-currentness-scope` and `receipt-trust-class` publish nested input and
 output structures, including required nullable fields and typed report

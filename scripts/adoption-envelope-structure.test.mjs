@@ -77,7 +77,7 @@ const blockerKeys = ['blockerId', 'nonClaim', 'reason', 'requiredInputKinds', 's
 const planCommandKeys = ['argv', 'commandId', 'inputRefIds', 'nonClaim', 'owner'];
 const phases = ['profile', 'bootstrap', 'bind', 'migrate', 'plan-gates', 'collect-evidence', 'release'];
 const scenarios = ['existing_gradual_adoption', 'legacy_proof_migration', 'new_repository', 'release_channel'];
-const inputKinds = ['adoption_checklist', 'branch_authority', 'external_consumer', 'gradual_adoption_bootstrap', 'gradual_adoption_guidance', 'migration_plan',
+const inputKinds = ['adoption_checklist', 'bootstrap_witness_plan', 'branch_authority', 'external_consumer', 'gradual_adoption_bootstrap', 'gradual_adoption_guidance', 'migration_plan',
   'receipt_producer_admission', 'registry_consumer', 'release_authority', 'repo_profile_scaffold', 'requirement_bindings', 'selective_gate_evidence',
   'selective_gate_plan', 'witness_plan'];
 const presets = ['agentic_runtime_repo', 'generated_docs_contract_repo', 'python_service', 'python_typescript_service', 'typescript_monorepo', 'typescript_workspace'];

@@ -11,6 +11,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/semversion"
 )
 
 type packageJSON struct {
@@ -58,7 +59,7 @@ func run(args []string) error {
 	if err := os.MkdirAll("dist", 0o755); err != nil {
 		return err
 	}
-	_, _, err := packageMetadata()
+	version, _, err := packageMetadata()
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func run(args []string) error {
 			"build",
 			"-trimpath",
 			"-buildvcs=false",
-			"-ldflags=-buildid=",
+			"-ldflags=-buildid= -X github.com/research-engineering/agentic-proofkit/internal/app.buildVersion="+version,
 			"-o",
 			target.BinaryPath,
 			"./cmd/agentic-proofkit",
@@ -109,8 +110,8 @@ func packageMetadata() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	if manifest.Version == "" {
-		return "", "", fmt.Errorf("root package version is required")
+	if !semversion.IsExact(manifest.Version) {
+		return "", "", fmt.Errorf("root package version must be an exact semantic version")
 	}
 	if manifest.Repository.URL == "" {
 		return "", "", fmt.Errorf("root package repository url is required")

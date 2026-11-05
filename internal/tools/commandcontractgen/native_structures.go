@@ -1116,8 +1116,12 @@ func (owner nativeStructure) definition() (map[string]any, error) {
 			required = root["required"]
 		}
 		kinds[kind] = struct{}{}
-		// Root projections above read the native schema; only the published
-		// copy shares repeated subtrees, and Hoist proves it expands back.
+		// Root projections above read the native schema. Normalize repeated
+		// dialect declarations before sharing publication subtrees.
+		schema, err = schemadefs.NormalizeDialectDeclarations(schema)
+		if err != nil {
+			return nil, fmt.Errorf("native structure %s variant %s: %w", owner.id, variant.id, err)
+		}
 		published, err := schemadefs.Hoist(schema)
 		if err != nil {
 			return nil, fmt.Errorf("native structure %s variant %s: %w", owner.id, variant.id, err)

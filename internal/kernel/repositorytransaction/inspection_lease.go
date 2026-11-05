@@ -49,9 +49,10 @@ func (file *inspectionFile) Close() error {
 }
 
 var (
-	ErrInspectionRouteChanged = errors.New("repository inspection route changed")
-	ErrReadCleanup            = errors.New("repository read cleanup failed")
-	ErrUnsafeInspectionRoute  = errors.New("repository inspection route is unsafe")
+	ErrInspectionRouteChanged   = errors.New("repository inspection route changed")
+	ErrReadCleanup              = errors.New("repository read cleanup failed")
+	ErrUnsafeInspectionRoute    = errors.New("repository inspection route is unsafe")
+	ErrUnsafeControlPermissions = errors.New("repository transaction control permissions are unsafe")
 )
 
 func isReadCleanup(err error) bool {

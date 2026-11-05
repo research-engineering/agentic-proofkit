@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
 import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
-import {expandSharedDefinitions} from './schema-definitions.mjs';
+import {embeddedSchema, expandSharedDefinitions} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_GRADUAL_CONTRACT || new URL('proofkit/cli-contract.v2.json', root)));
@@ -700,7 +700,7 @@ test('shared witness and repair predicates retain their exact finite domains', (
     assert.deepEqual(property(policies, 'networkPolicies').items.enum, ['external', 'loopback', 'none']);
   }
   witnessCommand(checks.get('gradual-adoption-bootstrap/output')[0].schema.properties.witnessPlan);
-  assert.deepEqual(checks.get('gradual-adoption-bootstrap/output')[0].schema.properties.witnessPlan, shared('output'), 'nested plan must preserve the independently exercised standalone output shape');
+  assert.deepEqual(checks.get('gradual-adoption-bootstrap/output')[0].schema.properties.witnessPlan, embeddedSchema(shared('output')), 'nested plan must preserve the independently exercised standalone output shape');
   for (const [command, index] of [['gradual-adoption-guidance', 2], ['gradual-adoption-bootstrap', 3]]) {
     const shape = checks.get(command + '/output')[index].schema;
     const repair = invoke(command, '{}', 'repair', ['--agent-envelope']);

@@ -32,11 +32,21 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 	return runWithProjectView(ctx, args, stdin, stdout, stderr, renderer, capabilities, runProjectView)
 }
 
+// buildVersion is supplied from the release package manifest by packagebuild.
+var buildVersion = "(devel)"
+
 func runWithProjectView(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer, capabilities PresentationCapabilities, projectView projectViewRunner) int {
 	args, layout, layoutExplicit, err := parseProcessOptions(args)
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
+	}
+	if len(args) > 0 && args[0] == "--version" {
+		if len(args) != 1 || layoutExplicit {
+			writeDiagnosticf(stderr, "--version accepts no additional options or operands")
+			return 1
+		}
+		return writeText(cliexec.BinaryName+" "+buildVersion+"\n", 0, nil, stdout, stderr)
 	}
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" {
 		if layoutExplicit {

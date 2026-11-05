@@ -266,6 +266,12 @@ identity-bound terminal receipts use schema v2. Finishing recovery alone does
 not establish downgrade compatibility; no automatic downgrade or control-state
 deletion is supported.
 
+Add `.agentic-proofkit/` to the consuming repository's ignore rules before
+the first materialization. It is private local control state, and a Git
+checkout cannot preserve the required directory permissions. If control state
+has already been committed, keep the original private copy for recovery and
+remove the tracked copy from version control before using a fresh checkout.
+
 New transactions prepare their complete journal in a private
 `.agentic-proofkit/transaction-residue/preparing-*` directory before publishing
 the active transaction. Interrupted unpublished preparation is retained there,

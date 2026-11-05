@@ -15,6 +15,7 @@ func usageWithRenderer(renderer cliexec.Renderer) string {
 	lines := []string{
 		"Usage:",
 		"  agentic-proofkit [--json-layout pretty|compact] <command> [arguments]",
+		"  " + renderer.DisplayCommand("--version"),
 		"",
 		"Start here: the agent bootstrap, then the project's next action:",
 		"  " + renderer.DisplayCommand("integration", "source") + " --tool <" + strings.Join(integration.flagValueChoices["--tool"], "|") + "> --format text",

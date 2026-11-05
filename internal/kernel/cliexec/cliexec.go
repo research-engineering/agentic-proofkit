@@ -44,7 +44,7 @@ func AdmitLauncherProfile(profile string, pythonExecutable string) (Renderer, er
 		if pythonExecutable == "" || !filepath.IsAbs(pythonExecutable) {
 			return Renderer{}, fmt.Errorf("%s must be a non-empty absolute path when %s is %s", PythonExecutableEnvironment, LauncherProfileEnvironment, ProfilePythonModule)
 		}
-		if admit.ContainsSecretLikeValue(pythonExecutable) || strings.IndexFunc(pythonExecutable, isControlOrFormat) >= 0 {
+		if admit.ContainsSecretLikePathValue(pythonExecutable) || strings.IndexFunc(pythonExecutable, isControlOrFormat) >= 0 {
 			return Renderer{}, fmt.Errorf("%s must not contain secret-like or control values", PythonExecutableEnvironment)
 		}
 		return Renderer{profile: ProfilePythonModule, pythonExecutable: pythonExecutable}, nil

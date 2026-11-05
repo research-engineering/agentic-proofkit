@@ -150,3 +150,16 @@ func validReceiptTrustClassInput() map[string]any {
 		"nonClaims": []any{"Receipt trust-class test input does not approve merge."},
 	}
 }
+
+func TestBuildRejectsReceiptBelowMinimumTrustRank(t *testing.T) {
+	input := validReceiptTrustClassInput()
+	low := validReceiptTrustClassInput()["trustClasses"].([]any)[0].(map[string]any)
+	low["trustClassId"] = "proofkit.test.lower"
+	low["rank"] = json.Number("1")
+	input["trustClasses"] = append(input["trustClasses"].([]any), low)
+	input["obligationReceipts"].([]any)[0].(map[string]any)["trustClassId"] = low["trustClassId"]
+	record, exit, err := Build(input)
+	if err != nil || exit != 1 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%q err=%v, want a failed report", exit, record.State, err)
+	}
+}

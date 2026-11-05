@@ -21,11 +21,11 @@ const mergeSatisfyingProducerEnv = "PROOFKIT_MERGE_SATISFYING_PRODUCER"
 
 const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild current && ./dist/agentic-proofkit --help >/dev/null && go run ./internal/tools/pythonpackage build-current && go run ./internal/tools/pythonpackage verify-current"
 const setupVerifiedNPMActionSHA256 = "e5b863b6c0c9fac02ed3e00708d760cb3bc3ef6dc33c138b6ca13670d5895339"
-const ciSourceQualityStepInventorySHA256 = "9e7fdac5768a868929325052379a0b6382d18fc47052af7c1a148663b46ad153"
+const ciSourceQualityStepInventorySHA256 = "20e94f4ab8563fb287e128b88d5844d8707156d635fc03fb8c4be351776e5b3e"
 const ciBrowserRuntimeStepInventorySHA256 = "c157f7ee933119596eecbce7dd03478c84389736fd99248ef884e338f24d9ee4"
 const ciBrowserVisualStepInventorySHA256 = "6f19d5ff18a70bcff69441bdbf8a783b8e0ec9456c971cfb4df3c75e688b741a"
 const ciBrowserMatrixStepInventorySHA256 = "05461faaee041a60936e63dfd20484068ac04d1b91504fbddad78fec80056c6f"
-const releaseCandidateStepInventorySHA256 = "8e5002e046eab875b8549f4e90238f37a5d4d9bc77b4a9abe86d221fe6c7c2d5"
+const releaseCandidateStepInventorySHA256 = "4cfe2eaee7f2ab17f24db01b5e28710b0a1135d14911562e8ff3f22b114b2852"
 
 type packageGateWorkflowExpectation struct {
 	label                              string
@@ -438,6 +438,13 @@ func admittedStatusExpressions() []string {
 }
 
 func validateReleaseWorkflowExpressions(workflow githubWorkflow) error {
+	for _, job := range workflow.Jobs {
+		for _, step := range job.Steps {
+			if strings.HasPrefix(step.Uses, "actions/setup-go@") && step.With["cache"] != false {
+				return errors.New("release Go setup must explicitly disable shared caching")
+			}
+		}
+	}
 	if err := validateExactWorkflowRuntimeControls(
 		"release workflow",
 		workflow,
@@ -1991,6 +1998,8 @@ func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
 		expected = append(expected, platformSmokeSetupSteps()...)
 		expected = append(expected,
 			githubStep{Name: "Run Linux filesystem and process invariants", Run: requiredPlatformInvariantCommand},
+			githubStep{Name: "Install pinned Go test dependencies", Run: "npm ci --ignore-scripts"},
+			githubStep{Name: "Run full native Go tests", Run: "npm run go:test"},
 			githubStep{Name: "Run platform smoke", Run: requiredPlatformSmokeShell},
 			githubStep{Name: "Build release wheel set", Run: requiredReleaseWheelSetShell},
 			githubStep{Name: "Verify Python 3.11.0 installed wheel", Run: requiredMinimumPythonCommand},
@@ -2007,6 +2016,8 @@ func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
 		expected = append(expected, platformSmokeSetupSteps()...)
 		expected = append(expected,
 			githubStep{Name: "Run Darwin filesystem and process invariants", Run: requiredPlatformInvariantCommand},
+			githubStep{Name: "Install pinned Go test dependencies", Run: "npm ci --ignore-scripts"},
+			githubStep{Name: "Run full native Go tests", Run: "npm run go:test"},
 			githubStep{Name: "Run platform smoke", Run: requiredPlatformSmokeShell},
 		)
 	}
@@ -2145,9 +2156,9 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		timeoutMinutes int
 	}{
 		"source-quality":             {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 30},
-		"platform-smoke":             {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 12},
-		"platform-smoke-intel":       {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 20},
-		"platform-smoke-linux-arm64": {name: "quality / platform smoke / linux-arm64", runner: "ubuntu-24.04-arm", timeoutMinutes: 15},
+		"platform-smoke":             {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 30},
+		"platform-smoke-intel":       {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 30},
+		"platform-smoke-linux-arm64": {name: "quality / platform smoke / linux-arm64", runner: "ubuntu-24.04-arm", timeoutMinutes: 30},
 		"browser-runtime":            {name: "quality / browser runtime", runner: "ubuntu-24.04", timeoutMinutes: 20},
 		"browser-visual":             {name: "quality / browser visual references", runner: "ubuntu-24.04-arm", timeoutMinutes: 20},
 		"browser-matrix":             {name: "quality / browser design matrix", runner: "ubuntu-24.04-arm", timeoutMinutes: 20},

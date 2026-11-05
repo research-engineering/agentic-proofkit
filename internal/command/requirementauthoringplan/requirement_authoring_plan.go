@@ -9,6 +9,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathidentity"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
@@ -85,7 +86,6 @@ func Build(raw any) (map[string]any, int, error) {
 func buildOutput(input input) (map[string]any, int) {
 	nextSource := input.CandidateRequirementValue
 	sourceResult := input.CandidateRequirementResult
-	var sourceErr error
 	updates, changedPlanes, compositionFailures := compareCandidateSource(input)
 	transitionInput := map[string]any{
 		"schemaVersion": json.Number("2"),
@@ -105,9 +105,7 @@ func buildOutput(input input) (map[string]any, int) {
 
 	sourceFailures := []string{}
 	transitionFailures := []string{}
-	if sourceErr != nil {
-		sourceFailures = append(sourceFailures, "candidate next source admission error: "+sourceErr.Error())
-	} else if sourceResult.ExitCode != 0 {
+	if sourceResult.ExitCode != 0 {
 		sourceFailures = append(sourceFailures, "candidate next source must pass requirement-source-admission")
 		for _, failure := range sourceResult.Failures {
 			sourceFailures = append(sourceFailures, "candidate next source admission failed: "+failure)
@@ -158,7 +156,7 @@ func buildOutput(input input) (map[string]any, int) {
 		"ownerReviewPlan":                   ownerReviewPlan(input),
 		"planKind":                          planKind,
 		"promotionPreconditions":            promotionPreconditions(input),
-		"ruleResults":                       ruleResults(compositionFailures, sourceFailures, transitionFailures, sourceResult, sourceErr, transitionRecord.State, transitionErr),
+		"ruleResults":                       ruleResults(compositionFailures, sourceFailures, transitionFailures, sourceResult, transitionRecord.State, transitionErr),
 		"schemaVersion":                     outputSchemaVersion,
 		"state":                             state,
 		"summary": map[string]any{
@@ -167,7 +165,7 @@ func buildOutput(input input) (map[string]any, int) {
 			"executedWitnessCountNonClaim": 0,
 			"failureCount":                 len(failures),
 			"mode":                         input.Mode,
-			"sourceAdmissionState":         stateFromSourceResult(sourceResult, sourceErr),
+			"sourceAdmissionState":         sourceResult.Report.State,
 			"targetRequirementSourceId":    input.CurrentRequirementState.SourceID(),
 			"targetRequirementsPath":       input.CurrentRequirementState.RequirementsPath(),
 			"targetSpecPackagePath":        input.CurrentRequirementState.SpecPackagePath(),
@@ -504,13 +502,13 @@ func ownerReviewPlan(input input) []any {
 	return actions
 }
 
-func ruleResults(compositionFailures, sourceFailures, transitionFailures []string, sourceResult requirementsourceadmission.Result, sourceErr error, transitionState string, transitionErr error) []any {
+func ruleResults(compositionFailures, sourceFailures, transitionFailures []string, sourceResult requirementsourceadmission.Result, transitionState string, transitionErr error) []any {
 	compositionState := statusFailedIf(len(compositionFailures) > 0)
-	if sourceErr != nil || sourceResult.ExitCode != 0 {
+	if sourceResult.ExitCode != 0 {
 		compositionState = "skipped"
 	}
 	return []any{
-		ruleResult("proofkit.requirement-authoring-plan.candidate-source-admission", sourceRuleStatus(sourceResult, sourceErr), "candidate source must pass requirement-source-admission", sourceFailures),
+		ruleResult("proofkit.requirement-authoring-plan.candidate-source-admission", sourceRuleStatus(sourceResult), "candidate source must pass requirement-source-admission", sourceFailures),
 		ruleResult("proofkit.requirement-authoring-plan.transition-admission", transitionRuleStatus(transitionState, transitionErr), "current to candidate next source must pass requirement-source-transition", transitionFailures),
 		ruleResult("proofkit.requirement-authoring-plan.non-authority", "passed", "authoring output remains candidate data until owner materialization", []string{}),
 		ruleResult("proofkit.requirement-authoring-plan.composition", compositionState, "candidate operations must cover exact changed requirement ids and lifecycle targets", compositionFailures),
@@ -533,8 +531,8 @@ func ruleResult(ruleID string, status string, message string, failures []string)
 	}
 }
 
-func sourceRuleStatus(sourceResult requirementsourceadmission.Result, sourceErr error) string {
-	if sourceErr != nil || sourceResult.ExitCode != 0 {
+func sourceRuleStatus(sourceResult requirementsourceadmission.Result) string {
+	if sourceResult.ExitCode != 0 {
 		return "failed"
 	}
 	return "passed"
@@ -548,13 +546,6 @@ func transitionRuleStatus(state string, err error) string {
 		return "failed"
 	}
 	return "passed"
-}
-
-func stateFromSourceResult(result requirementsourceadmission.Result, err error) string {
-	if err != nil {
-		return "failed"
-	}
-	return result.Report.State
 }
 
 func stateFromTransition(state string, err error) string {
@@ -587,7 +578,8 @@ func repoPath(raw any, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if pathValue == ".git" || len(pathValue) > len(".git/") && pathValue[:len(".git/")] == ".git/" {
+	metadata, err := pathidentity.ContainsComponentEquivalent(pathValue, ".git")
+	if err != nil || metadata {
 		return "", fmt.Errorf("%s must not target repository metadata", context)
 	}
 	return pathValue, nil

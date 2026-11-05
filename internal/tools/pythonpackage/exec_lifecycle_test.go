@@ -40,7 +40,7 @@ func TestPOSIXWrapperExecPreservesProcessIdentityAndSignals(t *testing.T) {
 		{"selected", python}, {"real", realPython}, {"symlink", symlink}, {"exec-shim", shim},
 	} {
 		for _, mode := range []struct{ before, after os.FileMode }{
-			{0o755, 0o755}, {0o750, 0o750}, {0o644, 0o755},
+			{0o755, 0o755}, {0o750, 0o750}, {0o644, 0o744},
 		} {
 			t.Run(fmt.Sprintf("%s/%04o", item.name, mode.before), func(t *testing.T) {
 				assertPOSIXWrapperLifecycle(t, item.path, mode.before, mode.after)

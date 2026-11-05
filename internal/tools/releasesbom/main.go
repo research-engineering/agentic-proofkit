@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,11 +22,10 @@ import (
 )
 
 const (
-	bomFormat     = "CycloneDX"
-	specVersion   = "1.6"
-	sbomPath      = "artifacts/release/sbom.cdx.json"
-	toolName      = "agentic-proofkit"
-	toolComponent = "pkg:generic/agentic-proofkit"
+	bomFormat   = "CycloneDX"
+	specVersion = "1.6"
+	sbomPath    = "artifacts/release/sbom.cdx.json"
+	toolName    = "agentic-proofkit"
 )
 
 var uuidNamespaceURL = [16]byte{0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8}
@@ -60,13 +60,11 @@ type cyclonedxBOM struct {
 
 type cyclonedxMetadata struct {
 	Component cyclonedxComponent `json:"component"`
-	Tools     []cyclonedxTool    `json:"tools"`
+	Tools     cyclonedxTools     `json:"tools"`
 }
 
-type cyclonedxTool struct {
-	Name    string `json:"name"`
-	Vendor  string `json:"vendor"`
-	Version string `json:"version"`
+type cyclonedxTools struct {
+	Components []cyclonedxComponent `json:"components"`
 }
 
 type cyclonedxComponent struct {
@@ -126,11 +124,10 @@ func run() error {
 		Version:      1,
 		Metadata: cyclonedxMetadata{
 			Component: rootComponent(manifest),
-			Tools: []cyclonedxTool{{
-				Name:    toolName,
-				Vendor:  "agentic-proofkit",
-				Version: manifest.Version,
-			}},
+			Tools: cyclonedxTools{Components: []cyclonedxComponent{{
+				Type: "application", BOMRef: "tool:" + toolName,
+				Name: toolName, Version: manifest.Version, PackageURL: rootRef(manifest),
+			}}},
 		},
 		Components:   components,
 		Dependencies: dependencies,
@@ -177,6 +174,13 @@ func components(manifest packageJSON) ([]cyclonedxComponent, []cyclonedxDependen
 	goModules, dependencies := projectModuleEvidence(sourceModules, runtimeInventories)
 	out := append([]cyclonedxComponent{}, goModules...)
 	out = append(out, fileComponents...)
+	fileRefs := make([]string, 0, len(fileComponents))
+	for _, file := range fileComponents {
+		fileRefs = append(fileRefs, file.BOMRef)
+	}
+	sort.Strings(fileRefs)
+	dependencies = append(dependencies, cyclonedxDependency{Ref: rootRef(manifest), DependsOn: fileRefs})
+	sort.Slice(dependencies, func(left, right int) bool { return dependencies[left].Ref < dependencies[right].Ref })
 	return out, dependencies, nil
 }
 
@@ -217,10 +221,12 @@ func binaryRuntimeModules(reader io.ReaderAt) ([]goModuleRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("required release binary Go build info is unreadable")
 	}
-	if !completeBinaryBuildInfo(reader, info) {
+	if !completeBinaryBuildInfo(reader, info) || !strings.HasPrefix(info.GoVersion, "go1.") {
 		return nil, fmt.Errorf("required release binary Go build info is unreadable")
 	}
-	modules := make([]goModuleRecord, 0, len(info.Deps))
+	// Go build information is read from the same admitted bytes as the hash.
+	modules := make([]goModuleRecord, 0, len(info.Deps)+1)
+	modules = append(modules, goModuleRecord{Path: "stdlib", Version: strings.TrimPrefix(info.GoVersion, "go")})
 	for _, module := range info.Deps {
 		record := goModuleRecord{Path: module.Path, Version: module.Version}
 		if module.Replace != nil {
@@ -303,7 +309,7 @@ func moduleKey(module goModuleRecord) string {
 }
 
 func moduleComponent(module goModuleRecord, scope string, properties []cyclonedxProperty) cyclonedxComponent {
-	return cyclonedxComponent{
+	component := cyclonedxComponent{
 		Type:       "library",
 		BOMRef:     "go-module:" + moduleKey(module),
 		Name:       module.Path,
@@ -312,6 +318,14 @@ func moduleComponent(module goModuleRecord, scope string, properties []cyclonedx
 		Properties: properties,
 		Scope:      scope,
 	}
+	// Only licenses attested by the bundled notices are projected here.
+	switch module.Path {
+	case "stdlib", "golang.org/x/mod", "golang.org/x/net", "golang.org/x/sys", "golang.org/x/text":
+		component.Licenses = []cyclonedxLicense{{Expression: "BSD-3-Clause"}}
+	case "github.com/mattn/go-isatty":
+		component.Licenses = []cyclonedxLicense{{Expression: "MIT"}}
+	}
+	return component
 }
 
 func appendUniqueProperty(properties []cyclonedxProperty, property cyclonedxProperty) []cyclonedxProperty {
@@ -413,10 +427,11 @@ func admitReleaseFile(
 		return zero, nil, false, fmt.Errorf("release file %s changed during admission", path)
 	}
 	component := cyclonedxComponent{
-		Type:    componentType(path),
-		BOMRef:  "file:" + filepath.ToSlash(path),
-		Name:    filepath.Base(path),
-		Version: manifest.Version,
+		Type:       componentType(path),
+		BOMRef:     "file:" + filepath.ToSlash(path),
+		Name:       filepath.Base(path),
+		Version:    manifest.Version,
+		PackageURL: releaseArtifactPURL(manifest, path),
 		Hashes: []cyclonedxHash{{
 			Alg:     "SHA-256",
 			Content: hex.EncodeToString(contentDigest[:]),
@@ -491,7 +506,7 @@ func rootComponent(manifest packageJSON) cyclonedxComponent {
 		BOMRef:     rootRef(manifest),
 		Name:       manifest.Name,
 		Version:    manifest.Version,
-		PackageURL: toolComponent + "@" + manifest.Version,
+		PackageURL: rootRef(manifest),
 		Licenses: []cyclonedxLicense{{
 			Expression: manifest.License,
 		}},
@@ -503,7 +518,20 @@ func rootComponent(manifest packageJSON) cyclonedxComponent {
 }
 
 func rootRef(manifest packageJSON) string {
-	return "pkg:generic/" + manifest.Name + "@" + manifest.Version
+	name := strings.ReplaceAll(manifest.Name, "@", "%40")
+	return "pkg:npm/" + name + "@" + url.PathEscape(manifest.Version)
+}
+
+func releaseArtifactPURL(manifest packageJSON, path string) string {
+	switch filepath.Ext(path) {
+	case ".tgz":
+		return rootRef(manifest)
+	case ".whl":
+		return "pkg:pypi/agentic-proofkit@" + url.PathEscape(manifest.Version) + "?file_name=" + url.QueryEscape(filepath.Base(path))
+	default:
+		target := filepath.Base(filepath.Dir(path))
+		return "pkg:generic/agentic-proofkit@" + url.PathEscape(manifest.Version) + "?platform=" + url.QueryEscape(target)
+	}
 }
 
 func sbomSerialNumber(manifest packageJSON) string {

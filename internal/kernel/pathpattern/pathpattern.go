@@ -91,31 +91,33 @@ func Validate(pattern string, context string) error {
 	return err
 }
 
+// A repo-relative glob is anchored to the repository root. A matching
+// directory covers its descendants, as does a literal selector. Within a
+// segment, * never crosses a slash; only a complete ** segment can do so.
 func globToRegexp(pattern string) (*regexp.Regexp, error) {
 	var builder strings.Builder
 	builder.WriteByte('^')
-	for index := 0; index < len(pattern); index++ {
-		char := pattern[index]
-		if char == '*' && index+1 < len(pattern) && pattern[index+1] == '*' {
-			if index+2 < len(pattern) && pattern[index+2] == '/' {
-				builder.WriteString("(?:.*/)?")
-				index += 2
-			} else {
+	segments := strings.Split(pattern, "/")
+	for index, segment := range segments {
+		last := index == len(segments)-1
+		if segment == "**" {
+			if last {
 				builder.WriteString(".*")
-				index++
+			} else {
+				builder.WriteString("(?:[^/]+/)*")
 			}
 			continue
 		}
-		if char == '*' {
-			builder.WriteString("[^/]*")
-			continue
+		for partIndex, part := range strings.Split(segment, "*") {
+			if partIndex > 0 {
+				builder.WriteString("[^/]*")
+			}
+			builder.WriteString(regexp.QuoteMeta(part))
 		}
-		start := index
-		for index+1 < len(pattern) && pattern[index+1] != '*' {
-			index++
+		if !last {
+			builder.WriteByte('/')
 		}
-		builder.WriteString(regexp.QuoteMeta(pattern[start : index+1]))
 	}
-	builder.WriteByte('$')
+	builder.WriteString("(?:/.*)?$")
 	return regexp.Compile(builder.String())
 }

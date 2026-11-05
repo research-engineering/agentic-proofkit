@@ -6,6 +6,9 @@ toolchain go1.27.3
 
 tool (
 	github.com/rhysd/actionlint/cmd/actionlint
+	golang.org/x/tools/cmd/deadcode
+	golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize
+	golang.org/x/tools/go/analysis/passes/nilness/cmd/nilness
 	golang.org/x/vuln/cmd/govulncheck
 	honnef.co/go/tools/cmd/staticcheck
 )

@@ -342,6 +342,7 @@ func validDeploymentEvidenceInput() map[string]any {
 			"nonClaims": []any{nonClaim},
 		},
 		"policy": map[string]any{
+			"endpointEvaluationTime":        "1980-01-01T00:00:00Z",
 			"expectedDeploymentClaim":       "candidate",
 			"expectedEvidenceSchema":        "deployment.evidence.v1",
 			"expectedProofScope":            "local",
@@ -356,5 +357,47 @@ func validDeploymentEvidenceInput() map[string]any {
 		},
 		"rawOperatorEvidence": []any{},
 		"nonClaims":           []any{"Deployment evidence admission test fixture is not release proof."},
+	}
+}
+
+func TestBuildChecksTemporaryEndpointExpiryAgainstAdmittedTime(t *testing.T) {
+	for _, item := range []struct{ clock, expires, want string }{
+		{"2020-01-01T00:00:00Z", "2001-01-01T00:00:00Z", "failed"},
+		{"2020-01-01T00:00:00Z", "2020-01-01T00:00:00.000Z", "failed"},
+		{"2016-12-31T23:59:59.999999999Z", "2016-12-31T23:59:60Z", "passed"},
+		{"2020-01-01T00:00:00Z", "2020-01-01T00:00:00.000000001Z", "passed"},
+		{"", "2020-01-01T00:00:00Z", "blocked"},
+	} {
+		input := validDeploymentEvidenceInput()
+		policy := input["policy"].(map[string]any)
+		if item.clock == "" {
+			delete(policy, "endpointEvaluationTime")
+		} else {
+			policy["endpointEvaluationTime"] = item.clock
+		}
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId": "proofkit.test.endpoint", "endpointKind": "temporary",
+			"url": "https://demo.trycloudflare.com/proof", "expiresAt": item.expires,
+			"temporaryEndpointApprovalRef": "proofkit.test.approval", "replacementPlanRef": "proofkit.test.replacement",
+		}}
+		record, _, err := Build(input)
+		if err != nil || record.State != item.want {
+			t.Fatalf("clock=%q expiry=%q state=%q err=%v, want %q", item.clock, item.expires, record.State, err, item.want)
+		}
+	}
+}
+
+func TestBuildRejectsNonPublicIPLiterals(t *testing.T) {
+	for _, host := range []string{"127.0.0.2", "[::1]", "0.0.0.0", "169.254.169.254", "10.0.0.5", "[::ffff:10.0.0.5]"} {
+		input := validDeploymentEvidenceInput()
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId": "proofkit.test.endpoint", "endpointKind": "stable", "url": "https://" + host + "/proof",
+		}}
+		record, exit, err := Build(input)
+		if err != nil || exit != 1 || record.State != "failed" {
+			t.Fatalf("host=%s exit=%d state=%q err=%v, want failed", host, exit, record.State, err)
+		}
 	}
 }

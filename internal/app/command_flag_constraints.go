@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 )
 
 type descriptorArguments struct {
@@ -40,6 +42,9 @@ func classifyDescriptorArguments(descriptor commandDescriptor, args []string) de
 
 func validateFlagConstraints(descriptor commandDescriptor, parsed descriptorArguments) error {
 	commandRoute := commandRouteText(descriptor.routeTokens)
+	if descriptor.runner == commandRunnerPilotAdmission && parsed.counts["--pilot"]+parsed.counts["--stack-diverse"] > 1 {
+		return fmt.Errorf("pilot selector may be specified only once")
+	}
 	for _, flag := range descriptor.singleOccurrenceFlags {
 		if parsed.counts[flag] > 1 {
 			return fmt.Errorf("%s may be specified only once", flag)
@@ -124,10 +129,5 @@ func flagChoiceError(flag string, choices []string) error {
 }
 
 func flagRequiresValue(flag string) bool {
-	switch flag {
-	case "--agent-envelope", "--contract-envelope", "--empty-local-environment-policy", "--help", "-h", "--list", "--materialization-manifest", "--normalized-inventory", "--open", "--serve", "--stack-diverse", "--verify":
-		return false
-	default:
-		return true
-	}
+	return commandroute.FlagRequiresValue(flag)
 }

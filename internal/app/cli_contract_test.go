@@ -12,6 +12,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptioncontract"
@@ -26,13 +27,14 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "f863f724c29d225502f1a8fa1a021495c1787869fb99f98fc876aff36c3f9409"
+	cliContractPublicABISHA256               = "4d37ab1e009dbf8c39813a7219c1b6215e4883e5248fa9f27b6f38d350dae430"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
 )
 
 func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
+	t.Parallel()
 	contract := readCLIContract(t)
 	assertCLIContractSchema(t)
 	if problems := commandDescriptorContractParityProblems(commandDescriptors, contract.Commands); len(problems) != 0 {
@@ -175,6 +177,7 @@ func TestCLIContractsAreCompleteGeneratedAndWitnessBound(t *testing.T) {
 }
 
 func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
+	t.Parallel()
 	contract := readCLIContract(t)
 	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
 	tests := []struct {
@@ -235,6 +238,7 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 }
 
 func TestCLIContractRootShapeVariantInventoryIsClosedAndModeComplete(t *testing.T) {
+	t.Parallel()
 	contract := readCLIContract(t)
 	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
 	usedDefinitions := map[string][]string{}
@@ -1005,6 +1009,7 @@ func TestProofkitContractMapRoutesRequiredInputCommands(t *testing.T) {
 }
 
 func TestCLIContractPublicABIGoldenStable(t *testing.T) {
+	t.Parallel()
 	got := currentCLIContractPublicABISHA256(t)
 	if got != cliContractPublicABISHA256 {
 		t.Fatalf("public CLI ABI hash drifted: got %s want %s", got, cliContractPublicABISHA256)
@@ -1769,6 +1774,7 @@ func TestDescriptorFlagConstraintsMatchCommandParsers(t *testing.T) {
 }
 
 func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
+	t.Parallel()
 	expectedConstrainedUsage := map[string]string{
 		"transaction-inspect-residue":    "agentic-proofkit transaction inspect-residue [--color <auto|never>] [--format <json|text>] --repo-root <path>",
 		"transaction-quarantine-residue": "agentic-proofkit transaction quarantine-residue [--color <auto|never>] --expect-observation <sha256-ref> [--format <json|text>] --repo-root <path>",
@@ -1776,7 +1782,7 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"adopt-materialize-plan":         "agentic-proofkit adopt materialize plan --input <path|-> [--color <auto|never>] [--format <json|text>] [--input-pointer <pointer>] --repo-root <path>",
 		"adopt-materialize-recover":      "agentic-proofkit adopt materialize recover --action <resume|rollback> [--color <auto|never>] [--format <json|text>] --repo-root <path> --transaction <sha256-ref>",
 		"adopt-plan":                     "agentic-proofkit adopt plan [--color <auto|never>] [--format <json|text>] --mode <audit-from-code|code-baseline|fresh> --repo-root <path> [--stack <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>]",
-		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
+		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <adoption|bootstrap|guidance|pilot|workflow> [--pilot <all|first|stack-diverse>] [--touched-rule-id <id>]",
 		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <json|markdown>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
 		"integration-check":              "agentic-proofkit integration check [--format <json|text>] --repo-root <path> --tool <claude|codex>",
 		"integration-apply":              "agentic-proofkit integration apply [--color <auto|never>] --expect-desired-state <sha256-ref> --expect-transaction <sha256-ref> [--format <json|text>] --operation <install|remove|update> --repo-root <path> --tool <claude|codex>",
@@ -1960,16 +1966,26 @@ type cliContractCommand struct {
 	Stdin                    bool                      `json:"stdin"`
 }
 
-func readCLIContract(t *testing.T) cliContract {
-	t.Helper()
-	file, err := os.Open(filepath.Join(repoRoot(t), "proofkit", "cli-contract.v2.json"))
+// Tests share this read-only projection. Mutating contract fixtures are
+// independently decoded at their call sites.
+var loadCLIContract = sync.OnceValues(func() (cliContract, error) {
+	root, err := testRepoRoot()
 	if err != nil {
-		t.Fatalf("open CLI contract: %v", err)
+		return cliContract{}, err
+	}
+	file, err := os.Open(filepath.Join(root, "proofkit", "cli-contract.v2.json"))
+	if err != nil {
+		return cliContract{}, err
 	}
 	defer file.Close()
-	contract, err := admission.DecodeTypedJSON[cliContract](file, installedclicontract.MaximumContractBytes)
+	return admission.DecodeTypedJSON[cliContract](file, installedclicontract.MaximumContractBytes)
+})
+
+func readCLIContract(t *testing.T) cliContract {
+	t.Helper()
+	contract, err := loadCLIContract()
 	if err != nil {
-		t.Fatalf("decode CLI contract: %v", err)
+		t.Fatalf("read CLI contract: %v", err)
 	}
 	return contract
 }
@@ -1990,7 +2006,17 @@ func assertCLIContractSchema(t *testing.T) {
 	if err := json.Unmarshal(record["processContract"], &processContract); err != nil {
 		t.Fatalf("decode process contract: %v", err)
 	}
-	assertKeys(t, "CLI process contract", keys(processContract), []string{"commandRouteGrammar", "failureExitCode", "globalOptions", "helpGrammar", "stderr", "stdout", "successExitCode"})
+	assertKeys(t, "CLI process contract", keys(processContract), []string{"commandRouteGrammar", "failureExitCode", "flagGrammar", "globalOptions", "helpGrammar", "stderr", "stdout", "successExitCode", "versionGrammar"})
+	var flagGrammar struct {
+		ZeroOperandFlags              []string `json:"zeroOperandFlags"`
+		OtherAllowedFlagsOperandCount int      `json:"otherAllowedFlagsOperandCount"`
+	}
+	if err := json.Unmarshal(processContract["flagGrammar"], &flagGrammar); err != nil ||
+		!slices.Equal(flagGrammar.ZeroOperandFlags, commandroute.ZeroOperandFlags()) ||
+		flagGrammar.OtherAllowedFlagsOperandCount != 1 {
+		t.Fatalf("CLI flag arity differs from the native grammar: %#v (%v)", flagGrammar, err)
+	}
+
 	var routeGrammar map[string]any
 	if err := json.Unmarshal(processContract["commandRouteGrammar"], &routeGrammar); err != nil {
 		t.Fatalf("decode command route grammar: %v", err)
@@ -2869,4 +2895,25 @@ func contains(values []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+func TestCLIVersionUsesStandaloneTextOutput(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if exit := Run(t.Context(), []string{"--version"}, nil, &stdout, &stderr); exit != 0 || stdout.String() != "agentic-proofkit "+buildVersion+"\n" || stderr.Len() != 0 {
+		t.Fatalf("version exit=%d stdout=%q stderr=%q", exit, stdout.String(), stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if exit := Run(t.Context(), []string{"--version", "--help"}, nil, &stdout, &stderr); exit != 1 || stdout.Len() != 0 {
+		t.Fatalf("mixed version arguments exit=%d stdout=%q stderr=%q", exit, stdout.String(), stderr.String())
+	}
+}
+
+func normalizedNativeSchema(t *testing.T, schema map[string]any) map[string]any {
+	t.Helper()
+	normalized, err := schemadefs.NormalizeDialectDeclarations(schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return normalized
 }

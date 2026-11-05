@@ -72,6 +72,13 @@ func TestLauncherProfileAdmissionMatrix(t *testing.T) {
 			wantProfile:      ProfilePythonModule,
 			wantCommand:      "'/tmp/proofkit venv/bin/python' -m agentic_proofkit self-check --input proofkit/input.json",
 		},
+		{
+			name:             "python with a normal project name",
+			profile:          ProfilePythonModule,
+			pythonExecutable: "/tmp/flask-backend-api/.venv/bin/python",
+			wantProfile:      ProfilePythonModule,
+			wantCommand:      "/tmp/flask-backend-api/.venv/bin/python -m agentic_proofkit self-check --input proofkit/input.json",
+		},
 	}
 	for _, item := range valid {
 		t.Run(item.name, func(t *testing.T) {

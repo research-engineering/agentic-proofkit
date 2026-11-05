@@ -172,7 +172,7 @@ func TestGeneratedCommandInvocationProfileRouteClosure(t *testing.T) {
 			invocationProfileAssertProjectCallerArgvPreserved(t, bootstrapInput, project)
 			projectWorkflow := invocationProfileObjectValue(t, project["adoptionWorkflowPlan"], "project adoption workflow plan")
 			invocationProfileAssertArgvInventory(t, renderer, projectWorkflow, map[string]int{
-				"$.phases[?phase=bind].commands[*].argv":      3,
+				"$.phases[?phase=bind].commands[*].argv":      1,
 				"$.phases[?phase=bootstrap].commands[*].argv": 2,
 				"$.phases[?phase=profile].commands[*].argv":   2,
 			})

@@ -88,6 +88,24 @@ func buildMaterializationManifest(input materializationInput, renderer cliexec.R
 			files = append(files, profilePayload)
 			continue
 		}
+		// The bootstrap binding starter has no repository-owned proof bindings.
+		// Do not advertise it as a materializable input to binding commands.
+		if file["payloadKey"] == "proofBinding" {
+			files = append(files, map[string]any{
+				"content":               nil,
+				"contentKind":           "caller_owned",
+				"contentSha256":         nil,
+				"materializationStatus": "caller_content_required",
+				"nonClaims": []any{
+					"Proofkit identifies this caller-owned file but does not provide authoritative content for it.",
+					"The consuming repository must review or author this file before treating it as created.",
+				},
+				"path":    file["path"],
+				"purpose": file["purpose"],
+				"source":  "bootstrap_manifest",
+			})
+			continue
+		}
 		files = append(files, map[string]any{
 			"content":               file["content"],
 			"contentKind":           file["contentKind"],

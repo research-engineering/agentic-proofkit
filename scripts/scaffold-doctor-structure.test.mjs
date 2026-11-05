@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
 import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
-import {expandSharedDefinitions} from './schema-definitions.mjs';
+import {embeddedSchema, expandSharedDefinitions} from './schema-definitions.mjs';
 
 // Independently authored expectations for adoption-doctor, scaffold-project-structure
 // and scaffold-profile-plan. Expected inventories are never read from the schemas under test.
@@ -221,6 +221,28 @@ function invoke(command, input, phase = 'passed', flags = [], global = []) {
   }
   return value;
 }
+
+test('scaffold routes only admitted materialized payloads', () => {
+  const value = invoke('scaffold-project-structure', scaffold());
+  const files = new Map(value.materializationManifest.files.map(file => [file.path, file]));
+  const binding = files.get('proofkit/bindings.json');
+  assert.equal(binding.materializationStatus, 'caller_content_required');
+  assert.equal(binding.content, null);
+  const routed = [];
+  for (const phase of value.adoptionWorkflowPlan.phases) {
+    for (const command of phase.commands) {
+      const [, name, flag, path] = command.argv;
+      if (flag !== '--input') continue;
+      const file = files.get(path);
+      assert.equal(file?.materializationStatus, 'payload_available', path);
+      const result = run(name, file.content);
+      assert.equal(result.status, 0, name + ': ' + result.stderr);
+      routed.push(name);
+    }
+  }
+  assert(routed.includes('witness-plan'));
+  assert(!routed.some(name => ['witness-scheduler-plan', 'requirement-bindings', 'proof-slice'].includes(name)));
+});
 
 test('public identities conserve contract and wire versions and retire root-shape predecessors', () => {
   for (const [key, [definitionId, contractId, variants]] of Object.entries(identities)) {
@@ -499,7 +521,7 @@ function outputArrayRange(command, index, name, value) {
     return undefined;
   }
   return {'materializationManifest.files': [9, 9], 'materializationManifest.nextCommands': [6, 6], 'materializationManifest.nonClaims': [4, 4],
-    'materializationManifest.sourceReports': [3, 3], 'adoptionWorkflowInput.inputRefs': [5, 5], 'adoptionWorkflowPlan.inputRefs': [5, 5],
+    'materializationManifest.sourceReports': [3, 3], 'adoptionWorkflowInput.inputRefs': [4, 4], 'adoptionWorkflowPlan.inputRefs': [4, 4],
     'adoptionWorkflowPlan.phases': [7, 7], 'report.diagnostics': [1, 1], 'report.diagnostics.0.value.files': [9, 9], 'report.ruleResults': [1, null]}[name];
 }
 
@@ -659,8 +681,8 @@ test('reachable native states and degradation stay inside the published unions',
     seen.add('scaffold-omitted/' + envelope.omitted.length);
     if (envelope.envelopeId === '<redacted-diagnostic-value>') seen.add('scaffold/redacted');
   }
-  for (const want of ['scaffold/passed/8/ready_for_caller_review/passed', 'scaffold/failed/7/ready_for_caller_review/passed', 'scaffold/failed/8/blocked/passed',
-    'scaffold/failed/8/ready_for_caller_review/failed', 'scaffold-omitted/1', 'scaffold/redacted']) assert(seen.has(want), 'unreached scaffold domain ' + want);
+  for (const want of ['scaffold/passed/7/ready_for_caller_review/passed', 'scaffold/failed/6/ready_for_caller_review/passed', 'scaffold/failed/7/blocked/passed',
+    'scaffold/failed/7/ready_for_caller_review/failed', 'scaffold-omitted/1', 'scaffold/redacted']) assert(seen.has(want), 'unreached scaffold domain ' + want);
 });
 
 test('reachable envelope limits are exact at the bound and refuse one beyond', () => {
@@ -722,10 +744,10 @@ test('whole chains reuse the producing commands and their published structures',
     const ref = contract.commands.find(row => row.command === command)[direction + 'Contract'].rootDefinitionRef;
     return expandSharedDefinitions(contract.contractDefinitions.find(row => row.definitionId === ref).fieldTree.variants[index].schema);
   };
-  assert.deepEqual(outputSchema.properties.bootstrapReport, reusedDefinition('gradual-adoption-bootstrap', 'output', 0));
-  assert.deepEqual(outputSchema.properties.repoProfileScaffoldPlan, reusedDefinition('scaffold-profile-plan', 'output', 0));
+  assert.deepEqual(outputSchema.properties.bootstrapReport, embeddedSchema(reusedDefinition('gradual-adoption-bootstrap', 'output', 0)));
+  assert.deepEqual(outputSchema.properties.repoProfileScaffoldPlan, embeddedSchema(reusedDefinition('scaffold-profile-plan', 'output', 0)));
   const inputSchema = checks.get('scaffold-project-structure/input')[0].schema;
-  assert.deepEqual(inputSchema.properties.repoProfileScaffold, reusedDefinition('scaffold-profile-plan', 'input', 0));
+  assert.deepEqual(inputSchema.properties.repoProfileScaffold, embeddedSchema(reusedDefinition('scaffold-profile-plan', 'input', 0)));
   const standaloneBootstrap = reusedDefinition('gradual-adoption-bootstrap', 'input', 0);
   for (const [key, member] of Object.entries(standaloneBootstrap.properties)) {
     if (!['module', 'paths', 'proofBindingPath', 'repository'].includes(key)) assert.deepEqual(inputSchema.properties.bootstrap.properties[key], member, 'bootstrap/' + key);
