@@ -31,6 +31,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
@@ -1592,16 +1593,6 @@ func npmTarballName(name string, version string) (string, bool) {
 	return filename, true
 }
 
-func artifactDirectoriesAdmitted(root *os.Root, path string) bool {
-	for current := filepath.Dir(path); current != "."; current = filepath.Dir(current) {
-		info, err := root.Lstat(current)
-		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return false
-		}
-	}
-	return true
-}
-
 func readPythonPackageSet(root string, path string, manifest packageJSON) ([]pythonWheel, bool) {
 	packages, _, err := readReleaseJSON[pythonPackageSet](root, path)
 	if err != nil || packages.PackageName != pythonPackageName || packages.PackageVersion != manifest.Version || len(packages.Packages) == 0 {
@@ -1628,14 +1619,11 @@ func pythonWheelBytesMatch(rootPath string, wheel pythonWheel) bool {
 		return false
 	}
 	defer root.Close()
-	if !artifactDirectoriesAdmitted(root, relativePath) {
-		return false
-	}
 	before, err := root.Lstat(relativePath)
 	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxPythonWheelBytes {
 		return false
 	}
-	file, err := root.Open(relativePath)
+	file, err := rootpath.OpenRegularFile(root, filepath.ToSlash(relativePath))
 	if err != nil {
 		return false
 	}

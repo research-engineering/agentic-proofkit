@@ -15,6 +15,7 @@ import (
 	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/sbomsubjects"
 )
 
@@ -368,7 +369,7 @@ func openStableReleaseArtifact(path string) (*os.File, fs.FileInfo, *os.Root, er
 		root.Close()
 		return nil, nil, nil, fmt.Errorf("release artifact must be a bounded regular non-symlink file")
 	}
-	file, err := root.Open(path)
+	file, err := rootpath.OpenRegularFile(root, filepath.ToSlash(path))
 	if err != nil {
 		root.Close()
 		return nil, nil, nil, fmt.Errorf("open release artifact: %w", err)
