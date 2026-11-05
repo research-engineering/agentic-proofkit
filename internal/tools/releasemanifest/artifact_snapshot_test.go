@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/sbomsubjects"
 )
 
 func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
@@ -55,7 +56,12 @@ func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
 			Sha256:         wheelSHA256,
 		})
 	}
-	writeFile(t, filepath.Join("artifacts", "release", "sbom.cdx.json"), "{}")
+	components := fixtureSBOMComponents(t, records, packages)
+	writeFixtureSBOM(t, components)
+	sbomDigest, err := fileSHA256(fixtureSBOMPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	snapshot, err := newReleaseArtifactSnapshot(records, packages)
 	if err != nil {
@@ -125,12 +131,32 @@ func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
 			t.Fatalf("derived package identity %d drifted", index)
 		}
 	}
-	assets, checksums, subjectChecksums, err := snapshot.ReleaseEvidence(records, packages)
+	writeFile(t, fixtureSBOMPath, "{}")
+	if err := snapshot.RevalidateSources(); err == nil || !strings.Contains(err.Error(), "changed after immutable admission") {
+		t.Fatalf("same-path SBOM replacement was not rejected: %v", err)
+	}
+	assets, checksums, subjectChecksums, err := snapshot.ReleaseEvidence(fixtureVersion)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(assets) != len(releaseplatform.Targets())+2 || len(checksums) != len(assets) || len(subjectChecksums) != len(assets)-1 {
 		t.Fatalf("snapshot evidence sizes=(%d,%d,%d)", len(assets), len(checksums), len(subjectChecksums))
+	}
+	if !containsChecksumLine(checksums, sbomDigest+"  sbom.cdx.json") {
+		t.Fatal("SBOM subject admission and outer checksum did not use the same SBOM snapshot")
+	}
+	privateSBOM := filepath.Join(snapshot.root, fixtureSBOMPath)
+	content, err := os.ReadFile(privateSBOM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if content[len(content)-1] != '\n' {
+		t.Fatal("fixture SBOM lacks a trailing newline")
+	}
+	content[len(content)-1] = ' '
+	writeFile(t, privateSBOM, string(content))
+	if _, _, _, err := snapshot.ReleaseEvidence(fixtureVersion); err == nil || !strings.Contains(err.Error(), "differ from the admitted snapshot digest") {
+		t.Fatalf("same-size replacement SBOM bytes were accepted: %v", err)
 	}
 	for _, subject := range subjectChecksums {
 		parts := strings.SplitN(subject, "  ", 2)
@@ -139,6 +165,18 @@ func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
 		}
 	}
 
+	writeFixtureSBOM(t, components)
+	if err := os.Truncate(fixtureSBOMPath, sbomsubjects.MaxBytes+1); err != nil {
+		t.Fatal(err)
+	}
+	destination := t.TempDir()
+	if _, err := snapshotReleaseArtifact(destination, fixtureSBOMPath); err == nil || !strings.Contains(err.Error(), "bounded regular non-symlink file") {
+		t.Fatalf("oversize SBOM was not rejected before snapshot copy: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(destination, fixtureSBOMPath)); !os.IsNotExist(err) {
+		t.Fatalf("oversize SBOM created a private copy: %v", err)
+	}
+	writeFixtureSBOM(t, components)
 	writeFile(t, filepath.Join("artifacts", "package", records[0].Filename), "replacement")
 	if err := snapshot.RevalidateSources(); err == nil || !strings.Contains(err.Error(), "changed after immutable admission") {
 		t.Fatalf("same-path replacement was not rejected: %v", err)
@@ -149,7 +187,7 @@ func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
 	if err := snapshot.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, _, err := snapshot.ReleaseEvidence(records, packages); err == nil || !strings.Contains(err.Error(), "snapshot is closed") {
+	if _, _, _, err := snapshot.ReleaseEvidence(fixtureVersion); err == nil || !strings.Contains(err.Error(), "snapshot is closed") {
 		t.Fatalf("closed snapshot remained readable: %v", err)
 	}
 }

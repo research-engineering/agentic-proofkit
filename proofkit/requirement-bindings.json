@@ -4185,6 +4185,10 @@
           "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputFailsClosedForEachBlockingEvidenceClass$'"
         },
         {
+          "selector": "TestBuildInputRejectsSymlinkedReleaseMetadata",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputRejectsSymlinkedReleaseMetadata$'"
+        },
+        {
           "selector": "TestSelfEvidenceInvokesCurrentCommandOracleOwner",
           "command": "go test ./internal/tools/releasecloseoutinput -run '^TestSelfEvidenceInvokesCurrentCommandOracleOwner$'"
         },
@@ -4214,6 +4218,21 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-016",
+      "scenarioId": "proofkit.supply-chain-quality.release-platform-go-architecture-baseline",
+      "witnessId": "proofkit.packagebuild.release-architecture-baseline-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packagebuild/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPackageBuildPinsAndVerifiesArchitectureBaseline",
+          "command": "go test ./internal/tools/packagebuild -run '^TestPackageBuildPinsAndVerifiesArchitectureBaseline$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-016",
@@ -4723,6 +4742,21 @@
       ],
       "commandIds": ["proofkit.go-test", "proofkit.release-sbom"],
       "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-002",
+      "scenarioId": "proofkit.supply-chain-quality.release-sbom",
+      "witnessId": "proofkit.release-sbom.artifact-subject-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasemanifest/sbom_subjects_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReleaseManifestRequiresExactSBOMFileSubjects",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestReleaseManifestRequiresExactSBOMFileSubjects$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test", "proofkit.package-artifact"],
+      "environmentClasses": ["local-go", "local-go-python"]
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-002",

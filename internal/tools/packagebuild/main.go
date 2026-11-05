@@ -1,6 +1,7 @@
 package main
 
 import (
+	"debug/buildinfo"
 	"fmt"
 	"os"
 	"os/exec"
@@ -63,6 +64,10 @@ func run(args []string) error {
 		return err
 	}
 	for _, target := range selectedTargets {
+		baselineKey, baseline, err := target.GoArchitectureBaseline()
+		if err != nil {
+			return err
+		}
 		platformRoot := filepath.Dir(target.BinaryPath)
 		if err := os.MkdirAll(platformRoot, 0o755); err != nil {
 			return err
@@ -81,6 +86,7 @@ func run(args []string) error {
 			"CGO_ENABLED=0",
 			"GOOS="+target.GOOS,
 			"GOARCH="+target.GOARCH,
+			baselineKey+"="+baseline,
 		)
 		command.Stdout = os.Stdout
 		stderr := diagnostic.NewStderrCapture()
@@ -91,12 +97,30 @@ func run(args []string) error {
 			}
 			return fmt.Errorf("build %s/%s: %w", target.GOOS, target.GOARCH, err)
 		}
+		if err := verifyBuildTarget(target, baselineKey, baseline); err != nil {
+			return err
+		}
 	}
 	wrapper, err := wrapperScript()
 	if err != nil {
 		return err
 	}
 	return os.WriteFile("dist/agentic-proofkit", []byte(wrapper), 0o755)
+}
+
+func verifyBuildTarget(target releaseplatform.Target, baselineKey, baseline string) error {
+	info, err := buildinfo.ReadFile(target.BinaryPath)
+	if err != nil {
+		return fmt.Errorf("read build settings for %s/%s: %w", target.GOOS, target.GOARCH, err)
+	}
+	settings := make(map[string]string, len(info.Settings))
+	for _, setting := range info.Settings {
+		settings[setting.Key] = setting.Value
+	}
+	if settings["GOOS"] != target.GOOS || settings["GOARCH"] != target.GOARCH || settings[baselineKey] != baseline {
+		return fmt.Errorf("built binary does not match release target %s/%s with %s=%s", target.GOOS, target.GOARCH, baselineKey, baseline)
+	}
+	return nil
 }
 
 func packageMetadata() (string, string, error) {
