@@ -242,9 +242,14 @@ adapterStdinDelta("TRANSPORT", adapterBundleRows, jsonText(adapterTransportPrede
 adapterStdinDelta("PREPARED-TYPE", adapterBundleRows,
   jsonText("  let prepared: {readonly args: readonly string[]; readonly outputFile: string | null};"),
   jsonText("  let prepared: {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string};")),
-adapterStdinDelta("OUTPUT-CONTEXT-TYPE", adapterBundleRows,
-  jsonText("function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null} {"),
-  jsonText("function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string} {")),
+adapterStdinDelta("OUTPUT-ARGUMENT-ADMISSION", adapterBundleRows,
+  jsonText(`function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null} {
+  const outputPath = outputPathFromArgs(args);`),
+  jsonText(`function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string} {
+  if (args.some(argument => typeof argument !== "string")) {
+    throw new Error("Proofkit command arguments must be strings");
+  }
+  const outputPath = outputPathFromArgs(args);`)),
 adapterStdinDelta("NO-OUTPUT-CONTEXT", adapterBundleRows,
   jsonText("    return {args, outputFile: null};"), jsonText("    return {args, outputFile: null, cwd};")),
 adapterStdinDelta("ADMITTED-OUTPUT-CONTEXT", adapterBundleRows,
@@ -278,9 +283,9 @@ Object.freeze({
 }),
 adapterStdinDelta("SHA256", adapterBundleRows,
   "sha256:e9089d40688aa25c2565633825244c55bcadab85b65c74242ef871cedc2c6533",
-  "sha256:cb547ed0459b5c2a24d8a4946bef4919cf8354e9c85bdd89db5c59427d088f09"),
-adapterStdinDelta("LINE-COUNT", ["adapter-default", "adapter-explicit-json"], "\"lineCount\": 1124", "\"lineCount\": 1226"),
-adapterStdinDelta("LINE-COUNT-COMPACT", ["adapter-compact"], "\"lineCount\":1124", "\"lineCount\":1226"),
+  "sha256:35874e850c3ffa7830a665f7cd9a9278308e66ac654a6751b9ad71389fa9be6b"),
+adapterStdinDelta("LINE-COUNT", ["adapter-default", "adapter-explicit-json"], "\"lineCount\": 1124", "\"lineCount\": 1229"),
+adapterStdinDelta("LINE-COUNT-COMPACT", ["adapter-compact"], "\"lineCount\":1124", "\"lineCount\":1229"),
 ]);
 const count = (text, needle) => text.split(needle).length - 1;
 // Returns the predecessor stdout implied by the declared deltas of a row, or null

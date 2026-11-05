@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:cb547ed0459b5c2a24d8a4946bef4919cf8354e9c85bdd89db5c59427d088f09"
+const expectedTypeScriptSourceSha256 = "sha256:35874e850c3ffa7830a665f7cd9a9278308e66ac654a6751b9ad71389fa9be6b"
 const optionsSnapshotStatement = "  const options = snapshotProofkitRunOptions(callerOptions, mode === \"json-no-input\" ? \"none\" : undefined);"
 const unownedOptionsStatement = "  const options = mode === \"json-no-input\" ? {...callerOptions, inputMode: \"none\" as const} : callerOptions;"
 
@@ -999,6 +999,13 @@ assert.equal(noInput.value.inputless, true);
   Object.defineProperty(args, 0, {get() { return ++reads === 1 ? "--output" : "--other"; }});
   assert.equal(runProofkitTextCommand("text-pass", {}, args, options).text, "text output file");
   assert.equal(reads, 1, "argument accessors must not be revisited after capture");
+  let coerced = 0;
+  const coercible = {toString() { coerced++; return "--output"; }};
+  for (const flag of [new String("--output"), coercible]) {
+    assert.throws(() => runProofkitTextCommand("text-pass", {}, [flag, "../outside/coerced.txt"], options), /command arguments must be strings/);
+  }
+  assert.equal(coerced, 0, "argument admission must precede Node coercion");
+  assert.equal(existsSync(outsideRoot + "/coerced.txt"), false);
 }
 
 // Each case executes a real child; a Proxy can pass the data-property checks

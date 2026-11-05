@@ -931,6 +931,9 @@ function outputPathFromArgs(args: readonly string[]): string | null {
 }
 
 function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string} {
+  if (args.some(argument => typeof argument !== "string")) {
+    throw new Error("Proofkit command arguments must be strings");
+  }
   const outputPath = outputPathFromArgs(args);
   if (outputPath === null) {
     return {args, outputFile: null, cwd};
