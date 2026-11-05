@@ -76,7 +76,8 @@ reference continues to name a scheduler-plan input.
 Repository-relative path selectors are anchored to the repository root. A
 matched directory selects its descendants. Within a segment `*` matches
 characters other than a slash. A complete `**` segment may cross directory
-boundaries.
+boundaries. Adjacent `**` operators within a complete segment have the same
+meaning.
 
 For temporary endpoint evidence, provide `policy.endpointEvaluationTime` as an
 RFC 3339 UTC timestamp. An expiry must be strictly later than the supplied

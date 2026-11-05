@@ -25,7 +25,7 @@ const ciSourceQualityStepInventorySHA256 = "20e94f4ab8563fb287e128b88d5844d87071
 const ciBrowserRuntimeStepInventorySHA256 = "c157f7ee933119596eecbce7dd03478c84389736fd99248ef884e338f24d9ee4"
 const ciBrowserVisualStepInventorySHA256 = "6f19d5ff18a70bcff69441bdbf8a783b8e0ec9456c971cfb4df3c75e688b741a"
 const ciBrowserMatrixStepInventorySHA256 = "05461faaee041a60936e63dfd20484068ac04d1b91504fbddad78fec80056c6f"
-const releaseCandidateStepInventorySHA256 = "4cfe2eaee7f2ab17f24db01b5e28710b0a1135d14911562e8ff3f22b114b2852"
+const releaseCandidateStepInventorySHA256 = "803d41ceed67d60ff8622716c7d6afcef13efac5ff63762646b8e8462921a1f7"
 
 type packageGateWorkflowExpectation struct {
 	label                              string

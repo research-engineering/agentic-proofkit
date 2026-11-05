@@ -23,8 +23,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if os.Args[len(os.Args)-1] == "text-policy-input-helper" {
-		main()
+	if len(os.Args) >= 4 && os.Args[len(os.Args)-1] == "text-policy-input-helper" {
+		run(os.Args[3 : len(os.Args)-1])
 		os.Exit(0)
 	}
 	os.Exit(m.Run())
@@ -268,13 +268,26 @@ func assertGitPaths(t *testing.T, root string, want []string, options ...string)
 	}
 }
 
-func inventoryCommand(t *testing.T, root string) *exec.Cmd {
+func TestCheckReportsFailureAfterCrossingTheFormerAggregateLimit(t *testing.T) {
+	root := inventoryRepository(t)
+	line := []byte(strings.Repeat("a", 4095) + "\n")
+	content := bytes.Repeat(line, (13<<20)/len(line))
+	inventoryWrite(t, root, "a.txt", content)
+	inventoryWrite(t, root, "z.txt", append(content, []byte("bad \n")...))
+	stdout, stderr, exit := inventoryRun(t, inventoryCommand(t, root, "--check"))
+	if exit != 1 || len(stderr) != 0 || !bytes.Contains(stdout, []byte("z.txt:3329: trailing whitespace")) {
+		t.Fatalf("batch check exit=%d stdout=%q stderr=%q", exit, stdout, stderr)
+	}
+}
+
+func inventoryCommand(t *testing.T, root string, args ...string) *exec.Cmd {
 	t.Helper()
 	executable, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
-	command := exec.Command(executable, "-test.run=^$", "--", "text-policy-input-helper")
+	helperArgs := append([]string{"-test.run=^$", "--"}, args...)
+	command := exec.Command(executable, append(helperArgs, "text-policy-input-helper")...)
 	command.Dir = root
 	command.Env = append(gitfixture.Command(root).Env,
 		"GOCOVERDIR="+t.TempDir(),

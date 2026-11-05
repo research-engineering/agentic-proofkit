@@ -100,7 +100,9 @@ func globToRegexp(pattern string) (*regexp.Regexp, error) {
 	segments := strings.Split(pattern, "/")
 	for index, segment := range segments {
 		last := index == len(segments)-1
-		if segment == "**" {
+		// A segment of adjacent globstars retains the previous wildcard-only
+		// grammar. A star run embedded in a name never crosses a segment.
+		if len(segment) >= 2 && len(segment)%2 == 0 && strings.Trim(segment, "*") == "" {
 			if last {
 				builder.WriteString(".*")
 			} else {

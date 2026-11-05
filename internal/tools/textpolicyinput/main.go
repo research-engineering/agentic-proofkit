@@ -60,10 +60,14 @@ const batchBudget = 8 << 20
 const inputLimit = 32 << 20
 
 func main() {
-	if len(os.Args) > 2 || len(os.Args) == 2 && os.Args[1] != "--check" {
+	run(os.Args[1:])
+}
+
+func run(args []string) {
+	if len(args) > 1 || len(args) == 1 && args[0] != "--check" {
 		exit(fmt.Errorf("usage: textpolicyinput [--check]"))
 	}
-	check := len(os.Args) == 2
+	check := len(args) == 1
 	repoRoot, err := repoRoot()
 	if err != nil {
 		exit(err)

@@ -8,7 +8,7 @@ func TestMatchesAllRootNamesUsesTheCompiledWildcardLanguage(t *testing.T) {
 		want    bool
 	}{
 		{"*", true}, {"**", true}, {"**/*", true}, {"**/**", true},
-		{"***", true}, {"****/*", false}, {"**/**/**", true},
+		{"***", true}, {"****/*", true}, {"**/**/**", true},
 		{"docs/**", false}, {"*.go", false}, {"*/*", false},
 		{"*/**", false}, {"**/*/*", false}, {"***/*", false}, {"x", false},
 	} {
