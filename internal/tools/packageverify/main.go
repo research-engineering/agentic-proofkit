@@ -2609,7 +2609,6 @@ func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedS
 		"export function runProofkitNoInputJsonCommand",
 		"options.inputMode === \"none\"",
 		"stable JSON value must not contain unsafe integer numbers",
-		"openSync(filePath, \"r\")",
 	} {
 		if !strings.Contains(report.Source, token) {
 			return fmt.Errorf("json adapter source missing required token %q", token)

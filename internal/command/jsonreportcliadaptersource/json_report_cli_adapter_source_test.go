@@ -1004,6 +1004,17 @@ assert.equal(noInput.value.inputless, true);
   for (const flag of [new String("--output"), coercible]) {
     assert.throws(() => runProofkitTextCommand("text-pass", {}, [flag, "../outside/coerced.txt"], options), /command arguments must be strings/);
   }
+  let serialized = 0;
+  const input = new Proxy({}, {ownKeys() { serialized++; return []; }});
+  assert.throws(() => runProofkitTextCommand(
+    "text-pass", input, ["--output", "reject-before-effects/result.txt", coercible], options,
+  ), /command arguments must be strings/);
+  assert.equal(serialized, 0, "rejected argument values must not trigger input serialization");
+  assert.equal(existsSync(join(repositoryRoot, "reject-before-effects")), false);
+  let parsed = 0;
+  const operand = {startsWith() { parsed++; return false; }};
+  assert.throws(() => runProofkitTextCommand("text-pass", {}, ["--output", operand], options), /command arguments must be strings/);
+  assert.equal(parsed, 0, "argument admission must precede flag parsing");
   assert.equal(coerced, 0, "argument admission must precede Node coercion");
   assert.equal(existsSync(outsideRoot + "/coerced.txt"), false);
 }
