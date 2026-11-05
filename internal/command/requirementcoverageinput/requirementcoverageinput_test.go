@@ -9,8 +9,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofbindingtestinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
+	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
@@ -177,6 +180,114 @@ func TestBuildPreservesNormalizedSourceSetProvenance(t *testing.T) {
 	if _, _, err := requirementcoverageview.BuildJSON(output, requirementcoverageview.Options{}); err != nil {
 		t.Fatalf("coverage view should admit provenance-bearing composed input: %v", err)
 	}
+}
+
+func TestComposeAndViewJoinDerivedResolutionOrder(t *testing.T) {
+	input := validComposeInput(t, "").(map[string]any)
+	compact := input["compactProofContract"].(map[string]any)
+	binding := compact["bindings"].([]any)[0].([]any)
+	binding[8].([]any)[3] = json.Number("9")
+	normalized, exitCode, err := proofbindingtestinventory.BuildNormalized(map[string]any{
+		"schemaVersion":        json.Number("3"),
+		"inventoryId":          "proofkit.coverage.derived_inventory",
+		"commandRefPolicy":     map[string]any{"prefix": "proofkit.coverage"},
+		"compactProofContract": compact,
+		"requirementSource":    input["requirementSource"],
+	})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("produce normalized inventory: exit=%d, err=%v", exitCode, err)
+	}
+	input["normalizedTestEvidenceInventory"] = normalized
+	mapping := derivedRouteMapping(normalized)
+	routeID := mapping["witnessRouteId"].(string)
+	if got := mapping["resolutionOrderIndex"]; got != json.Number("9") {
+		t.Fatalf("producer resolutionOrderIndex=%v, want 9", got)
+	}
+
+	// The supplied projection can be a proper subset of the compact routes.
+	other := cloneJSONValue(binding).([]any)
+	other[2] = "proofkit.coverage::other"
+	other[8].([]any)[3] = json.Number("3")
+	compact["bindings"] = []any{binding, other}
+	composed, exitCode, err := Build(input)
+	if err != nil || exitCode != 0 {
+		t.Fatalf("compose valid subset: exit=%d, err=%v", exitCode, err)
+	}
+	if got := composed["normalizedTestEvidenceInventory"]; !reflect.DeepEqual(got, normalized) {
+		t.Fatalf("compose changed the valid projection: %#v", got)
+	}
+	view, viewExit, err := requirementcoverageview.BuildJSON(composed, requirementcoverageview.Options{})
+	if err != nil {
+		t.Fatalf("view valid subset: %v", err)
+	}
+	requirement := view.(map[string]any)["requirementCoverage"].([]any)[0].(map[string]any)
+	routes := requirement["declaredWitnessRoutes"].([]any)
+	if len(routes) != 4 {
+		t.Fatalf("view declared routes=%v, want four", routes)
+	}
+	var order any
+	for _, raw := range routes {
+		route := raw.(map[string]any)
+		if route["witnessRouteId"] == routeID {
+			order = route["resolutionOrderIndex"]
+		}
+	}
+	if order != 9 {
+		t.Fatalf("view resolutionOrderIndex=%v, want 9 for %s", order, routeID)
+	}
+	envelopeOnly := cloneJSONValue(composed).(map[string]any)
+	delete(envelopeOnly, "testEvidenceInventory")
+	if got, code, err := requirementcoverageview.BuildJSON(envelopeOnly, requirementcoverageview.Options{}); err != nil || code != viewExit || !reflect.DeepEqual(got, view) {
+		t.Fatalf("view without duplicate inventory changed output: exit=%d, err=%v", code, err)
+	}
+	ordinary := cloneJSONValue(composed).(map[string]any)
+	envelope := ordinary["normalizedTestEvidenceInventory"].(map[string]any)
+	delete(envelope, "projectionKind")
+	delete(envelope, "projectionSummary")
+	if got, code, err := requirementcoverageview.BuildJSON(ordinary, requirementcoverageview.Options{}); err != nil || code != viewExit || !reflect.DeepEqual(got, view) {
+		t.Fatalf("view with ordinary normalized inventory changed output: exit=%d, err=%v", code, err)
+	}
+	delete(ordinary, "normalizedTestEvidenceInventory")
+	if got, code, err := requirementcoverageview.BuildJSON(ordinary, requirementcoverageview.Options{}); err != nil || code != viewExit || !reflect.DeepEqual(got, view) {
+		t.Fatalf("view with only direct inventory changed output: exit=%d, err=%v", code, err)
+	}
+
+	for _, tc := range []struct {
+		name string
+		want string
+	}{
+		{"forged", "resolutionOrderIndex must match"},
+		{"omitted", "resolutionOrderIndex must be a JSON-safe non-negative integer"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bad := cloneJSONValue(normalized).(map[string]any)
+			mapping := derivedRouteMapping(bad)
+			if tc.name == "forged" {
+				mapping["resolutionOrderIndex"] = json.Number("8")
+				if _, err := testevidenceinventory.AdmitNormalizedProjection(bad, nil, "standalone projection"); err != nil {
+					t.Fatalf("forgery must remain well-formed in isolation: %v", err)
+				}
+			} else {
+				delete(mapping, "resolutionOrderIndex")
+			}
+			badCompose := cloneJSONValue(input).(map[string]any)
+			badCompose["normalizedTestEvidenceInventory"] = bad
+			if got, code, err := Build(badCompose); got != nil || code != 1 || err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("compose must reject %s index: exit=%d, err=%v", tc.name, code, err)
+			}
+			for _, validView := range []map[string]any{composed, envelopeOnly} {
+				badView := cloneJSONValue(validView).(map[string]any)
+				badView["normalizedTestEvidenceInventory"] = bad
+				if got, code, err := requirementcoverageview.BuildJSON(badView, requirementcoverageview.Options{}); got != nil || code != 1 || err == nil || !strings.Contains(err.Error(), tc.want) {
+					t.Errorf("view must reject %s index: exit=%d, err=%v", tc.name, code, err)
+				}
+			}
+		})
+	}
+}
+
+func derivedRouteMapping(normalized map[string]any) map[string]any {
+	return normalized["projectionSummary"].(map[string]any)["routeEntryMappings"].([]any)[0].(map[string]any)
 }
 
 func TestBuildPreservesChildOwnedInventorySupersessionDeclarationRef(t *testing.T) {
@@ -431,6 +542,70 @@ func TestBuildRejectsObservedSurfaceIDCollisionWithDeclaredSurface(t *testing.T)
 	_, _, err := Build(input)
 	if err == nil || !strings.Contains(err.Error(), "observed test surface id collision") {
 		t.Fatalf("Build() error=%v, want observed surface collision", err)
+	}
+}
+
+func TestComposeObservedSurfaceIDAtOwnerLengthBoundary(t *testing.T) {
+	const observedPath = "internal/command/requirementcoverageinput/requirementcoverageinput_test.go"
+	for _, length := range []int{217, 218, 256} {
+		t.Run(fmt.Sprint(length), func(t *testing.T) {
+			owner := strings.Repeat("a", length-1) + "b"
+			input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
+			input["selectedOwnerIds"] = []any{owner}
+			source := input["requirementSource"].(map[string]any)
+			group := source["groups"].([]any)[0].(map[string]any)
+			member := group["members"].([]any)[0].(map[string]any)
+			member["fields"].(map[string]any)["ownerId"] = owner
+			inventory := input["normalizedTestEvidenceInventory"].(map[string]any)["inventory"].(map[string]any)
+			inventory["entries"].([]any)[0].(map[string]any)["ownerId"] = owner
+			universe := input["coverageUniverse"].(map[string]any)
+			universe["ownerIds"] = []any{owner}
+			for _, key := range []string{"codeSurfaces", "specSurfaces", "testSurfaces"} {
+				universe[key].([]any)[0].(map[string]any)["ownerId"] = owner
+			}
+			unrelated := universe["testSurfaces"].([]any)[0].(map[string]any)
+
+			output, exitCode, err := Build(input)
+			if err != nil || exitCode != 0 {
+				t.Fatalf("compose owner length %d: exit=%d, err=%v", length, exitCode, err)
+			}
+			if _, _, err := requirementcoverageview.BuildJSON(output, requirementcoverageview.Options{}); err != nil {
+				t.Fatalf("view must admit composed surfaces: %v", err)
+			}
+			sum := sha256.Sum256([]byte(owner + "\x00" + observedPath))
+			digest := strings.Map(func(r rune) rune {
+				return 'a' + rune(strings.IndexRune("0123456789abcdef", r))
+			}, fmt.Sprintf("%x", sum[:8]))
+			wantID := "surface.observed_test." + digest
+			if length == 217 {
+				wantID = "surface.observed_test." + owner + "." + digest
+				if len(wantID) != admit.MaxRuleIDBytes {
+					t.Fatal("control must be at the RuleID limit")
+				}
+			}
+			surfaces := output["coverageUniverse"].(map[string]any)["testSurfaces"].([]any)
+			wantObserved := map[string]any{"surfaceId": wantID, "ownerId": owner, "path": observedPath}
+			if !reflect.DeepEqual(surfaces, []any{unrelated, wantObserved}) {
+				t.Fatalf("testSurfaces=%#v, want unchanged declaration and %#v", surfaces, wantObserved)
+			}
+
+			if length == 218 {
+				explicit := map[string]any{"surfaceId": "surface.explicit_test", "ownerId": owner, "path": observedPath}
+				universe["testSurfaces"] = []any{unrelated, explicit}
+				output, exitCode, err := Build(input)
+				if err != nil || exitCode != 0 {
+					t.Fatalf("compose explicit surface: exit=%d, err=%v", exitCode, err)
+				}
+				if got := output["coverageUniverse"].(map[string]any)["testSurfaces"]; !reflect.DeepEqual(got, []any{unrelated, explicit}) {
+					t.Fatalf("explicit or unrelated surface changed: %#v", got)
+				}
+				unrelated["surfaceId"] = wantID
+				universe["testSurfaces"] = []any{unrelated}
+				if got, code, err := Build(input); got != nil || code != 1 || err == nil || !strings.Contains(err.Error(), "observed test surface id collision") {
+					t.Fatalf("compose must reject bounded ID collision: exit=%d, err=%v", code, err)
+				}
+			}
+		})
 	}
 }
 

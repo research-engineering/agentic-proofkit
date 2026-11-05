@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
@@ -1899,7 +1900,21 @@ func TestVerifyTextPolicySmokeReportRequiresJSONABI(t *testing.T) {
 }
 
 func TestVerifyJSONAdapterSourceSmokeReportRequiresHardenedGenerator(t *testing.T) {
-	source := hardenedAdapterSmokeSource()
+	t.Run("current generator", func(t *testing.T) {
+		report, err := jsonreportcliadaptersource.Build("typescript", "json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		stdout, err := json.Marshal(report)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result := installedCommandResult{ExitCode: 0, Stdout: stdout}
+		if err := verifyJSONAdapterSourceSmokeReport(result, jsonreportcliadaptersource.TypeScriptSource()); err != nil {
+			t.Fatal(err)
+		}
+	})
+	source := jsonreportcliadaptersource.TypeScriptSource()
 	valid := installedCommandResult{
 		ExitCode: 0,
 		Stdout:   jsonAdapterSmokeStdout(source, digest.SHA256TextRef(source), "proofkit.json-report-cli-adapter-source"),
@@ -1983,20 +1998,6 @@ func TestVerifyJSONAdapterSourceSmokeReportRequiresHardenedGenerator(t *testing.
 
 func samplePlatformBinaryEntry() string {
 	return releaseplatform.PackageTarEntries()[len(releaseplatform.PackageTarEntries())-1]
-}
-
-func hardenedAdapterSmokeSource() string {
-	return `function readProofkitBoundedTextFile(filePath: string): string {
-  const file = openSync(filePath, "r");
-  return String(file);
-}
-
-export function runProofkitNoInputJsonCommand(): void {
-  if (options.inputMode === "none") {
-    throw new Error("stable JSON value must not contain unsafe integer numbers");
-  }
-}
-`
 }
 
 func jsonAdapterSmokeStdout(source string, sourceHash string, artifactKind string) []byte {

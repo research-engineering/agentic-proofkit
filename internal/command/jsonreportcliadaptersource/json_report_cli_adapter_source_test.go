@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:434d4b3a03096288ae895711ba0626e7e705fdc7724cfcba3e7306d8ce5ec06b"
+const expectedTypeScriptSourceSha256 = "sha256:35874e850c3ffa7830a665f7cd9a9278308e66ac654a6751b9ad71389fa9be6b"
 const optionsSnapshotStatement = "  const options = snapshotProofkitRunOptions(callerOptions, mode === \"json-no-input\" ? \"none\" : undefined);"
 const unownedOptionsStatement = "  const options = mode === \"json-no-input\" ? {...callerOptions, inputMode: \"none\" as const} : callerOptions;"
 
@@ -120,7 +120,8 @@ func TestGeneratedSourceUsesHardBoundedInputReads(t *testing.T) {
 		}
 	}
 	for _, required := range []string{
-		"openSync(filePath, \"r\")",
+		"constants.O_RDONLY | constants.O_NONBLOCK",
+		"openSync(filePath, flags)",
 		"fstatSync(fd)",
 		"readSync(fd, chunk",
 		"closeSync(fd)",
@@ -199,7 +200,7 @@ func TestGeneratedSourcePreservesCLIExitCodeAsPublicContract(t *testing.T) {
 		"return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, input, args, options));",
 		"function outputPathFromArgs(args: readonly string[])",
 		"function admitWritableOutputTarget",
-		"prepared = prepareOutputArgs(options.cwd, args)",
+		"prepared = prepareOutputArgs(options.cwd, [...args])",
 		"if (child.status !== 0 && child.stdout.trim().length === 0) {",
 	} {
 		if !strings.Contains(source, required) {
@@ -246,6 +247,7 @@ func TestGeneratedSourceAvoidsGenericIndexedAssignmentDrift(t *testing.T) {
 
 func TestGeneratedTypeScriptAdapterExecutesCoreSemantics(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.091236415555979919321510491623647940156692204483402355271747696953075393053294")
+	t.Run("nonblocking file acquisition", testGeneratedAdapterFIFO)
 	t.Run("owned execution options", func(t *testing.T) {
 		output, err := executeGeneratedAdapterHarness(t, TypeScriptSource())
 		if err != nil {
@@ -968,6 +970,54 @@ assert.throws(
 const noInput = runProofkitNoInputJsonCommand("json-no-input", [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(noInput.status, 0);
 assert.equal(noInput.value.inputless, true);
+
+{
+  const options = {binaryPath: fakeProofkitPath, cwd: repositoryRoot};
+  for (const [name, run, expected] of [
+    ["json", (args) => runProofkitJsonCommand("requirement-spec-tree-view", {}, args, options).value.outputFile, true],
+    ["no-input", (args) => runProofkitNoInputJsonCommand("requirement-spec-tree-view", args, options).value.outputFile, true],
+    ["text", (args) => runProofkitTextCommand("text-pass", {}, args, options).text, "text output file"],
+  ]) {
+    let captures = 0;
+    const args = [];
+    args[Symbol.iterator] = function* () {
+      captures++;
+      yield "--output";
+      yield "iterator-" + name + ".txt";
+    };
+    assert.equal(run(args), expected, name + " must track the captured output operand");
+    assert.equal(captures, 1);
+    assert.equal(args.length, 0);
+    assert.equal(Object.isFrozen(args), false);
+    const outside = [];
+    outside[Symbol.iterator] = function* () { yield "--output"; yield "../outside/iterator-" + name + ".txt"; };
+    assert.throws(() => run(outside), /inside the repository/);
+    assert.equal(existsSync(outsideRoot + "/iterator-" + name + ".txt"), false);
+  }
+  let reads = 0;
+  const args = ["--output", "getter-output.txt"];
+  Object.defineProperty(args, 0, {get() { return ++reads === 1 ? "--output" : "--other"; }});
+  assert.equal(runProofkitTextCommand("text-pass", {}, args, options).text, "text output file");
+  assert.equal(reads, 1, "argument accessors must not be revisited after capture");
+  let coerced = 0;
+  const coercible = {toString() { coerced++; return "--output"; }};
+  for (const flag of [new String("--output"), coercible]) {
+    assert.throws(() => runProofkitTextCommand("text-pass", {}, [flag, "../outside/coerced.txt"], options), /command arguments must be strings/);
+  }
+  let serialized = 0;
+  const input = new Proxy({}, {ownKeys() { serialized++; return []; }});
+  assert.throws(() => runProofkitTextCommand(
+    "text-pass", input, ["--output", "reject-before-effects/result.txt", coercible], options,
+  ), /command arguments must be strings/);
+  assert.equal(serialized, 0, "rejected argument values must not trigger input serialization");
+  assert.equal(existsSync(join(repositoryRoot, "reject-before-effects")), false);
+  let parsed = 0;
+  const operand = {startsWith() { parsed++; return false; }};
+  assert.throws(() => runProofkitTextCommand("text-pass", {}, ["--output", operand], options), /command arguments must be strings/);
+  assert.equal(parsed, 0, "argument admission must precede flag parsing");
+  assert.equal(coerced, 0, "argument admission must precede Node coercion");
+  assert.equal(existsSync(outsideRoot + "/coerced.txt"), false);
+}
 
 // Each case executes a real child; a Proxy can pass the data-property checks
 // while changing caller-owned execution options during serialization.
