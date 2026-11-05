@@ -33,6 +33,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packagearchive"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
@@ -41,8 +42,8 @@ const rootBinaryName = "agentic-proofkit"
 const installedNPMPackageRelativeRoot = "node_modules/@research-engineering/agentic-proofkit"
 const installedNPMReadmeRelativePath = "README.md"
 const installedNPMExecCommandPrefix = "npm exec --offline -- agentic-proofkit "
-const maxTarEntryBytes = 128 << 20
-const maxEmbeddedBinaryBytes = 64 << 20
+const maxTarEntryBytes = packagearchive.MaxEntryBytes
+const maxEmbeddedBinaryBytes = packagearchive.MaxBinaryBytes
 const packageVerifyProcessTimeout = 30 * time.Second
 
 var (
@@ -87,12 +88,7 @@ var mutableReleaseDocRules = []struct {
 	},
 }
 
-type tarEntry struct {
-	Mode     int64
-	Name     string
-	Size     int64
-	Typeflag byte
-}
+type tarEntry = packagearchive.Entry
 
 type rootPackageArtifact struct {
 	Content []byte
@@ -423,29 +419,11 @@ func verifyTarEntryHeaders(entries []tarEntry) error {
 }
 
 func verifyTarEntryHeader(entry tarEntry) error {
-	if entry.Name == "" || strings.Contains(entry.Name, "\x00") || strings.HasPrefix(entry.Name, "/") || strings.Contains(entry.Name, "\\") {
-		return fmt.Errorf("root package contains unsafe tar entry path %q", entry.Name)
-	}
-	cleaned := filepath.ToSlash(filepath.Clean(entry.Name))
-	if cleaned != entry.Name || cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") || strings.Contains(cleaned, "/../") {
-		return fmt.Errorf("root package contains unsafe tar entry path %q", entry.Name)
-	}
-	if entry.Typeflag != tar.TypeReg {
-		return fmt.Errorf("root package tar entry %s must be a regular file", entry.Name)
-	}
-	if entry.Size < 0 || entry.Size > maxTarEntryBytes {
-		return fmt.Errorf("root package tar entry %s has invalid size %d", entry.Name, entry.Size)
+	if err := packagearchive.VerifyHeader(entry); err != nil {
+		return err
 	}
 	if entry.Name == workspaceImageEntry && (entry.Size == 0 || entry.Size > maxWorkspaceImageBytes || entry.Mode != 0o644) {
 		return fmt.Errorf("root package workspace image requires bounded non-empty bytes and mode 0644")
-	}
-	if rootBinaryEntry(entry.Name) {
-		if entry.Size == 0 || entry.Size > maxEmbeddedBinaryBytes {
-			return fmt.Errorf("root package binary entry %s has invalid size %d", entry.Name, entry.Size)
-		}
-		if entry.Mode&0o111 == 0 {
-			return fmt.Errorf("root package binary entry %s must be executable", entry.Name)
-		}
 	}
 	return nil
 }

@@ -3,8 +3,10 @@ package main
 import (
 	"archive/tar"
 	"archive/zip"
+	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
 func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
@@ -45,7 +48,7 @@ func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
 		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
 		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), "binary")
 		_, err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
-		if err == nil || !strings.Contains(err.Error(), "contains duplicate entries") {
+		if err == nil || !strings.Contains(err.Error(), "duplicate tar entry") {
 			t.Fatalf("duplicate npm binary was not rejected: %v", err)
 		}
 	})
@@ -54,10 +57,134 @@ func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
 		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
 		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), "metadata")
 		_, err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
-		if err == nil || !strings.Contains(err.Error(), "contains duplicate entries") {
+		if err == nil || !strings.Contains(err.Error(), "duplicate tar entry") {
 			t.Fatalf("duplicate npm metadata entry was not rejected: %v", err)
 		}
 	})
+}
+
+func TestCrossCarrierTraversalCountsPAXMetadata(t *testing.T) {
+	for _, count := range []int{1, 1024} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
+			path := filepath.Join(packageDir, records[0].Filename)
+			writeNPMCarrierWithMetadata(t, path, "", count)
+			info, err := os.Stat(path)
+			if err != nil || info.Size() >= 256<<20 {
+				t.Fatalf("metadata fixture must fit compressed budget: %v", err)
+			}
+			_, err = verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+			if count == 1 {
+				if err != nil {
+					t.Fatalf("valid PAX carrier rejected: %v", err)
+				}
+			} else if err == nil || !strings.Contains(err.Error(), "expanded byte limit") {
+				t.Fatalf("PAX traversal did not reject by its physical byte budget: %v", err)
+			}
+		})
+	}
+}
+
+func TestCrossCarrierTraversalRequiresGzipIntegrity(t *testing.T) {
+	packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
+	path := filepath.Join(packageDir, records[0].Filename)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content[len(content)-8] ^= 1
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+	if !errors.Is(err, gzip.ErrChecksum) {
+		t.Fatalf("carrier CRC failure was not propagated: %v", err)
+	}
+}
+
+func TestWheelCarrierChecksTopologyAndSameLengthContent(t *testing.T) {
+	expectedPath := filepath.Join(t.TempDir(), "expected")
+	writeFile(t, expectedPath, "binary-a")
+	extra := zip.FileHeader{Name: "agentic_proofkit/extra.py", Method: zip.Store}
+	extra.SetMode(0o644)
+	symlink := extra
+	symlink.SetMode(os.ModeSymlink | 0o777)
+	for _, test := range []struct {
+		name, content string
+		extras        []zip.FileHeader
+		equal         bool
+		wantError     string
+	}{
+		{"matching", "binary-a", []zip.FileHeader{extra}, true, ""},
+		{"different bytes", "binary-b", nil, false, ""},
+		{"unsafe member", "binary-a", []zip.FileHeader{symlink}, false, "canonical regular ZIP entries"},
+		{"duplicate member", "binary-a", []zip.FileHeader{extra, extra}, false, "duplicate ZIP entries"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "carrier.whl")
+			writeWheelCarrier(t, path, []byte(test.content), test.extras...)
+			equal, _, err := wheelCarrierBinaryEquals(path, extractedCarrierBinary{path: expectedPath, size: int64(len("binary-a"))})
+			if equal != test.equal ||
+				(test.wantError == "" && err != nil) ||
+				(test.wantError != "" && (err == nil || !strings.Contains(err.Error(), test.wantError))) {
+				t.Fatalf("wheel carrier equal=%v err=%v", equal, err)
+			}
+		})
+	}
+}
+
+func TestReleaseManifestRejectsCorruptNPMOnlyCarrier(t *testing.T) {
+	t.Chdir(t.TempDir())
+	for _, directory := range []string{"release", "artifacts/package", "artifacts/release"} {
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const name = "@research-engineering/agentic-proofkit"
+	const version = "1.2.3"
+	const filename = "research-engineering-agentic-proofkit-1.2.3.tgz"
+	writeFile(t, "package.json", `{"name":"`+name+`","version":"`+version+`","license":"MIT","repository":{"url":"https://github.com/example/proofkit"}}`)
+	writeFile(t, "go.mod", "module example.test/proofkit\n")
+	writeFile(t, releasechange.RecordPath, `{"schemaVersion":2,"version":"1.2.3","previousVersion":"1.2.2","changeClass":"compatible","additions":[],"breakingChanges":[],"migration":{"required":false,"steps":[]},"platformRequirements":["Linux"],"knownLimitations":["Fixture has no publication evidence."],"rollback":{"strategy":"previous_admitted_version"}}`)
+	writeFile(t, "artifacts/release/sbom.cdx.json", "{}")
+	carrier := filepath.Join("artifacts", "package", filename)
+	writeNPMCarrier(t, carrier, "")
+	writeRecord := func() {
+		t.Helper()
+		shasum, integrity := npmFileClaims(t, carrier)
+		if err := writeJSON("artifacts/package/npm-pack.json", []packRecord{{Name: name, Version: version, Filename: filename, Shasum: shasum, Integrity: integrity}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeRecord()
+	if err := run(); err != nil {
+		t.Fatalf("valid npm-only release rejected: %v", err)
+	}
+	metadata := map[string][]byte{}
+	for _, name := range []string{"checksums.sha256", "sbom-subjects.sha256", "release-manifest.json", "release-notes.md", "metadata-checksums.sha256"} {
+		path := filepath.Join("artifacts", "release", name)
+		content, err := os.ReadFile(path)
+		if err != nil || len(content) == 0 {
+			t.Fatalf("valid release did not write %s: %v", name, err)
+		}
+		metadata[path] = content
+	}
+	content, err := os.ReadFile(carrier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content[len(content)-8] ^= 1
+	writeFile(t, carrier, string(content))
+	writeRecord()
+	if err := run(); !errors.Is(err, gzip.ErrChecksum) {
+		t.Fatalf("generator did not reject the hash-matching CRC mutation: %v", err)
+	}
+	for path, want := range metadata {
+		got, err := os.ReadFile(path)
+		if err != nil || !bytes.Equal(got, want) {
+			t.Fatalf("failed archive admission modified %s: %v", path, err)
+		}
+	}
 }
 
 func writeCarrierFixture(t *testing.T, mutatedWheelSuffix string) (string, string, []packRecord, *pythonPackageSet) {
@@ -91,12 +218,26 @@ func writeCarrierFixture(t *testing.T, mutatedWheelSuffix string) (string, strin
 
 func writeNPMCarrier(t *testing.T, path string, duplicate string) {
 	t.Helper()
+	writeNPMCarrierWithMetadata(t, path, duplicate, 0)
+}
+
+func writeNPMCarrierWithMetadata(t *testing.T, path string, duplicate string, metadataEntries int) {
+	t.Helper()
 	file, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	gzipWriter := gzip.NewWriter(file)
 	tarWriter := tar.NewWriter(gzipWriter)
+	if metadataEntries > 0 {
+		comment := strings.Repeat("m", 600<<10)
+		for index := range metadataEntries {
+			header := tar.Header{Name: fmt.Sprintf("package/pax-%d", index), Mode: 0o644, Typeflag: tar.TypeReg, Format: tar.FormatPAX, PAXRecords: map[string]string{"comment": comment}}
+			if err := tarWriter.WriteHeader(&header); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 	if duplicate == "metadata" {
 		for range 2 {
 			content := []byte("metadata")
@@ -134,7 +275,7 @@ func writeNPMCarrier(t *testing.T, path string, duplicate string) {
 	}
 }
 
-func writeWheelCarrier(t *testing.T, path string, content []byte) {
+func writeWheelCarrier(t *testing.T, path string, content []byte, extras ...zip.FileHeader) {
 	t.Helper()
 	file, err := os.Create(path)
 	if err != nil {
@@ -149,6 +290,11 @@ func writeWheelCarrier(t *testing.T, path string, content []byte) {
 	}
 	if _, err := member.Write(content); err != nil {
 		t.Fatal(err)
+	}
+	for _, extra := range extras {
+		if _, err := wheel.CreateHeader(&extra); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := wheel.Close(); err != nil {
 		t.Fatal(err)

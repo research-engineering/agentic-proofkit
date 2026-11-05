@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -318,7 +319,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 				tarballPath := filepath.Join(root, "artifacts", "package", testNPMTarballName)
 				mustRemove(t, tarballPath)
 				outsidePath := filepath.Join(t.TempDir(), "outside.tgz")
-				writeFile(t, outsidePath, "package")
+				writeFile(t, outsidePath, string(npmArchive(t, npmArchiveHeaders())))
 				if err := os.Symlink(outsidePath, tarballPath); err != nil {
 					t.Fatal(err)
 				}
@@ -356,7 +357,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 				writeJSON(t, filepath.Join(root, "artifacts", "package", "npm-pack.json"), []any{
 					map[string]any{
 						"filename":  testNPMTarballName,
-						"integrity": testNPMIntegrity([]byte("package")),
+						"integrity": testNPMIntegrity(npmArchive(t, npmArchiveHeaders())),
 						"name":      testNPMPackageName,
 						"shasum":    strings.Repeat("0", 40),
 						"version":   "1.2.3",
@@ -371,9 +372,9 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 				writeJSON(t, filepath.Join(root, "artifacts", "package", "npm-pack.json"), []any{
 					map[string]any{
 						"filename":  testNPMTarballName,
-						"integrity": "sha512-" + strings.Repeat("A", 88),
+						"integrity": testNPMIntegrity([]byte("different artifact")),
 						"name":      testNPMPackageName,
-						"shasum":    testSHA1([]byte("package")),
+						"shasum":    testSHA1(npmArchive(t, npmArchiveHeaders())),
 						"version":   "1.2.3",
 					},
 				})
@@ -1020,7 +1021,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 
 func TestPackRecordBytesMatchEnforcesByteLimit(t *testing.T) {
 	root := t.TempDir()
-	content := []byte("package")
+	content := npmArchive(t, npmArchiveHeaders())
 	writeNPMArtifact(t, root, testNPMTarballName, content)
 	record := packRecord{
 		Filename:  testNPMTarballName,
@@ -1029,11 +1030,11 @@ func TestPackRecordBytesMatchEnforcesByteLimit(t *testing.T) {
 		Shasum:    testSHA1(content),
 		Version:   "1.2.3",
 	}
-	if !packRecordBytesMatchWithin(root, record, int64(len(content))) {
-		t.Fatal("exact byte limit rejected a valid npm tarball")
+	if err := verifyPackRecordBytesWithin(root, record, int64(len(content))); err != nil {
+		t.Fatalf("exact byte limit rejected a valid npm tarball: %v", err)
 	}
-	if packRecordBytesMatchWithin(root, record, int64(len(content)-1)) {
-		t.Fatal("limit-minus-one admitted an oversized npm tarball")
+	if err := verifyPackRecordBytesWithin(root, record, int64(len(content)-1)); err == nil || !strings.Contains(err.Error(), "resource limit") {
+		t.Fatalf("limit-minus-one did not reject at file acquisition: %v", err)
 	}
 }
 
@@ -1536,7 +1537,7 @@ func populateCompleteFixture(t *testing.T, root string) {
 	writeJSON(t, filepath.Join(root, filepath.FromSlash(releasechange.RecordPath)), releaseChangeRecordFixture())
 	runFixtureGit(t, root, "add", ".gitignore", "go.mod", "go.sum", "package.json", "proofkit", "release", "source.txt")
 	runFixtureGit(t, root, "commit", "-m", "fixture")
-	writeNPMArtifact(t, root, testNPMTarballName, []byte("package"))
+	writeNPMArtifact(t, root, testNPMTarballName, npmArchive(t, npmArchiveHeaders()))
 	wheelSHA256, binarySHA256 := writePythonWheelFixture(t, root)
 	writeJSON(t, filepath.Join(root, "artifacts", "pypi", "python-packages.json"), map[string]any{
 		"packageName":    testPythonPackageName,
@@ -1565,7 +1566,7 @@ func populateCompleteFixture(t *testing.T, root string) {
 	writeLocalSelfEvidence(t, root, execution)
 }
 
-func writePythonWheelFixture(t *testing.T, root string) (string, string) {
+func writePythonWheelFixture(t *testing.T, root string, extraHeaders ...zip.FileHeader) (string, string) {
 	t.Helper()
 	path := filepath.Join(root, "artifacts", "pypi", testPythonWheelName)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -1585,6 +1586,15 @@ func writePythonWheelFixture(t *testing.T, root string) (string, string) {
 	binary := []byte("fixture-binary")
 	if _, err := member.Write(binary); err != nil {
 		t.Fatal(err)
+	}
+	for _, header := range extraHeaders {
+		member, err := wheel.CreateHeader(&header)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := io.WriteString(member, "extra wheel member"); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := wheel.Close(); err != nil {
 		t.Fatal(err)
