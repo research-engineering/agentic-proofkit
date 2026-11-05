@@ -68,16 +68,11 @@ func run(args []string) error {
 		if err := os.MkdirAll(platformRoot, 0o755); err != nil {
 			return err
 		}
-		command := exec.Command(
-			"go",
-			"build",
-			"-trimpath",
-			"-buildvcs=false",
-			"-ldflags=-buildid= -X github.com/research-engineering/agentic-proofkit/internal/app.buildVersion="+version,
-			"-o",
-			target.BinaryPath,
-			"./cmd/agentic-proofkit",
-		)
+		buildArgs, err := releaseplatform.BinaryBuildArgs(version, target.BinaryPath)
+		if err != nil {
+			return err
+		}
+		command := exec.Command("go", append([]string{"build"}, buildArgs...)...)
 		command.Env = append(os.Environ(),
 			"CGO_ENABLED=0",
 			"GOOS="+target.GOOS,
