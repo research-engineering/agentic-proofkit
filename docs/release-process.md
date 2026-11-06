@@ -237,13 +237,19 @@ The `release` workflow must:
    admitted trusted path, or record `existing_byte_match` when the same wheel
    set already exists with exact candidate bytes;
 8. capture post-publish npm registry identity with package name, version, filename,
-   shasum, and integrity;
+   shasum, and integrity. npm can accept a publish before its scan finishes.
+   Capture polls for availability with about 20 minutes of backoff within a
+   30-minute publisher job; acceptance is not availability. If this wait
+   expires, verify the exact public version and candidate bytes before rerunning
+   failed jobs. Do not republish while the accepted upload is still pending;
 9. when PyPI publication is enabled, capture post-publish PyPI registry identity
    with package name, version, filename, wheel tags, registry-reported URL,
    SHA-256, and retained publication mode;
-10. verify a root-only npm registry install, signature audit, successful JSON
-    report command, and failed-report JSON command with stdout/stderr/exit-code
-    discipline;
+10. resolve the exact npm version by name, bind the root-only registry lock to
+    the candidate version, tarball URL and integrity, then install from the
+    verified lock with lifecycle scripts disabled; audit signatures before
+    running successful and failed JSON report commands with
+    stdout/stderr/exit-code discipline;
 11. install and verify the pinned Node/npm toolchain before final metadata
     generation, then run the repository-owned release manifest tool against the
     candidate SBOM plus candidate and registry evidence, retaining Trusted
