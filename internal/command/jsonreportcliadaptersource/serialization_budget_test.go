@@ -9,7 +9,8 @@ import (
 
 func TestGeneratedAdapterBoundsExpandedJSONBeforeEffects(t *testing.T) {
 	const harness = `import assert from "node:assert/strict";
-import { proofkitStableJsonString, proofkitStableJsonValue, runProofkitJsonCommand, writeProofkitJsonReportOutput } from "./adapter.ts";
+import { createRequire, syncBuiltinESMExports } from "node:module";
+import { proofkitStableJsonString, proofkitStableJsonValue, runProofkitJsonCommand, runProofkitTextCommand, writeProofkitJsonReportOutput } from "./adapter.ts";
 
 const shared = {id: "shared", values: [1, "\""]};
 const detached = [{id: "shared", values: [1, "\""]}, {id: "shared", values: [1, "\""]}];
@@ -36,15 +37,37 @@ assert.throws(() => writeProofkitJsonReportOutput(oversizedGraph(), null, {
   jsonLayout: "compact",
   writeStdout() { assert.fail("refused output was written"); },
 }), refusal);
-assert.throws(() => runProofkitJsonCommand("text-policy", oversizedGraph(), [], {
-  cwd: process.cwd(), binaryPath: "missing-proofkit-binary",
-}), refusal);
+
+const require = createRequire(import.meta.url);
+const filesystem = require("node:fs");
+const child = require("node:child_process");
+let temporaryInputs = 0;
+let temporaryWrites = 0;
+let launches = 0;
+const createTemp = filesystem.mkdtempSync;
+const writeInput = filesystem.writeFileSync;
+filesystem.mkdtempSync = (...args) => { temporaryInputs++; return createTemp(...args); };
+filesystem.writeFileSync = (...args) => { temporaryWrites++; return writeInput(...args); };
+child.spawnSync = () => {
+  launches++;
+  return {status: 0, stdout: Buffer.from('{"accepted":true}\n'), stderr: Buffer.alloc(0)};
+};
+syncBuiltinESMExports();
+const runOptions = {cwd: process.cwd(), binaryPath: "proofkit-test-child"};
+for (const run of [runProofkitJsonCommand, runProofkitTextCommand]) {
+  assert.throws(() => run("text-policy", oversizedGraph(), [], runOptions), refusal);
+  assert.deepEqual([temporaryInputs, temporaryWrites, launches], [0, 0, 0], "oversized input reached transport");
+}
+assert.deepEqual(runProofkitJsonCommand("text-policy", true, [], runOptions).value, {accepted: true});
+assert.deepEqual([temporaryInputs, temporaryWrites, launches], [1, 1, 1], "transport observers were not exercised");
 
 const byteLimit = 32 * 1024 * 1024;
 const prefix = "a".repeat(byteLimit - 5);
 assert.equal(Buffer.byteLength(proofkitStableJsonString(prefix + "\u00e9", "compact")), byteLimit);
 assert.throws(() => proofkitStableJsonString(prefix + "a\u00e9", "compact"), refusal);
-assert.throws(() => proofkitStableJsonString(prefix + "\u2028", "compact"), refusal);
+const escapedPrefix = "a".repeat(byteLimit - 9);
+assert.equal(Buffer.byteLength(proofkitStableJsonString(escapedPrefix + "\u2028", "compact")), byteLimit);
+assert.throws(() => proofkitStableJsonString(escapedPrefix + "a\u2028", "compact"), refusal);
 assert.equal(Buffer.byteLength(proofkitStableJsonString([prefix], "compact")), byteLimit);
 assert.throws(() => proofkitStableJsonString([prefix], "pretty"), refusal);
 `
