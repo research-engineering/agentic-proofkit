@@ -398,6 +398,7 @@ test("workspace navigation excludes provider-falsified lifecycle waits", () => {
   )].map((match) => match[1]);
   assert.deepEqual(lifecycleMethods, ["goto"]);
   assert.equal(source.match(/\bpage\.goto\("about:blank"\);/g)?.length, 1);
+  assert.doesNotMatch(source, /\.\s*toHaveURL\s*\(/, "toHaveURL delegates to a lifecycle wait");
 });
 
 test("workspace navigation owns waiter rejection before a delayed trigger", async () => {

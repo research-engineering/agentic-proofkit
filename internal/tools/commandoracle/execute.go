@@ -162,6 +162,8 @@ func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *e
 	}
 	command := exec.Command(goExecutable, argv[1:]...)
 	command.Dir = root
+	// Nonempty whitespace suppresses persisted GOFLAGS without passing a flag.
+	command.Env = append(command.Environ(), "GOFLAGS= ", "GOWORK=off")
 	stderrReader, stderrWriter, err := os.Pipe()
 	if err != nil {
 		return decision("process.stderr_pipe_failed")

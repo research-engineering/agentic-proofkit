@@ -184,6 +184,84 @@ func TestHang(t *testing.T) { time.Sleep(time.Minute) }
 	}
 }
 
+func TestRunGoTestsExecutesTheMaterializedModuleNotAmbientOverrides(t *testing.T) {
+	root, outside := t.TempDir(), t.TempDir()
+	candidate := syntheticCandidates()[0]
+	candidate.PackagePath = "."
+	candidate.SourcePath = "boundary_test.go"
+	candidate.TestName = "TestSnapshotSource"
+	candidate.Selector = candidate.SourcePath + "::" + candidate.TestName
+	const module = "example.test/snapshot"
+	source := fmt.Sprintf(`package snapshot
+
+import (
+	"os"
+	"os/exec"
+	"testing"
+)
+
+func TestSnapshotSource(t *testing.T) {
+	if cache := os.Getenv("PROOFKIT_EXPECT_GO_CACHE"); cache != "" {
+		out, err := exec.Command("go", "env", "GOMODCACHE", "GOPROXY").Output()
+		if err != nil || string(out) != cache+"\noff\n" {
+			t.Fatal("configured Go cache and proxy did not survive")
+		}
+	}
+	t.Attr(%q, %q)
+}
+`, commandcoverage.ExecutionAttributeKey, candidate.SourceMarker)
+	replacement, overlay, goenv := filepath.Join(outside, "replacement_test.go"), filepath.Join(outside, "overlay.json"), filepath.Join(outside, "goenv")
+	cache := filepath.Join(outside, "module-cache")
+	manifest, err := json.Marshal(map[string]map[string]string{"Replace": {candidate.SourcePath: replacement}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for path, content := range map[string]string{
+		filepath.Join(root, "go.mod"):             "module " + module + "\n\ngo 1.26\n",
+		filepath.Join(root, candidate.SourcePath): source,
+		replacement: "package snapshot\nimport \"testing\"\nfunc TestSnapshotSource(t *testing.T) { t.Fatal(\"ambient replacement\") }\n",
+		overlay:     string(manifest),
+		goenv:       "GOFLAGS=-overlay=" + overlay + "\nGOMODCACHE=" + cache + "\nGOPROXY=off\n",
+	} {
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, test := range []struct {
+		name, flags, config, workspace string
+	}{
+		{"control", "", "off", "off"},
+		{"process_overlay", "-overlay=" + overlay, "off", "off"},
+		{"persisted_overlay", "", goenv, "off"},
+		{"external_workspace", "", "off", filepath.Join(outside, "missing.go.work")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("GOFLAGS", test.flags)
+			t.Setenv("GOENV", test.config)
+			t.Setenv("GOWORK", test.workspace)
+			if test.config == goenv {
+				t.Setenv("GOMODCACHE", "")
+				t.Setenv("GOPROXY", "")
+				t.Setenv("PROOFKIT_EXPECT_GO_CACHE", cache)
+			} else {
+				t.Setenv("PROOFKIT_EXPECT_GO_CACHE", "")
+			}
+			ledger, err := newEventLedger([]app.CommandCoverageOracleCandidate{candidate}, map[string]string{".": module})
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+			defer cancel()
+			if err := runGoTests(ctx, root, executionCommands([]app.CommandCoverageOracleCandidate{candidate}), ledger); err != nil {
+				t.Fatalf("materialized source did not execute: %v", err)
+			}
+			if err := ledger.finalize(); err != nil {
+				t.Fatalf("materialized source did not produce the expected evidence: %v", err)
+			}
+		})
+	}
+}
+
 func TestRunGoTestCommandTerminatesImmediatelyWhenStderrExceedsBound(t *testing.T) {
 	bin := t.TempDir()
 	script := "#!/bin/sh\n/bin/dd if=/dev/zero bs=1048577 count=1 1>&2\n/bin/sleep 5\n"

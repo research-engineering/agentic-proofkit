@@ -1,9 +1,11 @@
 package repositorysnapshot
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -202,6 +204,73 @@ func TestCaptureRejectsSuccessfulGitDiagnosticsWithoutEcho(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), diagnostic) {
 		t.Fatalf("Capture() leaked git diagnostics: %v", err)
+	}
+}
+
+func TestSnapshotKeepsGitIdentityWithTheExplicitRoot(t *testing.T) {
+	makeRepository := func(content string) string {
+		root := initializeRepository(t)
+		writeFile(t, filepath.Join(root, "tracked.txt"), content)
+		runGit(t, root, "add", "tracked.txt")
+		runGit(t, root, "commit", "-m", "initial")
+		return root
+	}
+	root, foreign := makeRepository("original\n"), makeRepository("foreign\n")
+	want, err := Capture(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := Capture(foreign)
+	if err != nil || other.Revision == want.Revision || other.Digest == want.Digest {
+		t.Fatalf("foreign control did not differ: %+v, %v", other, err)
+	}
+	t.Setenv("GIT_DIR", filepath.Join(foreign, ".git"))
+	t.Setenv("GIT_WORK_TREE", foreign)
+	t.Setenv("GIT_INDEX_FILE", filepath.Join(foreign, ".git", "index"))
+	for _, operation := range []struct {
+		name string
+		run  func() (Snapshot, error)
+	}{
+		{"capture", func() (Snapshot, error) { return Capture(root) }},
+		{"materialize", func() (Snapshot, error) { return Materialize(root, t.TempDir()) }},
+	} {
+		t.Run(operation.name, func(t *testing.T) {
+			got, err := operation.run()
+			if err != nil || !reflect.DeepEqual(got, want) {
+				t.Fatalf("snapshot = %+v, %v; want %+v", got, err, want)
+			}
+		})
+	}
+}
+
+func TestCaptureDoesNotRefreshLinkedWorktreeIndex(t *testing.T) {
+	root := initializeRepository(t)
+	writeFile(t, filepath.Join(root, "tracked.txt"), "original\n")
+	runGit(t, root, "add", "tracked.txt")
+	runGit(t, root, "commit", "-m", "initial")
+	linked := filepath.Join(t.TempDir(), "linked")
+	runGit(t, root, "worktree", "add", "--detach", linked)
+	name, err := gitfixture.Command(linked, "rev-parse", "--path-format=absolute", "--git-path", "index").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	index := strings.TrimSpace(string(name))
+	before, err := os.ReadFile(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed := time.Now().Add(-24 * time.Hour)
+	if err := os.Chtimes(filepath.Join(linked, "tracked.txt"), changed, changed); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_OPTIONAL_LOCKS", "0")
+	snapshot, err := Capture(linked)
+	if err != nil || strings.Contains(snapshot.Revision, "+") {
+		t.Fatalf("unchanged linked-worktree content appeared dirty: %+v, %v", snapshot, err)
+	}
+	after, err := os.ReadFile(index)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatalf("linked worktree index changed during read-only capture: %v", err)
 	}
 }
 

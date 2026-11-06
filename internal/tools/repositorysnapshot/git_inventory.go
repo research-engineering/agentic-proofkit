@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -97,6 +98,11 @@ func sourceRevision(ctx context.Context, root, digest string) (string, error) {
 func gitOutput(ctx context.Context, root string, args ...string) (string, error) {
 	command := exec.Command("git", args...)
 	command.Dir = root
+	// Git's repository, index and object-store overrides must not supersede root.
+	command.Env = slices.DeleteFunc(command.Environ(), func(entry string) bool {
+		return strings.HasPrefix(entry, "GIT_")
+	})
+	command.Env = append(command.Env, "GIT_OPTIONAL_LOCKS=0")
 	stdout := newBoundedBuffer()
 	stderr := newBoundedBuffer()
 	out, err := command.StdoutPipe()

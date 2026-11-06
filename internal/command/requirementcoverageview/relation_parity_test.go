@@ -2,10 +2,14 @@ package requirementcoverageview
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/browserdoc"
 )
 
 func cloneRelationValue(t *testing.T, value any) map[string]any {
@@ -134,15 +138,15 @@ func TestCoverageRelationFullOutputParity(t *testing.T) {
 		"owner-scope":    "bd1f5d2c8aa6ec3fcb56b784c8d1df8cedba529775ac943dede87c0afc4559fb",
 		"compact":        "c0a6930a61e5068f698064da83b26b5eb38fef0c985fc00729527cad8649e7da",
 	}
-	wants := map[string]string{
-		"sparse":         "8ac5287acfcdb15a14571e1203f133e63388a54cf1710737b78ff5c29b0b0eb5",
-		"dense":          "aece2404a8cf7955761bacdaee1314e0496edd27c7b64c79469e7db624ae3a0b",
-		"no-match":       "35b98b4fb392bd23a9ca9f80676a831828b6d4c6ebb3e1addd6687b44f425ac6",
-		"missing":        "cfc6a2d405398ad2814cc3026a660ab61f82782c47dca045e202e3c7691189b5",
-		"failed":         "d6fc87ee6ee3df83b55232ff4d9560504713e3d576fdf061247c26ae65bf5a9a",
-		"mixed-negative": "75fd5d70a2279fc0eab1f78f7fe1c82246b29c37d1134231c5195070bc0883fc",
-		"owner-scope":    "849e22e3cc1a7fbc9c723e91a69af33cea258612367edd8f67c1825d84f45bf6",
-		"compact":        "b975cf6e96f21948a5e133f19e7836405c0beca85e42c1e7eb886ba7b895e1fd",
+	frameWants := map[string]string{
+		"sparse":         "8d7eb48bff901ae02ab71148223e4fa8ad2c89367bd2284e6b846b9241cc861f",
+		"dense":          "92de20e9455f119e94590d78339af458448ffeac1aef9c9d8c5d9bf5c8246202",
+		"no-match":       "05acfc194a84f84fdee65d83fd040e48258d04ab7919954cba7f5a8fcf6f7ef3",
+		"missing":        "f7a1d0e44c8de29259154662930ea457bca1fdae4983fd30f2a0a6b0e3cff9cf",
+		"failed":         "9d877950800287bb2106905fad839a6b0854ca51cee9890facb66c48427f4778",
+		"mixed-negative": "068745bdb5a5b3f225df66360c0e80f03c822aa755a898f2dd080788f4c4e3c3",
+		"owner-scope":    "ebdd5437d0c232e52b31a663e4719352dcfb4b168c0d2c0f49d7532ea747be05",
+		"compact":        "caaa62d48fff5f267268d1848dabecc7312443e0c0bf3e2b503923ee839b7f86",
 	}
 	for _, name := range []string{"sparse", "dense", "no-match", "missing", "failed", "mixed-negative", "owner-scope", "compact"} {
 		t.Run(name, func(t *testing.T) {
@@ -186,9 +190,16 @@ func TestCoverageRelationFullOutputParity(t *testing.T) {
 			if got := relationObservationDigest(t, []any{view, code, markdown}); got != protectedWants[name] {
 				t.Fatalf("protected JSON/exit/Markdown digest = %s", got)
 			}
-			got := relationObservationDigest(t, []any{view, code, markdown, html})
-			if got != wants[name] {
-				t.Fatalf("full output digest = %s", got)
+			// Bind the shared script to its owner independently of the coverage HTML frame.
+			beforeScript, scriptAndTail, starts := strings.Cut(html, "<script>")
+			script, tail, ends := strings.Cut(scriptAndTail, "</script>")
+			sum := sha256.Sum256([]byte(script))
+			if !starts || !ends || "'sha256-"+base64.StdEncoding.EncodeToString(sum[:])+"'" != browserdoc.ScriptHashSource() {
+				t.Fatal("coverage HTML did not embed the exact shared browser script")
+			}
+			frame := beforeScript + "<script></script>" + tail
+			if got := relationObservationDigest(t, []any{view, code, markdown, frame}); got != frameWants[name] {
+				t.Fatalf("coverage output frame digest = %s", got)
 			}
 		})
 	}

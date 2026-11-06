@@ -22,11 +22,7 @@ export function admittedWorkspaceURL(baseURL) {
     url.protocol !== "http:"
     || url.hostname !== "127.0.0.1"
     || url.port === ""
-    || url.username !== ""
-    || url.password !== ""
-    || url.pathname !== "/"
-    || url.search !== ""
-    || url.hash !== ""
+    || url.href !== `${url.origin}/`
   ) throw new Error("Workspace base URL is outside the admitted local origin");
   return url.href;
 }

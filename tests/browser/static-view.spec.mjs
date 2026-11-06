@@ -81,6 +81,23 @@ test("static hierarchy reveals the named sibling and preserves kind-group naviga
   await expect(group).toBeVisible();
   await expect(group.locator("[data-proofkit-card] > h2 > .proofkit-id")).toHaveText(["spec.module", "spec.module.second"]);
   await expect(page.getByRole("searchbox")).toHaveValue("");
+
+  const mode = page.getByLabel("View", {exact: true});
+  const kind = page.getByLabel("Node kind", {exact: true});
+  await mode.selectOption("table");
+  await kind.selectOption("meta_spec");
+  await page.evaluate(() => history.back());
+  await expect.poll(() => new URL(page.url()).hash).toBe(href);
+  await expect(target).toBeVisible();
+  await expect(mode).toHaveValue("cards");
+  await expect(kind).toHaveValue("");
+
+  await kind.selectOption("module_spec");
+  const groupHref = await groupLink.getAttribute("href");
+  await page.evaluate(() => history.forward());
+  await expect.poll(() => new URL(page.url()).hash).toBe(groupHref);
+  await expect(group).toBeVisible();
+  await expect(kind).toHaveValue("module_spec");
 });
 
 test("static CSP admits the exact embedded script and blocks a different inline script with an allowed control", async ({staticViewURL, page, request}) => {

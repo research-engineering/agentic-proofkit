@@ -1,6 +1,7 @@
 package packageartifactrecord
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -20,7 +21,9 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/repositorysnapshot"
 )
 
@@ -115,17 +118,11 @@ type ArtifactEvidence struct {
 }
 
 func Read(root string) (Record, error) {
-	rootFS, err := os.OpenRoot(root)
-	if err != nil {
-		return Record{}, fmt.Errorf("open package artifact execution root: %w", err)
-	}
-	defer rootFS.Close()
-	file, err := rootFS.Open(filepath.FromSlash(RecordPath))
+	content, err := artifactfile.ReadBounded(root, RecordPath, maxRecordBytes)
 	if err != nil {
 		return Record{}, err
 	}
-	defer file.Close()
-	raw, err := admission.DecodeJSON(file, maxRecordBytes)
+	raw, err := admission.DecodeJSON(bytes.NewReader(content), maxRecordBytes)
 	if err != nil {
 		return Record{}, err
 	}
@@ -136,12 +133,12 @@ func Read(root string) (Record, error) {
 	if err := admit.KnownKeys(object, []string{"argv", "artifactSnapshotDigest", "commandId", "environmentDigest", "executionArgv", "exitCode", "finishedAt", "schemaVersion", "sourceRevision", "sourceSnapshotDigest", "startedAt", "status", "toolchainDigest"}, "package artifact execution record"); err != nil {
 		return Record{}, err
 	}
-	content, err := json.Marshal(raw)
+	encoded, err := json.Marshal(raw)
 	if err != nil {
 		return Record{}, err
 	}
 	var record Record
-	if err := json.Unmarshal(content, &record); err != nil {
+	if err := json.Unmarshal(encoded, &record); err != nil {
 		return Record{}, err
 	}
 	return record, nil
@@ -290,7 +287,7 @@ func admitCandidateReleaseManifest(rootFS *os.Root) error {
 	if err != nil || !exists {
 		return err
 	}
-	file, err := rootFS.Open(path)
+	file, err := rootpath.OpenRegularFile(rootFS, filepath.ToSlash(path))
 	if err != nil {
 		return err
 	}
