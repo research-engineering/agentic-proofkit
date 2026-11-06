@@ -130,7 +130,7 @@ var nativeBoundaryDirectionDeltas = []string{
 	"self-check/input:compatibilitySummary,nativeSource,rootDefinitionDigest,rootDefinitionRef",
 	"self-check/output:compatibilitySummary,nativeSource,rootDefinitionDigest,rootDefinitionRef",
 	"stack-preset/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"json-report-cli-adapter-source/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"json-report-cli-adapter-source/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"custom-rule-boundary/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"custom-rule-boundary/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"document-lifecycle-boundary/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
@@ -229,6 +229,15 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Fatalf("undeclared public direction delta\n got: %v\nwant: %v", got, want)
 	}
+	t.Run("mirror occurrence guard is not normalized away", func(t *testing.T) {
+		mutated := readCLIContractRaw(t)
+		mutatePublicABIRecord(t, mutated, "commands", "command", "requirement-spec-tree-view", func(record map[string]any) {
+			record["singleOccurrenceFlags"] = []any{"--format", "--input", "--input-pointer", "--output"}
+		})
+		if _, err := sourceCutoverDirectionDelta(previous, mutated); err == nil || err.Error() != "requirement-spec-tree-view output mirror flags changed without declaration" {
+			t.Fatalf("missing mirror occurrence guard reached the wrong boundary: %v", err)
+		}
+	})
 	previousDefinitions, _, err := indexPublicABIRecords(previous["contractDefinitions"], "definitionId")
 	if err != nil {
 		t.Fatal(err)
@@ -302,6 +311,13 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 		process = clonePublicABIRecord(process)
 		delete(process, "flagGrammar")
 		delete(process, "versionGrammar")
+		priorStdout := priorEnvelope["processContract"].(map[string]any)["stdout"].(string)
+		const mirrorClause = "For commands admitting --mirror-output, that flag requires --output and writes the same bytes to stdout only after successful file publication. "
+		if process["stdout"] == strings.Replace(priorStdout, "Commands do not write stderr on success.", mirrorClause+"Commands do not write stderr on success.", 1) {
+			process["stdout"] = priorStdout
+		} else {
+			return nil, fmt.Errorf("public stdout contract does not declare the exact output mirror behavior")
+		}
 		nextEnvelope["processContract"] = process
 	}
 	if !reflect.DeepEqual(priorEnvelope, nextEnvelope) {
@@ -370,17 +386,17 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 			delete(prior, direction)
 			delete(next, direction)
 		}
-		// Scalar flag uniqueness is a later, global CLI policy. Its exact ABI
-		// is pinned separately and TestCLIRejectsRepeatedScalarFlagsBeforeInput
-		// exercises every scalar through the dispatcher.
-		if previous, present := prior["singleOccurrenceFlags"]; present {
-			next["singleOccurrenceFlags"] = previous
-		} else {
-			delete(next, "singleOccurrenceFlags")
-		}
 		// Other later grammar is checked against the dispatcher and public
 		// command projection by TestCLIContractMatchesDispatcherAndHelp.
 		switch name {
+		case "requirement-spec-tree-view":
+			if !reflect.DeepEqual(next["allowedFlags"], []any{"--format", "--input", "--input-pointer", "--mirror-output", "--output"}) ||
+				!reflect.DeepEqual(next["singleOccurrenceFlags"], []any{"--format", "--input", "--input-pointer", "--mirror-output", "--output"}) ||
+				!reflect.DeepEqual(next["flagPresenceRequirements"], []any{map[string]any{"flag": "--mirror-output", "requiredFlags": []any{"--output"}}}) {
+				return nil, fmt.Errorf("%s output mirror flags changed without declaration", name)
+			}
+			next["allowedFlags"] = prior["allowedFlags"]
+			delete(next, "flagPresenceRequirements")
 		case "adoption-contract-envelope", "pilot-admission", "requirement-proof-view":
 			for _, field := range []string{"flagChoices", "atMostOneOfFlagGroups"} {
 				if priorValue, present := prior[field]; present {
@@ -389,6 +405,13 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 					delete(next, field)
 				}
 			}
+		}
+		// Validate command-specific changes before removing the global flag delta.
+		// TestCLIRejectsRepeatedScalarFlagsBeforeInput owns its runtime behavior.
+		if previous, present := prior["singleOccurrenceFlags"]; present {
+			next["singleOccurrenceFlags"] = previous
+		} else {
+			delete(next, "singleOccurrenceFlags")
 		}
 		if !reflect.DeepEqual(prior, next) {
 			return nil, fmt.Errorf("%s command-level CLI behavior changed without declaration", name)

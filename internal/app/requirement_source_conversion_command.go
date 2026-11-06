@@ -16,6 +16,7 @@ type requirementSourceConversionArgs struct {
 	target       string
 	baselinePath string
 	outputPath   string
+	mirrorOutput bool
 }
 
 // runRequirementSourceConversion reads each caller document once, converts the
@@ -74,7 +75,7 @@ func runRequirementSourceConversion(args []string, stdin io.Reader, stdout io.Wr
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	return 0
+	return mirrorPublishedOutput(encoded, 0, parsed.mirrorOutput, stdout, stderr)
 }
 
 // Descriptor validation has already admitted flag names, choices, required and
@@ -84,6 +85,10 @@ func parseRequirementSourceConversionArgs(args []string) (requirementSourceConve
 	parsed := requirementSourceConversionArgs{}
 	for index := 0; index < len(args); index++ {
 		flag := args[index]
+		if flag == "--mirror-output" {
+			parsed.mirrorOutput = true
+			continue
+		}
 		switch flag {
 		case "--input", "--input-pointer", "--to", "--baseline", "--output":
 		default:

@@ -920,7 +920,7 @@ func TestOutputWriterRejectsDeterministicParentSwap(t *testing.T) {
 		"mode-sticky",
 		"symlink",
 	} {
-		t.Run("before-publish/temp-"+mutation, func(t *testing.T) {
+		t.Run("before-rename/temp-"+mutation, func(t *testing.T) {
 			root := t.TempDir()
 			if mutation == "mode-setgid" {
 				effectiveGroupID := os.Getegid()
@@ -950,7 +950,7 @@ func TestOutputWriterRejectsDeterministicParentSwap(t *testing.T) {
 
 			mutated := false
 			outputWriterBarrier = func(stage, outputPath string) {
-				if mutated || stage != "before_publish" || outputPath != "out/result.txt" {
+				if mutated || stage != "before_rename" || outputPath != "out/result.txt" {
 					return
 				}
 				entries, err := os.ReadDir("out")

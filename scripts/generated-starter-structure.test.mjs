@@ -15,10 +15,10 @@ assert.equal(baseline.observations.length, 52);
 const names = ["stack-preset", "json-report-cli-adapter-source"];
 const ajv = new Ajv2020({strict: false, validateFormats: false});
 const validators = new Map(names.map(name => {
-  const definition = contract.contractDefinitions.find(x => x.definitionId === `proofkit.${name}.output.v1.json-schema`);
-  assert.ok(definition, `${name}/output owner`);
   const command = contract.commands.find(x => x.command === name);
   assert.equal(command.input, "none"); assert.equal(command.inputContract, undefined);
+  const definition = contract.contractDefinitions.find(x => x.definitionId === command.outputContract.rootDefinitionRef);
+  assert.ok(definition, `${name}/output owner`);
   return [name, ajv.compile(definition.fieldTree.variants[0].schema)];
 }));
 const presets = {
@@ -58,150 +58,13 @@ const helpRows = Object.freeze(["stack-preset--help", "stack-preset-h", "json-re
 // macOS can leave the child blocked forever. The bundle rows carry the source
 // change, its digest and its line count; the texts below are adapter source,
 // compared in their JSON string encoding.
-const adapterBundleRows = Object.freeze(["adapter-default", "adapter-explicit-json", "adapter-compact"]);
-const adapterImportsPredecessor = `import { closeSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { randomUUID } from "node:crypto";
-import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
-`;
-const adapterImportsCurrent = `import { closeSync, constants, fstatSync, fsyncSync, lstatSync, mkdirSync, mkdtempSync, openSync, readSync, realpathSync, renameSync, rmdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
-import { randomUUID } from "node:crypto";
-import { tmpdir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-`;
-const adapterTransportPredecessor = `  const childResult = spawnSync(options.binaryPath, childArgs, {
-    cwd: options.cwd,
-    env: options.env,
-    input: options.inputMode === "none" ? undefined : proofkitStableJsonString(input),
-    maxBuffer: options.maxBuffer ?? defaultMaxBuffer,
-  });
-  if (childResult.error !== undefined) {
-    throw new Error(formatProofkitCliError(childResult.error));
-  }
-  const child: ProofkitProcessResult = {
-    status: childResult.status,
-    stdout: decodeProofkitUTF8(childResult.stdout, "Proofkit stdout"),
-    stderr: decodeProofkitUTF8(childResult.stderr, "Proofkit stderr"),
-  };
-  return {child, outputFile: prepared.outputFile};
-}
-`;
-const adapterTransportCurrent = `  const executionOptions = Object.freeze({...options, cwd: prepared.cwd});
-  const inputText = options.inputMode === "none" ? null : proofkitStableJsonString(input);
-  const childResult = spawnProofkitChild(executionOptions, childArgs, inputText);
-  if (childResult.error !== undefined) {
-    throw new Error(formatProofkitCliError(childResult.error));
-  }
-  const child: ProofkitProcessResult = {
-    status: childResult.status,
-    stdout: decodeProofkitUTF8(childResult.stdout, "Proofkit stdout"),
-    stderr: decodeProofkitUTF8(childResult.stderr, "Proofkit stderr"),
-  };
-  return {child, outputFile: prepared.outputFile};
-}
-
-// Capture before output admission or input serialization can run caller code.
-// Node includes enumerable inherited env entries and omits undefined values.
-// Its NODE_V8_COVERAGE fallback must also be captured, including absence, so
-// spawn cannot substitute a later ambient value. Only owned records are frozen.
-function snapshotProofkitRunOptions(caller: ProofkitCommandRunOptions, inputModeOverride?: "none"): ProofkitCommandRunOptions {
-  try {
-    let parentCwd: string | undefined;
-    let parentCwdError: unknown;
-    try { parentCwd = process.cwd(); } catch (error) { parentCwdError = error; }
-    const {binaryPath, cwd, env, inputMode, jsonLayout, maxBuffer} = caller;
-    let executionCwd = cwd;
-    if (cwd.length !== 0 && !isAbsolute(cwd)) {
-      if (parentCwd === undefined) throw parentCwdError;
-      executionCwd = parentCwd + (parentCwd.endsWith(sep) ? "" : sep) + cwd;
-    }
-    const sourceEnv = env ?? process.env;
-    const environment = Object.create(null) as Record<string, string | undefined>;
-    for (const key in sourceEnv) environment[key] = sourceEnv[key];
-    if (env == null || !Object.hasOwn(env, "NODE_V8_COVERAGE")) {
-      const coverage = process.env.NODE_V8_COVERAGE;
-      if (coverage) environment.NODE_V8_COVERAGE = coverage;
-    }
-    return Object.freeze({binaryPath, cwd: executionCwd, env: Object.freeze(environment), inputMode: inputModeOverride ?? inputMode, jsonLayout, maxBuffer});
-  } catch (error) {
-    throw new Error(formatProofkitCliError(error));
-  }
-}
-
-// The child never reads its standard input from spawnSync's input option. On
-// Unix-like systems that option writes into a socket pair, shuts down writing and
-// keeps its end open until the child exits, and on macOS a child blocked reading
-// such a socket is sometimes not woken by the shutdown and then waits forever.
-// Input goes through a regular file, which ends at its size; a call without input
-// gives the child the null device.
-function spawnProofkitChild(options: ProofkitCommandRunOptions, childArgs: readonly string[], inputText: string | null) {
-  try {
-    return inputText === null ?
-      spawnProofkitWithStdin(options, childArgs, "ignore") :
-      spawnProofkitWithInputFile(options, childArgs, inputText);
-  } catch (error) {
-    throw new Error(formatProofkitCliError(error));
-  }
-}
-
-// The input is written to a file created exclusively with mode 0600 in a fresh
-// mode 0700 directory under the temporary directory of this process, and the
-// child gets that file opened read-only. Except on Windows, the file and its
-// directory are removed as soon as the file is open, before the child starts:
-// the open descriptor alone keeps the input, so none remains on disk while the
-// child runs, and a signal that ends this process then leaves none behind. When
-// the call returns or throws, the descriptor is closed and the file and directory
-// are removed if they have not been removed yet: on Windows, where an open file
-// can keep its name until it is closed, after a throw before the early removal,
-// and after a failed early removal. The removal uses path calls only, so it needs
-// no descriptor of its own, and a failed removal fails the call.
-function spawnProofkitWithInputFile(options: ProofkitCommandRunOptions, childArgs: readonly string[], inputText: string) {
-  const directory = mkdtempSync(join(tmpdir(), "proofkit-cli-stdin-"));
-  const inputPath = join(directory, "stdin");
-  let inputFd: number | null = null;
-  let removed = false;
-  try {
-    const writeFd = openSync(inputPath, "wx", 0o600);
-    try {
-      writeFileSync(writeFd, inputText, {encoding: "utf8"});
-    } finally {
-      closeSync(writeFd);
-    }
-    inputFd = openSync(inputPath, "r");
-    if (process.platform !== "win32") {
-      removeProofkitInputFile(inputPath, directory);
-      removed = true;
-    }
-    return spawnProofkitWithStdin(options, childArgs, inputFd);
-  } finally {
-    try {
-      if (inputFd !== null) closeSync(inputFd);
-    } finally {
-      if (!removed) removeProofkitInputFile(inputPath, directory);
-    }
-  }
-}
-
-function removeProofkitInputFile(inputPath: string, directory: string): void {
-  rmSync(inputPath, {force: true});
-  rmdirSync(directory);
-}
-
-function spawnProofkitWithStdin(options: ProofkitCommandRunOptions, childArgs: readonly string[], stdin: "ignore" | number) {
-  const environment = options.env === undefined ? undefined : Object.assign(Object.create(null), options.env);
-  if (environment !== undefined && !Object.hasOwn(environment, "NODE_V8_COVERAGE")) Object.defineProperty(environment, "NODE_V8_COVERAGE", {value: undefined});
-  return spawnSync(options.binaryPath, childArgs, {
-    cwd: options.cwd,
-    env: environment,
-    maxBuffer: options.maxBuffer ?? defaultMaxBuffer,
-    stdio: [stdin, "pipe", "pipe"],
-  });
-}
-`;
-const jsonText = text => JSON.stringify(text).slice(1, -1);
-const adapterStdinReason = "The adapter uses regular-file stdin and one owned execution context, including the admitted physical output root and isolated Node environment.";
-const adapterStdinDelta = (suffix, rows, predecessor, current) => Object.freeze({
-  id: `ADAPTER-STDIN-FILE-${suffix}`, reason: adapterStdinReason, rows: Object.freeze(rows), predecessor, current, occurrences: 1,
-});
+// Observed from the native v3 adapter CLI. Unchanged starter rows still use
+// their frozen predecessor stream or the two declared help deltas below.
+const currentAdapterStdout = new Map([
+  ["adapter-default", "9c835daf76c75a1a5057f71e48883d48edee2c806e4371abed325c3c083bc1dd"],
+  ["adapter-explicit-json", "9c835daf76c75a1a5057f71e48883d48edee2c806e4371abed325c3c083bc1dd"],
+  ["adapter-compact", "c2be9ea4ecf5b95026b0b0d6458059bb710b7a65139d86e20b02001a686c2192"],
+]);
 const declaredStreamDeltas = Object.freeze([Object.freeze({
   id: "PILOT-D10",
   reason: "Usage lines name the --format values a command admits instead of <mode>.",
@@ -229,79 +92,6 @@ Object.freeze({
   current: "  May be specified once: --format\n  May be specified once: --language\n\nPublic contract:",
   occurrences: 1,
 }),
-adapterStdinDelta("IMPORTS", adapterBundleRows, jsonText(adapterImportsPredecessor), jsonText(adapterImportsCurrent)),
-adapterStdinDelta("TEXT-OPTIONS", adapterBundleRows,
-  jsonText(`  if (options.jsonLayout !== undefined) {
-    throw new Error("Proofkit jsonLayout is valid only for JSON command output");
-  }
-  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options);`),
-  jsonText("  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options, \"text\");")),
-adapterStdinDelta("EXECUTION-OPTIONS", adapterBundleRows,
-  jsonText("function runProofkitCommand(commandRoute: string, input: unknown, args: readonly string[], options: ProofkitCommandRunOptions) {"),
-  jsonText(`function runProofkitCommand(commandRoute: string, input: unknown, args: readonly string[], callerOptions: ProofkitCommandRunOptions, mode: "json" | "text" | "json-no-input" = "json") {
-  const options = snapshotProofkitRunOptions(callerOptions, mode === "json-no-input" ? "none" : undefined);
-  if (mode === "text" && options.jsonLayout !== undefined) {
-    throw new Error("Proofkit jsonLayout is valid only for JSON command output");
-  }`)),
-adapterStdinDelta("JSON-RESULT-OWNER", adapterBundleRows,
-  jsonText(`  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options);
-  if (child.status !== 0 && child.stdout.trim().length === 0) {`),
-  jsonText(`  return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, input, args, options));
-}
-
-function readProofkitJsonCommandResult<T>(commandRoute: string, {child, outputFile}: ReturnType<typeof runProofkitCommand>): ProofkitJsonCommandResult<T> {
-  if (child.status !== 0 && child.stdout.trim().length === 0) {`)),
-adapterStdinDelta("NO-INPUT-OWNER", adapterBundleRows,
-  jsonText("  return runProofkitJsonCommand<T>(commandRoute, null, args, {...options, inputMode: \"none\"});"),
-  jsonText("  return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, null, args, options, \"json-no-input\"));")),
-adapterStdinDelta("TRANSPORT", adapterBundleRows, jsonText(adapterTransportPredecessor), jsonText(adapterTransportCurrent)),
-adapterStdinDelta("PREPARED-TYPE", adapterBundleRows,
-  jsonText("  let prepared: {readonly args: readonly string[]; readonly outputFile: string | null};"),
-  jsonText("  let prepared: {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string};")),
-adapterStdinDelta("OUTPUT-ARGUMENT-ADMISSION", adapterBundleRows,
-  jsonText(`function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null} {
-  const outputPath = outputPathFromArgs(args);`),
-  jsonText(`function prepareOutputArgs(cwd: string, args: readonly string[]): {readonly args: readonly string[]; readonly outputFile: string | null; readonly cwd: string} {
-  if (args.some(argument => typeof argument !== "string")) {
-    throw new Error("Proofkit command arguments must be strings");
-  }
-  const outputPath = outputPathFromArgs(args);`)),
-adapterStdinDelta("NO-OUTPUT-CONTEXT", adapterBundleRows,
-  jsonText("    return {args, outputFile: null};"), jsonText("    return {args, outputFile: null, cwd};")),
-adapterStdinDelta("ADMITTED-OUTPUT-CONTEXT", adapterBundleRows,
-  jsonText("  return {args: canonicalArgs, outputFile: target.filePath};"),
-  jsonText("  return {args: canonicalArgs, outputFile: target.filePath, cwd: target.cwd};")),
-adapterStdinDelta("OUTPUT-TARGET-TYPE", adapterBundleRows,
-  jsonText("function admitWritableOutputTarget(cwd: string, outputPath: string): {readonly argument: string; readonly filePath: string} {"),
-  jsonText("function admitWritableOutputTarget(cwd: string, outputPath: string): {readonly argument: string; readonly filePath: string; readonly cwd: string} {")),
-adapterStdinDelta("PHYSICAL-OUTPUT-ROOT", adapterBundleRows,
-  jsonText("\tconst root = realpathSync(cwd);"), jsonText("\tconst root = realpathSync.native(cwd);")),
-adapterStdinDelta("OUTPUT-ROOT-BINDING", adapterBundleRows,
-  jsonText("  return {argument: relative(root, filePath), filePath};"),
-  jsonText("  return {argument: relative(root, filePath), filePath, cwd: root};")),
-Object.freeze({
-  id: "ADAPTER-NONBLOCKING-INPUT",
-  reason: "POSIX file acquisition must not block before regular-file admission.",
-  rows: adapterBundleRows,
-  predecessor: jsonText('  const fd = openSync(filePath, "r");'),
-  current: jsonText(`  // A FIFO without a writer must not block before descriptor admission.
-  const flags = process.platform === "win32" ? "r" : constants.O_RDONLY | constants.O_NONBLOCK;
-  const fd = openSync(filePath, flags);`),
-  occurrences: 1,
-}),
-Object.freeze({
-  id: "ADAPTER-ARGV-SNAPSHOT",
-  reason: "Argument admission and execution must consume one owned snapshot.",
-  rows: adapterBundleRows,
-  predecessor: jsonText("prepared = prepareOutputArgs(options.cwd, args);"),
-  current: jsonText("prepared = prepareOutputArgs(options.cwd, [...args]);"),
-  occurrences: 1,
-}),
-adapterStdinDelta("SHA256", adapterBundleRows,
-  "sha256:e9089d40688aa25c2565633825244c55bcadab85b65c74242ef871cedc2c6533",
-  "sha256:35874e850c3ffa7830a665f7cd9a9278308e66ac654a6751b9ad71389fa9be6b"),
-adapterStdinDelta("LINE-COUNT", ["adapter-default", "adapter-explicit-json"], "\"lineCount\": 1124", "\"lineCount\": 1229"),
-adapterStdinDelta("LINE-COUNT-COMPACT", ["adapter-compact"], "\"lineCount\":1124", "\"lineCount\":1229"),
 ]);
 const count = (text, needle) => text.split(needle).length - 1;
 // Returns the predecessor stdout implied by the declared deltas of a row, or null
@@ -325,7 +115,8 @@ function invoke(row) {
 }
 function bundleSemantics(value) {
   assert.equal(value.artifactKind, "proofkit.json-report-cli-adapter-source");
-  assert.equal(value.generatorId, "proofkit.json-report-cli-adapter-source.typescript.v2");
+  assert.equal(value.schemaVersion, 2);
+  assert.equal(value.generatorId, "proofkit.json-report-cli-adapter-source.typescript.v3");
   assert.equal(value.sourceFileName, "proofkit-json-report-cli-adapter.ts");
   assert.equal(value.language, "typescript"); assert.equal(value.format, "json");
   assert.equal(value.sourceSha256, `sha256:${hash(value.source)}`);
@@ -356,11 +147,12 @@ function presetSemantics(value, row) {
     "Stack presets do not own consuming repository policy.", "Stack presets do not prove requirement coverage or rollout readiness."]);
 }
 
-test("starter outputs preserve predecessor streams, launcher domains and independent meanings", () => {
+test("starter outputs match scoped streams, launcher domains and independent meanings", () => {
   for (const row of baseline.observations) {
     const result = invoke(row);
     assert.equal(result.status, row.exitCode, row.name);
-    assert.ok(conservesPredecessor(row, result.stdout), `${row.name}/stdout`);
+    if (currentAdapterStdout.has(row.name)) assert.equal(hash(result.stdout), currentAdapterStdout.get(row.name), `${row.name}/stdout`);
+    else assert.ok(conservesPredecessor(row, result.stdout), `${row.name}/stdout`);
     if (row.name === "preset-duplicate") {
       assert.equal(row.stderrSHA256, hash("stack-preset supports only --preset <id>\n"));
       assert.equal(result.stderr, "--preset may be specified only once\n");
@@ -445,7 +237,6 @@ test("starter schema does not launder native-only hash line-count and rendered-c
 
 test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
   const delta = declaredStreamDeltas.find(item => item.id === "PILOT-D10");
-  assert.equal(declaredStreamDeltas.length, 22);
   const rows = baseline.observations.filter(row => delta.rows.includes(row.name));
   assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   const current = invoke(rows[0]).stdout;
@@ -462,31 +253,18 @@ test("the PILOT-D10 usage delta is exact and limited to its rows", () => {
   assert.equal(conservesPredecessor(unlisted, unlistedCurrent + delta.current), false, "delta applied to an unlisted row");
 });
 
-test("the adapter deltas are exact and limited to the adapter bundle rows", () => {
-  const deltas = declaredStreamDeltas.filter(item => item.id.startsWith("ADAPTER-"));
-  assert.equal(deltas.length, 18);
-  const rows = baseline.observations.filter(row => adapterBundleRows.includes(row.name));
-  assert.deepEqual(rows.map(row => row.name), [...adapterBundleRows]);
+test("the new adapter stream is exact, scoped and rejects its predecessor identity", () => {
+  const rows = baseline.observations.filter(row => currentAdapterStdout.has(row.name));
+  assert.deepEqual(rows.map(row => row.name), [...currentAdapterStdout.keys()]);
+  const admitsAdapter = validators.get("json-report-cli-adapter-source");
   for (const row of rows) {
-    const current = invoke(row).stdout, source = JSON.parse(current).source;
-    assert.ok(conservesPredecessor(row, current), `${row.name}/declared adapter deltas`);
-    assert.equal(source.includes(adapterTransportCurrent), true, `${row.name}/file transport`);
-    assert.equal(source.includes("input: options.inputMode"), false, `${row.name}/no spawnSync input option`);
-    const applied = deltas.filter(item => item.rows.includes(row.name));
-    assert.equal(applied.length, 17, row.name);
-    for (const delta of applied) {
-      const reverted = current.replace(delta.current, delta.predecessor);
-      assert.notEqual(reverted, current, `${row.name}/${delta.id}`);
-      assert.equal(conservesPredecessor(row, reverted), false, `${row.name}/${delta.id}/reverted`);
-    }
-    const otherByte = current.replace("Proofkit binaryPath is required", "Proofkit binaryPath is  required");
-    assert.notEqual(otherByte, current);
-    assert.equal(conservesPredecessor(row, otherByte), false, `${row.name}/other byte`);
-  }
-  for (const name of ["json-report-cli-adapter-source--help", "adapter-missing", "preset-python_service"]) {
-    const row = baseline.observations.find(item => item.name === name), current = invoke(row).stdout;
-    assert.ok(conservesPredecessor(row, current), `${name}/no adapter delta`);
-    for (const delta of deltas) assert.equal(conservesPredecessor(row, current + delta.current), false, `${name}/${delta.id} applied to an unlisted row`);
+    const current = invoke(row).stdout;
+    assert.notEqual(currentAdapterStdout.get(row.name), row.stdoutSHA256);
+    assert.equal(hash(current), currentAdapterStdout.get(row.name));
+    const report = JSON.parse(current);
+    assert.equal(admitsAdapter({...report, schemaVersion: 1}), false);
+    assert.equal(admitsAdapter({...report, generatorId: "proofkit.json-report-cli-adapter-source.typescript.v2"}), false);
+    assert.equal(report.source.includes('input: options.inputMode'), false, "no spawnSync input option");
   }
 });
 

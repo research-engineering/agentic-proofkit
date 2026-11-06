@@ -322,7 +322,7 @@ func moduleComponent(module goModuleRecord, scope string, properties []cyclonedx
 	switch module.Path {
 	case "stdlib", "golang.org/x/mod", "golang.org/x/net", "golang.org/x/sys", "golang.org/x/text":
 		component.Licenses = []cyclonedxLicense{{Expression: "BSD-3-Clause"}}
-	case "github.com/mattn/go-isatty":
+	case "github.com/mattn/go-isatty", "github.com/yuin/goldmark/v2":
 		component.Licenses = []cyclonedxLicense{{Expression: "MIT"}}
 	}
 	return component

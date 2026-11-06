@@ -8,13 +8,14 @@ import (
 func TestGeneratedStarterOutputOwnersPreserveNoInputAndRootFields(t *testing.T) {
 	for _, item := range []struct {
 		command string
+		version string
 		fields  []any
 	}{
-		{"stack-preset", []any{"diagnostics", "nonClaims", "reportId", "reportKind", "ruleResults", "schemaVersion", "state", "summary"}},
-		{"json-report-cli-adapter-source", []any{"artifactKind", "exportedSymbols", "format", "generatorId", "language", "nonClaims", "schemaVersion", "source", "sourceFileName", "sourceSha256", "summary"}},
+		{"stack-preset", "1", []any{"diagnostics", "nonClaims", "reportId", "reportKind", "ruleResults", "schemaVersion", "state", "summary"}},
+		{"json-report-cli-adapter-source", "2", []any{"artifactKind", "exportedSymbols", "format", "generatorId", "language", "nonClaims", "schemaVersion", "source", "sourceFileName", "sourceSha256", "summary"}},
 	} {
 		t.Run(item.command, func(t *testing.T) {
-			owner, ok := nativeStructureOwner("proofkit." + item.command + ".output.v1.json-schema")
+			owner, ok := nativeStructureOwner("proofkit." + item.command + ".output.v" + item.version + ".json-schema")
 			if !ok || owner.direction != "output" || owner.jsonValueInput || owner.outOfBandVersion != "" {
 				t.Fatal("missing ordinary inline-version output owner")
 			}
@@ -30,7 +31,7 @@ func TestGeneratedStarterOutputOwnersPreserveNoInputAndRootFields(t *testing.T) 
 				!reflect.DeepEqual(variant["allowedFields"], item.fields) || !reflect.DeepEqual(variant["requiredFields"], item.fields) {
 				t.Fatal("output root field inventory drift")
 			}
-			if version, err := owner.contractVersion(definition); err != nil || version != "1" {
+			if version, err := owner.contractVersion(definition); err != nil || version.String() != item.version {
 				t.Fatalf("version=%s error=%v", version, err)
 			}
 			if _, err := admitDefinitions(map[string]any{"contractDefinitions": []any{definition}}); err != nil {

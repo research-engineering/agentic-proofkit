@@ -12,7 +12,7 @@ func OutputStructure() map[string]any {
 		claims[index] = jsonshape.StringLiteral(value)
 	}
 	schema := jsonshape.Object(
-		jsonshape.Required("schemaVersion", jsonshape.IntegerLiteral(1)),
+		jsonshape.Required("schemaVersion", jsonshape.IntegerLiteral(BundleSchemaVersion)),
 		jsonshape.Required("artifactKind", jsonshape.StringLiteral(artifactKind)),
 		jsonshape.Required("generatorId", jsonshape.StringLiteral(TypeScriptGeneratorID)),
 		jsonshape.Required("language", jsonshape.StringLiteral(LanguageTypeScript)),

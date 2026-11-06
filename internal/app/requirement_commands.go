@@ -122,6 +122,8 @@ func parseRequirementViewArgs(command string, args []string) (requirementViewArg
 			}
 			options.format = args[index+1]
 			index++
+		case "--mirror-output":
+			options.mirrorOutput = true
 		case "--output":
 			if command != "requirement-spec-tree-view" {
 				return requirementViewArgs{}, fmt.Errorf("--output is valid only for requirement-spec-tree-view")
@@ -230,48 +232,58 @@ func writeCoverageView(input any, options requirementViewArgs, stdout io.Writer,
 func writeSpecTreeView(input any, options requirementViewArgs, stdout io.Writer, stderr io.Writer) int {
 	if options.format == "markdown" {
 		output, exitCode, err := requirementspectree.BuildViewMarkdown(input)
-		return writeViewText(output, exitCode, err, options.outputPath, stdout, stderr)
+		return writeViewText(output, exitCode, err, options, stdout, stderr)
 	}
 	if options.format == "html" {
 		output, exitCode, err := requirementspectree.BuildViewHTML(input)
-		return writeViewText(output, exitCode, err, options.outputPath, stdout, stderr)
+		return writeViewText(output, exitCode, err, options, stdout, stderr)
 	}
 	output, exitCode, err := requirementspectree.BuildViewJSON(input)
 	if options.outputPath != "" {
-		return writeViewJSON(output, exitCode, err, options.outputPath, jsonLayoutFromWriter(stdout), stderr)
+		return writeViewJSON(output, exitCode, err, options, stdout, stderr)
 	}
 	return writeJSON(output, exitCode, err, stdout, stderr)
 }
 
-func writeViewJSON(output any, exitCode int, err error, outputPath string, layout stablejson.Layout, stderr io.Writer) int {
+func writeViewJSON(output any, exitCode int, err error, options requirementViewArgs, stdout, stderr io.Writer) int {
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	bytes, err := stablejson.MarshalLayout(output, layout)
+	bytes, err := stablejson.MarshalLayout(output, jsonLayoutFromWriter(stdout))
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	if err := writeRepoRelativeOutputFile(filepath.FromSlash(outputPath), bytes); err != nil {
+	if err := writeRepoRelativeOutputFile(filepath.FromSlash(options.outputPath), bytes); err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	return exitCode
+	return mirrorPublishedOutput(bytes, exitCode, options.mirrorOutput, stdout, stderr)
 }
 
-func writeViewText(output string, exitCode int, err error, outputPath string, stdout io.Writer, stderr io.Writer) int {
+func writeViewText(output string, exitCode int, err error, options requirementViewArgs, stdout io.Writer, stderr io.Writer) int {
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	if outputPath == "" {
+	if options.outputPath == "" {
 		return writeText(output, exitCode, nil, stdout, stderr)
 	}
-	nativePath := filepath.FromSlash(outputPath)
-	if err := writeRepoRelativeOutputFile(nativePath, []byte(output)); err != nil {
+	content := []byte(output)
+	if err := writeRepoRelativeOutputFile(filepath.FromSlash(options.outputPath), content); err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
+	}
+	return mirrorPublishedOutput(content, exitCode, options.mirrorOutput, stdout, stderr)
+}
+
+func mirrorPublishedOutput(content []byte, exitCode int, mirror bool, stdout, stderr io.Writer) int {
+	if mirror {
+		if err := writeAll(stdout, content); err != nil {
+			writeDiagnostic(stderr, err)
+			return 1
+		}
 	}
 	return exitCode
 }
@@ -364,6 +376,39 @@ func publishRepoRelativeOutputFile(nativePath string, content []byte, replaceExi
 	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
 		return err
 	}
+	if outputWriterBarrier != nil {
+		outputWriterBarrier("before_rename", relative)
+	}
+	// Retain the descriptor for verification even when outputMode forbids reopening.
+	if _, err := temp.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	currentDigest := sha256.New()
+	wantSize := int64(len(content))
+	size, err := io.Copy(currentDigest, io.LimitReader(temp, wantSize+1))
+	if err != nil {
+		return err
+	}
+	if err := temp.Close(); err != nil {
+		return err
+	}
+	expectedDigest := sha256.Sum256(content)
+	if size != wantSize || !bytes.Equal(currentDigest.Sum(nil), expectedDigest[:]) {
+		return errors.New("temporary output content changed before publication")
+	}
+	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
+		return err
+	}
+	if replaceExisting {
+		currentOutput, outputErr := parentRoot.Lstat(filepath.FromSlash(leaf))
+		if priorOutput == nil {
+			if !os.IsNotExist(outputErr) {
+				return errors.New("output destination changed before publication")
+			}
+		} else if outputErr != nil || !os.SameFile(priorOutput, currentOutput) || priorOutput.Mode() != currentOutput.Mode() {
+			return errors.New("output destination identity or mode changed before publication")
+		}
+	}
 	currentTempRouteInfo, err := parentRoot.Lstat(filepath.FromSlash(tempRelative))
 	if err != nil {
 		return err
@@ -373,42 +418,6 @@ func publishRepoRelativeOutputFile(nativePath string, content []byte, replaceExi
 	}
 	if currentTempRouteInfo.Mode() != outputMode {
 		return errors.New("temporary output mode changed before publication")
-	}
-	// Retain the opened descriptor: the selected mode may forbid reopening.
-	currentTemp := temp
-	if _, err := currentTemp.Seek(0, io.SeekStart); err != nil {
-		return err
-	}
-	currentTempInfo, err := currentTemp.Stat()
-	if err != nil {
-		_ = currentTemp.Close()
-		return err
-	}
-	if !os.SameFile(tempInfo, currentTempInfo) {
-		_ = currentTemp.Close()
-		return errors.New("temporary output identity changed before publication")
-	}
-	if currentTempInfo.Mode() != outputMode {
-		_ = currentTemp.Close()
-		return errors.New("temporary output mode changed before publication")
-	}
-	currentDigest := sha256.New()
-	if _, err := io.Copy(currentDigest, currentTemp); err != nil {
-		_ = currentTemp.Close()
-		return err
-	}
-	if err := currentTemp.Close(); err != nil {
-		return err
-	}
-	expectedDigest := sha256.Sum256(content)
-	if !bytes.Equal(currentDigest.Sum(nil), expectedDigest[:]) {
-		return errors.New("temporary output content changed before publication")
-	}
-	if outputWriterBarrier != nil {
-		outputWriterBarrier("before_rename", relative)
-	}
-	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
-		return err
 	}
 	if !replaceExisting {
 		// Link fails instead of replacing a name created after admission.
@@ -423,14 +432,6 @@ func publishRepoRelativeOutputFile(nativePath string, content []byte, replaceExi
 			return fmt.Errorf("output was published at %s but its temporary link was not removed: %w", relative, err)
 		}
 		return nil
-	}
-	currentOutput, outputErr := parentRoot.Lstat(filepath.FromSlash(leaf))
-	if priorOutput == nil {
-		if !os.IsNotExist(outputErr) {
-			return errors.New("output destination changed before publication")
-		}
-	} else if outputErr != nil || !os.SameFile(priorOutput, currentOutput) || priorOutput.Mode() != currentOutput.Mode() {
-		return errors.New("output destination identity or mode changed before publication")
 	}
 	if err := parentRoot.Rename(filepath.FromSlash(tempRelative), filepath.FromSlash(leaf)); err != nil {
 		return err

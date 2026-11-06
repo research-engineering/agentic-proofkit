@@ -68,6 +68,10 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 	for _, flag := range descriptor.allowedFlags {
 		lines = append(lines, "  "+flag)
 	}
+	if slices.Contains(descriptor.allowedFlags, "--mirror-output") {
+		lines = append(lines, "", "File output:",
+			"  --output writes the report without printing it. Add --mirror-output to print the same bytes after publication.")
+	}
 	if descriptor.name == "stack-preset" {
 		lines = append(lines, "", "Copyable preset commands:")
 		for _, presetID := range descriptor.flagValueChoices["--preset"] {
@@ -275,7 +279,13 @@ func commandUsageLine(descriptor commandDescriptor) string {
 		case "--touched-rule-id":
 			segments = append(segments, "[--touched-rule-id <id>]")
 		case "--output":
-			segments = append(segments, "[--output <path>]")
+			if slices.Contains(descriptor.allowedFlags, "--mirror-output") {
+				segments = append(segments, "[--output <path> [--mirror-output]]")
+			} else {
+				segments = append(segments, "[--output <path>]")
+			}
+		case "--mirror-output":
+			continue
 		case "--baseline":
 			segments = append(segments, "[--baseline <path>]")
 		default:

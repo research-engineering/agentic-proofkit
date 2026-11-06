@@ -286,6 +286,9 @@ The release workflow records PyPI identity through:
 npm run pypi:registry
 ```
 
+Each expected wheel must explicitly report `yanked: false`. A missing or null
+status is not evidence that the wheel is available for ordinary installation.
+
 The evidence must distinguish:
 
 - local candidate tarball facts;
