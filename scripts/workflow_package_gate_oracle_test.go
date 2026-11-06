@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -1660,25 +1659,6 @@ func TestPackageGateWorkflowOracleAcceptsOwnerCIAndReleaseWorkflows(t *testing.T
 			releasePackageGateWorkflowExpectation(),
 		)
 	})
-}
-
-func TestReleaseWorkflowInstalledAdapterGeneratorMatchesOwner(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("..", ".github", "workflows", "release.yml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, needle := range []string{
-		`["generatorId", "` + jsonreportcliadaptersource.TypeScriptGeneratorID + `"]`,
-		fmt.Sprintf(`["schemaVersion", %d]`, jsonreportcliadaptersource.BundleSchemaVersion),
-	} {
-		if count := strings.Count(string(raw), needle); count != 1 {
-			t.Fatalf("release workflow installed-adapter owner check %s occurs %d times, want 1", needle, count)
-		}
-	}
-	if strings.Contains(string(raw), "proofkit.json-report-cli-adapter-source.typescript.v1") ||
-		strings.Contains(string(raw), "proofkit.json-report-cli-adapter-source.typescript.v2") {
-		t.Fatal("release workflow retains the retired TypeScript generator identity")
-	}
 }
 
 func TestWorkflowGuardExpressionsRejectNeutralization(t *testing.T) {

@@ -46,6 +46,26 @@ func TestBuildPreservesOpenRowsWithOptionalEdgesAndMissingDescription(t *testing
 	}
 }
 
+func TestBuildRecognizesOnlyPolicyHeaders(t *testing.T) {
+	for _, tc := range []struct {
+		header string
+		state  string
+		exit   int
+	}{
+		{"Status | ID", "failed", 1},
+		{"State | ID", "passed", 0},
+		{"Status | Reference", "passed", 0},
+	} {
+		t.Run(tc.header, func(t *testing.T) {
+			markdown := closedFrontierMarkdown("", "| "+tc.header+" | Scope | Completion |", "|---|---|---|---|", "| NEXT | PROD-77 | Pending review | Still open |")
+			record, code, err := Build(minimalCloseoutInput(markdown))
+			if err != nil || code != tc.exit || record.State != tc.state {
+				t.Fatalf("header admission: exit=%d state=%s err=%v", code, record.State, err)
+			}
+		})
+	}
+}
+
 func TestBuildRejectsTopLevelAndNestedTableAmplificationBeforeParsing(t *testing.T) {
 	for _, prefix := range []string{"", "> "} {
 		wide := prefix + strings.Repeat("head|", 512) + "head\n" + prefix + strings.Repeat("---|", 512) + "---\n" + strings.Repeat(prefix+"one\n", 512)

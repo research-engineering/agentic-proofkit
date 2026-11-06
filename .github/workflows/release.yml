@@ -455,12 +455,13 @@ jobs:
           ./node_modules/.bin/agentic-proofkit json-report-cli-adapter-source --language typescript > registry-install-json-adapter-source.json 2> registry-install-json-adapter-source.stderr
           test ! -s registry-install-json-adapter-source.stderr
           (cd "$repo_root" && go run ./cmd/agentic-proofkit json-report-cli-adapter-source --language typescript) > /tmp/proofkit-owner-json-adapter-source.json
-          node <<'NODE'
-          const assert = require("node:assert/strict");
+          node - registry-install-json-adapter-source.json /tmp/proofkit-owner-json-adapter-source.json <<'ADAPTER_BUNDLE'
           const crypto = require("node:crypto");
           const fs = require("node:fs");
-          const installed = JSON.parse(fs.readFileSync("registry-install-json-adapter-source.json", "utf8"));
-          const owner = JSON.parse(fs.readFileSync("/tmp/proofkit-owner-json-adapter-source.json", "utf8"));
+          const { isDeepStrictEqual } = require("node:util");
+          const [installedPath, ownerPath] = process.argv.slice(2);
+          const installed = JSON.parse(fs.readFileSync(installedPath, "utf8"));
+          const owner = JSON.parse(fs.readFileSync(ownerPath, "utf8"));
           for (const [key, value] of [
             ["schemaVersion", 2],
             ["artifactKind", "proofkit.json-report-cli-adapter-source"],
@@ -473,7 +474,9 @@ jobs:
               throw new Error(`registry adapter source ${key} mismatch: ${installed[key]}`);
             }
           }
-          assert.deepEqual(installed, owner, "registry adapter bundle does not match the current owner");
+          if (!isDeepStrictEqual(installed, owner)) {
+            throw new Error("registry adapter bundle does not match the current owner");
+          }
           const expectedHash = `sha256:${crypto.createHash("sha256").update(installed.source, "utf8").digest("hex")}`;
           if (installed.sourceSha256 !== expectedHash || owner.sourceSha256 !== expectedHash) {
             throw new Error("registry adapter source hash mismatch");
@@ -498,7 +501,7 @@ jobs:
               throw new Error(`registry adapter source contains forbidden stale token ${token}`);
             }
           }
-          NODE
+          ADAPTER_BUNDLE
           popd >/dev/null
           cp "$consumer/package-lock.json" artifacts/registry/root-install-package-lock.json
           cp "$consumer/registry-install-help.txt" artifacts/registry/root-install-help.txt

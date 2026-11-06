@@ -63,3 +63,61 @@ func TestPublishedOutputMirrorRequiresAdmittedOutput(t *testing.T) {
 		t.Fatalf("publish-then-mirror outcome status=%d stderr=%q fileBytes=%d read=%v", status, stderr.String(), len(content), readErr)
 	}
 }
+
+func TestPublishedOutputMirrorRefusesLateTemporaryContentChange(t *testing.T) {
+	grouped := conversionFixture(t, "source.grouped.json")
+	const output = "report.json"
+	for _, tc := range []struct {
+		name     string
+		args     []string
+		input    []byte
+		existing bool
+	}{
+		{"view", []string{"requirement-spec-tree-view", "--format", "json"}, []byte(cliRequirementSpecTreeInput()), true},
+		{"conversion", []string{"requirement-source-conversion", "--to", "flat"}, grouped, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			if tc.existing {
+				if err := os.WriteFile(output, []byte("previous"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			mutated := false
+			previous := outputWriterBarrier
+			t.Cleanup(func() { outputWriterBarrier = previous })
+			outputWriterBarrier = func(stage, _ string) {
+				if stage != "before_rename" {
+					return
+				}
+				entries, err := os.ReadDir(".")
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, entry := range entries {
+					if strings.HasPrefix(entry.Name(), ".proofkit-output-") {
+						file, err := os.OpenFile(entry.Name(), os.O_WRONLY, 0)
+						if err != nil {
+							t.Fatal(err)
+						}
+						_, writeErr := file.WriteAt([]byte("%"), 0)
+						if err := errors.Join(writeErr, file.Close()); err != nil {
+							t.Fatal(err)
+						}
+						mutated = true
+					}
+				}
+			}
+			args := append(tc.args, "--input", "-", "--output", output, "--mirror-output")
+			result := runConversion(t, tc.input, args...)
+			if !mutated {
+				t.Fatal("temporary output was not changed")
+			}
+			result.refused(t, "temporary output content changed before publication")
+			content, err := os.ReadFile(output)
+			if tc.existing && (err != nil || string(content) != "previous") || !tc.existing && !os.IsNotExist(err) {
+				t.Fatalf("refused publication changed the destination: content=%q error=%v", content, err)
+			}
+		})
+	}
+}

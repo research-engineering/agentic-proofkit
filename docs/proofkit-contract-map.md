@@ -317,6 +317,8 @@ For `requirement-spec-tree-view` and `requirement-source-conversion`, `--output`
 publishes a repository-relative file without writing the report to stdout. Add
 `--mirror-output` to receive exactly the published bytes on stdout after the
 file is written. An error writing the mirror does not undo publication. The
+operation does not coordinate external writers with access to the same files;
+do not concurrently modify the publication directory or destination. The
 generated TypeScript runner uses this flag to return the result without
 reopening the output path. Use the generated adapter with the CLI version
 that produced it; its subprocess buffer limit also applies to mirrored output.

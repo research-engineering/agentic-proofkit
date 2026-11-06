@@ -376,6 +376,39 @@ func publishRepoRelativeOutputFile(nativePath string, content []byte, replaceExi
 	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
 		return err
 	}
+	if outputWriterBarrier != nil {
+		outputWriterBarrier("before_rename", relative)
+	}
+	// Retain the descriptor for verification even when outputMode forbids reopening.
+	if _, err := temp.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	currentDigest := sha256.New()
+	wantSize := int64(len(content))
+	size, err := io.Copy(currentDigest, io.LimitReader(temp, wantSize+1))
+	if err != nil {
+		return err
+	}
+	if err := temp.Close(); err != nil {
+		return err
+	}
+	expectedDigest := sha256.Sum256(content)
+	if size != wantSize || !bytes.Equal(currentDigest.Sum(nil), expectedDigest[:]) {
+		return errors.New("temporary output content changed before publication")
+	}
+	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
+		return err
+	}
+	if replaceExisting {
+		currentOutput, outputErr := parentRoot.Lstat(filepath.FromSlash(leaf))
+		if priorOutput == nil {
+			if !os.IsNotExist(outputErr) {
+				return errors.New("output destination changed before publication")
+			}
+		} else if outputErr != nil || !os.SameFile(priorOutput, currentOutput) || priorOutput.Mode() != currentOutput.Mode() {
+			return errors.New("output destination identity or mode changed before publication")
+		}
+	}
 	currentTempRouteInfo, err := parentRoot.Lstat(filepath.FromSlash(tempRelative))
 	if err != nil {
 		return err
@@ -385,42 +418,6 @@ func publishRepoRelativeOutputFile(nativePath string, content []byte, replaceExi
 	}
 	if currentTempRouteInfo.Mode() != outputMode {
 		return errors.New("temporary output mode changed before publication")
-	}
-	// Retain the opened descriptor: the selected mode may forbid reopening.
-	currentTemp := temp
-	if _, err := currentTemp.Seek(0, io.SeekStart); err != nil {
-		return err
-	}
-	currentTempInfo, err := currentTemp.Stat()
-	if err != nil {
-		_ = currentTemp.Close()
-		return err
-	}
-	if !os.SameFile(tempInfo, currentTempInfo) {
-		_ = currentTemp.Close()
-		return errors.New("temporary output identity changed before publication")
-	}
-	if currentTempInfo.Mode() != outputMode {
-		_ = currentTemp.Close()
-		return errors.New("temporary output mode changed before publication")
-	}
-	currentDigest := sha256.New()
-	if _, err := io.Copy(currentDigest, currentTemp); err != nil {
-		_ = currentTemp.Close()
-		return err
-	}
-	if err := currentTemp.Close(); err != nil {
-		return err
-	}
-	expectedDigest := sha256.Sum256(content)
-	if !bytes.Equal(currentDigest.Sum(nil), expectedDigest[:]) {
-		return errors.New("temporary output content changed before publication")
-	}
-	if outputWriterBarrier != nil {
-		outputWriterBarrier("before_rename", relative)
-	}
-	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
-		return err
 	}
 	if !replaceExisting {
 		// Link fails instead of replacing a name created after admission.
@@ -435,14 +432,6 @@ func publishRepoRelativeOutputFile(nativePath string, content []byte, replaceExi
 			return fmt.Errorf("output was published at %s but its temporary link was not removed: %w", relative, err)
 		}
 		return nil
-	}
-	currentOutput, outputErr := parentRoot.Lstat(filepath.FromSlash(leaf))
-	if priorOutput == nil {
-		if !os.IsNotExist(outputErr) {
-			return errors.New("output destination changed before publication")
-		}
-	} else if outputErr != nil || !os.SameFile(priorOutput, currentOutput) || priorOutput.Mode() != currentOutput.Mode() {
-		return errors.New("output destination identity or mode changed before publication")
 	}
 	if err := parentRoot.Rename(filepath.FromSlash(tempRelative), filepath.FromSlash(leaf)); err != nil {
 		return err
