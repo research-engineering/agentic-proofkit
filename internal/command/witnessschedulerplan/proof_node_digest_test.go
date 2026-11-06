@@ -54,7 +54,7 @@ func nodeDigests(t *testing.T, edit func(map[string]any)) map[string]string {
 	}
 	reported := record.Diagnostics[len(record.Diagnostics)-1]
 	rows, _ := reported.Value.([]any)
-	if record.SchemaVersion != 2 || reported.Key != "proofNodeDigests" || len(rows) != len(projection.Commands) {
+	if record.SchemaVersion != 3 || reported.Key != "proofNodeDigests" || len(rows) != len(projection.Commands) {
 		t.Fatalf("report schemaVersion=%d diagnostic=%s rows=%d", record.SchemaVersion, reported.Key, len(rows))
 	}
 	for index, raw := range rows {

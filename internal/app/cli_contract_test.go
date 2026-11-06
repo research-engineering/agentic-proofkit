@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "dee53cb5fe67a3fadd6f498fb98460ec91100ebf870fbd00482101f1ae98c98d"
+	cliContractPublicABISHA256               = "b633437b8f260567cb82eeaa08df3c76fb1be9d2c8a228de3d43fc30f6c65fe3"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -648,7 +648,7 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.witness-plan.input.v1.json-schema":                              {},
 			"proofkit.witness-plan.output.v1.json-schema":                             {},
 			"proofkit.witness-scheduler-plan.input.v1.json-schema":                    {},
-			"proofkit.witness-scheduler-plan.output.v2.json-schema":                   {},
+			"proofkit.witness-scheduler-plan.output.v3.json-schema":                   {},
 			bindingStructureDefinition:                                                {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
 			sourceViewOutputStructureDefinition: {}, transitionInputStructureDefinition: {}, transitionOutputStructureDefinition: {},
 			authoringInputStructureDefinition: {}, authoringOutputStructureDefinition: {}, contextCatalogStructureDefinition: {},
