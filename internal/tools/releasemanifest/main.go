@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -20,6 +21,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
@@ -28,6 +30,7 @@ const (
 	pythonPackageName = "agentic-proofkit"
 	schemaVersion     = 1
 	npmRegistry       = releasechannel.NPMRegistryURL
+	maxEvidenceBytes  = 16 << 20
 )
 
 type packageJSON struct {
@@ -84,6 +87,7 @@ type npmRegistrySet struct {
 	Registry           string       `json:"registry"`
 	SchemaVersion      int          `json:"schemaVersion"`
 	Source             string       `json:"source"`
+	artifactDigest     string
 }
 
 type pythonWheelRecord struct {
@@ -204,46 +208,47 @@ func main() {
 }
 
 func run() (returnErr error) {
-	manifest, err := readPackageJSON("package.json")
+	const root = "."
+	manifest, err := readPackageJSON(root, "package.json")
 	if err != nil {
 		return err
 	}
-	changeRecord, err := releasechange.Read(releasechange.RecordPath)
+	changeRecord, err := releasechange.ReadFrom(root, releasechange.RecordPath)
 	if err != nil {
 		return err
 	}
 	if err := releasechange.RequireVersion(changeRecord, manifest.Version); err != nil {
 		return err
 	}
-	localRecords, err := readPackRecords(filepath.Join("artifacts", "package", "npm-pack.json"))
+	localRecords, err := readPackRecords(root, filepath.Join("artifacts", "package", "npm-pack.json"))
 	if err != nil {
 		return err
 	}
 	sortPackRecords(localRecords)
-	pythonPackages, err := optionalPythonPackageSet(filepath.Join("artifacts", "pypi", "python-packages.json"))
+	pythonPackages, err := optionalPythonPackageSet(root, filepath.Join("artifacts", "pypi", "python-packages.json"))
 	if err != nil {
 		return err
 	}
-	registryRecords, err := optionalPackRecords(filepath.Join("artifacts", "registry", "npm-pack.json"))
-	if err != nil {
+	registryRecords, err := readPackRecords(root, filepath.Join("artifacts", "registry", "npm-pack.json"))
+	if err != nil && !errors.Is(err, artifactfile.ErrMissing) {
 		return err
 	}
 	if len(registryRecords) > 0 {
 		sortPackRecords(registryRecords)
 	}
-	npmRegistry, err := optionalNPMRegistrySet(filepath.Join("artifacts", "registry", "published-registry-artifact-set.json"))
+	npmRegistry, err := optionalNPMRegistrySet(root, filepath.Join("artifacts", "registry", "published-registry-artifact-set.json"))
 	if err != nil {
 		return err
 	}
-	pypiRegistry, err := optionalPyPIRegistrySet(filepath.Join("artifacts", "pypi-registry", "pypi-release.json"))
+	pypiRegistry, err := optionalPyPIRegistrySet(root, filepath.Join("artifacts", "pypi-registry", "pypi-release.json"))
 	if err != nil {
 		return err
 	}
-	npmPublicationMode, err := optionalPublicationMode(filepath.Join("artifacts", "registry", "npm-publication-mode.txt"), "npm")
+	npmPublicationMode, err := optionalPublicationMode(root, filepath.Join("artifacts", "registry", "npm-publication-mode.txt"), "npm")
 	if err != nil {
 		return err
 	}
-	pypiPublicationMode, err := optionalPublicationMode(filepath.Join("artifacts", "pypi-registry", "pypi-publication-mode.txt"), "pypi")
+	pypiPublicationMode, err := optionalPublicationMode(root, filepath.Join("artifacts", "pypi-registry", "pypi-publication-mode.txt"), "pypi")
 	if err != nil {
 		return err
 	}
@@ -294,7 +299,11 @@ func run() (returnErr error) {
 	if err != nil {
 		return err
 	}
-	moduleName, err := goModule()
+	installEvidence, err := optionalRegistryInstallEvidence(root, filepath.Join("artifacts", "registry"), npmRegistry)
+	if err != nil {
+		return err
+	}
+	moduleName, err := goModule(root)
 	if err != nil {
 		return err
 	}
@@ -351,19 +360,15 @@ func run() (returnErr error) {
 			Node: nodeVersion,
 			Npm:  npmVersion,
 		},
-		Channels:          releaseChannels(localRecords, registryRecords, npmPublicationMode, pythonPackages, pypiRegistry, pypiPublicationMode, assets, trustedPublishers),
-		LocalPackEvidence: packageEvidenceSet(localRecords, assetShaByFilename(assets)),
+		Channels:                releaseChannels(localRecords, registryRecords, npmPublicationMode, pythonPackages, pypiRegistry, pypiPublicationMode, assets, trustedPublishers),
+		LocalPackEvidence:       packageEvidenceSet(localRecords, assetShaByFilename(assets)),
+		RegistryInstallEvidence: installEvidence,
 		NonClaims: []string{
 			"GitHub Release assets are archive evidence, not package-manager dependency authority.",
 			"PyPI distribution is not registry authority until the PyPI channel has its own admitted post-publish evidence.",
 			"Native witness execution, consumer adoption, consumer proof freshness, merge policy, and rollout policy remain consumer-owned.",
 		},
 	}
-	installEvidence, err := optionalRegistryInstallEvidence(filepath.Join("artifacts", "registry"))
-	if err != nil {
-		return err
-	}
-	release.RegistryInstallEvidence = installEvidence
 	if err := writeJSON(filepath.Join(releaseDir, "release-manifest.json"), release); err != nil {
 		return err
 	}
@@ -380,8 +385,8 @@ func run() (returnErr error) {
 	return os.WriteFile(filepath.Join(releaseDir, "metadata-checksums.sha256"), []byte(strings.Join(metadataChecksums, "\n")+"\n"), 0o644)
 }
 
-func readPackageJSON(path string) (packageJSON, error) {
-	manifest, err := readAdmittedJSON[packageJSON](path)
+func readPackageJSON(root, path string) (packageJSON, error) {
+	manifest, err := readAdmittedJSON[packageJSON](root, path)
 	if err != nil {
 		return packageJSON{}, err
 	}
@@ -391,8 +396,8 @@ func readPackageJSON(path string) (packageJSON, error) {
 	return manifest, nil
 }
 
-func readPackRecords(path string) ([]packRecord, error) {
-	records, err := readAdmittedJSON[[]packRecord](path)
+func readPackRecords(root, path string) ([]packRecord, error) {
+	records, err := readAdmittedJSON[[]packRecord](root, path)
 	if err != nil {
 		return nil, err
 	}
@@ -407,23 +412,13 @@ func readPackRecords(path string) ([]packRecord, error) {
 	return records, nil
 }
 
-func optionalPackRecords(path string) ([]packRecord, error) {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return readPackRecords(path)
-}
-
-func optionalPublicationMode(path string, label string) (string, error) {
-	content, err := os.ReadFile(path)
+func optionalPublicationMode(root, path, label string) (string, error) {
+	content, err := artifactfile.ReadBounded(root, path, 64)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, artifactfile.ErrMissing) {
 			return "", nil
 		}
-		return "", err
+		return "", fmt.Errorf("read %s publication mode: %w", label, err)
 	}
 	mode, err := unicodepolicy.DecodeUTF8(content)
 	if err != nil {
@@ -546,14 +541,15 @@ func packRecordsByFilename(records []packRecord, label string) (map[string]packR
 	return result, nil
 }
 
-func optionalNPMRegistrySet(path string) (*npmRegistrySet, error) {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
+func optionalNPMRegistrySet(root, path string) (*npmRegistrySet, error) {
+	content, err := artifactfile.ReadBounded(root, path, maxEvidenceBytes)
+	if err != nil {
+		if errors.Is(err, artifactfile.ErrMissing) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
-	out, err := readAdmittedJSON[npmRegistrySet](path)
+	out, err := decodeAdmittedJSON[npmRegistrySet](content, path)
 	if err != nil {
 		return nil, err
 	}
@@ -587,6 +583,8 @@ func optionalNPMRegistrySet(path string) (*npmRegistrySet, error) {
 		return nil, err
 	}
 	out.PublicationMode = mode
+	sum := sha256.Sum256(content)
+	out.artifactDigest = hex.EncodeToString(sum[:])
 	sortPackRecords(out.Packages)
 	return &out, nil
 }
@@ -610,15 +608,12 @@ func requireNPMRegistryMatchesLocal(registry *npmRegistrySet, records []packReco
 	return requireRegistryRecordsMatchLocal(registry.Packages, local)
 }
 
-func optionalPythonPackageSet(path string) (*pythonPackageSet, error) {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
+func optionalPythonPackageSet(root, path string) (*pythonPackageSet, error) {
+	out, err := readAdmittedJSON[pythonPackageSet](root, path)
+	if err != nil {
+		if errors.Is(err, artifactfile.ErrMissing) {
 			return nil, nil
 		}
-		return nil, err
-	}
-	out, err := readAdmittedJSON[pythonPackageSet](path)
-	if err != nil {
 		return nil, err
 	}
 	if out.ArtifactKind != "proofkit.python-package-set.v1" || out.SchemaVersion != 1 {
@@ -655,15 +650,12 @@ func requirePythonPackagesMatchPackage(manifest packageJSON, packageSet *pythonP
 	return nil
 }
 
-func optionalPyPIRegistrySet(path string) (*pypiRegistrySet, error) {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
+func optionalPyPIRegistrySet(root, path string) (*pypiRegistrySet, error) {
+	out, err := readAdmittedJSON[pypiRegistrySet](root, path)
+	if err != nil {
+		if errors.Is(err, artifactfile.ErrMissing) {
 			return nil, nil
 		}
-		return nil, err
-	}
-	out, err := readAdmittedJSON[pypiRegistrySet](path)
-	if err != nil {
 		return nil, err
 	}
 	if out.ArtifactKind != "proofkit.pypi-registry-artifact-set.v1" || out.SchemaVersion != 1 {
@@ -758,16 +750,19 @@ func requirePyPIRegistryMatchesLocal(registry *pypiRegistrySet, local *pythonPac
 	return nil
 }
 
-func readAdmittedJSON[T any](path string) (T, error) {
-	var out T
-	file, err := os.Open(path)
+func readAdmittedJSON[T any](root, path string) (T, error) {
+	content, err := artifactfile.ReadBounded(root, path, maxEvidenceBytes)
 	if err != nil {
-		return out, err
+		var out T
+		return out, fmt.Errorf("read %s: %w", path, err)
 	}
-	defer file.Close()
-	value, err := admission.DecodeTypedJSON[T](file, 16<<20)
+	return decodeAdmittedJSON[T](content, path)
+}
+
+func decodeAdmittedJSON[T any](content []byte, path string) (T, error) {
+	value, err := admission.DecodeTypedJSON[T](bytes.NewReader(content), maxEvidenceBytes)
 	if err != nil {
-		return out, fmt.Errorf("decode %s: %w", path, err)
+		return value, fmt.Errorf("decode %s: %w", path, err)
 	}
 	return value, nil
 }
@@ -1028,14 +1023,13 @@ func pythonPackageEvidenceSet(records []pythonWheelRecord) []packageEvidence {
 	return out
 }
 
-func optionalRegistryInstallEvidence(dir string) (*registryInstallEvidence, error) {
+func optionalRegistryInstallEvidence(root, dir string, registry *npmRegistrySet) (*registryInstallEvidence, error) {
 	var packageLock, helpOutput, auditSignatures, artifactSet, adapterSourceReport, successReport, failedReport string
 	paths := []struct {
 		path   string
 		target *string
 	}{
 		{path: filepath.Join(dir, "audit-signatures.txt"), target: &auditSignatures},
-		{path: filepath.Join(dir, "published-registry-artifact-set.json"), target: &artifactSet},
 		{path: filepath.Join(dir, "root-install-help.txt"), target: &helpOutput},
 		{path: filepath.Join(dir, "root-install-json-adapter-source.json"), target: &adapterSourceReport},
 		{path: filepath.Join(dir, "root-install-json-failed.json"), target: &failedReport},
@@ -1044,26 +1038,30 @@ func optionalRegistryInstallEvidence(dir string) (*registryInstallEvidence, erro
 	}
 	missing := []string{}
 	found := 0
+	if registry == nil {
+		missing = append(missing, "published-registry-artifact-set.json")
+	} else {
+		artifactSet = registry.artifactDigest
+		found++
+	}
 	for _, item := range paths {
-		path := item.path
-		if _, err := os.Stat(path); err != nil {
-			if os.IsNotExist(err) {
-				missing = append(missing, filepath.Base(path))
+		content, err := artifactfile.ReadBounded(root, item.path, maxEvidenceBytes)
+		if err != nil {
+			if errors.Is(err, artifactfile.ErrMissing) {
+				missing = append(missing, filepath.Base(item.path))
 				continue
 			}
-			return nil, err
+			return nil, fmt.Errorf("read registry install evidence %s: %w", filepath.Base(item.path), err)
 		}
-		sum, err := fileSHA256(path)
-		if err != nil {
-			return nil, err
-		}
-		*item.target = sum
+		sum := sha256.Sum256(content)
+		*item.target = hex.EncodeToString(sum[:])
 		found++
 	}
 	if found == 0 {
 		return nil, nil
 	}
 	if len(missing) > 0 {
+		sort.Strings(missing)
 		return nil, fmt.Errorf("registry install evidence is partial; missing file(s): %s", strings.Join(missing, ", "))
 	}
 	return &registryInstallEvidence{
@@ -1086,10 +1084,10 @@ func writeJSON(path string, value any) error {
 	return os.WriteFile(path, append(content, '\n'), 0o644)
 }
 
-func goModule() (string, error) {
-	content, err := os.ReadFile("go.mod")
+func goModule(root string) (string, error) {
+	content, err := artifactfile.ReadBounded(root, "go.mod", maxEvidenceBytes)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("read go.mod: %w", err)
 	}
 	decoded, err := unicodepolicy.DecodeUTF8(content)
 	if err != nil {

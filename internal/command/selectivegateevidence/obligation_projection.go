@@ -17,9 +17,6 @@ type currentnessProjectionDiagnostic struct {
 	CurrentnessCheckRefs [][]string
 	DecisionStates       []string
 	EvidenceRefs         []string
-	ReceiptID            string
-	RequirementID        string
-	ProofRouteRef        string
 	ScopeCheckRefs       [][]string
 }
 
@@ -27,12 +24,7 @@ type trustProjectionDiagnostic struct {
 	ArtifactRefs   []string
 	DecisionStates []string
 	EvidenceRefs   []string
-	ProducerRef    string
-	ProofRouteRef  string
 	ProvenanceRef  *string
-	ReceiptID      string
-	ReceiptStatus  string
-	RequirementID  string
 }
 
 func ProjectObligationDecision(raw any) (map[string]any, error) {
@@ -73,7 +65,6 @@ func ProjectObligationDecision(raw any) (map[string]any, error) {
 	}
 	routes := map[string]map[string]any{}
 	routesByObligation := map[string]map[string]any{}
-	routeKeys := []string{}
 	for _, routeRecord := range routeRecords {
 		route, key, err := admitRoute(routeRecord)
 		if err != nil {
@@ -91,9 +82,7 @@ func ProjectObligationDecision(raw any) (map[string]any, error) {
 			return nil, fmt.Errorf("selective evidence obligation projection obligationId values must be unique")
 		}
 		routesByObligation[obligationID] = route
-		routeKeys = append(routeKeys, key)
 	}
-	sort.Strings(routeKeys)
 	receiptGroups := groupReceipts(evidenceInput.Receipts)
 	currentnessDiagnostics, err := currentnessDiagnosticsByObligation(record["receiptCurrentnessScopeAdmission"], routesByObligation, receiptGroups)
 	if err != nil {
@@ -365,9 +354,6 @@ func currentnessProjectionFromDiagnostic(diagnostic receiptcurrentnessscope.Proj
 		CurrentnessCheckRefs: copyNestedStrings(diagnostic.CurrentnessCheckRefs),
 		DecisionStates:       append([]string{}, diagnostic.DecisionCandidateStates...),
 		EvidenceRefs:         append([]string{}, diagnostic.EvidenceRefs...),
-		ReceiptID:            diagnostic.ReceiptID,
-		RequirementID:        diagnostic.RequirementID,
-		ProofRouteRef:        diagnostic.ProofRouteRef,
 		ScopeCheckRefs:       copyNestedStrings(diagnostic.ScopeCheckRefs),
 	}
 }
@@ -382,11 +368,7 @@ func trustProjectionFromDiagnostic(diagnostic receipttrustclass.ProjectionDiagno
 		ArtifactRefs:   append([]string{}, diagnostic.ArtifactRefs...),
 		DecisionStates: append([]string{}, diagnostic.DecisionCandidateStates...),
 		EvidenceRefs:   append([]string{}, diagnostic.EvidenceRefs...),
-		ProofRouteRef:  diagnostic.ProofRouteRef,
 		ProvenanceRef:  provenanceRef,
-		ReceiptID:      diagnostic.ReceiptID,
-		ReceiptStatus:  diagnostic.ReceiptStatus,
-		RequirementID:  diagnostic.RequirementID,
 	}
 }
 

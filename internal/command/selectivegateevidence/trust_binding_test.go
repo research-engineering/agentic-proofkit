@@ -1,6 +1,7 @@
 package selectivegateevidence
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -87,6 +88,37 @@ func TestTrustProjectionNeedsProducerFactsButKeepsEvidenceRolesDistinct(t *testi
 	if _, err := ProjectObligationDecision(input); err == nil || !strings.Contains(err.Error(), "requires admitted producer receipt") {
 		t.Fatalf("unknown producer facts were trusted: %v", err)
 	}
+}
+
+func TestFailedReceiptsBindProducerIdentityWhenProvided(t *testing.T) {
+	failedInput := func() map[string]any {
+		input := fullyBoundProjectionInput()
+		evidence := input["evidence"].(map[string]any)
+		selectiveReceipt(evidence)["status"] = "failed"
+		selectiveReceipt(evidence)["exitCode"] = json.Number("1")
+		producerReceipt(evidence)["status"] = "failed"
+		producerReceipt(evidence)["satisfiesMergeObligation"] = false
+		input["receiptTrustClassAdmission"].(map[string]any)["obligationReceipts"].([]any)[0].(map[string]any)["receiptStatus"] = "failed"
+		return input
+	}
+	assertProjectedDecision(t, failedInput(), "failed")
+	for _, test := range []struct{ field, value string }{
+		{"subjectRef", "unrelated.command"},
+		{"evidenceRef", "artifacts/unrelated-report.json"},
+	} {
+		t.Run(test.field, func(t *testing.T) {
+			input := failedInput()
+			producerReceipt(input["evidence"].(map[string]any))[test.field] = test.value
+			if _, err := ProjectObligationDecision(input); err == nil || !strings.Contains(err.Error(), "producer receipt "+test.field+" does not match") {
+				t.Fatalf("unrelated producer %s accepted or wrong cause: %v", test.field, err)
+			}
+		})
+	}
+	partial := failedInput()
+	delete(selectiveReceipt(partial["evidence"].(map[string]any)), "producerReceiptId")
+	delete(partial, "receiptCurrentnessScopeAdmission")
+	delete(partial, "receiptTrustClassAdmission")
+	assertProjectedDecision(t, partial, "failed")
 }
 
 func fullyBoundProjectionInput() map[string]any {

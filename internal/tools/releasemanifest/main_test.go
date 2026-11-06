@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +26,7 @@ func TestReleaseManifestReadersRejectAmbiguousJSON(t *testing.T) {
 				writeFile(t, path, `{"name":"agentic-proofkit","name":"other","version":"1.2.3","license":"MIT","repository":{"url":"https://example.test/repo"}}`)
 			},
 			read: func(path string) error {
-				_, err := readPackageJSON(path)
+				_, err := readPackageJSON(filepath.Dir(path), filepath.Base(path))
 				return err
 			},
 			want: "duplicate object key",
@@ -35,7 +37,7 @@ func TestReleaseManifestReadersRejectAmbiguousJSON(t *testing.T) {
 				writeFile(t, path, `[{"name":"agentic-proofkit","version":"1.2.3","filename":"agentic-proofkit.tgz","integrity":"sha512-x","shasum":"abc"}] true`)
 			},
 			read: func(path string) error {
-				_, err := readPackRecords(path)
+				_, err := readPackRecords(filepath.Dir(path), filepath.Base(path))
 				return err
 			},
 			want: "multiple JSON values",
@@ -46,7 +48,7 @@ func TestReleaseManifestReadersRejectAmbiguousJSON(t *testing.T) {
 				writeFile(t, path, `{"artifactKind":"proofkit.python-package-set.v1","schemaVersion":1,"packageName":"agentic-proofkit","packageName":"other","packageVersion":"1.2.3","packages":[{"filename":"agentic_proofkit-1.2.3-py3-none-any.whl","name":"agentic-proofkit","version":"1.2.3","sha256":"abc","binarySha256":"def","pythonTag":"py3","abiTag":"none","platformTag":"any","platformSuffix":"any","wheelTag":"py3-none-any"}]}`)
 			},
 			read: func(path string) error {
-				_, err := optionalPythonPackageSet(path)
+				_, err := optionalPythonPackageSet(filepath.Dir(path), filepath.Base(path))
 				return err
 			},
 			want: "duplicate object key",
@@ -57,7 +59,7 @@ func TestReleaseManifestReadersRejectAmbiguousJSON(t *testing.T) {
 				writeFile(t, path, `{"artifactKind":"proofkit.pypi-registry-artifact-set.v1","schemaVersion":1,"registry":"https://pypi.org","packageName":"agentic-proofkit","packageVersion":"1.2.3","packages":[],"packages":[]}`)
 			},
 			read: func(path string) error {
-				_, err := optionalPyPIRegistrySet(path)
+				_, err := optionalPyPIRegistrySet(filepath.Dir(path), filepath.Base(path))
 				return err
 			},
 			want: "duplicate object key",
@@ -68,7 +70,7 @@ func TestReleaseManifestReadersRejectAmbiguousJSON(t *testing.T) {
 				writeFile(t, path, `{"artifactKind":"proofkit.published-registry-artifact-set.v1","schemaVersion":1,"authorityChannel":"registry_release","authorityValidator":"releaseauthority","registry":"https://registry.npmjs.org","publicationMode":"existing_byte_match","source":"registry npm pack byte-match for preexisting version","nonClaims":["Registry evidence does not prove adoption."],"packages":[],"packages":[]}`)
 			},
 			read: func(path string) error {
-				_, err := optionalNPMRegistrySet(path)
+				_, err := optionalNPMRegistrySet(filepath.Dir(path), filepath.Base(path))
 				return err
 			},
 			want: "duplicate object key",
@@ -131,9 +133,16 @@ func TestNPMRegistryAuthorityFlowsFromAdmittedFileToPublishedChannel(t *testing.
 	record := packRecord{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3", Filename: "research-engineering-agentic-proofkit-1.2.3.tgz", Integrity: "sha512-x", Shasum: "abc"}
 	path := filepath.Join(t.TempDir(), "published-registry-artifact-set.json")
 	writeFile(t, path, `{"artifactKind":"proofkit.published-registry-artifact-set.v1","schemaVersion":1,"authorityChannel":"registry_release","authorityValidator":"releaseauthority","registry":"https://registry.npmjs.org","publicationMode":"existing_byte_match","source":"registry npm pack byte-match for preexisting version","nonClaims":["Registry evidence does not prove adoption."],"packages":[{"name":"@research-engineering/agentic-proofkit","version":"1.2.3","filename":"research-engineering-agentic-proofkit-1.2.3.tgz","integrity":"sha512-x","shasum":"abc"}]}`)
-	registry, err := optionalNPMRegistrySet(path)
+	registry, err := optionalNPMRegistrySet(filepath.Dir(path), filepath.Base(path))
 	if err != nil {
 		t.Fatalf("optionalNPMRegistrySet() error=%v", err)
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if registry.artifactDigest != fmt.Sprintf("%x", sha256.Sum256(content)) {
+		t.Fatal("registry digest does not bind the admitted artifact-set bytes")
 	}
 	if err := requireNPMRegistryMatchesLocal(registry, registry.Packages, []packRecord{record}, "existing_byte_match"); err != nil {
 		t.Fatalf("requireNPMRegistryMatchesLocal() error=%v", err)
@@ -411,7 +420,7 @@ func TestPyPIRegistryEvidenceRequiresCanonicalAuthorityMetadata(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "pypi-release.json")
 			writeFile(t, path, item.json)
 
-			_, err := optionalPyPIRegistrySet(path)
+			_, err := optionalPyPIRegistrySet(filepath.Dir(path), filepath.Base(path))
 			if err == nil || !strings.Contains(err.Error(), item.want) {
 				t.Fatalf("optionalPyPIRegistrySet() error=%v, want %q", err, item.want)
 			}
@@ -423,7 +432,7 @@ func TestPyPIRegistryEvidenceAdmitsCompletePostPublishShape(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "pypi-release.json")
 	writeFile(t, path, `{"artifactKind":"proofkit.pypi-registry-artifact-set.v1","schemaVersion":1,"authorityChannel":"pypi_registry_release","authorityValidator":"pypiregistry","registry":"https://pypi.org","source":"post-publish PyPI JSON API","packageName":"agentic-proofkit","packageVersion":"1.2.3","packages":[{"abiTag":"none","binarySha256":"bin","filename":"agentic_proofkit-1.2.3-py3-none-any.whl","name":"agentic-proofkit","packageType":"bdist_wheel","platformSuffix":"any","platformTag":"any","pythonTag":"py3","sha256":"def","url":"https://files.pythonhosted.org/packages/example.whl","version":"1.2.3","wheelTag":"py3-none-any"}],"nonClaims":["PyPI registry identity does not prove consumer installation."]}`)
 
-	out, err := optionalPyPIRegistrySet(path)
+	out, err := optionalPyPIRegistrySet(filepath.Dir(path), filepath.Base(path))
 	if err != nil {
 		t.Fatalf("optionalPyPIRegistrySet() error=%v", err)
 	}
@@ -472,10 +481,26 @@ func TestOptionalRegistryInstallEvidenceIsAllOrNone(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "root-install-help.txt"), "help")
 
-	_, err := optionalRegistryInstallEvidence(root)
+	_, err := optionalRegistryInstallEvidence(root, ".", nil)
 	if err == nil || !strings.Contains(err.Error(), "registry install evidence is partial") {
 		t.Fatalf("optionalRegistryInstallEvidence() error=%v, want partial evidence rejection", err)
 	}
+}
+
+func TestReleaseManifestRejectsPartialInstallEvidenceBeforeOutput(t *testing.T) {
+	writeReleaseManifestFixture(t, false)
+	if err := run(); err != nil {
+		t.Fatalf("valid candidate rejected: %v", err)
+	}
+	outputs := retainReleaseOutputs(t)
+	if err := os.MkdirAll("artifacts/registry", 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, "artifacts/registry/root-install-help.txt", "help output\n")
+	if err := run(); err == nil || !strings.Contains(err.Error(), "registry install evidence is partial") {
+		t.Fatalf("partial install evidence was not refused: %v", err)
+	}
+	assertRetainedReleaseOutputs(t, outputs)
 }
 
 func TestOptionalRegistryInstallEvidenceAdmitsCompleteEvidence(t *testing.T) {
@@ -492,7 +517,8 @@ func TestOptionalRegistryInstallEvidenceAdmitsCompleteEvidence(t *testing.T) {
 		writeFile(t, filepath.Join(root, file), file)
 	}
 
-	evidence, err := optionalRegistryInstallEvidence(root)
+	admittedDigest := fmt.Sprintf("%x", sha256.Sum256([]byte("independently admitted registry record")))
+	evidence, err := optionalRegistryInstallEvidence(root, ".", &npmRegistrySet{artifactDigest: admittedDigest})
 	if err != nil {
 		t.Fatalf("optionalRegistryInstallEvidence() error=%v", err)
 	}
@@ -502,7 +528,7 @@ func TestOptionalRegistryInstallEvidenceAdmitsCompleteEvidence(t *testing.T) {
 		evidence.FailedReportSha256 == "" ||
 		evidence.HelpOutputSha256 == "" ||
 		evidence.PackageLockSha256 == "" ||
-		evidence.PublishedArtifactSetSha256 == "" ||
+		evidence.PublishedArtifactSetSha256 != admittedDigest ||
 		evidence.SuccessReportSha256 == "" {
 		t.Fatalf("optionalRegistryInstallEvidence() = %#v, want complete digest evidence", evidence)
 	}
@@ -641,7 +667,7 @@ func TestPyPIRegistryEvidenceRejectsDuplicateWheelSubstitution(t *testing.T) {
 		}
 		path := filepath.Join(t.TempDir(), "pypi-registry.json")
 		writeFile(t, path, string(raw))
-		return optionalPyPIRegistrySet(path)
+		return optionalPyPIRegistrySet(filepath.Dir(path), filepath.Base(path))
 	}
 
 	complete, err := admit([]pythonWheelRecord{registryRecords[3], registryRecords[1], registryRecords[0], registryRecords[2]})
