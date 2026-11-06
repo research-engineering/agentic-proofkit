@@ -94,17 +94,23 @@ func TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift(t *testing.T)
 		"package/docs/specs/example/requirements.v2.json",
 		"package/proofkit/cli-contract.v2.json",
 	}
+	packed := map[string]string{"package/dist/platform/darwin-arm64/agentic-proofkit": "platform binary\n"}
 	for _, entry := range entries {
-		sourcePath := strings.TrimPrefix(entry, "package/")
-		writeFileBytes(t, filepath.Join(root, filepath.FromSlash(sourcePath)), []byte("source-owner\n"))
-		tarball := writePackageTarball(t, map[string]string{entry: "corrupted-packed-owner\n"})
-		artifact := tarballArtifact(t, tarball)
-		artifact.Entries = []string{entry}
-
-		err := verifyPackedOwnerRecordsMatchSource(artifact)
-		if err == nil || !strings.Contains(err.Error(), "does not match source owner") {
+		packed[entry] = "source owner for " + entry + "\n"
+		writeFileBytes(t, filepath.FromSlash(strings.TrimPrefix(entry, "package/")), []byte(packed[entry]))
+	}
+	content := tarballArtifact(t, writePackageTarball(t, packed)).Content
+	if err := verifyPackedOwnerRecordsMatchSource(content); err != nil {
+		t.Fatalf("matching source owners were rejected: %v", err)
+	}
+	for _, entry := range entries {
+		sourcePath := filepath.FromSlash(strings.TrimPrefix(entry, "package/"))
+		writeFileBytes(t, sourcePath, []byte("changed-source-owner\n"))
+		err := verifyPackedOwnerRecordsMatchSource(content)
+		if err == nil || !strings.Contains(err.Error(), entry+" does not match source owner") {
 			t.Fatalf("verifyPackedOwnerRecordsMatchSource(%s) error=%v, want content-identity failure", entry, err)
 		}
+		writeFileBytes(t, sourcePath, []byte(packed[entry]))
 	}
 }
 
@@ -2025,7 +2031,7 @@ func packageDocEntries(content string) map[string]string {
 	}
 }
 
-func writePackageTarball(t *testing.T, entries map[string]string) string {
+func writePackageTarball(t *testing.T, entries map[string]string, leading ...string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "agentic-proofkit.tgz")
 	file, err := os.Create(path)
@@ -2034,7 +2040,17 @@ func writePackageTarball(t *testing.T, entries map[string]string) string {
 	}
 	gzipWriter := gzip.NewWriter(file)
 	tarWriter := tar.NewWriter(gzipWriter)
-	for name, content := range entries {
+	order := slices.Clone(leading)
+	for name := range entries {
+		if !slices.Contains(leading, name) {
+			order = append(order, name)
+		}
+	}
+	for _, name := range order {
+		content, exists := entries[name]
+		if !exists {
+			t.Fatalf("no fixture body for %s", name)
+		}
 		body := []byte(content)
 		mode := int64(0o644)
 		if rootBinaryEntry(name) {

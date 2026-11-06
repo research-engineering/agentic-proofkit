@@ -224,7 +224,7 @@ func runVerifier() error {
 	if err := verifyRootManifestBoundary(rootPackage); err != nil {
 		return err
 	}
-	if err := verifyPackedOwnerRecordsMatchSource(rootPackage); err != nil {
+	if err := verifyPackedOwnerRecordsMatchSource(rootPackage.Content); err != nil {
 		return err
 	}
 	if err := verifyPackedPlatformBinariesMatchSource(rootPackage); err != nil {
@@ -242,23 +242,37 @@ func runVerifier() error {
 	return verifyOutsideConsumer(rootPackage)
 }
 
-func verifyPackedOwnerRecordsMatchSource(artifact rootPackageArtifact) error {
-	for _, entry := range artifact.Entries {
-		if !sourceOwnedPackageEntry(entry) {
-			continue
+func verifyPackedOwnerRecordsMatchSource(content []byte) error {
+	var failedEntry string
+	var ownerErr error
+	_, err := packagearchive.GzipEntries(content, maxCompressedArchiveBytes, verifyTarEntryHeader, func(entry tarEntry, body io.Reader) error {
+		if !sourceOwnedPackageEntry(entry.Name) || (ownerErr != nil && entry.Name >= failedEntry) {
+			return nil
 		}
-		packed, err := readTarFileFromBytes(artifact.Content, entry)
-		if err != nil {
-			return err
+		// Tar order is not necessarily the previous lexical diagnostic order.
+		if err := comparePackedSourceOwner(entry.Name, body); err != nil {
+			failedEntry, ownerErr = entry.Name, err
 		}
-		sourcePath := strings.TrimPrefix(entry, "package/")
-		source, err := os.ReadFile(filepath.FromSlash(sourcePath))
-		if err != nil {
-			return fmt.Errorf("read source owner for packed entry %s: %w", entry, err)
-		}
-		if !bytes.Equal(packed, source) {
-			return fmt.Errorf("packed owner record %s does not match source owner %s", entry, sourcePath)
-		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return ownerErr
+}
+
+func comparePackedSourceOwner(entry string, body io.Reader) error {
+	packed, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	sourcePath := strings.TrimPrefix(entry, "package/")
+	source, err := os.ReadFile(filepath.FromSlash(sourcePath))
+	if err != nil {
+		return fmt.Errorf("read source owner for packed entry %s: %w", entry, err)
+	}
+	if !bytes.Equal(packed, source) {
+		return fmt.Errorf("packed owner record %s does not match source owner %s", entry, sourcePath)
 	}
 	return nil
 }
