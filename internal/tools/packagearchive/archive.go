@@ -32,6 +32,10 @@ type Entry struct {
 }
 
 func GzipHeaders(content []byte, maximumCompressedBytes int64, validateHeader func(Entry) error) ([]Entry, error) {
+	return GzipEntries(content, maximumCompressedBytes, validateHeader, nil)
+}
+
+func GzipEntries(content []byte, maximumCompressedBytes int64, validateHeader func(Entry) error, visitBody func(Entry, io.Reader) error) ([]Entry, error) {
 	if maximumCompressedBytes <= 0 || maximumCompressedBytes == math.MaxInt64 {
 		return nil, fmt.Errorf("package archive limits must be positive and bounded")
 	}
@@ -43,7 +47,7 @@ func GzipHeaders(content []byte, maximumCompressedBytes int64, validateHeader fu
 		return nil, err
 	}
 	defer reader.Close()
-	return BoundedHeaders(reader, MaxExpandedBytes, MaxEntries, validateHeader)
+	return BoundedEntries(reader, MaxExpandedBytes, MaxEntries, validateHeader, visitBody)
 }
 
 func BoundedHeaders(reader io.Reader, maximumBytes int64, maximumEntries int, validateHeader func(Entry) error) ([]Entry, error) {

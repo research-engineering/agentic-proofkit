@@ -64,6 +64,17 @@ func Targets() []Target {
 	return out
 }
 
+func (t Target) GoArchitectureBaseline() (key, value string, err error) {
+	switch t.GOARCH {
+	case "amd64":
+		return "GOAMD64", "v1", nil
+	case "arm64":
+		return "GOARM64", "v8.0", nil
+	default:
+		return "", "", fmt.Errorf("unsupported release CPU architecture")
+	}
+}
+
 func CurrentTarget() (Target, error) {
 	for _, item := range targets {
 		if item.GOOS == runtime.GOOS && item.GOARCH == runtime.GOARCH {

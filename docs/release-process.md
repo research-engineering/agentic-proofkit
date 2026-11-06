@@ -76,10 +76,11 @@ Each required CLI binary must expose complete Go build info from the immutable
 bytes used for its subject digest. Admission checks the unique ELF/Mach-O
 build-info section against the supported toolchain's canonical inline encoding,
 including module framing and every decoded record. Unreadable, unsupported or
-noncanonical metadata rejects admission; a complete section with no dependency
-modules admits an empty runtime inventory. This does not authenticate the
-metadata or prove dependency reachability. Package and wheel subjects do not
-require Go build info.
+noncanonical metadata rejects admission. Each admitted binary records the Go
+standard library at its recorded Go version, even when it has no external
+dependency modules. This does not authenticate the metadata or prove
+dependency reachability. Package and wheel subjects do not require Go build
+info.
 
 Workflow-local scripts must not own a divergent release manifest or SBOM
 algorithm. PyPI wheels may be built and archived as candidate artifacts before
@@ -87,9 +88,11 @@ PyPI publication. PyPI publication is enabled only when
 `PROOFKIT_ENABLE_PYPI_PUBLISH=true` and the PyPI Trusted Publisher is admitted.
 Wheels become PyPI dependency authority only after the dedicated PyPI job either
 publishes them through Trusted Publisher or records an exact existing-byte
-match, the repository-owned PyPI registry capture tool verifies filename, tag,
-URL, and SHA-256 identity against the candidate wheel set, and the release
-manifest binds that registry identity to the retained publication-mode sidecar.
+match, the repository-owned PyPI registry capture tool matches filenames,
+Python tags, and SHA-256 digests against the candidate wheel set, and the
+release manifest binds that registry identity to the retained publication-mode
+sidecar. The capture tool records the URL reported by PyPI; it neither compares
+that URL to a candidate value nor downloads it to verify the served bytes.
 
 The source-checkout root-package verifier bounds its first archive read and tar
 inventory, not only later member reads: compressed input is at most 128 MiB,
@@ -236,8 +239,8 @@ The `release` workflow must:
 8. capture post-publish npm registry identity with package name, version, filename,
    shasum, and integrity;
 9. when PyPI publication is enabled, capture post-publish PyPI registry identity
-   with package name, version, filename, wheel tags, URL, SHA-256, and retained
-   publication mode;
+   with package name, version, filename, wheel tags, registry-reported URL,
+   SHA-256, and retained publication mode;
 10. verify a root-only npm registry install, signature audit, successful JSON
     report command, and failed-report JSON command with stdout/stderr/exit-code
     discipline;
@@ -325,14 +328,14 @@ that public source. A release from a private source repository may be a valid
 package release, but it is not public-source provenance.
 
 Artifact attestation workflow wiring is not the same as completed provenance.
-When attestation storage is enabled and the repository visibility supports
-provider attestations, the release workflow must complete the attestation job
-before the GitHub Release asset job can publish archive assets. Provider-side
-attestation evidence becomes release evidence only after that job runs with
-attestation storage enabled and records the result. User-owned private
-repositories currently cannot store GitHub artifact attestations; in that state
-the release may still publish package and archive evidence, but it must not
-claim provider artifact attestation or public-source provenance.
+In `.github/workflows/release.yml`, `release-attestations` runs only when
+`vars.PROOFKIT_ENABLE_GITHUB_ATTESTATIONS == 'true'` and
+`github.event.repository.private == false`, subject to its publish-mode and
+upstream job conditions. With that flag and visibility, `release-assets`
+requires `release-attestations` to succeed. Otherwise the attestation job is
+skipped and does not block package or archive publication. Provider-side
+attestation evidence becomes release evidence only after the job runs and
+records the result. A private-source release is not public-source provenance.
 
 ## Non-Claims
 

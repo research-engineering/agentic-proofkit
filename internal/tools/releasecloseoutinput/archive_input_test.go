@@ -49,7 +49,7 @@ func TestWheelCriterionRejectsUnsafeNonBinaryEntries(t *testing.T) {
 				"packageName": testPythonPackageName, "packageVersion": "1.2.3",
 				"packages": []any{map[string]any{"binarySha256": binary, "filename": testPythonWheelName, "name": testPythonPackageName, "sha256": wheel, "version": "1.2.3"}},
 			})
-			result := pythonArtifactCriterion(root, packageJSON{Version: "1.2.3"})
+			result, _ := pythonArtifactCriterion(root, packageJSON{Version: "1.2.3"})
 			if result.Status != test.want {
 				t.Fatalf("wheel topology criterion = %q, want %q", result.Status, test.want)
 			}
@@ -78,12 +78,16 @@ func npmArchive(t *testing.T, headers []tar.Header) []byte {
 	var out bytes.Buffer
 	gzipWriter := gzip.NewWriter(&out)
 	writer := tar.NewWriter(gzipWriter)
-	for _, header := range headers {
+	for index, header := range headers {
 		if err := writer.WriteHeader(&header); err != nil {
 			t.Fatal(err)
 		}
 		if header.Typeflag == tar.TypeReg {
-			if _, err := io.CopyN(writer, npmZeroStream{}, header.Size); err != nil {
+			if header.Size == 1 {
+				if _, err := writer.Write([]byte{byte(index)}); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := io.CopyN(writer, npmZeroStream{}, header.Size); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -110,7 +114,7 @@ func TestValidPackRecordsRejectsHashMatchingMalformedArchives(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
 			writeNPMArtifact(t, root, testNPMTarballName, test.content)
-			if validPackRecords(root, filepath.Join("artifacts", "package", "npm-pack.json"), packageJSON{Name: testNPMPackageName, Version: "1.2.3"}) {
+			if _, ok := verifyPackRecords(root, filepath.Join("artifacts", "package", "npm-pack.json"), packageJSON{Name: testNPMPackageName, Version: "1.2.3"}); ok {
 				t.Fatal("malformed archive admitted with matching outer hashes")
 			}
 		})
@@ -160,7 +164,7 @@ func TestValidPackRecordsRequiresCompleteSingleArchive(t *testing.T) {
 			root := t.TempDir()
 			// Every structural negative has independently recomputed outer hashes.
 			writeNPMArtifact(t, root, testNPMTarballName, test.content)
-			got := validPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"})
+			_, got := verifyPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"})
 			if got != test.want {
 				t.Fatalf("complete single archive admitted=%v want=%v", got, test.want)
 			}
@@ -245,10 +249,46 @@ func TestCloseoutNPMArchiveCardinality(t *testing.T) {
 			content := npmArchive(t, headers)
 			root := t.TempDir()
 			writeNPMArtifact(t, root, testNPMTarballName, content)
-			got := validPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"})
+			_, got := verifyPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"})
 			if got != (count == 4096) {
 				t.Fatalf("entry count %d admitted=%v", count, got)
 			}
+		})
+	}
+}
+
+func TestBuildInputRejectsUnadmittedNPMArchiveSubjects(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		mutate func(*testing.T, string)
+	}{
+		{"outside symlink to identical bytes", func(t *testing.T, root string) {
+			path := filepath.Join(root, "artifacts", "package", testNPMTarballName)
+			target := filepath.Join(t.TempDir(), testNPMTarballName)
+			if err := os.Rename(path, target); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(target, path); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"regular malformed archive with matching checksums", func(t *testing.T, root string) {
+			writeNPMArtifact(t, root, testNPMTarballName, []byte("not a gzip archive"))
+			packagePaths := []string{"artifacts/package/" + testNPMTarballName, "artifacts/pypi/" + testPythonWheelName}
+			writeChecksumFile(t, root, "artifacts/release/sbom-subjects.sha256", packagePaths)
+			writeCloseoutArchiveChecksums(t, root)
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := completeFixture(t)
+			test.mutate(t, root)
+			input, err := buildInput(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertCriterionStatus(t, input, "proofkit.release_closeout.package_artifacts", "missing_evidence")
+			assertCloseoutOutcome(t, input, 1, "failed")
+			assertCriterionStatus(t, input, "proofkit.release_closeout.manifest_and_sbom", "missing_evidence")
 		})
 	}
 }
@@ -271,7 +311,7 @@ func TestCloseoutNPMEntrySizeBoundaries(t *testing.T) {
 				}
 				root := t.TempDir()
 				writeNPMArtifact(t, root, testNPMTarballName, npmArchive(t, headers))
-				got := validPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"})
+				_, got := verifyPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"})
 				if got != (delta == 0) {
 					t.Fatalf("entry size %d admitted=%v", test.size+delta, got)
 				}
@@ -284,7 +324,7 @@ func TestCloseoutNPMRejectsInvalidCompressedInputs(t *testing.T) {
 	for _, content := range [][]byte{nil, []byte("package"), gzipArchiveBytes(t, []byte("package")), gzipArchiveBytes(t, make([]byte, 1024))} {
 		root := t.TempDir()
 		writeNPMArtifact(t, root, testNPMTarballName, content)
-		if validPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"}) {
+		if _, ok := verifyPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"}); ok {
 			t.Fatal("non-package archive admitted")
 		}
 	}
@@ -293,7 +333,7 @@ func TestCloseoutNPMRejectsInvalidCompressedInputs(t *testing.T) {
 	writeNPMArtifact(t, root, testNPMTarballName, content)
 	record := packRecord{Filename: testNPMTarballName, Shasum: testSHA1(content), Integrity: testNPMIntegrity(content)}
 	for _, limit := range []int64{-1, 0, math.MaxInt64} {
-		if verifyPackRecordBytesWithin(root, record, limit) == nil {
+		if subjects, err := verifyPackRecordBytesWithin(root, record, limit); err == nil || subjects != nil {
 			t.Fatalf("invalid limit %d admitted", limit)
 		}
 	}
@@ -308,7 +348,7 @@ func TestCloseoutNPMRejectsInvalidCompressedInputs(t *testing.T) {
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if packRecordBytesMatch(root, record) {
+	if subjects, err := verifyPackRecordBytesWithin(root, record, maxNPMTarballBytes); err == nil || subjects != nil {
 		t.Fatal("oversized compressed file admitted")
 	}
 }
@@ -372,7 +412,7 @@ func TestCloseoutNPMExpandedBoundary(t *testing.T) {
 			content := out.Bytes()
 			root := t.TempDir()
 			writeNPMArtifact(t, root, testNPMTarballName, content)
-			got := validPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"})
+			_, got := verifyPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"})
 			if got == overflow {
 				t.Fatalf("512 MiB expanded boundary: overflow=%v admitted=%v", overflow, got)
 			}

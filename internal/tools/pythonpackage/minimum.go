@@ -84,6 +84,16 @@ func minimumTarget(architecture string) (target, error) {
 	return target{}, fmt.Errorf("minimum smoke has no native Linux release target")
 }
 
+func minimumBuildEnvironment(native target, parent []string) ([]string, error) {
+	baselineKey, baseline, err := native.GoArchitectureBaseline()
+	if err != nil {
+		return nil, err
+	}
+	return environmentWithOverrides(parent, map[string]string{
+		"CGO_ENABLED": "0", "GOOS": native.GOOS, "GOARCH": native.GOARCH, "GOMAXPROCS": "2", baselineKey: baseline,
+	}), nil
+}
+
 func minimumSelectWheel(manifest packageJSON, set packageSet, native target) (wheelRecord, error) {
 	if set.ArtifactKind != artifactKind || set.SchemaVersion != schemaVersion || set.PackageName != packageName || set.PackageVersion != manifest.Version || len(set.Packages) != len(releaseTargets()) {
 		return wheelRecord{}, fmt.Errorf("minimum smoke requires the exact current release wheel set")
@@ -275,7 +285,10 @@ func runMinimumPython(ctx context.Context) (receipt minimumReceipt, err error) {
 	if err := put(wheelPath, wheel, false); err != nil {
 		return receipt, err
 	}
-	buildEnvironment := environmentWithOverrides(os.Environ(), map[string]string{"CGO_ENABLED": "0", "GOOS": "linux", "GOARCH": architecture, "GOMAXPROCS": "2"})
+	buildEnvironment, err := minimumBuildEnvironment(native, os.Environ())
+	if err != nil {
+		return receipt, err
+	}
 	output := filepath.Join(work, "build-output")
 	cliBuild, err := releaseplatform.BinaryBuildArgs(manifest.Version, output)
 	if err != nil {

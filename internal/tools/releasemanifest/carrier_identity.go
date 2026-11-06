@@ -28,56 +28,66 @@ type pythonWheelIdentity struct {
 	wheelSHA256  string
 }
 
-func verifyCrossCarrierBinaryIdentity(packageDir string, pythonDir string, localRecords []packRecord, pythonPackages *pythonPackageSet) (identities map[string]pythonWheelIdentity, returnErr error) {
+type carrierIdentity struct {
+	binariesByPath map[string]string
+	wheelsByName   map[string]pythonWheelIdentity
+}
+
+func verifyCrossCarrierBinaryIdentity(packageDir string, pythonDir string, localRecords []packRecord, pythonPackages *pythonPackageSet) (_ carrierIdentity, returnErr error) {
 	if len(localRecords) != 1 {
-		return nil, fmt.Errorf("cross-carrier identity requires exactly one npm package artifact")
+		return carrierIdentity{}, fmt.Errorf("cross-carrier identity requires exactly one npm package artifact")
 	}
 	npmPath := filepath.Join(packageDir, localRecords[0].Filename)
 	if pythonPackages == nil {
-		return nil, readNPMCarrier(npmPath, nil)
+		digests, err := hashNPMCarrierBinaries(npmPath)
+		return carrierIdentity{binariesByPath: digests}, err
 	}
 	scratch, err := os.MkdirTemp("", "proofkit-carrier-binaries-")
 	if err != nil {
-		return nil, fmt.Errorf("create cross-carrier scratch directory: %w", err)
+		return carrierIdentity{}, fmt.Errorf("create cross-carrier scratch directory: %w", err)
 	}
 	defer func() {
 		returnErr = errors.Join(returnErr, os.RemoveAll(scratch))
 	}()
 	npmBinaries, err := extractNPMCarrierBinaries(npmPath, scratch)
 	if err != nil {
-		return nil, fmt.Errorf("decode npm package carrier: %w", err)
+		return carrierIdentity{}, fmt.Errorf("decode npm package carrier: %w", err)
 	}
 	wheelsBySuffix := make(map[string]pythonWheelRecord, len(pythonPackages.Packages))
 	for _, record := range pythonPackages.Packages {
 		if _, exists := wheelsBySuffix[record.PlatformSuffix]; exists {
-			return nil, fmt.Errorf("cross-carrier identity contains a duplicate Python platform suffix")
+			return carrierIdentity{}, fmt.Errorf("cross-carrier identity contains a duplicate Python platform suffix")
 		}
 		wheelsBySuffix[record.PlatformSuffix] = record
 	}
 	targets := releaseplatform.Targets()
 	if len(wheelsBySuffix) != len(targets) {
-		return nil, fmt.Errorf("cross-carrier identity requires exact release-platform wheel closure")
+		return carrierIdentity{}, fmt.Errorf("cross-carrier identity requires exact release-platform wheel closure")
 	}
-	identities = make(map[string]pythonWheelIdentity, len(targets))
+	identity := carrierIdentity{
+		binariesByPath: make(map[string]string, len(targets)),
+		wheelsByName:   make(map[string]pythonWheelIdentity, len(targets)),
+	}
 	for _, target := range targets {
 		npmBinary, exists := npmBinaries[target.PlatformSuffix]
 		if !exists {
-			return nil, fmt.Errorf("npm package carrier is missing a release-platform binary")
+			return carrierIdentity{}, fmt.Errorf("npm package carrier is missing a release-platform binary")
 		}
 		wheel, exists := wheelsBySuffix[target.PlatformSuffix]
 		if !exists {
-			return nil, fmt.Errorf("python package carrier is missing a release-platform wheel")
+			return carrierIdentity{}, fmt.Errorf("python package carrier is missing a release-platform wheel")
 		}
 		equal, binarySHA256, err := wheelCarrierBinaryEquals(filepath.Join(pythonDir, wheel.Filename), npmBinary)
 		if err != nil {
-			return nil, fmt.Errorf("decode python wheel carrier: %w", err)
+			return carrierIdentity{}, fmt.Errorf("decode python wheel carrier: %w", err)
 		}
 		if !equal {
-			return nil, fmt.Errorf("npm and python package carriers contain different release-platform binary bytes")
+			return carrierIdentity{}, fmt.Errorf("npm and python package carriers contain different release-platform binary bytes")
 		}
-		identities[wheel.Filename] = pythonWheelIdentity{binarySHA256: binarySHA256}
+		identity.wheelsByName[wheel.Filename] = pythonWheelIdentity{binarySHA256: binarySHA256}
+		identity.binariesByPath[target.BinaryPath] = binarySHA256
 	}
-	return identities, nil
+	return identity, nil
 }
 
 type extractedCarrierBinary struct {
@@ -109,6 +119,31 @@ func readNPMCarrier(path string, visit func(packagearchive.Entry, io.Reader) err
 		return err
 	}
 	return packagearchive.VerifyPlatformClosure(entries)
+}
+
+func hashNPMCarrierBinaries(path string) (map[string]string, error) {
+	targets := releaseplatform.Targets()
+	pathsByEntry := make(map[string]string, len(targets))
+	for _, target := range targets {
+		pathsByEntry[target.PackageTarEntry] = target.BinaryPath
+	}
+	digests := make(map[string]string, len(targets))
+	err := readNPMCarrier(path, func(entry packagearchive.Entry, body io.Reader) error {
+		binaryPath, wanted := pathsByEntry[entry.Name]
+		if !wanted {
+			return nil
+		}
+		hash := sha256.New()
+		if _, err := io.CopyN(hash, body, entry.Size); err != nil {
+			return err
+		}
+		digests[binaryPath] = hex.EncodeToString(hash.Sum(nil))
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return digests, nil
 }
 
 func extractNPMCarrierBinaries(path string, scratch string) (map[string]extractedCarrierBinary, error) {

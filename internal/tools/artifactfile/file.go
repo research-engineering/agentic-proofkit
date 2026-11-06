@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 )
 
 const temporaryCollisionLimit = 16
@@ -96,12 +98,9 @@ func ReadBounded(rootPath, relativePath string, maxBytes int64) ([]byte, error) 
 		return nil, fmt.Errorf("open artifact root failed")
 	}
 	defer root.Close()
-	if _, err := admitDirectories(root, filepath.Dir(path), false); err != nil {
-		return nil, err
-	}
-	file, err := openSource(root, path)
+	file, err := rootpath.OpenRegularFile(root, relativePath)
 	if err != nil {
-		if info, inspectErr := root.Lstat(path); inspectErr == nil && (info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular()) {
+		if errors.Is(err, rootpath.ErrUnsafeRoute) {
 			return nil, fmt.Errorf("artifact source must be a regular non-symlink file")
 		}
 		return nil, fmt.Errorf("open artifact file failed")

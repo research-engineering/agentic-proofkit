@@ -67,6 +67,13 @@ func TestOperationsRejectSymlinkComponentsWithoutOutsideMutation(t *testing.T) {
 				if err := os.MkdirAll(filepath.Join(root, "artifacts", "alias"), 0o755); err != nil {
 					t.Fatal(err)
 				}
+				const target = "artifacts/alias/report.json"
+				if err := os.WriteFile(filepath.Join(root, target), []byte("genuine"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if content, err := ReadBounded(root, target, 64); err != nil || string(content) != "genuine" {
+					t.Fatalf("ordinary target must be readable before linking it: %q, %v", content, err)
+				}
 				if err := os.Symlink("alias", filepath.Join(root, "artifacts", "proofkit")); err != nil {
 					t.Fatal(err)
 				}

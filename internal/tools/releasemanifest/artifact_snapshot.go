@@ -13,14 +13,26 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/sbomsubjects"
 )
 
 const maxReleaseArtifactBytes int64 = 512 << 20
+const sbomArtifactPath = "artifacts/release/sbom.cdx.json"
+
+func releaseArtifactByteLimit(path string) int64 {
+	if filepath.ToSlash(path) == sbomArtifactPath {
+		return sbomsubjects.MaxBytes
+	}
+	return maxReleaseArtifactBytes
+}
 
 type releaseArtifactSnapshot struct {
-	root                  string
-	bySource              map[string]releaseArtifact
-	pythonWheelIdentities map[string]pythonWheelIdentity
+	root     string
+	bySource map[string]releaseArtifact
+	carriers carrierIdentity
 }
 
 type releaseArtifact struct {
@@ -50,7 +62,7 @@ func newReleaseArtifactSnapshot(localRecords []packRecord, pythonPackages *pytho
 	if len(sourcePaths) == 0 {
 		return nil, fmt.Errorf("release assets require at least one package artifact")
 	}
-	sourcePaths = append(sourcePaths, filepath.Join("artifacts", "release", "sbom.cdx.json"))
+	sourcePaths = append(sourcePaths, filepath.FromSlash(sbomArtifactPath))
 	sort.Strings(sourcePaths)
 	root, err := os.MkdirTemp("", "proofkit-release-artifacts-")
 	if err != nil {
@@ -82,7 +94,7 @@ func (snapshot *releaseArtifactSnapshot) Close() error {
 	}
 	snapshot.root = ""
 	snapshot.bySource = nil
-	snapshot.pythonWheelIdentities = nil
+	snapshot.carriers = carrierIdentity{}
 	return nil
 }
 
@@ -90,8 +102,8 @@ func (snapshot *releaseArtifactSnapshot) VerifyCrossCarrierBinaryIdentity(localR
 	if err := snapshot.requireOpen(); err != nil {
 		return err
 	}
-	snapshot.pythonWheelIdentities = nil
-	identities, err := verifyCrossCarrierBinaryIdentity(
+	snapshot.carriers = carrierIdentity{}
+	identity, err := verifyCrossCarrierBinaryIdentity(
 		filepath.Join(snapshot.root, "artifacts", "package"),
 		filepath.Join(snapshot.root, "artifacts", "pypi"),
 		localRecords,
@@ -100,29 +112,27 @@ func (snapshot *releaseArtifactSnapshot) VerifyCrossCarrierBinaryIdentity(localR
 	if err != nil {
 		return err
 	}
-	if pythonPackages == nil {
-		snapshot.pythonWheelIdentities = nil
-		return nil
-	}
-	if len(identities) != len(pythonPackages.Packages) {
-		return fmt.Errorf("python wheel identity decoder lacks exact package closure")
-	}
-	for _, record := range pythonPackages.Packages {
-		identity, ok := identities[record.Filename]
-		if !ok {
-			return fmt.Errorf("python wheel identity decoder lacks an expected package")
+	if pythonPackages != nil {
+		if len(identity.wheelsByName) != len(pythonPackages.Packages) {
+			return fmt.Errorf("python wheel identity decoder lacks exact package closure")
 		}
-		artifact, ok := snapshot.bySource[filepath.Join("artifacts", "pypi", record.Filename)]
-		if !ok {
-			return fmt.Errorf("release artifact snapshot lacks an expected Python wheel")
+		for _, record := range pythonPackages.Packages {
+			wheel, ok := identity.wheelsByName[record.Filename]
+			if !ok {
+				return fmt.Errorf("python wheel identity decoder lacks an expected package")
+			}
+			artifact, ok := snapshot.bySource[filepath.Join("artifacts", "pypi", record.Filename)]
+			if !ok {
+				return fmt.Errorf("release artifact snapshot lacks an expected Python wheel")
+			}
+			wheel.wheelSHA256 = artifact.sha256
+			if record.Sha256 != wheel.wheelSHA256 || record.BinarySha256 != wheel.binarySHA256 {
+				return fmt.Errorf("python package-set digest claims do not match immutable wheel bytes")
+			}
+			identity.wheelsByName[record.Filename] = wheel
 		}
-		identity.wheelSHA256 = artifact.sha256
-		if record.Sha256 != identity.wheelSHA256 || record.BinarySha256 != identity.binarySHA256 {
-			return fmt.Errorf("python package-set digest claims do not match immutable wheel bytes")
-		}
-		identities[record.Filename] = identity
 	}
-	snapshot.pythonWheelIdentities = identities
+	snapshot.carriers = identity
 	return nil
 }
 
@@ -133,13 +143,13 @@ func (snapshot *releaseArtifactSnapshot) AdmittedPythonPackageSet(pythonPackages
 	if pythonPackages == nil {
 		return nil, nil
 	}
-	if len(snapshot.pythonWheelIdentities) != len(pythonPackages.Packages) {
+	if len(snapshot.carriers.wheelsByName) != len(pythonPackages.Packages) {
 		return nil, fmt.Errorf("python wheel bytes have not passed exact immutable identity admission")
 	}
 	admitted := *pythonPackages
 	admitted.Packages = append([]pythonWheelRecord(nil), pythonPackages.Packages...)
 	for index := range admitted.Packages {
-		identity, ok := snapshot.pythonWheelIdentities[admitted.Packages[index].Filename]
+		identity, ok := snapshot.carriers.wheelsByName[admitted.Packages[index].Filename]
 		if !ok {
 			return nil, fmt.Errorf("python wheel identity admission lacks an expected package")
 		}
@@ -168,32 +178,56 @@ func (snapshot *releaseArtifactSnapshot) AdmittedNPMRecords(records []packRecord
 	return admitted, nil
 }
 
-func (snapshot *releaseArtifactSnapshot) ReleaseEvidence(localRecords []packRecord, pythonPackages *pythonPackageSet) ([]assetEvidence, []string, []string, error) {
+func (snapshot *releaseArtifactSnapshot) ReleaseEvidence(version string) ([]assetEvidence, []string, []string, error) {
 	if err := snapshot.requireOpen(); err != nil {
 		return nil, nil, nil, err
 	}
-	subjectPaths := expectedPackageArtifactPaths(localRecords, pythonPackages)
-	assetPaths := append([]string(nil), subjectPaths...)
-	assetPaths = append(assetPaths, filepath.Join("artifacts", "release", "sbom.cdx.json"))
+	sbomPath := filepath.FromSlash(sbomArtifactPath)
+	sbomArtifact, ok := snapshot.bySource[sbomPath]
+	if !ok || sbomArtifact.size > sbomsubjects.MaxBytes {
+		return nil, nil, nil, fmt.Errorf("release artifact snapshot requires a bounded SBOM")
+	}
+	assetPaths := make([]string, 0, len(snapshot.bySource))
+	for sourcePath := range snapshot.bySource {
+		assetPaths = append(assetPaths, sourcePath)
+	}
 	sort.Strings(assetPaths)
-	sort.Strings(subjectPaths)
 	assets := make([]assetEvidence, 0, len(assetPaths))
 	checksums := make([]string, 0, len(assetPaths))
-	subjectChecksums := make([]string, 0, len(subjectPaths))
+	subjectChecksums := make([]string, 0, len(assetPaths)-1)
+	binaryPaths := releaseplatform.BinaryPaths()
+	expectedSubjects := make(map[string]string, len(assetPaths)-1+len(binaryPaths))
 	for _, sourcePath := range assetPaths {
-		artifact, ok := snapshot.bySource[sourcePath]
-		if !ok {
-			return nil, nil, nil, fmt.Errorf("release artifact snapshot lacks an expected asset")
-		}
+		artifact := snapshot.bySource[sourcePath]
 		assets = append(assets, assetEvidence{Filename: artifact.filename, Sha256: artifact.sha256})
-		checksums = append(checksums, fmt.Sprintf("%s  %s", artifact.sha256, artifact.filename))
-	}
-	for _, sourcePath := range subjectPaths {
-		artifact, ok := snapshot.bySource[sourcePath]
-		if !ok {
-			return nil, nil, nil, fmt.Errorf("release artifact snapshot lacks an expected SBOM subject")
+		line := fmt.Sprintf("%s  %s", artifact.sha256, artifact.filename)
+		checksums = append(checksums, line)
+		if sourcePath != sbomPath {
+			expectedSubjects[filepath.ToSlash(sourcePath)] = artifact.sha256
+			subjectChecksums = append(subjectChecksums, line)
 		}
-		subjectChecksums = append(subjectChecksums, fmt.Sprintf("%s  %s", artifact.sha256, artifact.filename))
+	}
+	for _, binaryPath := range binaryPaths {
+		digest, ok := snapshot.carriers.binariesByPath[binaryPath]
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("release artifact snapshot lacks an admitted carrier binary for %q", binaryPath)
+		}
+		expectedSubjects[binaryPath] = digest
+	}
+	sbom, err := os.Open(filepath.Join(snapshot.root, sbomPath))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("open release SBOM snapshot: %w", err)
+	}
+	defer sbom.Close()
+	content, err := io.ReadAll(io.LimitReader(sbom, sbomsubjects.MaxBytes+1))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("read release SBOM snapshot: %w", err)
+	}
+	if int64(len(content)) != sbomArtifact.size || fmt.Sprintf("%x", sha256.Sum256(content)) != sbomArtifact.sha256 {
+		return nil, nil, nil, fmt.Errorf("release SBOM bytes differ from the admitted snapshot digest")
+	}
+	if err := sbomsubjects.Admit(content, expectedSubjects, version); err != nil {
+		return nil, nil, nil, err
 	}
 	return assets, checksums, subjectChecksums, nil
 }
@@ -249,7 +283,8 @@ func snapshotReleaseArtifact(snapshotRoot string, sourcePath string) (releaseArt
 	sha1Hash := sha1.New()
 	sha256Hash := sha256.New()
 	sha512Hash := sha512.New()
-	written, copyErr := io.Copy(io.MultiWriter(target, sha1Hash, sha256Hash, sha512Hash), io.LimitReader(source, maxReleaseArtifactBytes+1))
+	limit := releaseArtifactByteLimit(clean)
+	written, copyErr := io.Copy(io.MultiWriter(target, sha1Hash, sha256Hash, sha512Hash), io.LimitReader(source, limit+1))
 	syncErr := target.Sync()
 	closeErr := target.Close()
 	if copyErr != nil {
@@ -261,7 +296,7 @@ func snapshotReleaseArtifact(snapshotRoot string, sourcePath string) (releaseArt
 	if closeErr != nil {
 		return releaseArtifact{}, fmt.Errorf("close release artifact snapshot: %w", closeErr)
 	}
-	if written > maxReleaseArtifactBytes {
+	if written > limit {
 		return releaseArtifact{}, fmt.Errorf("release artifact exceeds the byte limit")
 	}
 	after, err := source.Stat()
@@ -291,11 +326,12 @@ func stableReleaseArtifactIdentity(sourcePath string) (releaseArtifact, error) {
 	defer root.Close()
 	defer file.Close()
 	hash := sha256.New()
-	size, err := io.Copy(hash, io.LimitReader(file, maxReleaseArtifactBytes+1))
+	limit := releaseArtifactByteLimit(clean)
+	size, err := io.Copy(hash, io.LimitReader(file, limit+1))
 	if err != nil {
 		return releaseArtifact{}, fmt.Errorf("revalidate release artifact: %w", err)
 	}
-	if size > maxReleaseArtifactBytes {
+	if size > limit {
 		return releaseArtifact{}, fmt.Errorf("release artifact exceeds the byte limit")
 	}
 	after, err := file.Stat()
@@ -329,11 +365,11 @@ func openStableReleaseArtifact(path string) (*os.File, fs.FileInfo, *os.Root, er
 		root.Close()
 		return nil, nil, nil, fmt.Errorf("inspect release artifact: %w", err)
 	}
-	if before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() > maxReleaseArtifactBytes {
+	if before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() > releaseArtifactByteLimit(path) {
 		root.Close()
 		return nil, nil, nil, fmt.Errorf("release artifact must be a bounded regular non-symlink file")
 	}
-	file, err := root.Open(path)
+	file, err := rootpath.OpenRegularFile(root, filepath.ToSlash(path))
 	if err != nil {
 		root.Close()
 		return nil, nil, nil, fmt.Errorf("open release artifact: %w", err)

@@ -125,6 +125,16 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			commandIDs:  []string{"proofkit.go-test", "proofkit.release-sbom"}, environmentClasses: []string{"local-go"},
 			selectors: []string{"TestBinaryBuildInfoRejectsSilentMetadataLoss", "TestBinaryBuildInfoReleaseTargetMatrix"},
 		},
+		{"REQ-PROOFKIT-QUALITY-002", "proofkit.supply-chain-quality.release-sbom-artifact-subject-admission"}: {
+			witnessPath: "internal/tools/releasemanifest/sbom_subjects_test.go",
+			commandIDs:  []string{"proofkit.go-test", "proofkit.package-artifact"}, environmentClasses: []string{"local-go", "local-go-python"},
+			selectors: []string{"TestReleaseManifestRequiresExactSBOMFileSubjects"},
+		},
+		{"REQ-PROOFKIT-QUALITY-002", "proofkit.supply-chain-quality.release-sbom-closeout-subject-admission"}: {
+			witnessPath: "internal/tools/releasecloseoutinput/main_test.go",
+			commandIDs:  []string{"proofkit.go-test", "proofkit.package-gate"}, environmentClasses: []string{"local-go", "local-go-python"},
+			selectors: []string{"TestBuildInputFailsClosedForEachBlockingEvidenceClass", "TestBuildInputProducesAdmittedSatisfiedCloseout"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.impact-schema-independent-runtime"}: {
 			witnessPath: "scripts/impact-structure.test.mjs",
 			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
@@ -1207,6 +1217,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/tools/releasecloseoutinput/main_test.go",
 			selectors: []string{
 				"TestBuildInputFailsClosedForEachBlockingEvidenceClass",
+				"TestBuildInputRejectsSymlinkedReleaseMetadata",
 				"TestSelfEvidenceInvokesCurrentCommandOracleOwner",
 				"TestSelfEvidenceRejectsProducerUnreachableCommandOracleRef",
 			},

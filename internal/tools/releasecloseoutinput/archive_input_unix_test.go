@@ -3,17 +3,27 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
 )
 
-func TestNPMArchiveFIFORejectedWithoutBlocking(t *testing.T) {
-	root := t.TempDir()
-	content := npmArchive(t, npmArchiveHeaders())
-	writeNPMArtifact(t, root, testNPMTarballName, content)
+func TestBuildInputRejectsNPMArchiveFIFOWithoutBlocking(t *testing.T) {
+	if args := os.Args; len(args) >= 3 && args[len(args)-2] == "fifo-fixture" {
+		input, err := buildInput(args[len(args)-1])
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertCriterionStatus(t, input, "proofkit.release_closeout.package_artifacts", "missing_evidence")
+		assertCriterionStatus(t, input, "proofkit.release_closeout.manifest_and_sbom", "missing_evidence")
+		assertCloseoutOutcome(t, input, 1, "failed")
+		return
+	}
+	root := completeFixture(t)
 	path := filepath.Join(root, "artifacts", "package", testNPMTarballName)
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
@@ -21,16 +31,10 @@ func TestNPMArchiveFIFORejectedWithoutBlocking(t *testing.T) {
 	if err := syscall.Mkfifo(path, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	done := make(chan bool, 1)
-	go func() {
-		done <- validPackRecords(root, "artifacts/package/npm-pack.json", packageJSON{Name: testNPMPackageName, Version: "1.2.3"})
-	}()
-	select {
-	case admitted := <-done:
-		if admitted {
-			t.Fatal("FIFO admitted as npm archive")
-		}
-	case <-time.After(time.Second):
-		t.Fatal("npm archive admission blocked on FIFO")
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestBuildInputRejectsNPMArchiveFIFOWithoutBlocking$", "--", "fifo-fixture", root)
+	if out, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("buildInput FIFO subprocess: %v (context: %v)\n%s", err, ctx.Err(), out)
 	}
 }

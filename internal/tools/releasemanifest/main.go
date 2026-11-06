@@ -286,7 +286,7 @@ func run() (returnErr error) {
 	if err := requirePyPIRegistryMatchesLocal(pypiRegistry, pythonPackages, manifest); err != nil {
 		return err
 	}
-	assets, checksums, sbomSubjectChecksums, err := artifactSnapshot.ReleaseEvidence(localRecords, pythonPackages)
+	assets, checksums, sbomSubjectChecksums, err := artifactSnapshot.ReleaseEvidence(manifest.Version)
 	if err != nil {
 		return err
 	}

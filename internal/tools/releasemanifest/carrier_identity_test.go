@@ -3,7 +3,6 @@ package main
 import (
 	"archive/tar"
 	"archive/zip"
-	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
 	"errors"
@@ -14,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
-	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
 func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
@@ -24,13 +22,13 @@ func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(identities) != len(releaseplatform.Targets()) {
-			t.Fatalf("decoded identity count=%d", len(identities))
+		if len(identities.wheelsByName) != len(releaseplatform.Targets()) {
+			t.Fatalf("decoded wheel identity count=%d", len(identities.wheelsByName))
 		}
 		for _, target := range releaseplatform.Targets() {
 			filename := target.PlatformSuffix + ".whl"
 			want := sha256.Sum256(carrierBinary(target.PlatformSuffix))
-			if got := identities[filename].binarySHA256; got != fmt.Sprintf("%x", want) {
+			if got := identities.wheelsByName[filename].binarySHA256; got != fmt.Sprintf("%x", want) {
 				t.Fatalf("binary digest for %s=%s", filename, got)
 			}
 		}
@@ -134,57 +132,22 @@ func TestWheelCarrierChecksTopologyAndSameLengthContent(t *testing.T) {
 }
 
 func TestReleaseManifestRejectsCorruptNPMOnlyCarrier(t *testing.T) {
-	t.Chdir(t.TempDir())
-	for _, directory := range []string{"release", "artifacts/package", "artifacts/release"} {
-		if err := os.MkdirAll(directory, 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	const name = "@research-engineering/agentic-proofkit"
-	const version = "1.2.3"
-	const filename = "research-engineering-agentic-proofkit-1.2.3.tgz"
-	writeFile(t, "package.json", `{"name":"`+name+`","version":"`+version+`","license":"MIT","repository":{"url":"https://github.com/example/proofkit"}}`)
-	writeFile(t, "go.mod", "module example.test/proofkit\n")
-	writeFile(t, releasechange.RecordPath, `{"schemaVersion":2,"version":"1.2.3","previousVersion":"1.2.2","changeClass":"compatible","additions":[],"breakingChanges":[],"migration":{"required":false,"steps":[]},"platformRequirements":["Linux"],"knownLimitations":["Fixture has no publication evidence."],"rollback":{"strategy":"previous_admitted_version"}}`)
-	writeFile(t, "artifacts/release/sbom.cdx.json", "{}")
-	carrier := filepath.Join("artifacts", "package", filename)
-	writeNPMCarrier(t, carrier, "")
-	writeRecord := func() {
-		t.Helper()
-		shasum, integrity := npmFileClaims(t, carrier)
-		if err := writeJSON("artifacts/package/npm-pack.json", []packRecord{{Name: name, Version: version, Filename: filename, Shasum: shasum, Integrity: integrity}}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	writeRecord()
+	carrier, _, _ := writeReleaseManifestFixture(t, false)
 	if err := run(); err != nil {
 		t.Fatalf("valid npm-only release rejected: %v", err)
 	}
-	metadata := map[string][]byte{}
-	for _, name := range []string{"checksums.sha256", "sbom-subjects.sha256", "release-manifest.json", "release-notes.md", "metadata-checksums.sha256"} {
-		path := filepath.Join("artifacts", "release", name)
-		content, err := os.ReadFile(path)
-		if err != nil || len(content) == 0 {
-			t.Fatalf("valid release did not write %s: %v", name, err)
-		}
-		metadata[path] = content
-	}
+	metadata := retainReleaseOutputs(t)
 	content, err := os.ReadFile(carrier)
 	if err != nil {
 		t.Fatal(err)
 	}
 	content[len(content)-8] ^= 1
 	writeFile(t, carrier, string(content))
-	writeRecord()
+	writeFixtureNPMRecord(t, carrier)
 	if err := run(); !errors.Is(err, gzip.ErrChecksum) {
 		t.Fatalf("generator did not reject the hash-matching CRC mutation: %v", err)
 	}
-	for path, want := range metadata {
-		got, err := os.ReadFile(path)
-		if err != nil || !bytes.Equal(got, want) {
-			t.Fatalf("failed archive admission modified %s: %v", path, err)
-		}
-	}
+	assertRetainedReleaseOutputs(t, metadata)
 }
 
 func writeCarrierFixture(t *testing.T, mutatedWheelSuffix string) (string, string, []packRecord, *pythonPackageSet) {

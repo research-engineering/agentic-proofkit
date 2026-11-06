@@ -65,6 +65,8 @@ func TestBuildInputProducesAdmittedSatisfiedCloseout(t *testing.T) {
 	}
 	assertCloseoutOutcome(t, input, 0, "passed")
 	assertCriterionStatus(t, input, "proofkit.release_closeout.package_artifacts", "satisfied")
+	assertCriterionStatus(t, input, "proofkit.release_closeout.manifest_and_sbom", "satisfied")
+	assertCriterionStatus(t, input, "proofkit.release_closeout.channel_scope", "satisfied")
 	assertCriterionStatus(t, input, "proofkit.release_closeout.provider_publication_advisory", "advisory_skipped")
 	assertCriterionInventory(t, input)
 }
@@ -81,6 +83,47 @@ func TestCompleteFixtureCopiesAreIsolated(t *testing.T) {
 	}
 	if string(content) != "source-v1\n" {
 		t.Fatalf("fixture copy mutation leaked across tests: %q", content)
+	}
+}
+
+func TestBuildInputRejectsSymlinkedReleaseMetadata(t *testing.T) {
+	for _, tc := range []struct{ path, artifactCriterion string }{
+		{path: "artifacts/release/release-manifest.json"},
+		{path: "artifacts/release/release-notes.md"},
+		{path: "artifacts/release/sbom.cdx.json"},
+		{path: "artifacts/release/checksums.sha256"},
+		{path: "artifacts/package/npm-pack.json", artifactCriterion: "proofkit.release_closeout.package_artifacts"},
+		{path: "artifacts/pypi/python-packages.json", artifactCriterion: "proofkit.release_closeout.python_wrappers"},
+	} {
+		t.Run(filepath.Base(tc.path), func(t *testing.T) {
+			root := completeFixture(t)
+			local := filepath.Join(root, tc.path)
+			outside := filepath.Join(t.TempDir(), "foreign")
+			content, err := os.ReadFile(local)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(outside, content, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			mustRemove(t, local)
+			if err := os.Symlink(outside, local); err != nil {
+				t.Fatal(err)
+			}
+			input, err := buildInput(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertCriterionStatus(t, input, "proofkit.release_closeout.manifest_and_sbom", "missing_evidence")
+			if tc.artifactCriterion != "" {
+				assertCriterionStatus(t, input, tc.artifactCriterion, "missing_evidence")
+			}
+			wantChannelScope := "satisfied"
+			if tc.path == "artifacts/release/release-manifest.json" {
+				wantChannelScope = "missing_evidence"
+			}
+			assertCriterionStatus(t, input, "proofkit.release_closeout.channel_scope", wantChannelScope)
+		})
 	}
 }
 
@@ -435,6 +478,44 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "empty SBOM with matching external checksums",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				path := filepath.Join(root, "artifacts", "release", "sbom.cdx.json")
+				bom := readJSONMap(t, path)
+				bom["components"] = []any{}
+				writeJSON(t, path, bom)
+				writeCloseoutArchiveChecksums(t, root)
+			},
+		},
+		{
+			name:        "stale SBOM binary subject with matching external checksums",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				path := filepath.Join(root, "artifacts", "release", "sbom.cdx.json")
+				bom := readJSONMap(t, path)
+				closeoutSBOMSubjectHash(t, bom, "file:dist/platform/linux-x64/agentic-proofkit")["content"] = strings.Repeat("f", 64)
+				writeJSON(t, path, bom)
+				writeCloseoutArchiveChecksums(t, root)
+			},
+		},
+		{
+			name:        "swapped SBOM binary subjects with matching external checksums",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				path := filepath.Join(root, "artifacts", "release", "sbom.cdx.json")
+				bom := readJSONMap(t, path)
+				first := closeoutSBOMSubjectHash(t, bom, "file:dist/platform/linux-arm64/agentic-proofkit")
+				second := closeoutSBOMSubjectHash(t, bom, "file:dist/platform/linux-x64/agentic-proofkit")
+				if first["content"] == second["content"] {
+					t.Fatal("fixture must distinguish platform binary digests")
+				}
+				first["content"], second["content"] = second["content"], first["content"]
+				writeJSON(t, path, bom)
+				writeCloseoutArchiveChecksums(t, root)
+			},
+		},
+		{
 			name:        "release notes without rollback instructions",
 			criterionID: "proofkit.release_closeout.manifest_and_sbom",
 			mutate: func(root string) {
@@ -537,6 +618,36 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 				})
 				writeJSON(t, filepath.Join(root, "artifacts", "attestations", "github-artifact-attestations.json"), map[string]any{"state": "not_published"})
 				writeFile(t, filepath.Join(root, "artifacts", "retained-evidence-checksums.sha256"), strings.Repeat("a", 64)+"  release/github-release.json\n")
+			},
+		},
+		{
+			name:        "published GitHub archive candidate",
+			criterionID: "proofkit.release_closeout.channel_scope",
+			mutate: func(root string) {
+				manifest := releaseManifestFixture(true)
+				manifest["channels"].([]any)[1].(map[string]any)["status"] = "published"
+				writeReleaseManifest(t, root, manifest)
+			},
+		},
+		{
+			name:        "published Python wheel candidate",
+			criterionID: "proofkit.release_closeout.channel_scope",
+			mutate: func(root string) {
+				manifest := releaseManifestFixture(true)
+				manifest["channels"].([]any)[2].(map[string]any)["status"] = "published"
+				writeReleaseManifest(t, root, manifest)
+			},
+		},
+		{
+			name:        "published GitHub archive after candidate of same channel",
+			criterionID: "proofkit.release_closeout.channel_scope",
+			mutate: func(root string) {
+				manifest := releaseManifestFixture(true)
+				manifest["channels"] = append(manifest["channels"].([]any), map[string]any{
+					"authorityChannel": "github_release_archive",
+					"status":           "published",
+				})
+				writeReleaseManifest(t, root, manifest)
 			},
 		},
 		{
@@ -1030,10 +1141,10 @@ func TestPackRecordBytesMatchEnforcesByteLimit(t *testing.T) {
 		Shasum:    testSHA1(content),
 		Version:   "1.2.3",
 	}
-	if err := verifyPackRecordBytesWithin(root, record, int64(len(content))); err != nil {
+	if _, err := verifyPackRecordBytesWithin(root, record, int64(len(content))); err != nil {
 		t.Fatalf("exact byte limit rejected a valid npm tarball: %v", err)
 	}
-	if err := verifyPackRecordBytesWithin(root, record, int64(len(content)-1)); err == nil || !strings.Contains(err.Error(), "resource limit") {
+	if subjects, err := verifyPackRecordBytesWithin(root, record, int64(len(content)-1)); subjects != nil || err == nil || !strings.Contains(err.Error(), "resource limit") {
 		t.Fatalf("limit-minus-one did not reject at file acquisition: %v", err)
 	}
 }
@@ -1153,6 +1264,21 @@ func TestBuildInputAdmitsWorkflowPublicationTrustedPublisherIdentity(t *testing.
 func TestBuildInputAdmitsMixedPublicationTrustedPublisherIdentity(t *testing.T) {
 	root := completeFixture(t)
 	writeReleaseManifest(t, root, releaseManifestFixtureWithNpmPublication("mixed", trustedPublisherFixture("npm-production", "publish")))
+	writeLocalSelfEvidence(t, root, writePackageArtifactExecutionFixture(t, root))
+
+	input, err := buildInput(root)
+	if err != nil {
+		t.Fatalf("buildInput() error = %v", err)
+	}
+	assertCriterionStatus(t, input, "proofkit.release_closeout.channel_scope", "satisfied")
+	assertCloseoutOutcome(t, input, 0, "passed")
+}
+
+func TestBuildInputAdmitsPyPIExistingByteMatchWithWheelCandidate(t *testing.T) {
+	root := completeFixture(t)
+	manifest := releaseManifestFixtureWithPyPI("published", false)
+	manifest["channels"].([]any)[3].(map[string]any)["publicationMode"] = "existing_byte_match"
+	writeReleaseManifest(t, root, manifest)
 	writeLocalSelfEvidence(t, root, writePackageArtifactExecutionFixture(t, root))
 
 	input, err := buildInput(root)
@@ -1537,7 +1663,8 @@ func populateCompleteFixture(t *testing.T, root string) {
 	writeJSON(t, filepath.Join(root, filepath.FromSlash(releasechange.RecordPath)), releaseChangeRecordFixture())
 	runFixtureGit(t, root, "add", ".gitignore", "go.mod", "go.sum", "package.json", "proofkit", "release", "source.txt")
 	runFixtureGit(t, root, "commit", "-m", "fixture")
-	writeNPMArtifact(t, root, testNPMTarballName, npmArchive(t, npmArchiveHeaders()))
+	npmBytes := npmArchive(t, npmArchiveHeaders())
+	writeNPMArtifact(t, root, testNPMTarballName, npmBytes)
 	wheelSHA256, binarySHA256 := writePythonWheelFixture(t, root)
 	writeJSON(t, filepath.Join(root, "artifacts", "pypi", "python-packages.json"), map[string]any{
 		"packageName":    testPythonPackageName,
@@ -1551,19 +1678,60 @@ func populateCompleteFixture(t *testing.T, root string) {
 		t.Fatal(err)
 	}
 	writeFile(t, filepath.Join(root, "artifacts", "release", "release-notes.md"), releasechange.RenderMarkdown(changeRecord, testNPMPackageName, testPythonPackageName, false))
-	writeJSON(t, filepath.Join(root, "artifacts", "release", "sbom.cdx.json"), map[string]any{"bomFormat": "CycloneDX", "specVersion": "1.6"})
+	writeCloseoutSBOM(t, root, npmBytes, wheelSHA256)
 	writeReleaseManifest(t, root, releaseManifestFixture(true))
-	writeChecksumFile(t, root, "artifacts/release/checksums.sha256", []string{
-		"artifacts/package/" + testNPMTarballName,
-		"artifacts/pypi/" + testPythonWheelName,
-		"artifacts/release/sbom.cdx.json",
-	})
+	writeCloseoutArchiveChecksums(t, root)
 	writeChecksumFile(t, root, "artifacts/release/sbom-subjects.sha256", []string{
 		"artifacts/package/" + testNPMTarballName,
 		"artifacts/pypi/" + testPythonWheelName,
 	})
 	execution := writePackageArtifactExecutionFixture(t, root)
 	writeLocalSelfEvidence(t, root, execution)
+}
+
+func writeCloseoutArchiveChecksums(t *testing.T, root string) {
+	t.Helper()
+	writeChecksumFile(t, root, "artifacts/release/checksums.sha256", []string{
+		"artifacts/package/" + testNPMTarballName,
+		"artifacts/pypi/" + testPythonWheelName,
+		"artifacts/release/sbom.cdx.json",
+	})
+}
+
+func writeCloseoutSBOM(t *testing.T, root string, npmBytes []byte, wheelDigest string) {
+	t.Helper()
+	binaryDigest := func(payload byte) string { return fmt.Sprintf("%x", sha256.Sum256([]byte{payload})) }
+	subjects := []struct{ path, digest, kind string }{
+		{"artifacts/package/" + testNPMTarballName, fmt.Sprintf("%x", sha256.Sum256(npmBytes)), "application"},
+		{"artifacts/pypi/" + testPythonWheelName, wheelDigest, "application"},
+		{"dist/platform/darwin-arm64/agentic-proofkit", binaryDigest(1), "file"},
+		{"dist/platform/darwin-x64/agentic-proofkit", binaryDigest(2), "file"},
+		{"dist/platform/linux-arm64/agentic-proofkit", binaryDigest(3), "file"},
+		{"dist/platform/linux-x64/agentic-proofkit", binaryDigest(4), "file"},
+	}
+	components := make([]any, 0, len(subjects))
+	for _, subject := range subjects {
+		components = append(components, map[string]any{
+			"type": subject.kind, "bom-ref": "file:" + subject.path, "name": filepath.Base(subject.path), "version": "1.2.3",
+			"hashes":     []any{map[string]any{"alg": "SHA-256", "content": subject.digest}},
+			"properties": []any{map[string]any{"name": "proofkit:path", "value": subject.path}},
+		})
+	}
+	writeJSON(t, filepath.Join(root, "artifacts", "release", "sbom.cdx.json"), map[string]any{
+		"bomFormat": "CycloneDX", "specVersion": "1.6", "components": components,
+	})
+}
+
+func closeoutSBOMSubjectHash(t *testing.T, bom map[string]any, ref string) map[string]any {
+	t.Helper()
+	for _, raw := range bom["components"].([]any) {
+		component := raw.(map[string]any)
+		if component["bom-ref"] == ref {
+			return component["hashes"].([]any)[0].(map[string]any)
+		}
+	}
+	t.Fatalf("fixture is missing SBOM subject %q", ref)
+	return nil
 }
 
 func writePythonWheelFixture(t *testing.T, root string, extraHeaders ...zip.FileHeader) (string, string) {

@@ -4,19 +4,18 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"crypto/sha1"
 	"crypto/sha256"
-	"crypto/sha512"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"syscall"
@@ -32,6 +31,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
@@ -40,6 +40,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/retainedevidence"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/sbomsubjects"
 )
 
 var commandOracleValidateCurrent = commandoracle.ValidateCurrent
@@ -134,11 +135,6 @@ type releaseChannel struct {
 	PublicationMode  string                     `json:"publicationMode"`
 	Status           string                     `json:"status"`
 	TrustedPublisher *trustedpublisher.Identity `json:"trustedPublisher"`
-}
-
-type cyclonedxBOM struct {
-	BOMFormat   string `json:"bomFormat"`
-	SpecVersion string `json:"specVersion"`
 }
 
 type coverageMetricsEvidence struct {
@@ -441,11 +437,14 @@ func buildInput(root string) (completionInput, error) {
 	if err != nil {
 		return completionInput{}, err
 	}
+	npmCriterion, npmSubjects := packageArtifactCriterion(root, manifest)
+	wheelCriterion, wheels := pythonArtifactCriterion(root, manifest)
+	release := readReleaseManifest(root)
 	criteria := []criterion{
-		packageArtifactCriterion(root, manifest),
-		pythonArtifactCriterion(root, manifest),
-		releaseManifestCriterion(root, manifest),
-		releaseChannelClassificationCriterion(root, manifest),
+		npmCriterion,
+		wheelCriterion,
+		releaseManifestCriterion(root, manifest, release, npmSubjects, wheels),
+		releaseChannelClassificationCriterion(release, manifest),
 		selfEvidence,
 		registryPublicationNonClaimCriterion(),
 	}
@@ -463,14 +462,14 @@ func buildInput(root string) (completionInput, error) {
 	}, nil
 }
 
-func packageArtifactCriterion(root string, manifest packageJSON) criterion {
+func packageArtifactCriterion(root string, manifest packageJSON) (criterion, map[string]string) {
 	packPath := "artifacts/package/npm-pack.json"
 	tarballName, nameOK := npmTarballName(manifest.Name, manifest.Version)
 	evidence := []string{"package.json", packPath}
 	if nameOK {
 		evidence = append(evidence, filepath.ToSlash(filepath.Join("artifacts", "package", tarballName)))
 	}
-	ok := nameOK && validPackRecords(root, packPath, manifest)
+	subjects, ok := verifyPackRecords(root, packPath, manifest)
 	return blockingCriterion(
 		"proofkit.release_closeout.package_artifacts",
 		"Local npm package artifact and npm pack metadata must exist for the current package version.",
@@ -479,10 +478,10 @@ func packageArtifactCriterion(root string, manifest packageJSON) criterion {
 		[]string{"npm:package:artifact", "internal/tools/packageverify"},
 		[]string{"npm pack metadata is missing, invalid, or does not describe the current package.", "The current package tarball is missing or empty."},
 		[]string{"This criterion does not claim npm registry publication or consumer installation."},
-	)
+	), subjects
 }
 
-func pythonArtifactCriterion(root string, manifest packageJSON) criterion {
+func pythonArtifactCriterion(root string, manifest packageJSON) (criterion, []pythonWheel) {
 	path := "artifacts/pypi/python-packages.json"
 	packages, ok := readPythonPackageSet(root, path, manifest)
 	evidence := []string{path}
@@ -490,6 +489,9 @@ func pythonArtifactCriterion(root string, manifest packageJSON) criterion {
 		evidence = append(evidence, filepath.ToSlash(filepath.Join("artifacts", "pypi", item.Filename)))
 	}
 	sort.Strings(evidence)
+	if !ok {
+		packages = nil
+	}
 	return blockingCriterion(
 		"proofkit.release_closeout.python_wrappers",
 		"Python wheel candidate artifacts and package metadata must exist for the current package version.",
@@ -498,10 +500,10 @@ func pythonArtifactCriterion(root string, manifest packageJSON) criterion {
 		[]string{"npm:python:package", "npm:python:verify"},
 		[]string{"Python package metadata is missing or invalid.", "One or more declared Python wheel artifacts are missing or empty."},
 		[]string{"This criterion does not claim PyPI publication, Python SDK stability, or consumer adoption."},
-	)
+	), packages
 }
 
-func releaseManifestCriterion(root string, manifest packageJSON) criterion {
+func releaseManifestCriterion(root string, manifest packageJSON, release releaseManifestEvidence, npmSubjects map[string]string, wheels []pythonWheel) criterion {
 	evidence := []string{
 		ciProvenancePath,
 		releasechange.RecordPath,
@@ -513,15 +515,20 @@ func releaseManifestCriterion(root string, manifest packageJSON) criterion {
 		"artifacts/release/sbom.cdx.json",
 	}
 	evidence = append(evidence, retainedReleaseEvidenceRefs(root)...)
-	ok := releaseManifestMatches(root, manifest) &&
-		validSBOM(root, "artifacts/release/sbom.cdx.json") &&
-		releaseNotesMatchChangeRecord(root, "artifacts/release/release-notes.md", manifest) &&
-		releaseChecksumInventoriesMatch(root, manifest) &&
+	validManifest := release.matches(manifest)
+	notesDigest := ""
+	if validManifest {
+		notesDigest = releaseNotesDigest(root, manifest)
+	}
+	ok := validManifest && notesDigest != "" &&
+		releaseChecksumInventoriesMatch(root, manifest, npmSubjects, wheels, []string{
+			release.sha256 + "  release-manifest.json", notesDigest + "  release-notes.md",
+		}) &&
 		retainedReleaseEvidenceMatches(root) &&
 		allFilesExist(root, evidence)
 	return blockingCriterion(
 		"proofkit.release_closeout.manifest_and_sbom",
-		"Release manifest, version-bound change-record notes, package checksums, metadata checksums, SBOM, and SBOM subject digests must exist for the current package version.",
+		"Release manifest, version-bound change-record notes, package and metadata checksums, and SBOM file subjects must match the admitted current package and binary bytes.",
 		ok,
 		evidence,
 		[]string{"npm:release:manifest", "npm:release:sbom"},
@@ -530,22 +537,22 @@ func releaseManifestCriterion(root string, manifest packageJSON) criterion {
 	)
 }
 
-func releaseChannelClassificationCriterion(root string, packageManifest packageJSON) criterion {
+func releaseChannelClassificationCriterion(release releaseManifestEvidence, packageManifest packageJSON) criterion {
 	path := "artifacts/release/release-manifest.json"
-	manifest, err := readTypedJSON[releaseManifest](root, path)
-	ok := err == nil &&
+	manifest := release.record
+	ok := release.sha256 != "" &&
 		hasNPMRegistryChannelScope(manifest) &&
-		hasChannelStatus(manifest, string(releasechannel.GitHubReleaseArchive), "candidate", "published") &&
-		hasChannelStatus(manifest, string(releasechannel.PythonWheelCandidate), "candidate", "published") &&
+		hasCandidateChannel(manifest, releasechannel.GitHubReleaseArchive) &&
+		hasCandidateChannel(manifest, releasechannel.PythonWheelCandidate) &&
 		hasPlannedPyPIWithNonClaim(manifest) &&
 		publishedWorkflowIdentitiesValid(manifest, packageManifest)
 	return blockingCriterion(
 		"proofkit.release_closeout.channel_scope",
-		"Release manifest must classify npm, PyPI, GitHub archive, and wheel evidence as candidate, planned, or published without upgrading planned channels to authority, and workflow-published registry channels must retain Trusted Publisher identity.",
+		"Release manifest must classify GitHub archive and Python wheel candidate channels only as candidate, npm as candidate or published, and PyPI as planned or published. Workflow-published registry channels must retain Trusted Publisher identity.",
 		ok,
 		[]string{path},
 		[]string{"internal/tools/releasemanifest"},
-		[]string{"Release manifest omits a required channel, upgrades planned evidence without registry proof, lacks a non-claim for npm or PyPI candidate authority, or claims workflow publication without an admitted Trusted Publisher identity tuple."},
+		[]string{"Release manifest omits a required channel, uses a status outside its channel scope, lacks a required non-claim for npm candidate or planned PyPI evidence, or claims workflow publication without an admitted Trusted Publisher identity tuple."},
 		[]string{"This criterion does not claim post-publish registry identity, provider attestation, or archive publication."},
 	)
 }
@@ -1586,62 +1593,8 @@ func npmTarballName(name string, version string) (string, bool) {
 	return filename, true
 }
 
-func validPackRecords(root string, path string, manifest packageJSON) bool {
-	expectedFilename, ok := npmTarballName(manifest.Name, manifest.Version)
-	if !ok {
-		return false
-	}
-	records, err := readTypedJSON[[]packRecord](root, path)
-	if err != nil || len(records) != 1 {
-		return false
-	}
-	record := records[0]
-	return record.Name == manifest.Name &&
-		record.Version == manifest.Version &&
-		record.Filename == expectedFilename &&
-		packRecordBytesMatch(root, record)
-}
-
-func packRecordBytesMatch(root string, record packRecord) bool {
-	return verifyPackRecordBytesWithin(root, record, maxNPMTarballBytes) == nil
-}
-
-func verifyPackRecordBytesWithin(root string, record packRecord, maxBytes int64) error {
-	if filepath.Base(record.Filename) != record.Filename || filepath.Clean(record.Filename) != record.Filename || !filepath.IsLocal(record.Filename) {
-		return fmt.Errorf("invalid npm archive filename")
-	}
-	relativePath := filepath.Join("artifacts", "package", record.Filename)
-	content, err := artifactfile.ReadBounded(root, filepath.ToSlash(relativePath), maxBytes)
-	if err != nil {
-		return err
-	}
-	if len(content) == 0 {
-		return fmt.Errorf("npm archive is empty")
-	}
-	sha1Sum := sha1.Sum(content)
-	sha512Sum := sha512.Sum512(content)
-	if hex.EncodeToString(sha1Sum[:]) != record.Shasum || "sha512-"+base64.StdEncoding.EncodeToString(sha512Sum[:]) != record.Integrity {
-		return fmt.Errorf("npm archive digest mismatch")
-	}
-	entries, err := packagearchive.GzipHeaders(content, maxBytes, nil)
-	if err != nil {
-		return err
-	}
-	return packagearchive.VerifyPlatformClosure(entries)
-}
-
-func artifactDirectoriesAdmitted(root *os.Root, path string) bool {
-	for current := filepath.Dir(path); current != "."; current = filepath.Dir(current) {
-		info, err := root.Lstat(current)
-		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return false
-		}
-	}
-	return true
-}
-
 func readPythonPackageSet(root string, path string, manifest packageJSON) ([]pythonWheel, bool) {
-	packages, err := readTypedJSON[pythonPackageSet](root, path)
+	packages, _, err := readReleaseJSON[pythonPackageSet](root, path)
 	if err != nil || packages.PackageName != pythonPackageName || packages.PackageVersion != manifest.Version || len(packages.Packages) == 0 {
 		return nil, false
 	}
@@ -1666,14 +1619,11 @@ func pythonWheelBytesMatch(rootPath string, wheel pythonWheel) bool {
 		return false
 	}
 	defer root.Close()
-	if !artifactDirectoriesAdmitted(root, relativePath) {
-		return false
-	}
 	before, err := root.Lstat(relativePath)
 	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxPythonWheelBytes {
 		return false
 	}
-	file, err := root.Open(relativePath)
+	file, err := rootpath.OpenRegularFile(root, filepath.ToSlash(relativePath))
 	if err != nil {
 		return false
 	}
@@ -1714,32 +1664,35 @@ func pythonWheelBytesMatch(rootPath string, wheel pythonWheel) bool {
 	return statErr == nil && pathErr == nil && pathAfter.Mode()&os.ModeSymlink == 0 && os.SameFile(before, after) && os.SameFile(after, pathAfter) && before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
 }
 
-func releaseChecksumInventoriesMatch(root string, manifest packageJSON) bool {
-	expectedFilename, ok := npmTarballName(manifest.Name, manifest.Version)
-	if !ok {
+func releaseChecksumInventoriesMatch(root string, manifest packageJSON, npmSubjects map[string]string, wheels []pythonWheel, metadataLines []string) bool {
+	npmFilename, ok := npmTarballName(manifest.Name, manifest.Version)
+	npmDigest := npmSubjects["artifacts/package/"+npmFilename]
+	if !ok || npmDigest == "" || len(wheels) == 0 {
 		return false
 	}
-	packRecords, err := readTypedJSON[[]packRecord](root, "artifacts/package/npm-pack.json")
-	if err != nil || len(packRecords) != 1 {
-		return false
-	}
-	packRecord := packRecords[0]
-	if packRecord.Name != manifest.Name || packRecord.Version != manifest.Version || packRecord.Filename != expectedFilename {
-		return false
-	}
-	wheels, ok := readPythonPackageSet(root, "artifacts/pypi/python-packages.json", manifest)
-	if !ok {
-		return false
-	}
-	packageTargets := []string{filepath.ToSlash(filepath.Join("artifacts", "package", packRecord.Filename))}
+	subjects := maps.Clone(npmSubjects)
+	// Keep repository-relative path order: npm tarball, wheels by filename, then SBOM.
+	wheels = slices.Clone(wheels)
+	slices.SortFunc(wheels, func(a, b pythonWheel) int { return strings.Compare(a.Filename, b.Filename) })
+	subjectLines := make([]string, 0, len(wheels)+2)
+	subjectLines = append(subjectLines, fmt.Sprintf("%s  %s", npmDigest, npmFilename))
 	for _, wheel := range wheels {
-		packageTargets = append(packageTargets, filepath.ToSlash(filepath.Join("artifacts", "pypi", wheel.Filename)))
+		path := "artifacts/pypi/" + wheel.Filename
+		if _, duplicate := subjects[path]; duplicate {
+			return false
+		}
+		subjects[path] = wheel.Sha256
+		subjectLines = append(subjectLines, fmt.Sprintf("%s  %s", wheel.Sha256, wheel.Filename))
 	}
-	checksumTargets := append(append([]string{}, packageTargets...), "artifacts/release/sbom.cdx.json")
-	metadataTargets := []string{"artifacts/release/release-manifest.json", "artifacts/release/release-notes.md"}
-	return checksumFileMatches(root, "artifacts/release/checksums.sha256", checksumTargets) &&
-		checksumFileMatches(root, "artifacts/release/sbom-subjects.sha256", packageTargets) &&
-		checksumFileMatches(root, "artifacts/release/metadata-checksums.sha256", metadataTargets)
+	sbom, err := artifactfile.ReadBounded(root, "artifacts/release/sbom.cdx.json", sbomsubjects.MaxBytes)
+	if err != nil || sbomsubjects.Admit(sbom, subjects, manifest.Version) != nil {
+		return false
+	}
+	sbomDigest := sha256.Sum256(sbom)
+	archiveLines := append(subjectLines, fmt.Sprintf("%x  sbom.cdx.json", sbomDigest))
+	return checksumFileMatches(root, "artifacts/release/checksums.sha256", archiveLines) &&
+		checksumFileMatches(root, "artifacts/release/sbom-subjects.sha256", subjectLines) &&
+		checksumFileMatches(root, "artifacts/release/metadata-checksums.sha256", metadataLines)
 }
 
 func retainedReleaseEvidenceRefs(root string) []string {
@@ -1783,30 +1736,10 @@ func retainedReleaseEvidenceRepositoryPaths() []string {
 	return paths
 }
 
-func checksumFileMatches(root string, checksumPath string, targetPaths []string) bool {
-	expected, err := checksumLines(root, targetPaths)
-	if err != nil {
-		return false
-	}
-	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(checksumPath)))
-	if err != nil {
-		return false
-	}
-	return bytes.Equal(content, []byte(strings.Join(expected, "\n")+"\n"))
-}
-
-func checksumLines(root string, targetPaths []string) ([]string, error) {
-	targets := append([]string{}, targetPaths...)
-	sort.Strings(targets)
-	lines := make([]string, 0, len(targets))
-	for _, path := range targets {
-		sum, err := fileSHA256(filepath.Join(root, filepath.FromSlash(path)))
-		if err != nil {
-			return nil, err
-		}
-		lines = append(lines, fmt.Sprintf("%s  %s", sum, filepath.Base(path)))
-	}
-	return lines, nil
+func checksumFileMatches(root string, checksumPath string, expected []string) bool {
+	wanted := []byte(strings.Join(expected, "\n") + "\n")
+	content, err := artifactfile.ReadBounded(root, checksumPath, int64(len(wanted)))
+	return err == nil && bytes.Equal(content, wanted)
 }
 
 func fileSHA256(path string) (string, error) {
@@ -1818,49 +1751,18 @@ func fileSHA256(path string) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func releaseManifestMatches(root string, manifest packageJSON) bool {
-	release, err := readTypedJSON[releaseManifest](root, "artifacts/release/release-manifest.json")
-	if err != nil {
-		return false
-	}
-	return release.ArtifactKind == "proofkit.release-manifest.v1" &&
-		release.Package.Name == manifest.Name &&
-		release.Package.Version == manifest.Version &&
-		len(release.NonClaims) > 0
-}
-
-func validSBOM(root string, path string) bool {
-	sbom, err := readTypedJSON[cyclonedxBOM](root, path)
-	return err == nil && sbom.BOMFormat == "CycloneDX" && sbom.SpecVersion != ""
-}
-
-func releaseNotesMatchChangeRecord(root string, path string, manifest packageJSON) bool {
-	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
-	if err != nil {
-		return false
-	}
-	record, err := releasechange.Read(filepath.Join(root, filepath.FromSlash(releasechange.RecordPath)))
-	if err != nil || releasechange.RequireVersion(record, manifest.Version) != nil {
-		return false
-	}
-	pypiPublished := fileExists(root, "artifacts/pypi-registry/pypi-release.json")
-	expected := releasechange.RenderMarkdown(record, manifest.Name, pythonPackageName, pypiPublished)
-	return bytes.Equal(content, []byte(expected))
-}
-
-func hasChannelStatus(manifest releaseManifest, authority string, allowed ...string) bool {
+func hasCandidateChannel(manifest releaseManifest, authority releasechannel.ID) bool {
+	found := false
 	for _, channel := range manifest.Channels {
-		if channel.AuthorityChannel != authority {
+		if channel.AuthorityChannel != string(authority) {
 			continue
 		}
-		for _, status := range allowed {
-			if channel.Status == status {
-				return true
-			}
+		if channel.Status != "candidate" {
+			return false
 		}
-		return false
+		found = true
 	}
-	return false
+	return found
 }
 
 func hasNPMRegistryChannelScope(manifest releaseManifest) bool {
