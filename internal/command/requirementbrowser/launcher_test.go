@@ -123,7 +123,7 @@ func TestBrowserLauncherStartFailure(t *testing.T) {
 }
 
 func TestOneShotKeepsBrowserLauncherAndTerminalOutcomesDistinct(t *testing.T) {
-	for _, mode := range []string{"failed launch", "submitted before failure", "submitted after successful launch", "cancelled during launch"} {
+	for _, mode := range []string{"failed launch", "submitted before failure", "submitted after successful launch", "submitted while launcher is running", "cancelled during launch"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 			defer cancel()
@@ -156,6 +156,9 @@ func TestOneShotKeepsBrowserLauncherAndTerminalOutcomesDistinct(t *testing.T) {
 					return result, nil
 				case "submitted before failure":
 					terminal.TryCommit(submitted)
+				case "submitted while launcher is running":
+					terminal.TryCommit(submitted)
+					return make(chan error), nil
 				case "cancelled during launch":
 					cancel()
 				}
@@ -165,6 +168,9 @@ func TestOneShotKeepsBrowserLauncherAndTerminalOutcomesDistinct(t *testing.T) {
 			}
 			var stdout bytes.Buffer
 			err := serveHandleWithOpener(ctx, handle, Options{Open: true, SessionMode: "one-shot-question"}, &stdout, opener)
+			if mode == "submitted while launcher is running" && ctx.Err() != nil {
+				t.Fatal("one-shot handoff waited for the running launcher")
+			}
 			if closeCalls != 1 || len(done) != 0 {
 				t.Fatalf("cleanup calls=%d, unread completion=%d", closeCalls, len(done))
 			}

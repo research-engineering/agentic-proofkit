@@ -334,6 +334,33 @@ func TestProjectViewOneShotCLIOutputVariants(t *testing.T) {
 	}
 	assertPublicCLIRootVariant(t, "view", "output", "02-one-shot-terminal", decodeCLIJSON(t, terminal))
 	assertBrowserOutputStructure(t, "terminal", "workspace", terminal)
+
+	if err := os.Remove(urlFile); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(launcherDir, launcherName), []byte(launcher+"exit 7\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	args[len(args)-1] = "5"
+	code, output, diagnostic := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{})
+	if code != 1 || output != "" || !strings.Contains(diagnostic, "view could not complete the browser session") {
+		t.Fatalf("unsuccessful launcher must produce a session error without a terminal packet: exit=%d stdout=%q stderr=%q", code, output, diagnostic)
+	}
+	failedURL, err := os.ReadFile(urlFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := url.Parse(strings.TrimSpace(string(failedURL)))
+	if err != nil || parsed.Hostname() != "127.0.0.1" || parsed.Port() == "" {
+		t.Fatal("unsuccessful launcher did not receive the listener address")
+	}
+	connection, err := net.DialTimeout("tcp", parsed.Host, time.Second)
+	if err == nil {
+		_ = connection.Close()
+	}
+	if !errors.Is(err, syscall.ECONNREFUSED) {
+		t.Fatalf("expected a closed listener after launcher failure, got %v", err)
+	}
 }
 
 // The CLI-produced records must satisfy the same native structure owners that

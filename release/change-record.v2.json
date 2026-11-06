@@ -204,7 +204,7 @@
     },
     {
       "changeId": "proofkit.browser.launch-and-cancel-boundaries",
-      "summary": "One-shot browser sessions report an unsuccessful launcher exit instead of waiting for expiry when no terminal result is available, while preserving already committed handoffs and server cleanup. Cancellation reserves one request slot separate from projection work, and overlapping cancellation requests are refused before body decoding."
+      "summary": "One-shot browser sessions fail without waiting for expiry when they observe an unsuccessful launcher exit before a terminal result is committed, while preserving already committed handoffs and server cleanup. Cancellation reserves one request slot separate from projection work, and overlapping cancellation requests are refused before body decoding."
     },
     {
       "changeId": "proofkit.toolchain.runtime-and-build-updates",
