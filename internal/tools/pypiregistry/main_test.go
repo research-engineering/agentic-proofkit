@@ -334,7 +334,7 @@ func TestPyPIRegistryReadersRejectAmbiguousJSON(t *testing.T) {
 			name:    "package manifest duplicate key",
 			content: `{"name":"agentic-proofkit","name":"other","version":"1.2.3"}`,
 			read: func(path string) error {
-				_, err := readPackageJSON(path)
+				_, err := readPackageJSON(filepath.Dir(path), filepath.Base(path))
 				return err
 			},
 			want: "duplicate object key",
@@ -343,7 +343,7 @@ func TestPyPIRegistryReadersRejectAmbiguousJSON(t *testing.T) {
 			name:    "python package set trailing value",
 			content: `{"artifactKind":"proofkit.python-package-set.v1","schemaVersion":1,"packageName":"agentic-proofkit","packageVersion":"1.2.3","packages":[]} false`,
 			read: func(path string) error {
-				_, err := readPythonPackageSet(path)
+				_, err := readPythonPackageSet(filepath.Dir(path), filepath.Base(path))
 				return err
 			},
 			want: "multiple JSON values",

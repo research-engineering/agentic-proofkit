@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 )
 
 type consumerLock struct {
@@ -25,20 +28,25 @@ type lockedPackage struct {
 }
 
 func verifyConsumerLock(candidatePath, lockPath string) error {
-	records, err := readPackRecords(candidatePath, "release candidate")
+	directory, filename := splitInputPath(candidatePath)
+	records, err := readPackRecords(directory, filename, "release candidate")
 	if err != nil {
 		return err
 	}
 	if len(records) != 1 {
 		return fmt.Errorf("registry consumer requires exactly one candidate package")
 	}
-	file, err := os.Open(lockPath)
+	directory, filename = splitInputPath(lockPath)
+	content, err := artifactfile.ReadBounded(directory, filename, maxPackRecordBytes)
 	if err != nil {
-		return err
+		return fmt.Errorf("read registry consumer lock: %w", err)
 	}
-	defer file.Close()
-	lock, err := admission.DecodeTypedJSON[consumerLock](file, maxPackRecordBytes)
+	lock, err := admission.DecodeTypedJSON[consumerLock](bytes.NewReader(content), maxPackRecordBytes)
 	if err != nil {
+		var typeError *json.UnmarshalTypeError
+		if errors.As(err, &typeError) {
+			return fmt.Errorf("registry consumer lock has an invalid JSON value type")
+		}
 		return fmt.Errorf("admit registry consumer lock: %w", err)
 	}
 	expected := records[0]

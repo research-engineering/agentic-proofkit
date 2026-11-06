@@ -1,8 +1,8 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +15,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/npmpack"
 )
 
@@ -70,13 +71,12 @@ func capturePackReports(outputPath string, inputPaths []string) error {
 	seenNames := map[string]struct{}{}
 	seenFiles := map[string]struct{}{}
 	for _, inputPath := range inputPaths {
-		file, err := os.Open(inputPath)
+		root, name := splitInputPath(inputPath)
+		content, err := artifactfile.ReadBounded(root, name, maxPackRecordBytes)
 		if err != nil {
-			return err
+			return fmt.Errorf("read npm pack report: %w", err)
 		}
-		record, decodeErr := npmpack.DecodeNPM12Report(file, maxPackRecordBytes)
-		closeErr := file.Close()
-		err = errors.Join(decodeErr, closeErr)
+		record, err := npmpack.DecodeNPM12Report(bytes.NewReader(content), maxPackRecordBytes)
 		if err != nil {
 			return fmt.Errorf("admit npm pack report: %w", err)
 		}
@@ -96,24 +96,30 @@ func capturePackReports(outputPath string, inputPaths []string) error {
 	return writeJSON(outputPath, records)
 }
 
+func splitInputPath(path string) (string, string) {
+	// Preserve directory traversal semantics, including symlink/.. ordering.
+	root, name := filepath.Split(path)
+	if root == "" {
+		root = "."
+	}
+	return root, name
+}
+
 func run(root string) error {
-	local, err := readPackRecords(filepath.Join(root, "artifacts", "package", "npm-pack.json"), "local npm package evidence")
+	local, err := readPackRecords(root, "artifacts/package/npm-pack.json", "local npm package evidence")
 	if err != nil {
 		return err
 	}
-	registry, err := readPackRecords(filepath.Join(root, "artifacts", "registry", "npm-pack.json"), "npm registry evidence")
+	registry, err := readPackRecords(root, "artifacts/registry/npm-pack.json", "npm registry evidence")
 	if err != nil {
 		return err
 	}
 	if err := requireExactPackageSet(registry, local); err != nil {
 		return err
 	}
-	modeBytes, err := os.ReadFile(filepath.Join(root, "artifacts", "registry", "npm-publication-mode.txt"))
+	modeBytes, err := artifactfile.ReadBounded(root, "artifacts/registry/npm-publication-mode.txt", 64)
 	if err != nil {
-		return err
-	}
-	if len(modeBytes) > 64 {
-		return fmt.Errorf("npm publication mode exceeds byte limit")
+		return fmt.Errorf("read npm publication mode: %w", err)
 	}
 	modeText, err := unicodepolicy.DecodeUTF8(modeBytes)
 	if err != nil {
@@ -144,15 +150,14 @@ func run(root string) error {
 	return writeJSON(filepath.Join(root, "artifacts", "registry", "published-registry-artifact-set.json"), record)
 }
 
-func readPackRecords(path string, context string) ([]packRecord, error) {
-	file, err := os.Open(path)
+func readPackRecords(root, path, context string) ([]packRecord, error) {
+	content, err := artifactfile.ReadBounded(root, path, maxPackRecordBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read %s: %w", context, err)
 	}
-	defer file.Close()
-	records, err := admission.DecodeTypedJSON[[]packRecord](file, maxPackRecordBytes)
+	records, err := admission.DecodeTypedJSON[[]packRecord](bytes.NewReader(content), maxPackRecordBytes)
 	if err != nil {
-		return nil, fmt.Errorf("admit %s: %w", path, err)
+		return nil, fmt.Errorf("admit %s: %w", context, err)
 	}
 	if len(records) == 0 {
 		return nil, fmt.Errorf("%s must be non-empty", context)

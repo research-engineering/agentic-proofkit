@@ -81,7 +81,7 @@ func TestCapturePackReportsRejectsLegacyAndAmbiguousOutput(t *testing.T) {
 		value string
 		want  string
 	}{
-		{name: "legacy array", value: `[{"name":"first"}]`, want: "cannot unmarshal array"},
+		{name: "legacy array", value: `[{"name":"first"}]`, want: "invalid JSON value type"},
 		{name: "multiple keyed records", value: `{"first":{"name":"first"},"second":{"name":"second"}}`, want: "exactly one"},
 		{name: "key mismatch", value: `{"other":{"filename":"first.tgz","integrity":"sha512-first","name":"first","shasum":"first","version":"1.0.0"}}`, want: "key must equal"},
 	} {

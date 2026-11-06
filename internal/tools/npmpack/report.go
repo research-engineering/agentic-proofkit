@@ -1,6 +1,8 @@
 package npmpack
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
@@ -20,6 +22,10 @@ type Record struct {
 func DecodeNPM12Report(reader io.Reader, maxBytes int64) (Record, error) {
 	keyed, err := admission.DecodeTypedJSON[map[string]Record](reader, maxBytes)
 	if err != nil {
+		var typeError *json.UnmarshalTypeError
+		if errors.As(err, &typeError) {
+			return Record{}, fmt.Errorf("npm pack report has an invalid JSON value type")
+		}
 		return Record{}, err
 	}
 	if len(keyed) != 1 {
@@ -40,6 +46,11 @@ func DecodeNPM12Report(reader io.Reader, maxBytes int64) (Record, error) {
 			{name: "version", value: record.Version},
 		} {
 			if _, err := admit.NonEmptyText(field.value, "npm pack report "+field.name); err != nil {
+				return Record{}, err
+			}
+		}
+		if record.ID != "" {
+			if _, err := admit.NonEmptyText(record.ID, "npm pack report id"); err != nil {
 				return Record{}, err
 			}
 		}
