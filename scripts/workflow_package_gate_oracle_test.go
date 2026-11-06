@@ -763,7 +763,7 @@ func TestCIWorkflowDeclaresFailClosedRequiredAggregate(t *testing.T) {
 	if !usesAlwaysStatusCheck(gate.If) {
 		t.Fatalf("ci-required-gate if=%q, want always() so failed or skipped needs are inspected", gate.If)
 	}
-	wantNeeds := []string{"browser-matrix", "browser-runtime", "browser-visual", "platform-smoke", "platform-smoke-intel", "platform-smoke-linux-arm64", "source-quality"}
+	wantNeeds := []string{"browser-matrix", "browser-runtime", "browser-visual", "platform-smoke", "platform-smoke-linux-arm64", "source-quality"}
 	if got := needsList(gate.Needs); !reflect.DeepEqual(got, wantNeeds) {
 		t.Fatalf("ci-required-gate needs=%#v, want %#v", got, wantNeeds)
 	}
@@ -941,14 +941,6 @@ func TestCIRequiredAggregateRejectsExecutionOverrides(t *testing.T) {
 				job := workflow.Jobs["browser-runtime"]
 				job.ContinueOnError = "${{ 1 == 1 }}"
 				workflow.Jobs["browser-runtime"] = job
-			},
-		},
-		{
-			name: "required x86_64 leaf job continue on error",
-			mutate: func(workflow *githubWorkflow) {
-				job := workflow.Jobs["platform-smoke-intel"]
-				job.ContinueOnError = true
-				workflow.Jobs["platform-smoke-intel"] = job
 			},
 		},
 		{
@@ -1225,9 +1217,8 @@ func TestCIRequiredAggregateRejectsPlatformSmokeSubstitution(t *testing.T) {
 	if err := validateSetupVerifiedNPMAction(setupAction); err != nil {
 		t.Fatalf("owner setup-verified-npm action: %v", err)
 	}
-	// Each Darwin architecture is an independent required leaf; every
-	// substitution must be refused for either job.
-	for jobID, runner := range map[string]string{"platform-smoke": "macos-15", "platform-smoke-intel": "macos-15-intel"} {
+	// The native Darwin arm64 lane is required; every substitution is refused.
+	for jobID, runner := range map[string]string{"platform-smoke": "macos-15"} {
 		stepIndex := func(job githubJob, name string) int {
 			index, err := uniqueStepIndex(job.Steps, name)
 			if err != nil || index < 0 {
@@ -1410,44 +1401,16 @@ func TestCIRequiredAggregateRejectsPlatformSmokeSubstitution(t *testing.T) {
 			})
 		}
 	}
-	// The x86_64 claim depends on a separately required Intel runner, not on
-	// the arm64 job or on an aggregate that silently omits it.
-	intelAggregateLine := "test \"${{ needs.platform-smoke-intel.result }}\" = \"success\"\n"
-	for name, mutate := range map[string]func(*githubWorkflow){
-		"x86_64 job relabeled to arm64 runner": func(workflow *githubWorkflow) {
-			job := workflow.Jobs["platform-smoke-intel"]
-			job.RunsOn = "macos-15"
-			workflow.Jobs["platform-smoke-intel"] = job
-		},
-		"x86_64 job dropped from aggregate needs": func(workflow *githubWorkflow) {
-			gate := workflow.Jobs["ci-required-gate"]
-			gate.Needs = withoutNeed(t, gate.Needs, "platform-smoke-intel")
-			workflow.Jobs["ci-required-gate"] = gate
-		},
-		"x86_64 result unchecked by aggregate": func(workflow *githubWorkflow) {
-			gate := workflow.Jobs["ci-required-gate"]
-			gate.Steps[0].Run = strings.Replace(gate.Steps[0].Run, intelAggregateLine, "", 1)
-			workflow.Jobs["ci-required-gate"] = gate
-		},
-		"x86_64 job removed consistently": func(workflow *githubWorkflow) {
-			delete(workflow.Jobs, "platform-smoke-intel")
-			gate := workflow.Jobs["ci-required-gate"]
-			gate.Needs = withoutNeed(t, gate.Needs, "platform-smoke-intel")
-			gate.Steps[0].Run = strings.Replace(gate.Steps[0].Run, intelAggregateLine, "", 1)
-			workflow.Jobs["ci-required-gate"] = gate
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			workflow := cloneWorkflow(t, base)
-			if !strings.Contains(workflow.Jobs["ci-required-gate"].Steps[0].Run, intelAggregateLine) {
-				t.Fatal("owner aggregate lacks the x86_64 result line")
-			}
-			mutate(&workflow)
-			if err := validateCIRequiredAggregate(workflow); err == nil {
-				t.Fatal("x86_64 platform-smoke weakening was admitted")
-			}
-		})
-	}
+	// A retired Intel lane cannot silently regain a place in the closed topology.
+	t.Run("retired Intel runner restored", func(t *testing.T) {
+		workflow := cloneWorkflow(t, base)
+		job := workflow.Jobs["platform-smoke"]
+		job.RunsOn = "macos-15-intel"
+		workflow.Jobs["platform-smoke-intel"] = job
+		if err := validateCIRequiredAggregate(workflow); err == nil {
+			t.Fatal("retired Intel runner was admitted")
+		}
+	})
 	// The Linux arm64 claim depends on its own required native ARM runner: the
 	// job must prove aarch64 in-job before checkout, run the owner invariant,
 	// smoke and CPython 3.11.0 steps exactly, and stay in the aggregate.
@@ -1880,7 +1843,6 @@ test "${{ needs.browser-visual.result }}" = "success"
 test "${{ needs.browser-matrix.result }}" = "success"
 test "${{ needs.source-quality.result }}" = "success"
 test "${{ needs.platform-smoke.result }}" = "success"
-test "${{ needs.platform-smoke-intel.result }}" = "success"
 test "${{ needs.platform-smoke-linux-arm64.result }}" = "success"
 printf 'OK: all required quality checks passed\n'`
 
@@ -1890,7 +1852,7 @@ npm run platform:smoke
 `
 
 // The exact required leaf jobs of the CI aggregate, in needsList order.
-var ciRequiredLeafJobs = []string{"browser-matrix", "browser-runtime", "browser-visual", "platform-smoke", "platform-smoke-intel", "platform-smoke-linux-arm64", "source-quality"}
+var ciRequiredLeafJobs = []string{"browser-matrix", "browser-runtime", "browser-visual", "platform-smoke", "platform-smoke-linux-arm64", "source-quality"}
 
 const linuxArm64PlatformSmokeJob = "platform-smoke-linux-arm64"
 
@@ -1960,8 +1922,7 @@ func validateSetupVerifiedNPMAction(raw []byte) error {
 // architecture: uname -m must equal the job's architecture and Rosetta
 // translation must be absent, so the runner label is not the only evidence.
 var platformSmokeArchitectures = map[string]string{
-	"platform-smoke":       "arm64",
-	"platform-smoke-intel": "x86_64",
+	"platform-smoke": "arm64",
 }
 
 // The Linux arm64 job first proves in-job that the runner is natively
@@ -1983,8 +1944,7 @@ test "${translated:-0}" = "0"
 `
 }
 
-// Both Darwin architectures run the same test suite. Intel needs a longer
-// package timeout for the native adapter and CLI contract tests. Linux arm64 runs the same
+// Darwin arm64 runs the native Go suite. Linux arm64 runs the same
 // setup, invariant packages and platform smoke after its own architecture
 // check, then the CPython 3.11.0 installed smoke over a fresh release wheel set.
 func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
@@ -2013,14 +1973,10 @@ func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
 			Run:  requiredDarwinArchitectureShell(architecture),
 		})
 		expected = append(expected, platformSmokeSetupSteps()...)
-		goTests := "npm run go:test"
-		if jobID == "platform-smoke-intel" {
-			goTests += " -- -timeout=20m"
-		}
 		expected = append(expected,
 			githubStep{Name: "Run Darwin filesystem and process invariants", Run: requiredPlatformInvariantCommand},
 			githubStep{Name: "Install pinned Go test dependencies", Run: "npm ci --ignore-scripts"},
-			githubStep{Name: "Run full native Go tests", Run: goTests},
+			githubStep{Name: "Run full native Go tests", Run: "npm run go:test"},
 			githubStep{Name: "Run platform smoke", Run: requiredPlatformSmokeShell},
 		)
 	}
@@ -2134,7 +2090,6 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 			"browser-runtime":            "",
 			"browser-visual":             "",
 			"platform-smoke":             "",
-			"platform-smoke-intel":       "",
 			"platform-smoke-linux-arm64": "",
 			"source-quality":             "",
 			"ci-required-gate":           "always()",
@@ -2160,7 +2115,6 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 	}{
 		"source-quality":             {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 30},
 		"platform-smoke":             {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 30},
-		"platform-smoke-intel":       {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 45},
 		"platform-smoke-linux-arm64": {name: "quality / platform smoke / linux-arm64", runner: "ubuntu-24.04-arm", timeoutMinutes: 30},
 		"browser-runtime":            {name: "quality / browser runtime", runner: "ubuntu-24.04", timeoutMinutes: 20},
 		"browser-visual":             {name: "quality / browser visual references", runner: "ubuntu-24.04-arm", timeoutMinutes: 20},
@@ -2185,7 +2139,7 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 			)
 		}
 	}
-	for _, jobID := range []string{"platform-smoke", "platform-smoke-intel", linuxArm64PlatformSmokeJob} {
+	for _, jobID := range []string{"platform-smoke", linuxArm64PlatformSmokeJob} {
 		if err := validateExactPlatformSmokeSteps(jobID, workflow.Jobs[jobID]); err != nil {
 			return err
 		}

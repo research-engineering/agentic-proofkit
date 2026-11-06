@@ -653,10 +653,11 @@ func TestRequiredInputCommandsRouteStructuralErrorsByMode(t *testing.T) {
 func TestSpecializedParsersRejectDuplicateInputPointer(t *testing.T) {
 	duplicate := []string{"--input", "-", "--input-pointer", "", "--input-pointer", "/nested"}
 	cases := []struct {
-		name  string
-		parse func() error
+		name           string
+		parse          func() error
+		wantDiagnostic string
 	}{
-		{name: "browser", parse: func() error {
+		{name: "browser", wantDiagnostic: "--input-pointer may be specified only once", parse: func() error {
 			_, err := parseRequirementBrowserArgs(append(append([]string{}, duplicate...), "--view", "source"))
 			return err
 		}},
@@ -675,7 +676,11 @@ func TestSpecializedParsersRejectDuplicateInputPointer(t *testing.T) {
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
-			if err := item.parse(); err == nil || !strings.Contains(err.Error(), "--input-pointer requires") {
+			wantDiagnostic := item.wantDiagnostic
+			if wantDiagnostic == "" {
+				wantDiagnostic = "--input-pointer requires"
+			}
+			if err := item.parse(); err == nil || !strings.Contains(err.Error(), wantDiagnostic) {
 				t.Fatalf("parser error=%v, want duplicate --input-pointer rejection", err)
 			}
 		})

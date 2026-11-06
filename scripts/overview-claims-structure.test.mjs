@@ -84,6 +84,7 @@ test("overview boundary preserves predecessor streams, process classes and nativ
         "root-shape-only definition proofkit.spec-overview-claims.input.v1.root-shape; nested fields, types, and cardinalities are non-claims",
         "structural JSON Schema definition proofkit.spec-overview-claims.input.v2.json-schema; canonicalization and semantic validity remain native admission obligations",
       ).replace("\n\nPublic contract:", "\n  root fields: boundaryId, claims[], extractionRefs[], nonClaims[], overviewPath, requirementIds[], requirementsPath, sourceId, specPackagePath\n\nPublic contract:")
+        .replace("\n\nInput schema summary:", "\n\nFlag constraints:\n  May be specified once: --input\n  May be specified once: --input-pointer\n\nInput schema summary:")
         .replace("  CLI command routing, root JSON shapes,", "  CLI command routing, structural JSON Schemas,");
       assert.equal(result.stdout, expected, `${row.name}/declared-help-delta`);
     } else assert.equal(hash(result.stdout), row.stdoutSHA256, `${row.name}/stdout`);

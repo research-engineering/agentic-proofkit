@@ -265,9 +265,13 @@ func command(name string, input commandInputMode, allowedFlags []string, outputM
 		// Only the generic input runner consults this property.
 		panic("predecessor stream preservation requires the generic input runner: " + name)
 	}
-	if slices.Contains(descriptor.allowedFlags, "--format") {
-		descriptor.singleOccurrenceFlags = sortedUniqueStrings(append(descriptor.singleOccurrenceFlags, "--format"))
+	// Value flags select one operand unless their native owner appends values.
+	for _, flag := range descriptor.allowedFlags {
+		if flagRequiresValue(flag) && flag != "--local-environment-class" && flag != "--touched-rule-id" {
+			descriptor.singleOccurrenceFlags = append(descriptor.singleOccurrenceFlags, flag)
+		}
 	}
+	descriptor.singleOccurrenceFlags = sortedUniqueStrings(descriptor.singleOccurrenceFlags)
 	explicitFlagChoices := cloneStringMap(descriptor.flagValueChoices)
 	metadata, ok := generatedCommandContractMetadataByName[name]
 	if !ok {

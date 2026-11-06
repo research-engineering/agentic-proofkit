@@ -493,6 +493,9 @@ func inflateFragment(payload map[string]any, expectedSourceID string, envelope E
 }
 
 func compactV3BindingToCanonical(raw any, sourceID string, rowIndex int) ([]any, error) {
+	// Both fragment forms put owned_invariant before invariant_role. The full
+	// form inserts scenario_id after requirement_id; canonical output uses
+	// its separate, explicitly declared column order.
 	row, ok := raw.([]any)
 	if !ok {
 		return nil, fmt.Errorf("fragment v3 binding row #%d must be an array", rowIndex)

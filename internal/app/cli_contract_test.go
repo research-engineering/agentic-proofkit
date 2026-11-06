@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "b633437b8f260567cb82eeaa08df3c76fb1be9d2c8a228de3d43fc30f6c65fe3"
+	cliContractPublicABISHA256               = "52e0de7ae6a0f542bffa9d7bd75e3007e020762776f1eadd4fe827b84548b1f4"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2906,6 +2906,39 @@ func TestCLIVersionUsesStandaloneTextOutput(t *testing.T) {
 	stderr.Reset()
 	if exit := Run(t.Context(), []string{"--version", "--help"}, nil, &stdout, &stderr); exit != 1 || stdout.Len() != 0 {
 		t.Fatalf("mixed version arguments exit=%d stdout=%q stderr=%q", exit, stdout.String(), stderr.String())
+	}
+}
+
+func TestCLIRejectsRepeatedScalarFlagsBeforeInput(t *testing.T) {
+	for _, descriptor := range commandDescriptors {
+		for _, flag := range descriptor.allowedFlags {
+			if !flagRequiresValue(flag) || flag == "--local-environment-class" || flag == "--touched-rule-id" {
+				continue
+			}
+			t.Run(descriptor.name+"/"+flag, func(t *testing.T) {
+				args := append(append([]string{}, descriptor.routeTokens...), flag, "fixture", flag, "fixture")
+				var stdout, stderr bytes.Buffer
+				code := Run(t.Context(), args, strings.NewReader("not-json"), &stdout, &stderr)
+				if code != 1 || stdout.Len() != 0 || !strings.HasSuffix(stderr.String(), "may be specified only once\n") {
+					t.Fatalf("repeated scalar: exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+				}
+			})
+		}
+	}
+}
+
+func TestDescriptorRetainsRepeatableListFlags(t *testing.T) {
+	for _, item := range []struct{ command, flag string }{
+		{"gradual-adoption-guidance", "--touched-rule-id"},
+		{"adoption-contract-envelope", "--touched-rule-id"},
+		{"requirement-proof-view", "--local-environment-class"},
+		{"requirement-browser-server", "--local-environment-class"},
+		{"requirement-proof-resolver", "--local-environment-class"},
+	} {
+		descriptor, ok := commandDescriptorFor(item.command)
+		if !ok || slices.Contains(descriptor.singleOccurrenceFlags, item.flag) {
+			t.Fatalf("%s %s lost its list semantics", item.command, item.flag)
+		}
 	}
 }
 

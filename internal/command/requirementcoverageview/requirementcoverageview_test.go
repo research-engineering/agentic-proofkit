@@ -2,6 +2,7 @@ package requirementcoverageview
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -9,6 +10,52 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
+
+func TestCoverageEnvelopeAccountsForEveryOmittedFailure(t *testing.T) {
+	for _, count := range []int{0, 12, 13, 14} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			input := validCoverageInput(t)
+			refs := []any{"REQ-PROOFKIT-COVERAGE-001"}
+			for index := range count {
+				refs = append(refs, fmt.Sprintf("REQ-UNKNOWN-%03d", index))
+			}
+			inventoryEntry(input)["requirementRefs"] = refs
+			full, fullCode, err := BuildJSON(input, Options{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			failures := full.(map[string]any)["failures"].([]any)
+			if len(failures) != count {
+				t.Fatalf("fixture failures=%d, want %d", len(failures), count)
+			}
+			raw, code, err := BuildJSON(input, Options{AgentEnvelope: true})
+			if err != nil || code != fullCode {
+				t.Fatalf("envelope exit=%d full exit=%d err=%v", code, fullCode, err)
+			}
+			envelope := raw.(map[string]any)
+			if err := EnvelopeShape().CheckGenerated(envelope, "coverage envelope"); err != nil {
+				t.Fatal(err)
+			}
+			blockers := envelope["blockedPreconditions"].([]any)
+			bounds := envelope["bounds"].(map[string]any)
+			omitted := max(0, count-12)
+			if len(blockers) != min(count, 12) || bounds["omittedCount"] != omitted {
+				t.Fatalf("failure accounting: blockers=%d omitted=%v total=%d", len(blockers), bounds["omittedCount"], count)
+			}
+			for index, blocker := range blockers {
+				if blocker.(map[string]any)["description"] != failures[index] {
+					t.Fatalf("retained blocker %d changed", index)
+				}
+			}
+			if omitted > 0 && (bounds["truncated"] != true || bounds["fanout"] != "wide_or_full_gate_required") {
+				t.Fatalf("missing truncation escalation: %#v", bounds)
+			}
+			if omitted == 0 && bounds["fanout"] != "bounded" {
+				t.Fatalf("complete envelope escalated: %#v", bounds)
+			}
+		})
+	}
+}
 
 func TestBuildJSONBuildsDeclaredRequirementAndCommandRouteMapping(t *testing.T) {
 	view, exitCode, err := BuildJSON(validCoverageInput(t), Options{})

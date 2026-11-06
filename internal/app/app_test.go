@@ -552,7 +552,7 @@ func TestConformanceProfileRejectsAmbiguousModesAndHTML(t *testing.T) {
 		{
 			name: "duplicate input",
 			args: []string{"conformance-profile", "--input", "-", "--input", "-", "--profile", "sample"},
-			want: "--input requires a path",
+			want: "--input may be specified only once",
 		},
 	}
 	for _, item := range cases {
