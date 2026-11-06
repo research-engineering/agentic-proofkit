@@ -93,7 +93,7 @@ func ReadBounded(rootPath, relativePath string, maxBytes int64) ([]byte, error) 
 	if err != nil {
 		return nil, err
 	}
-	root, err := os.OpenRoot(rootPath)
+	root, err := rootpath.OpenDirectoryRoot(rootPath)
 	if err != nil {
 		return nil, fmt.Errorf("open artifact root failed")
 	}

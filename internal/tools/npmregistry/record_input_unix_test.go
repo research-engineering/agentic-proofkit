@@ -24,27 +24,35 @@ func TestRegistryInputsRefuseFIFOWithoutBlocking(t *testing.T) {
 	for _, test := range []struct {
 		path, diagnostic string
 		invoke           func(string) error
+		parents          bool
 	}{
 		{"raw-pack.json", "read npm pack report", func(path string) error {
 			return capturePackReports(filepath.Join(root, "output.json"), []string{path})
-		}},
-		{"package-lock.json", "read registry consumer lock", func(path string) error { return verifyConsumerLock(candidate, path) }},
-		{"artifacts/registry/npm-publication-mode.txt", "read npm publication mode", func(string) error { return run(root) }},
+		}, true},
+		{"explicit-candidate.json", "read release candidate", func(path string) error { return verifyConsumerLock(path, "unused.json") }, true},
+		{"package-lock.json", "read registry consumer lock", func(path string) error { return verifyConsumerLock(candidate, path) }, true},
+		{"artifacts/registry/npm-publication-mode.txt", "read npm publication mode", func(string) error { return run(root) }, false},
 	} {
 		t.Run(test.path, func(t *testing.T) {
 			path := filepath.Join(root, test.path)
 			if err := syscall.Mkfifo(path, 0o600); err != nil {
 				t.Fatal(err)
 			}
-			result := make(chan error, 1)
-			go func() { result <- test.invoke(path) }()
-			select {
-			case err := <-result:
-				if err == nil || !strings.Contains(err.Error(), test.diagnostic) {
-					t.Fatalf("input admission = %v, want %q", err, test.diagnostic)
+			operands := []string{path}
+			if test.parents {
+				operands = append(operands, filepath.Join(path, "input.json"))
+			}
+			for _, input := range operands {
+				result := make(chan error, 1)
+				go func() { result <- test.invoke(input) }()
+				select {
+				case err := <-result:
+					if err == nil || !strings.Contains(err.Error(), test.diagnostic) {
+						t.Fatalf("input %q admission = %v, want %q", input, err, test.diagnostic)
+					}
+				case <-time.After(5 * time.Second):
+					t.Fatalf("registry input %q admission blocked on a FIFO", input)
 				}
-			case <-time.After(5 * time.Second):
-				t.Fatal("registry input admission blocked on a FIFO")
 			}
 		})
 	}
