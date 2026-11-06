@@ -221,12 +221,12 @@ func TestOpenBrowserUsesFixedLauncherAndLoopbackURL(t *testing.T) {
 			if goos == "linux-default-port" {
 				goos = "linux"
 			}
-			err := openBrowserWithLauncher(t.Context(), goos, test.url, func(_ context.Context, command string, args ...string) error {
+			_, err := openBrowserWithLauncher(t.Context(), goos, test.url, func(_ context.Context, command string, args ...string) (<-chan error, error) {
 				calls++
 				if command != test.wantCommand || !slices.Equal(args, test.wantArgs) {
 					t.Fatalf("launcher command=%q args=%v, want %q %v", command, args, test.wantCommand, test.wantArgs)
 				}
-				return nil
+				return nil, nil
 			})
 			if err != nil || calls != 1 {
 				t.Fatalf("openBrowserWithLauncher() error=%v calls=%d", err, calls)
@@ -242,9 +242,9 @@ func TestOpenBrowserUsesFixedLauncherAndLoopbackURL(t *testing.T) {
 	} {
 		t.Run(unsafe, func(t *testing.T) {
 			called := false
-			err := openBrowserWithLauncher(t.Context(), "linux", unsafe, func(context.Context, string, ...string) error {
+			_, err := openBrowserWithLauncher(t.Context(), "linux", unsafe, func(context.Context, string, ...string) (<-chan error, error) {
 				called = true
-				return nil
+				return nil, nil
 			})
 			if err == nil || called {
 				t.Fatalf("unsafe URL error=%v launcherCalled=%v", err, called)
@@ -638,7 +638,7 @@ func TestBrowseTerminalPathsJoinCleanupAndConsumeDoneOnce(t *testing.T) {
 				}
 				return len(data), nil
 			})
-			err := serveHandleWithOpener(ctx, handle, Options{Open: mode == "open"}, writer, func(context.Context, string) error { opens++; return primary })
+			err := serveHandleWithOpener(ctx, handle, Options{Open: mode == "open"}, writer, func(context.Context, string) (<-chan error, error) { opens++; return nil, primary })
 			if !errors.Is(err, closeFailure) || closeCalls != 1 {
 				t.Fatal("browse terminal path dropped cleanup failure or closed more than once")
 			}
@@ -679,7 +679,7 @@ func TestBrowseEarlyFailuresCloseAndAwaitRealServer(t *testing.T) {
 			go func() { completion <- errors.Join(<-realDone, doneFailure) }()
 			handle.done = completion
 			writer := browserWriterFunc(func([]byte) (int, error) { return 0, primary })
-			err = serveHandleWithOpener(t.Context(), handle, Options{Open: mode == "open"}, writer, func(context.Context, string) error { return primary })
+			err = serveHandleWithOpener(t.Context(), handle, Options{Open: mode == "open"}, writer, func(context.Context, string) (<-chan error, error) { return nil, primary })
 			if !errors.Is(err, primary) || !errors.Is(err, closeFailure) || !errors.Is(err, doneFailure) || closeCalls != 1 {
 				t.Fatal("real server early failure did not own primary, cleanup and completion results")
 			}

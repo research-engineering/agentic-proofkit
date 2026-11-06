@@ -624,8 +624,13 @@ agentic-proofkit view --repo-root . --serve
 Only `--open` opens the local browser. Without `--serve`, `view` returns a
 bounded JSON plan and opens no listener. For a single question use `--serve
 --open --session-mode one-shot-question`; the terminal packet follows server
-cleanup. `--session-timeout-seconds` is optional, bounded to 1..7200 and valid
+cleanup. If the browser launcher exits unsuccessfully before a terminal result
+is available, the CLI reports the launch error rather than waiting for expiry.
+`--session-timeout-seconds` is optional, bounded to 1..7200 and valid
 only in that one-shot mode. Serving does not accept `--json-layout`.
+Cancellation has a separate single request slot, so busy projections do not
+block it. An overlapping cancellation can receive HTTP 429 without reading
+its request body.
 
 `view` requires a complete, current, structurally admitted materialized
 project. Other states direct the caller to `next` with the same explicit root;

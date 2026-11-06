@@ -41,6 +41,9 @@ var (
 
 func browserHandler(view string, rendered renderedView, expectedAuthority, capability string, oneShot bool, terminal *terminalArbiter) http.Handler {
 	workspaceRequests := make(chan struct{}, maxWorkspaceRequests)
+	// Keep cancellation available while projection slots are busy, without
+	// letting cancellation bypass body-read concurrency limits.
+	cancelRequests := make(chan struct{}, 1)
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if request.Host != expectedAuthority {
 			forbidden(response, request.Method)
@@ -130,6 +133,10 @@ func browserHandler(view string, rendered renderedView, expectedAuthority, capab
 				methodNotAllowed(response, method, "POST")
 				return
 			}
+			if !admitWorkspaceRequest(response, cancelRequests) {
+				return
+			}
+			defer releaseWorkspaceRequest(cancelRequests)
 			serveCancel(response, request, expectedOrigin, capability, rendered.workspace, oneShot, terminal)
 		case "/api/v1/handoff":
 			if method != http.MethodPost {

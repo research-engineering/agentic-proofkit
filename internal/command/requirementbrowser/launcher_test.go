@@ -1,7 +1,10 @@
 package requirementbrowser
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -114,8 +117,78 @@ func TestBrowserLauncherStartFailure(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	if err := startBrowserProcess(ctx, os.Args[0]); err == nil {
+	if done, err := startBrowserProcess(ctx, os.Args[0]); err == nil || done != nil {
 		t.Fatal("cancelled launcher started successfully")
+	}
+}
+
+func TestOneShotKeepsBrowserLauncherAndTerminalOutcomesDistinct(t *testing.T) {
+	for _, mode := range []string{"failed launch", "submitted before failure", "submitted after successful launch", "cancelled during launch"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			terminal := newTerminalArbiter()
+			done := make(chan error, 1)
+			closeCalls := 0
+			handle := ServerHandle{URL: "http://127.0.0.1:43127/", Handoff: terminal.packets, terminal: terminal, done: done,
+				close: func(context.Context) error {
+					closeCalls++
+					done <- nil
+					return nil
+				},
+			}
+			submitted := map[string]any{"state": questionStateSubmitted}
+			opener := func(ctx context.Context, _ string) (<-chan error, error) {
+				switch mode {
+				case "failed launch":
+					command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestBrowserLauncherChild$")
+					command.Env = append(os.Environ(), "PROOFKIT_BROWSER_CHILD=failure")
+					return startBrowserCommand(command)
+				case "submitted after successful launch":
+					result := make(chan error)
+					go func() {
+						select {
+						case result <- nil:
+							terminal.TryCommit(submitted)
+						case <-ctx.Done():
+						}
+					}()
+					return result, nil
+				case "submitted before failure":
+					terminal.TryCommit(submitted)
+				case "cancelled during launch":
+					cancel()
+				}
+				result := make(chan error, 1)
+				result <- errors.New("synthetic launcher exit")
+				return result, nil
+			}
+			var stdout bytes.Buffer
+			err := serveHandleWithOpener(ctx, handle, Options{Open: true, SessionMode: "one-shot-question"}, &stdout, opener)
+			if closeCalls != 1 || len(done) != 0 {
+				t.Fatalf("cleanup calls=%d, unread completion=%d", closeCalls, len(done))
+			}
+			if mode == "failed launch" {
+				var exit *exec.ExitError
+				if !errors.As(err, &exit) || exit.ExitCode() != 7 || stdout.Len() != 0 || !strings.Contains(err.Error(), "open browser") {
+					t.Fatalf("launch failure: error=%v stdout=%q", err, stdout.String())
+				}
+				return
+			}
+			want := questionStateSubmitted
+			if mode == "cancelled during launch" {
+				want = questionStateCancelled
+				if !errors.Is(err, ErrOneShotTerminal) {
+					t.Fatalf("cancellation was not terminal: %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			var packet map[string]any
+			if json.Unmarshal(stdout.Bytes(), &packet) != nil || packet["state"] != want {
+				t.Fatalf("terminal packet=%q, want %s", stdout.String(), want)
+			}
+		})
 	}
 }
 
