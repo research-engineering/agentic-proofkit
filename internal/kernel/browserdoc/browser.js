@@ -66,20 +66,33 @@
     }
   }
 
-  search.addEventListener("input", applyFilters);
-  for (const link of document.querySelectorAll('.hierarchy a[href^="#"]')) {
-    link.addEventListener("click", () => {
-      const target = document.getElementById((link.getAttribute("href") || "").slice(1));
-      if (!target) return;
-      if (viewMode) viewMode.value = "cards";
+  /** @param {string} hash */
+  function revealHierarchyTarget(hash) {
+    const target = document.getElementById(hash.slice(1));
+    if (!target?.closest("[hidden]")) return null;
+    if (viewMode && viewMode.value !== "cards") {
+      viewMode.value = "cards";
       applyFilters();
-      if (target.closest("[hidden]")) {
-        search.value = "";
-        for (const filter of filters) filter.value = "";
-        applyFilters();
-      }
-    });
+    }
+    if (target.closest("[hidden]")) {
+      search.value = "";
+      for (const filter of filters) filter.value = "";
+      applyFilters();
+    }
+    return target;
   }
+
+  const hierarchyHashes = new Set();
+  for (const link of document.querySelectorAll('.hierarchy a[href^="#"]')) {
+    const hash = link.getAttribute("href") || "";
+    hierarchyHashes.add(hash);
+    link.addEventListener("click", () => revealHierarchyTarget(hash));
+  }
+  window.addEventListener("hashchange", () => {
+    const hash = window.location.hash;
+    if (hierarchyHashes.has(hash)) revealHierarchyTarget(hash)?.scrollIntoView({block: "start"});
+  });
+  search.addEventListener("input", applyFilters);
   document.addEventListener("focusin", (event) => {
     const focused = event.target;
     if (!(focused instanceof HTMLElement) || focused === document.body || focused === document.documentElement) return;

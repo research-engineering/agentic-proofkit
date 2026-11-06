@@ -66,6 +66,7 @@ const (
 	maxPythonWheelBytes         int64 = 256 << 20
 	maxPythonBinaryBytes        int64 = 64 << 20
 	maxPythonWheelEntries             = 4096
+	maxRetainedRecordBytes            = 16 << 20
 )
 
 type completionInput struct {
@@ -946,11 +947,11 @@ func provenanceMatchesExecution(record map[string]any, execution packageartifact
 }
 
 func fileDigestRef(root string, path string) (string, error) {
-	value, err := fileSHA256(filepath.Join(root, filepath.FromSlash(path)))
+	content, err := artifactfile.ReadBounded(root, path, maxRetainedRecordBytes)
 	if err != nil {
 		return "", err
 	}
-	return "sha256:" + value, nil
+	return fmt.Sprintf("sha256:%x", sha256.Sum256(content)), nil
 }
 
 func packageArtifactCommandDigest(execution packageartifactrecord.Record) (string, error) {
@@ -1394,12 +1395,11 @@ func specProofBundleRecordMatches(record specProofBundleEvidence) bool {
 }
 
 func readAdmittedJSON(root string, path string) (any, error) {
-	file, err := os.Open(filepath.Join(root, filepath.FromSlash(path)))
+	content, err := artifactfile.ReadBounded(root, path, maxRetainedRecordBytes)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	return admission.DecodeJSON(file, 16<<20)
+	return admission.DecodeJSON(bytes.NewReader(content), maxRetainedRecordBytes)
 }
 
 func projectAdmittedJSON[T any](raw any) (T, error) {
@@ -1742,15 +1742,6 @@ func checksumFileMatches(root string, checksumPath string, expected []string) bo
 	return err == nil && bytes.Equal(content, wanted)
 }
 
-func fileSHA256(path string) (string, error) {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	sum := sha256.Sum256(content)
-	return hex.EncodeToString(sum[:]), nil
-}
-
 func hasCandidateChannel(manifest releaseManifest, authority releasechannel.ID) bool {
 	found := false
 	for _, channel := range manifest.Channels {
@@ -1880,15 +1871,14 @@ func pathEntryExists(root string, path string) bool {
 }
 
 func readTypedJSON[T any](root string, path string) (T, error) {
-	return readBoundedTypedJSON[T](root, path, 16<<20)
+	return readBoundedTypedJSON[T](root, path, maxRetainedRecordBytes)
 }
 
 func readBoundedTypedJSON[T any](root string, path string, maximumBytes int64) (T, error) {
-	file, err := os.Open(filepath.Join(root, filepath.FromSlash(path)))
+	content, err := artifactfile.ReadBounded(root, path, maximumBytes)
 	if err != nil {
 		var zero T
 		return zero, err
 	}
-	defer file.Close()
-	return admission.DecodeTypedJSON[T](file, maximumBytes)
+	return admission.DecodeTypedJSON[T](bytes.NewReader(content), maximumBytes)
 }
