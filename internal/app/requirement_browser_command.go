@@ -18,8 +18,14 @@ import (
 )
 
 var requirementBrowserSingleOccurrenceFlags = flags(
+	"--host",
+	"--input",
+	"--input-pointer",
+	"--port",
+	"--scope",
 	"--session-mode",
 	"--session-timeout-seconds",
+	"--view",
 )
 
 func runRequirementBrowserServer(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {

@@ -13,12 +13,20 @@
       "summary": "The TypeScript generator advances to v3 and json-report-cli-adapter-source emits output contract v2. The generated JSON helper writes arbitrary values to stdout only; command-specific --output remains supported and the runner consumes the native mirror without reopening the path."
     },
     {
+      "changeId": "proofkit.cli.scalar-flag-uniqueness",
+      "summary": "Every value-taking CLI flag rejects repeated occurrences, including identical values, before input is read. The append-valued --touched-rule-id and --local-environment-class selectors retain repetition. Calls that previously selected the last scalar value must pass exactly one value. Each command publishes the corresponding singleOccurrenceFlags; contract identities are unchanged."
+    },
+    {
+      "changeId": "proofkit.coverage-envelope.omission-accounting",
+      "summary": "requirement-coverage-view agent envelopes keep at most twelve failure blockers and publish one standard omission record for the remainder. omittedCount and the truncation and full-gate signals now preserve that remainder while the report exit code stays unchanged. The published envelope structure admits that omission record; contract identities are unchanged."
+    },
+    {
       "changeId": "proofkit.python-wheel.minimum-python",
       "summary": "Python wheels declare Requires-Python >=3.11 instead of >=3.9, so installers on Python 3.9 and 3.10 no longer select them. The required installed-wheel minimum smoke runs CPython 3.11.0 with a checksum-pinned pip 26.2.1. CLI contract identities are unchanged."
     },
     {
       "changeId": "proofkit.platform.darwin-verified-support",
-      "summary": "The supported Darwin claim narrows from macOS 13 or later, the 0.16.0 support claim, to verified macOS 15 or later on arm64 and x86_64, which required CI executes on the macos-15 and macos-15-intel runners. macOS 13 and 14 are no longer supported targets: Darwin binaries still declare a macOS 13.0 minimum in their Mach-O build metadata, so they remain binary-compatible by that metadata only and are not executed or verified. CLI contract identities are unchanged."
+      "summary": "The supported Darwin claim narrows from macOS 13 or later, the 0.16.0 support claim, to verified macOS 15 or later on arm64, which required CI executes on macos-15. Darwin x86_64 binaries are cross-built and packaged without native Intel macOS CI qualification. Both targets still declare a macOS 13.0 minimum in Mach-O build metadata; macOS 13 and 14 remain binary-compatible by that metadata only and are not executed or verified. CLI contract identities are unchanged."
     },
     {
       "changeId": "proofkit.path-pattern.utf8-literals",
@@ -217,7 +225,7 @@
     ]
   },
   "platformRequirements": [
-    "Published Darwin package binaries support macOS 15 or later on arm64 and x86_64, verified by the required macos-15 (arm64) and macos-15-intel (x86_64) CI jobs; they declare a macOS 13.0 minimum in their Mach-O build metadata, but macOS 13 and 14 are not supported targets.",
+    "Published Darwin arm64 binaries are verified on macOS 15 or later by the required macos-15 CI job. Darwin x86_64 binaries are cross-built and packaged without native Intel macOS CI qualification. Both targets declare a macOS 13.0 minimum in Mach-O build metadata; macOS 13 and 14 are not executed or verified.",
     "Published Linux package binaries and wheels target manylinux 2.17 or later on arm64 and x86_64; Linux wheel installation requires pip 20.3 or later.",
     "Python wheels require Python 3.11 or later.",
     "Windows is unsupported."

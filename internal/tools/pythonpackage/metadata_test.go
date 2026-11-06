@@ -189,10 +189,11 @@ func TestREADMEPlatformAndPythonProjection(t *testing.T) {
 		}
 	}
 	expectedBlock := strings.Join([]string{
-		fmt.Sprintf("Supported binary targets are macOS 15 or later on %s, executed by", strings.Join(ownerArchitectures["darwin"], " or ")),
-		"required CI on the GitHub-hosted `macos-15` and `macos-15-intel` runners. Darwin",
-		"binaries declare a macOS 13.0 minimum in their Mach-O build metadata; macOS 13",
-		"and 14 are binary-compatible by that metadata only, not executed or verified.",
+		"macOS 15 or later on arm64 is verified by required CI on the GitHub-hosted",
+		"`macos-15` runner. Darwin x64 binaries are cross-built and packaged without",
+		"native Intel macOS CI qualification. Both Darwin targets declare a macOS 13.0",
+		"minimum in their Mach-O build metadata; macOS 13 and 14 are binary-compatible",
+		"by that metadata only, not executed or verified.",
 		fmt.Sprintf("Linux manylinux %s or later is supported on %s, executed by", ownerMinimums["linux"], strings.Join(ownerArchitectures["linux"], " or ")),
 		"required CI on the GitHub-hosted `ubuntu-24.04-arm` and `ubuntu-24.04` runners.",
 		fmt.Sprintf("The manylinux %s floor is the wheel-tag declaration; CI does not execute a", ownerMinimums["linux"]),

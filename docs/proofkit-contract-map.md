@@ -14,6 +14,10 @@ counts and the standalone `--version` invocation. Released binaries report
 the version embedded from the package manifest. Source builds report
 `(devel)`.
 
+Every value-taking flag admits one occurrence, except the append-valued
+`--touched-rule-id` and `--local-environment-class` selectors. Repeated scalar
+flags are refused before input is read, including equal repeated values.
+
 In a command direction, `childDefinitionBindings` binds `pathSegments` to the
 one shipped `definitionRef` and its digest; `*` means each array element.
 `pathRelations` declares a native-owned derived path rule, while
@@ -72,6 +76,14 @@ A fresh scaffold routes its generated witness input to `witness-plan` and
 marks requirement bindings as caller content. The workflow accepts a
 `bootstrap_witness_plan` reference for that first step. A `witness_plan`
 reference continues to name a scheduler-plan input.
+
+Fragment-v3 binding rows place `owned_invariant` before `invariant_role`.
+The nine-cell form starts with `requirement_id`, `owned_invariant`,
+`invariant_role`; the ten-cell form inserts `scenario_id` immediately after
+`requirement_id`. The remaining cells are `blocking_status`,
+`required_environment_classes`, `positive_witness`, `falsification_witness`,
+`verify_commands` and `declared_mutation_claim_id`. Canonical output has its
+own explicit column order, with `invariant_role` before `owned_invariant`.
 
 Repository-relative path selectors are anchored to the repository root. A
 matched directory selects its descendants. Within a segment `*` matches

@@ -393,6 +393,44 @@ func closedFrontierMarkdown(extraLines ...string) string {
 	return strings.Join(lines, "\n")
 }
 
+func TestBuildPreservesPolicyRowsWithOptionalTableEdges(t *testing.T) {
+	for _, leading := range []string{"", "| "} {
+		for _, trailing := range []string{"", " |"} {
+			t.Run(leading+"row"+trailing, func(t *testing.T) {
+				row := leading + "NEXT | PROD-77 | Pending review | Still open" + trailing
+				record, code, err := Build(minimalCloseoutInput(closedFrontierMarkdown(row)))
+				if err != nil || code != 1 || record.State != "failed" {
+					t.Fatalf("open row disappeared: exit=%d state=%s err=%v", code, record.State, err)
+				}
+				closed := strings.Join([]string{
+					"### Production Readiness Roadmap",
+					leading + "Status | ID | Owner scope | Completion condition" + trailing,
+					leading + "--- | --- | --- | ---" + trailing,
+					leading + "DONE | PROD-01 | Alpha input | Alpha phrase" + trailing,
+					leading + "DONE | PROD-09 | Closeout | Frontier closed Closure gates:" + trailing,
+				}, "\n")
+				record, code, err = Build(minimalCloseoutInput(closed))
+				if err != nil || code != 0 || record.State != "passed" {
+					t.Fatalf("closed rows refused: exit=%d state=%s err=%v", code, record.State, err)
+				}
+				record, code, err = Build(minimalCloseoutInput(closed + "\n" + leading + "DONE | PROD-01 | Duplicate | Alpha phrase" + trailing))
+				if err != nil || code != 1 || record.State != "failed" {
+					t.Fatalf("duplicate row disappeared: exit=%d state=%s err=%v", code, record.State, err)
+				}
+			})
+		}
+	}
+}
+
+func TestBuildKeepsReadinessRowsWithEmptyDescriptionCells(t *testing.T) {
+	for _, row := range []string{"NEXT | PROD-77", "| NEXT | PROD-77 |", "| NEXT | PROD-77 | Pending review |"} {
+		record, code, err := Build(minimalCloseoutInput(closedFrontierMarkdown(row)))
+		if err != nil || code != 1 || record.State != "failed" {
+			t.Fatalf("incomplete policy row disappeared: exit=%d state=%s err=%v", code, record.State, err)
+		}
+	}
+}
+
 func frontierAuthorityPhraseRule() map[string]any {
 	return map[string]any{
 		"ruleId":             "live-authority-claim",

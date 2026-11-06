@@ -22,7 +22,9 @@ vulnerability absence, or consumer rollout safety by itself.
 - `REQ-PROOFKIT-QUALITY-003`: pure parser and canonicalization boundaries have
   fuzz/property tests that prove no-panic and round-trip stability without
   fuzzing side-effecting CLI or filesystem flows.
-- `REQ-PROOFKIT-QUALITY-004`: public CLI ABI has a small golden corpus and
+- `REQ-PROOFKIT-QUALITY-004`: value-taking flags are single occurrence before
+  input reads, except the append-valued `--touched-rule-id` and
+  `--local-environment-class` selectors. Public CLI ABI has a small golden corpus and
   canonical ABI hash covering command topology, exit code, stdout/stderr
   channel discipline, JSON parseability, stable public diagnostics, complete
   versioned root-shape input/output variants, exact source-checkout selectors,
@@ -81,7 +83,7 @@ vulnerability absence, or consumer rollout safety by itself.
   aggregate job omits job defaults and `continue-on-error` entirely. Exact
   workflow-level bash defaults plus a closed inventory require exact
   provider-check names and scalar runners, bind each platform job's (required
-  arm64 `macos-15`, x86_64 `macos-15-intel` and aarch64 `ubuntu-24.04-arm`)
+  arm64 `macos-15` and aarch64 `ubuntu-24.04-arm`)
   presence-aware exact ordered step inventory, whose first step checks the
   native architecture, and exact local setup-action bytes to the fail-closed
   package-script owner command, require the minimum-version CPython installed-wheel

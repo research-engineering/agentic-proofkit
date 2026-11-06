@@ -118,6 +118,7 @@ test("authority guards conserve75predecessor streams and independently check nat
       const id = `proofkit.${row.command}.input.v1`;
       let expected = row.predecessorHelp.replace(`root-shape-only definition ${id}.root-shape; nested fields, types, and cardinalities are non-claims`,
         `structural JSON Schema definition ${id}.json-schema; canonicalization and semantic validity remain native admission obligations`)
+        .replace("\n\nInput schema summary:", "\n\nFlag constraints:\n  May be specified once: --input\n  May be specified once: --input-pointer\n\nInput schema summary:")
         .replace("  CLI command routing, root JSON shapes,", "  CLI command routing, structural JSON Schemas,");
       if (row.command === migration) expected = expected.replace("  paritySetId\n  sourceProofOwners[]\n  targetProofkitRefs[]\n  parityRecords[]\n  nonClaims[]\n", "");
       const keys = row.command === producer ? "admissionChanges[], baselinePolicyDigest, guardId, mergeObligationReceiptRefs[], nonClaimRefs[], nonClaims[], policyChangeDigest, policyChangeId, policyId, policyOwner, policySurfaceRefs[], proposedPolicyDigest" : "nonClaims[], parityRecords[], paritySetId, sourceProofOwners[], targetProofkitRefs[]";

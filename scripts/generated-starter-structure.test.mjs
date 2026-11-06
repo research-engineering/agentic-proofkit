@@ -76,6 +76,22 @@ const declaredStreamDeltas = Object.freeze([Object.freeze({
   rows: helpRows,
   predecessor: "CLI command routing, root JSON shapes,", current: "CLI command routing, structural JSON Schemas,", occurrences: 1,
 }),
+Object.freeze({
+  id: "SCALAR-PRESET-HELP",
+  reason: "Scalar flags publish their single-occurrence constraint in help.",
+  rows: Object.freeze(["stack-preset--help", "stack-preset-h"]),
+  predecessor: "  agentic-proofkit stack-preset --preset typescript_workspace\n\nAfter owner review",
+  current: "  agentic-proofkit stack-preset --preset typescript_workspace\n\nFlag constraints:\n  May be specified once: --preset\n\nAfter owner review",
+  occurrences: 1,
+}),
+Object.freeze({
+  id: "SCALAR-LANGUAGE-HELP",
+  reason: "The language operand gains the same single-occurrence constraint as format.",
+  rows: Object.freeze(["json-report-cli-adapter-source--help", "json-report-cli-adapter-source-h"]),
+  predecessor: "  May be specified once: --format\n\nPublic contract:",
+  current: "  May be specified once: --format\n  May be specified once: --language\n\nPublic contract:",
+  occurrences: 1,
+}),
 ]);
 const count = (text, needle) => text.split(needle).length - 1;
 // Returns the predecessor stdout implied by the declared deltas of a row, or null
@@ -137,7 +153,10 @@ test("starter outputs match scoped streams, launcher domains and independent mea
     assert.equal(result.status, row.exitCode, row.name);
     if (currentAdapterStdout.has(row.name)) assert.equal(hash(result.stdout), currentAdapterStdout.get(row.name), `${row.name}/stdout`);
     else assert.ok(conservesPredecessor(row, result.stdout), `${row.name}/stdout`);
-    assert.equal(hash(result.stderr), row.stderrSHA256, `${row.name}/stderr`);
+    if (row.name === "preset-duplicate") {
+      assert.equal(row.stderrSHA256, hash("stack-preset supports only --preset <id>\n"));
+      assert.equal(result.stderr, "--preset may be specified only once\n");
+    } else assert.equal(hash(result.stderr), row.stderrSHA256, `${row.name}/stderr`);
     if (row.exitCode !== 0 || row.argv.some(x => x === "-h" || x === "--help")) continue;
     const command = row.argv.find(x => names.includes(x)), value = JSON.parse(result.stdout);
     assert.equal(validators.get(command)(value), true, `${row.name}/schema`);
@@ -267,4 +286,19 @@ test("the HELP-CONTRACT-SCHEMAS help delta is exact and limited to help rows", (
   const reportCurrent = invoke(report).stdout;
   assert.equal(count(reportCurrent, delta.current), 0);
   assert.ok(conservesPredecessor(report, reportCurrent), "non-help rows stay byte-exact");
+});
+
+test("scalar flag help deltas are exact and limited to their commands", () => {
+  const deltas = declaredStreamDeltas.filter(item => item.id.startsWith("SCALAR-"));
+  assert.equal(deltas.length, 2);
+  for (const delta of deltas) {
+    for (const row of baseline.observations.filter(item => delta.rows.includes(item.name))) {
+      const current = invoke(row).stdout;
+      assert.ok(conservesPredecessor(row, current), row.name);
+      assert.equal(conservesPredecessor(row, current.replace(delta.current, delta.predecessor)), false, `${row.name}/reverted`);
+      assert.equal(conservesPredecessor(row, current.replace("Usage:", "Usage: ")), false, `${row.name}/other byte`);
+    }
+    const unrelated = baseline.observations.find(row => !delta.rows.includes(row.name) && row.exitCode === 0);
+    assert.equal(conservesPredecessor(unrelated, invoke(unrelated).stdout + delta.current), false, "unlisted row");
+  }
 });
