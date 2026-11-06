@@ -56,6 +56,14 @@ func TestVerifyConsumerLockBindsOnlyTheCandidateArchive(t *testing.T) {
 			}
 		})
 	}
+	t.Run("type errors omit unadmitted package keys", func(t *testing.T) {
+		const key = "UNADMITTED_LOCK_MAP_KEY"
+		writeFixture(t, lock, `{"lockfileVersion":3,"packages":{"`+key+`":{"version":7}}}`)
+		err := verifyConsumerLock(candidate, lock)
+		if err == nil || !strings.Contains(err.Error(), "invalid JSON value type") || strings.Contains(err.Error(), key) {
+			t.Fatalf("expected a bounded JSON type diagnostic without the caller key, got %v", err)
+		}
+	})
 }
 
 func TestReleaseConsumerBindsTheLockBeforeInstallingAndExecuting(t *testing.T) {

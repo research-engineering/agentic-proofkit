@@ -6,13 +6,19 @@ import (
 )
 
 func TestDecodeNPM12ReportRequiresOneIdentityBoundRecord(t *testing.T) {
-	valid := `{"@research-engineering/agentic-proofkit":{"filename":"package.tgz","integrity":"sha512-value","name":"@research-engineering/agentic-proofkit","shasum":"abc","version":"1.2.3"}}`
+	valid := `{"@research-engineering/agentic-proofkit":{"filename":"package.tgz","id":"@research-engineering/agentic-proofkit@1.2.3","integrity":"sha512-value","name":"@research-engineering/agentic-proofkit","shasum":"abc","version":"1.2.3"}}`
 	record, err := DecodeNPM12Report(strings.NewReader(valid), int64(len(valid)))
 	if err != nil {
 		t.Fatalf("DecodeNPM12Report(valid) error = %v", err)
 	}
-	if record.Name != "@research-engineering/agentic-proofkit" {
+	if record.Name != "@research-engineering/agentic-proofkit" || record.ID != "@research-engineering/agentic-proofkit@1.2.3" {
 		t.Fatalf("DecodeNPM12Report(valid) = %#v", record)
+	}
+	const sentinel = "sk-proj-abcdefghijklmnop"
+	invalidID := strings.Replace(valid, record.ID, sentinel, 1)
+	_, err = DecodeNPM12Report(strings.NewReader(invalidID), int64(len(invalidID)))
+	if err == nil || strings.Contains(err.Error(), sentinel) {
+		t.Fatalf("expected an ID admission refusal without disclosure, got %v", err)
 	}
 
 	for _, test := range []struct {

@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -41,6 +43,10 @@ func verifyConsumerLock(candidatePath, lockPath string) error {
 	}
 	lock, err := admission.DecodeTypedJSON[consumerLock](bytes.NewReader(content), maxPackRecordBytes)
 	if err != nil {
+		var typeError *json.UnmarshalTypeError
+		if errors.As(err, &typeError) {
+			return fmt.Errorf("registry consumer lock has an invalid JSON value type")
+		}
 		return fmt.Errorf("admit registry consumer lock: %w", err)
 	}
 	expected := records[0]

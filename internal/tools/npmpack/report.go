@@ -49,6 +49,11 @@ func DecodeNPM12Report(reader io.Reader, maxBytes int64) (Record, error) {
 				return Record{}, err
 			}
 		}
+		if record.ID != "" {
+			if _, err := admit.NonEmptyText(record.ID, "npm pack report id"); err != nil {
+				return Record{}, err
+			}
+		}
 		return record, nil
 	}
 	return Record{}, fmt.Errorf("npm pack report must contain exactly one keyed record")
