@@ -75,7 +75,7 @@ type pypiFile struct {
 	PackageType   string `json:"packagetype"`
 	PythonVersion string `json:"python_version"`
 	URL           string `json:"url"`
-	Yanked        bool   `json:"yanked"`
+	Yanked        *bool  `json:"yanked"`
 }
 
 type pypiHTTPStatusError struct {
@@ -362,7 +362,10 @@ func compareRegistryFiles(candidates pythonPackageSet, registry pypiResponse) ([
 		if file.PackageType != "bdist_wheel" {
 			return nil, fmt.Errorf("pypi file %s has package type %s", file.Filename, file.PackageType)
 		}
-		if file.Yanked {
+		if file.Yanked == nil {
+			return nil, fmt.Errorf("pypi file %s must include boolean yanked status", file.Filename)
+		}
+		if *file.Yanked {
 			return nil, fmt.Errorf("pypi file %s is yanked", file.Filename)
 		}
 		if file.PythonVersion != candidate.PythonTag {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -45,6 +46,7 @@ func TestCompareRegistryFilesAcceptsMatchingWheels(t *testing.T) {
 			PackageType:   "bdist_wheel",
 			PythonVersion: "py3",
 			URL:           "https://files.pythonhosted.org/packages/example.whl",
+			Yanked:        new(false),
 		},
 	}
 	registry.URLs[0].Digests.SHA256 = "wheel"
@@ -58,6 +60,52 @@ func TestCompareRegistryFilesAcceptsMatchingWheels(t *testing.T) {
 	}
 	if evidence[0].URL != registry.URLs[0].URL || evidence[0].Sha256 != "wheel" {
 		t.Fatalf("compareRegistryFiles() evidence = %#v", evidence[0])
+	}
+}
+
+func TestRegistryEvidenceRequiresExplicitUnyankedStatus(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		present bool
+		value   any
+		want    string
+	}{
+		{name: "available", present: true, value: false},
+		{name: "missing", want: "must include boolean yanked status"},
+		{name: "null", present: true, want: "must include boolean yanked status"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			candidates, registry := matchingCandidateAndRegistry()
+			file := registry.URLs[0]
+			wireFile := map[string]any{
+				"digests":        file.Digests,
+				"filename":       file.Filename,
+				"packagetype":    file.PackageType,
+				"python_version": file.PythonVersion,
+				"url":            file.URL,
+			}
+			if tc.present {
+				wireFile["yanked"] = tc.value
+			}
+			wire, err := json.Marshal(map[string]any{"info": registry.Info, "urls": []any{wireFile}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			decoded, err := decodePyPIResponse(strings.NewReader(string(wire)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compareRegistryFiles(candidates, decoded)
+			if tc.want == "" {
+				if err != nil || len(evidence) != 1 {
+					t.Fatalf("explicit non-yanked wheel refused: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.want) || evidence != nil {
+				t.Fatalf("unknown yanked status: evidence=%v, err=%v; want %q", evidence, err, tc.want)
+			}
+		})
 	}
 }
 
@@ -117,7 +165,7 @@ func TestCompareRegistryFilesRejectsInvalidRegistryEvidence(t *testing.T) {
 		{
 			name: "yanked wheel",
 			mutate: func(_ *pythonPackageSet, registry *pypiResponse) {
-				registry.URLs[0].Yanked = true
+				registry.URLs[0].Yanked = new(true)
 			},
 			want: "is yanked",
 		},
@@ -366,6 +414,7 @@ func matchingCandidateAndRegistry() (pythonPackageSet, pypiResponse) {
 			PackageType:   "bdist_wheel",
 			PythonVersion: "py3",
 			URL:           "https://files.pythonhosted.org/packages/example.whl",
+			Yanked:        new(false),
 		},
 	}
 	registry.URLs[0].Digests.SHA256 = "wheel"
