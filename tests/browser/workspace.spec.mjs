@@ -335,9 +335,9 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     `http://user@127.0.0.1:${configuredURL.port}/`,
     `http://:secret@127.0.0.1:${configuredURL.port}/`,
     `http://127.0.0.1:${configuredURL.port}/workspace`,
-    `http://127.0.0.1:${configuredURL.port}/?`,
+    configuredURL.origin + "/?",
     `http://127.0.0.1:${configuredURL.port}/?query=1`,
-    `http://127.0.0.1:${configuredURL.port}/#`,
+    configuredURL.origin + "/#",
     `http://127.0.0.1:${configuredURL.port}/#fragment`,
   ]) {
     expect(() => admittedWorkspaceURL(rejectedURL)).toThrow(localAuthorityError);

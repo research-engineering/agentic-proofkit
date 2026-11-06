@@ -21,6 +21,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/repositorysnapshot"
@@ -286,7 +287,7 @@ func admitCandidateReleaseManifest(rootFS *os.Root) error {
 	if err != nil || !exists {
 		return err
 	}
-	file, err := rootFS.Open(path)
+	file, err := rootpath.OpenRegularFile(rootFS, filepath.ToSlash(path))
 	if err != nil {
 		return err
 	}

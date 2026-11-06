@@ -15,6 +15,7 @@ import (
 )
 
 func TestRetainedEvidenceReadersRejectNonRegularPaths(t *testing.T) {
+	const manifestPath = "artifacts/release/release-manifest.json"
 	read := func(root string) map[string]error {
 		path := packageartifactrecord.RecordPath
 		_, admitted := readAdmittedJSON(root, path)
@@ -24,10 +25,17 @@ func TestRetainedEvidenceReadersRejectNonRegularPaths(t *testing.T) {
 		return map[string]error{"admitted": admitted, "typed": typed, "digest": digest, "execution": execution}
 	}
 	if args := os.Args; len(args) >= 3 && args[len(args)-2] == "evidence-fifo" {
-		for reader, err := range read(args[len(args)-1]) {
+		root := args[len(args)-1]
+		for reader, err := range read(root) {
 			if err == nil {
 				t.Errorf("%s reader admitted a FIFO", reader)
 			}
+		}
+		if err := packageartifactrecord.PrepareCandidateArtifactOutputs(root); err == nil {
+			t.Error("candidate cleanup admitted a release manifest FIFO")
+		}
+		if info, err := os.Lstat(filepath.Join(root, manifestPath)); err != nil || info.Mode()&os.ModeNamedPipe == 0 {
+			t.Fatalf("candidate cleanup changed rejected manifest: %v", err)
 		}
 		return
 	}
@@ -64,6 +72,13 @@ func TestRetainedEvidenceReadersRejectNonRegularPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := syscall.Mkfifo(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest := filepath.Join(root, manifestPath)
+	if err := os.MkdirAll(filepath.Dir(manifest), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Mkfifo(manifest, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)

@@ -1,6 +1,7 @@
 package repositorysnapshot
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -239,6 +240,37 @@ func TestSnapshotKeepsGitIdentityWithTheExplicitRoot(t *testing.T) {
 				t.Fatalf("snapshot = %+v, %v; want %+v", got, err, want)
 			}
 		})
+	}
+}
+
+func TestCaptureDoesNotRefreshLinkedWorktreeIndex(t *testing.T) {
+	root := initializeRepository(t)
+	writeFile(t, filepath.Join(root, "tracked.txt"), "original\n")
+	runGit(t, root, "add", "tracked.txt")
+	runGit(t, root, "commit", "-m", "initial")
+	linked := filepath.Join(t.TempDir(), "linked")
+	runGit(t, root, "worktree", "add", "--detach", linked)
+	name, err := gitfixture.Command(linked, "rev-parse", "--path-format=absolute", "--git-path", "index").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	index := strings.TrimSpace(string(name))
+	before, err := os.ReadFile(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed := time.Now().Add(-24 * time.Hour)
+	if err := os.Chtimes(filepath.Join(linked, "tracked.txt"), changed, changed); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_OPTIONAL_LOCKS", "0")
+	snapshot, err := Capture(linked)
+	if err != nil || strings.Contains(snapshot.Revision, "+") {
+		t.Fatalf("unchanged linked-worktree content appeared dirty: %+v, %v", snapshot, err)
+	}
+	after, err := os.ReadFile(index)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatalf("linked worktree index changed during read-only capture: %v", err)
 	}
 }
 

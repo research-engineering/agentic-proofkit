@@ -184,6 +184,59 @@ func TestHang(t *testing.T) { time.Sleep(time.Minute) }
 	}
 }
 
+func TestRunGoTestsExecutesTheMaterializedModuleNotAmbientOverrides(t *testing.T) {
+	root, outside := t.TempDir(), t.TempDir()
+	candidate := syntheticCandidates()[0]
+	candidate.PackagePath = "."
+	candidate.SourcePath = "boundary_test.go"
+	candidate.TestName = "TestSnapshotSource"
+	candidate.Selector = candidate.SourcePath + "::" + candidate.TestName
+	const module = "example.test/snapshot"
+	source := fmt.Sprintf("package snapshot\nimport \"testing\"\nfunc TestSnapshotSource(t *testing.T) { t.Attr(%q, %q) }\n", commandcoverage.ExecutionAttributeKey, candidate.SourceMarker)
+	replacement, overlay, goenv := filepath.Join(outside, "replacement_test.go"), filepath.Join(outside, "overlay.json"), filepath.Join(outside, "goenv")
+	manifest, err := json.Marshal(map[string]map[string]string{"Replace": {candidate.SourcePath: replacement}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for path, content := range map[string]string{
+		filepath.Join(root, "go.mod"):             "module " + module + "\n\ngo 1.26\n",
+		filepath.Join(root, candidate.SourcePath): source,
+		replacement: "package snapshot\nimport \"testing\"\nfunc TestSnapshotSource(t *testing.T) { t.Fatal(\"ambient replacement\") }\n",
+		overlay:     string(manifest),
+		goenv:       "GOFLAGS=-overlay=" + overlay + "\n",
+	} {
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, test := range []struct {
+		name, flags, config, workspace string
+	}{
+		{"control", "", "off", "off"},
+		{"process_overlay", "-overlay=" + overlay, "off", "off"},
+		{"persisted_overlay", "", goenv, "off"},
+		{"external_workspace", "", "off", filepath.Join(outside, "missing.go.work")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("GOFLAGS", test.flags)
+			t.Setenv("GOENV", test.config)
+			t.Setenv("GOWORK", test.workspace)
+			ledger, err := newEventLedger([]app.CommandCoverageOracleCandidate{candidate}, map[string]string{".": module})
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+			defer cancel()
+			if err := runGoTests(ctx, root, executionCommands([]app.CommandCoverageOracleCandidate{candidate}), ledger); err != nil {
+				t.Fatalf("materialized source did not execute: %v", err)
+			}
+			if err := ledger.finalize(); err != nil {
+				t.Fatalf("materialized source did not produce the expected evidence: %v", err)
+			}
+		})
+	}
+}
+
 func TestRunGoTestCommandTerminatesImmediatelyWhenStderrExceedsBound(t *testing.T) {
 	bin := t.TempDir()
 	script := "#!/bin/sh\n/bin/dd if=/dev/zero bs=1048577 count=1 1>&2\n/bin/sleep 5\n"

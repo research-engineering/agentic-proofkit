@@ -53,7 +53,7 @@ function filterHost() {
     },
     addEventListener() {},
   };
-  runInNewContext(source, {document}, {timeout: 1000});
+  runInNewContext(source, {document, window: new EventTarget()}, {timeout: 1000});
   return (state, expected) => {
     filters[0].value = state.kind ?? "";
     filters[1].value = state.scope ?? "";

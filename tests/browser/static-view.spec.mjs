@@ -86,15 +86,16 @@ test("static hierarchy reveals the named sibling and preserves kind-group naviga
   const kind = page.getByLabel("Node kind", {exact: true});
   await mode.selectOption("table");
   await kind.selectOption("meta_spec");
-  await page.goBack();
-  expect(new URL(page.url()).hash).toBe(href);
+  await page.evaluate(() => history.back());
+  await expect(page).toHaveURL(url => url.hash === href);
   await expect(target).toBeVisible();
   await expect(mode).toHaveValue("cards");
   await expect(kind).toHaveValue("");
 
   await kind.selectOption("module_spec");
-  await page.goForward();
-  expect(new URL(page.url()).hash).toBe(await groupLink.getAttribute("href"));
+  const groupHref = await groupLink.getAttribute("href");
+  await page.evaluate(() => history.forward());
+  await expect(page).toHaveURL(url => url.hash === groupHref);
   await expect(group).toBeVisible();
   await expect(kind).toHaveValue("module_spec");
 });

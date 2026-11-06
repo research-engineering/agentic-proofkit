@@ -102,6 +102,7 @@ func gitOutput(ctx context.Context, root string, args ...string) (string, error)
 	command.Env = slices.DeleteFunc(command.Environ(), func(entry string) bool {
 		return strings.HasPrefix(entry, "GIT_")
 	})
+	command.Env = append(command.Env, "GIT_OPTIONAL_LOCKS=0")
 	stdout := newBoundedBuffer()
 	stderr := newBoundedBuffer()
 	out, err := command.StdoutPipe()
