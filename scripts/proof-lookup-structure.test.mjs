@@ -233,6 +233,22 @@ const redesignReplacedStyle = [
   "}",
   ":root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;line-height:var(--static-line-height);background:var(--static-canvas);color:var(--static-text)}body{margin:0;overflow-wrap:anywhere}main{max-width:var(--static-page-width);margin:0 auto;padding:var(--static-space-32) var(--static-space-20) var(--static-space-56)}header{margin-bottom:var(--static-space-20)}h1{font-size:var(--static-font-size-title);line-height:var(--static-line-height-title);margin:0}h2{font-size:var(--static-font-size-heading);margin:0 0 var(--static-space-12)}h3{font-size:var(--static-font-size-subheading);margin:var(--static-space-18) 0 var(--static-space-8)}.eyebrow{font-size:var(--static-font-size-label);font-weight:700;letter-spacing:0;text-transform:uppercase;color:var(--static-muted-text);margin:0 0 var(--static-space-8)}a{color:var(--static-link);text-decoration:none}a:hover{text-decoration:underline}:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:var(--focus-offset)}.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:var(--static-surface);border:var(--border-width) solid var(--static-border);border-radius:var(--radius-8);box-shadow:var(--static-shadow)}.summary{padding:var(--static-space-16);margin-bottom:var(--static-space-16)}.hierarchy{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--static-hierarchy-column),1fr));gap:var(--static-space-14);padding:var(--static-space-16);margin-bottom:var(--static-space-16)}.hierarchy section{min-width:0}.hierarchy h2,.card-group>h2{font-size:var(--static-font-size-group);text-transform:uppercase;letter-spacing:0;color:var(--static-muted-text);margin:0 0 var(--static-space-10)}.hierarchy ul{margin:0;padding-left:var(--static-space-18)}.hierarchy li{margin:var(--static-space-4) 0}.hierarchy span,.card-group>h2 span{font-weight:400;color:var(--static-muted-text)}dl{display:grid;grid-template-columns:minmax(var(--static-term-column-min),var(--static-term-column-max)) 1fr;gap:var(--static-space-8) var(--static-space-14);margin:0}dt{font-weight:700;color:var(--static-term-text)}dd{margin:0;min-width:0}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--static-font-size-code);background:var(--static-code-surface);border-radius:var(--radius-4);padding:var(--static-code-padding-block) var(--static-code-padding-inline)}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--static-control-column),1fr));gap:var(--static-space-10);align-items:end;padding:var(--static-space-14);margin-bottom:var(--static-space-10);position:sticky;top:0;z-index:1}.control{display:grid;gap:var(--static-space-6);min-width:0}.search-label{position:absolute;left:var(--static-offscreen)}input[type=search],select{width:100%;box-sizing:border-box;border:var(--border-width) solid var(--static-control-border);border-radius:var(--radius-6);padding:var(--static-space-8) var(--static-space-10);background:var(--static-surface);color:inherit}.toggle{font-size:var(--static-font-size-control)}.exports{display:flex;flex-wrap:wrap;gap:var(--static-space-10);align-items:center;padding:var(--static-space-14);margin-bottom:var(--static-space-10)}.exports h2{font-size:var(--static-font-size-group);text-transform:uppercase;letter-spacing:0;color:var(--static-muted-text);margin:0 var(--static-space-8) 0 0}button{border:var(--border-width) solid var(--static-control-border);border-radius:var(--radius-6);background:var(--static-secondary-surface);color:inherit;padding:var(--static-space-8) var(--static-space-10);cursor:pointer}button:hover{background:var(--static-secondary-hover)}.result-count{margin:var(--static-space-12) var(--static-space-2);color:var(--static-muted-text)}.cards{display:grid;gap:var(--static-space-18)}.cards[hidden]{display:none}.card-group[hidden]{display:none}.card-group{display:grid;gap:var(--static-space-12);scroll-margin-top:var(--static-scroll-margin)}.card-group>h2{border-bottom:var(--border-width) solid var(--static-border);padding-bottom:var(--static-space-8)}.card{padding:var(--static-space-18)}.proofkit-id{display:inline-block;margin-right:var(--static-space-8);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--static-font-size-code)}html[data-show-ids=false] .proofkit-id{display:none}.proofkit-title{font-weight:700}details{border:var(--border-width) solid var(--static-border);border-radius:var(--radius-6);margin-top:var(--static-space-12);padding:var(--static-space-10) var(--static-space-12)}summary{cursor:pointer;font-weight:700}.table-view{padding:0;overflow:auto}table{width:100%;border-collapse:collapse;font-size:var(--static-font-size-control)}th,td{border-bottom:var(--border-width) solid var(--static-border);padding:var(--static-space-10) var(--static-space-12);text-align:left;vertical-align:top}th{position:sticky;top:0;background:var(--static-secondary-surface);font-size:var(--static-font-size-label);text-transform:uppercase;letter-spacing:0;color:var(--static-muted-text)}.non-claims{margin-top:var(--static-space-18);padding:var(--static-space-18)}ul{margin:var(--static-space-8) 0 0;padding-left:var(--static-space-22)}@media (max-width:720px){main{padding:var(--static-space-24) var(--static-space-12) var(--static-space-40)}.controls{grid-template-columns:1fr;position:static}dl{grid-template-columns:1fr}.summary,.controls,.exports,.card,.non-claims{border-radius:var(--radius-6)}}@media (prefers-color-scheme:dark){:root{background:var(--static-dark-canvas);color:var(--static-dark-text)}.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:var(--static-dark-surface);border-color:var(--static-dark-border)}.eyebrow,.result-count,dt,.hierarchy h2,.card-group>h2,.hierarchy span,.card-group>h2 span,th,.exports h2{color:var(--static-dark-muted-text)}input[type=search],select,th{background:var(--static-dark-inset-surface)}input[type=search],select,button{border-color:var(--static-dark-control-border)}button{background:var(--static-dark-secondary-surface)}button:hover{background:var(--static-dark-secondary-hover)}code{background:var(--static-dark-inset-surface)}details,th,td,.card-group>h2{border-color:var(--static-dark-border)}a{color:var(--static-dark-link);text-decoration:underline}}",
 ].join('\n');
+const searchListener = '  search.addEventListener("input", applyFilters);\n';
+const focusListener = '  document.addEventListener("focusin", (event) => {\n';
+const previousHierarchyLinks = String.raw`  for (const link of document.querySelectorAll('.hierarchy a[href^="#"]')) {
+    link.addEventListener("click", () => {
+      const target = document.getElementById((link.getAttribute("href") || "").slice(1));
+      if (!target) return;
+      if (viewMode) viewMode.value = "cards";
+      applyFilters();
+      if (target.closest("[hidden]")) {
+        search.value = "";
+        for (const filter of filters) filter.value = "";
+        applyFilters();
+      }
+    });
+  }
+`;
 const declaredStreamDeltas = Object.freeze([Object.freeze({
   id: 'KERNEL-02',
   reason: 'The shared browserdoc stylesheet hides card groups without a matching record.',
@@ -277,22 +293,8 @@ const declaredStreamDeltas = Object.freeze([Object.freeze({
   id: 'UI-DESIGN-01-NAVIGATION',
   reason: 'Hierarchy navigation reveals its card-group target, and keyboard focus scrolls into the viewport only when outside it.',
   rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
-  scriptAnchor: '  search.addEventListener("input", applyFilters);\n',
-  scriptInsertion: String.raw`  for (const link of document.querySelectorAll('.hierarchy a[href^="#"]')) {
-    link.addEventListener("click", () => {
-      const target = document.getElementById((link.getAttribute("href") || "").slice(1));
-      if (!target) return;
-      if (viewMode) viewMode.value = "cards";
-      applyFilters();
-      if (target.closest("[hidden]")) {
-        search.value = "";
-        for (const filter of filters) filter.value = "";
-        applyFilters();
-      }
-    });
-  }
-  document.addEventListener("focusin", (event) => {
-    const focused = event.target;
+  scriptAnchor: searchListener,
+  scriptInsertion: previousHierarchyLinks + focusListener + String.raw`    const focused = event.target;
     if (!(focused instanceof HTMLElement) || focused === document.body || focused === document.documentElement) return;
     const box = focused.getBoundingClientRect();
     if (box.top < 0 || box.bottom > document.documentElement.clientHeight || box.left < 0 || box.right > document.documentElement.clientWidth) {
@@ -328,6 +330,16 @@ const declaredStreamDeltas = Object.freeze([Object.freeze({
     Object.freeze({inside: false, occurrences: 2, from: ' data-filter-claim-level="blocking"', to: ' data-filter-claim-level="[&#34;blocking&#34;]"'}),
     Object.freeze({inside: false, occurrences: 2, from: ' data-filter-proof-state="witness_backed"', to: ' data-filter-proof-state="[&#34;witness_backed&#34;]"'}),
   ]),
+}), Object.freeze({
+  id: 'UI-HIERARCHY-HISTORY',
+  reason: 'History traversal and direct links reveal the same static hierarchy targets.',
+  rows: Object.freeze(['compact-html', 'maliciousCompact-html', 'structured-html']),
+  scriptChange: Object.freeze({
+    sha256: '5ea0a855c9ae16fa58d51cd1d523239eb880e02b16b246f9fcc4af5fdfa8946b',
+    start: '  /** @param {string} hash */\n  function revealHierarchyTarget(hash) {\n',
+    end: focusListener,
+    predecessor: searchListener + previousHierarchyLinks,
+  }),
 })]);
 const count = (text, needle) => text.split(needle).length - 1;
 // tableBreaks mirrors browserdoc's table cell break opportunities: in the text
@@ -375,6 +387,16 @@ const tableCells = /<td>([\s\S]*?)<\/td>/g;
 // exactly that delta at exactly that position.
 function invertDelta(delta, stdout) {
   if (count(stdout, '<style>') !== 1 || count(stdout, '</style>') !== 1 || stdout.indexOf('</style>') < stdout.indexOf('<style>')) return null;
+  if (delta.scriptChange !== undefined) {
+    const {sha256, start, end, predecessor} = delta.scriptChange;
+    if (count(stdout, '<script>') !== 1 || count(stdout, '</script>') !== 1) return null;
+    const open = stdout.indexOf('<script>') + '<script>'.length, close = stdout.indexOf('</script>');
+    const script = stdout.slice(open, close);
+    if (close < open || hash(script) !== sha256 || count(script, start) !== 1 || count(script, end) !== 1) return null;
+    const first = script.indexOf(start), last = script.indexOf(end);
+    if (first + start.length > last) return null;
+    return stdout.slice(0, open + first) + predecessor + stdout.slice(open + last);
+  }
   if (delta.scriptInsertion !== undefined) {
     const at = stdout.indexOf(delta.scriptAnchor + delta.scriptInsertion);
     const start = stdout.indexOf('<script>'), end = stdout.indexOf('</script>');
@@ -470,27 +492,36 @@ test('lookup contracts conserve73actual predecessor process and rendered streams
 });
 
 test('the declared stream deltas are exact, positioned and limited to their rows', () => {
-  const [kernel, tokens, accessibility, redesign, hierarchy, arrays, compact, structured] = declaredStreamDeltas;
-  assert.deepEqual(declaredStreamDeltas.map(delta => delta.id), ['KERNEL-02', 'UI-DESIGN-01', 'UI-DESIGN-01-ACCESSIBILITY', 'UI-DESIGN-01-REDESIGN', 'UI-DESIGN-01-NAVIGATION', 'UI-FILTER-ARRAYS', 'UI-FILTER-COMPACT', 'UI-FILTER-STRUCTURED']);
+  const [kernel, tokens, accessibility, redesign, hierarchy, arrays, compact, structured, history] = declaredStreamDeltas;
+  assert.deepEqual(declaredStreamDeltas.map(delta => delta.id), ['KERNEL-02', 'UI-DESIGN-01', 'UI-DESIGN-01-ACCESSIBILITY', 'UI-DESIGN-01-REDESIGN', 'UI-DESIGN-01-NAVIGATION', 'UI-FILTER-ARRAYS', 'UI-FILTER-COMPACT', 'UI-FILTER-STRUCTURED', 'UI-HIERARCHY-HISTORY']);
   const rows = baseline.observations.filter(row => row.format === 'html');
-  for (const delta of [kernel, tokens, accessibility, redesign, hierarchy, arrays]) assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
+  for (const delta of [kernel, tokens, accessibility, redesign, hierarchy, arrays, history]) assert.deepEqual(rows.map(row => row.name), [...delta.rows]);
   assert.deepEqual([...compact.rows], ['compact-html', 'maliciousCompact-html']);
   assert.deepEqual([...structured.rows], ['structured-html']);
   const row = rows[0];
-  const withArrays = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
+  const withHistory = assertCLITransport(spawnWithInputFile(binary, row.argv, {input: row.input, encoding: 'utf8', timeout: 10000,
     maxBuffer: 2 << 20}), row.name).stdout;
-  assert.ok(conservesPredecessor(row, withArrays), 'current stdout must carry every declared delta');
+  assert.ok(conservesPredecessor(row, withHistory), 'current stdout must carry every declared delta');
+  const beforeHistory = declaredStreamDeltas.slice(0, -1);
+  assert.equal(conservesPredecessor(row, withHistory, beforeHistory), false, 'the history protocol must be declared');
+  const changedHistory = withHistory.replace('window.addEventListener("hashchange"', 'window.addEventListener("popstate"');
+  assert.notEqual(changedHistory, withHistory);
+  assert.equal(conservesPredecessor(row, changedHistory), false, 'an unapproved shared script must not conserve the predecessor');
+  const withArrays = invertDelta(history, withHistory);
+  assert.ok(withArrays !== null && conservesPredecessor(row, withArrays, beforeHistory), 'inversion restores the exact earlier stream');
   const earlier = [kernel, tokens, accessibility, redesign, hierarchy];
   assert.equal(conservesPredecessor(row, withArrays, earlier), false, 'the array protocol must be declared');
   for (const candidate of rows) {
-    const text = assertCLITransport(spawnWithInputFile(binary, candidate.argv, {input: candidate.input, encoding: 'utf8', timeout: 10000,
+    const rendered = assertCLITransport(spawnWithInputFile(binary, candidate.argv, {input: candidate.input, encoding: 'utf8', timeout: 10000,
       maxBuffer: 2 << 20}), candidate.name).stdout;
+    const text = invertDelta(history, rendered);
+    assert.notEqual(text, null);
     for (const delta of [arrays, candidate.name === 'structured-html' ? structured : compact]) {
       for (const replacement of delta.replacements) {
         for (const mutated of [text.replace(replacement.to, replacement.from), text.replace(replacement.to, replacement.to + replacement.to),
           text.replace(replacement.to, '').replace('</style>', replacement.to + '</style>')]) {
           assert.notEqual(mutated, text);
-          assert.equal(conservesPredecessor(candidate, mutated), false, 'array replacements cannot be missing, repeated or moved');
+          assert.equal(conservesPredecessor(candidate, mutated, beforeHistory), false, 'array replacements cannot be missing, repeated or moved');
         }
       }
     }

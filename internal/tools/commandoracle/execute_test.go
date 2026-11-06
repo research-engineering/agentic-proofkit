@@ -192,8 +192,26 @@ func TestRunGoTestsExecutesTheMaterializedModuleNotAmbientOverrides(t *testing.T
 	candidate.TestName = "TestSnapshotSource"
 	candidate.Selector = candidate.SourcePath + "::" + candidate.TestName
 	const module = "example.test/snapshot"
-	source := fmt.Sprintf("package snapshot\nimport \"testing\"\nfunc TestSnapshotSource(t *testing.T) { t.Attr(%q, %q) }\n", commandcoverage.ExecutionAttributeKey, candidate.SourceMarker)
+	source := fmt.Sprintf(`package snapshot
+
+import (
+	"os"
+	"os/exec"
+	"testing"
+)
+
+func TestSnapshotSource(t *testing.T) {
+	if cache := os.Getenv("PROOFKIT_EXPECT_GO_CACHE"); cache != "" {
+		out, err := exec.Command("go", "env", "GOMODCACHE", "GOPROXY").Output()
+		if err != nil || string(out) != cache+"\noff\n" {
+			t.Fatal("configured Go cache and proxy did not survive")
+		}
+	}
+	t.Attr(%q, %q)
+}
+`, commandcoverage.ExecutionAttributeKey, candidate.SourceMarker)
 	replacement, overlay, goenv := filepath.Join(outside, "replacement_test.go"), filepath.Join(outside, "overlay.json"), filepath.Join(outside, "goenv")
+	cache := filepath.Join(outside, "module-cache")
 	manifest, err := json.Marshal(map[string]map[string]string{"Replace": {candidate.SourcePath: replacement}})
 	if err != nil {
 		t.Fatal(err)
@@ -203,7 +221,7 @@ func TestRunGoTestsExecutesTheMaterializedModuleNotAmbientOverrides(t *testing.T
 		filepath.Join(root, candidate.SourcePath): source,
 		replacement: "package snapshot\nimport \"testing\"\nfunc TestSnapshotSource(t *testing.T) { t.Fatal(\"ambient replacement\") }\n",
 		overlay:     string(manifest),
-		goenv:       "GOFLAGS=-overlay=" + overlay + "\n",
+		goenv:       "GOFLAGS=-overlay=" + overlay + "\nGOMODCACHE=" + cache + "\nGOPROXY=off\n",
 	} {
 		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 			t.Fatal(err)
@@ -221,6 +239,13 @@ func TestRunGoTestsExecutesTheMaterializedModuleNotAmbientOverrides(t *testing.T
 			t.Setenv("GOFLAGS", test.flags)
 			t.Setenv("GOENV", test.config)
 			t.Setenv("GOWORK", test.workspace)
+			if test.config == goenv {
+				t.Setenv("GOMODCACHE", "")
+				t.Setenv("GOPROXY", "")
+				t.Setenv("PROOFKIT_EXPECT_GO_CACHE", cache)
+			} else {
+				t.Setenv("PROOFKIT_EXPECT_GO_CACHE", "")
+			}
 			ledger, err := newEventLedger([]app.CommandCoverageOracleCandidate{candidate}, map[string]string{".": module})
 			if err != nil {
 				t.Fatal(err)
