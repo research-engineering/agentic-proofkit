@@ -463,10 +463,10 @@ jobs:
           const installed = JSON.parse(fs.readFileSync(installedPath, "utf8"));
           const owner = JSON.parse(fs.readFileSync(ownerPath, "utf8"));
           for (const [key, value] of [
-            ["schemaVersion", 2],
+            ["schemaVersion", 3],
             ["artifactKind", "proofkit.json-report-cli-adapter-source"],
             ["format", "json"],
-            ["generatorId", "proofkit.json-report-cli-adapter-source.typescript.v3"],
+            ["generatorId", "proofkit.json-report-cli-adapter-source.typescript.v4"],
             ["language", "typescript"],
             ["sourceFileName", "proofkit-json-report-cli-adapter.ts"]
           ]) {

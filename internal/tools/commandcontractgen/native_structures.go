@@ -563,8 +563,8 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.stack-preset.output.v1.root-shape"}, commands: []string{"stack-preset"},
 		schema: func() (map[string]any, error) { return stackpreset.OutputStructure(), nil },
 	}, {
-		id: "proofkit.json-report-cli-adapter-source.output.v2.json-schema", direction: "output",
-		predecessors: []string{"proofkit.json-report-cli-adapter-source.output.v1.json-schema"}, commands: []string{"json-report-cli-adapter-source"},
+		id: "proofkit.json-report-cli-adapter-source.output.v3.json-schema", direction: "output",
+		predecessors: []string{"proofkit.json-report-cli-adapter-source.output.v2.json-schema"}, commands: []string{"json-report-cli-adapter-source"},
 		schema: func() (map[string]any, error) { return jsonreportcliadaptersource.OutputStructure(), nil },
 	}, {
 		id: "proofkit.spec-overview-claims.input.v2.json-schema", direction: "input", semanticVersion: 2,

@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
@@ -52,6 +54,68 @@ func TestWorkspaceRequestAdmissionIsBounded(t *testing.T) {
 		t.Fatal("released capacity must admit the next request")
 	}
 	releaseWorkspaceRequest(requests)
+}
+
+func TestWorkspaceCancelHasIndependentBoundedCapacity(t *testing.T) {
+	const authority = "127.0.0.1:43127"
+	const body = `{"requestId":"test.cancel","snapshotId":"snapshot.test"}`
+	capability, err := browserCapability()
+	if err != nil {
+		t.Fatal(err)
+	}
+	terminal := newTerminalArbiter()
+	rendered := renderedView{workspace: &workspaceSession{SnapshotID: "snapshot.test"}}
+	handler := browserHandler("workspace", rendered, authority, capability, true, terminal)
+	post := func(path string, payload io.Reader) int {
+		request := httptest.NewRequest(http.MethodPost, "http://"+authority+path, payload)
+		request.Header.Set("Origin", "http://"+authority)
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("X-Proofkit-Browser-Capability", capability)
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		return response.Code
+	}
+	const graph, cancel = "/api/v1/graph", "/api/v1/cancel"
+	var fillProjectionSlots func(int)
+	fillProjectionSlots = func(remaining int) {
+		if remaining > 0 {
+			reader := &workspaceReadHook{Reader: strings.NewReader(body), before: func() { fillProjectionSlots(remaining - 1) }}
+			if status := post(graph, reader); status != http.StatusNotFound {
+				t.Fatalf("admitted projection did not reach the unavailable graph: %d", status)
+			}
+			return
+		}
+		if status := post(graph, strings.NewReader(body)); status != http.StatusTooManyRequests {
+			t.Fatalf("projection slots were not exhausted: %d", status)
+		}
+		first := &workspaceReadHook{Reader: strings.NewReader(body), before: func() {
+			secondRead := false
+			second := &workspaceReadHook{Reader: strings.NewReader(body), before: func() { secondRead = true }}
+			if status := post(cancel, second); status != http.StatusTooManyRequests || secondRead {
+				t.Fatalf("overlapping cancel was not refused before reading: status=%d read=%v", status, secondRead)
+			}
+		}}
+		if status := post(cancel, first); status != http.StatusOK {
+			t.Fatalf("cancellation could not use its independent slot: %d", status)
+		}
+	}
+	fillProjectionSlots(4)
+	if status := post(cancel, strings.NewReader(body)); status != http.StatusGone {
+		t.Fatalf("released cancel slot did not reach the terminal arbiter: %d", status)
+	}
+}
+
+type workspaceReadHook struct {
+	io.Reader
+	before func()
+}
+
+func (reader *workspaceReadHook) Read(data []byte) (int, error) {
+	if before := reader.before; before != nil {
+		reader.before = nil
+		before()
+	}
+	return reader.Reader.Read(data)
 }
 
 func TestProjectionQueryKeepsEveryAdmittedRequirementPageReachable(t *testing.T) {

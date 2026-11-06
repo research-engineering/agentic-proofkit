@@ -39,9 +39,9 @@ func TestReleaseWorkflowInstalledAdapterBundleMatchesOwner(t *testing.T) {
 		want   string
 	}{
 		{name: "matching"},
-		{"retired schema", func(got, _ map[string]any) { got["schemaVersion"] = 1 }, "schemaVersion mismatch"},
+		{"retired schema", func(got, _ map[string]any) { got["schemaVersion"] = 2 }, "schemaVersion mismatch"},
 		{"retired generator", func(got, _ map[string]any) {
-			got["generatorId"] = "proofkit.json-report-cli-adapter-source.typescript.v2"
+			got["generatorId"] = "proofkit.json-report-cli-adapter-source.typescript.v3"
 		}, "generatorId mismatch"},
 		{"changed exports", func(got, _ map[string]any) { got["exportedSymbols"] = []string{"different"} }, "bundle does not match"},
 		{"changed non-claims", func(got, _ map[string]any) { got["nonClaims"] = []string{"different"} }, "bundle does not match"},

@@ -12,8 +12,8 @@ import (
 
 const LanguageTypeScript = "typescript"
 const FormatJSON = "json"
-const BundleSchemaVersion = 2
-const TypeScriptGeneratorID = "proofkit.json-report-cli-adapter-source.typescript.v3"
+const BundleSchemaVersion = 3
+const TypeScriptGeneratorID = "proofkit.json-report-cli-adapter-source.typescript.v4"
 const artifactKind = "proofkit.json-report-cli-adapter-source"
 const sourceFileName = "proofkit-json-report-cli-adapter.ts"
 const publicContract = "CLI/JSON plus generated source; no package-root SDK contract"
@@ -233,18 +233,55 @@ export function isProofkitJsonRecord(value: unknown): value is ProofkitJsonRecor
 }
 
 export function proofkitStableJsonValue(value: unknown): ProofkitJsonValue {
-  return stableJsonValueAtDepth(value, 1, new WeakSet<object>());
+  return stableJsonValueAtDepth(value, 1, newStableJsonCapture(false));
 }
 
-function stableJsonValueAtDepth(value: unknown, depth: number, active: WeakSet<object>): ProofkitJsonValue {
+type StableJsonCapture = {
+  readonly active: WeakSet<object>;
+  readonly pretty: boolean;
+  readonly parts: string[] | undefined;
+  remainingBytes: number;
+};
+
+function newStableJsonCapture(pretty: boolean, parts?: string[]): StableJsonCapture {
+  return { active: new WeakSet<object>(), pretty, parts, remainingBytes: defaultMaxInputBytes - 1 };
+}
+
+function requireStableJsonBudget(capture: StableJsonCapture, bytes: number): void {
+  if (bytes > capture.remainingBytes) throw new Error("stable JSON value exceeds byte limit");
+}
+
+function appendStableJsonASCII(capture: StableJsonCapture, fragment: string): void {
+  appendStableJsonFragment(capture, fragment, fragment.length);
+}
+
+function appendStableJsonFragment(capture: StableJsonCapture, fragment: string, bytes: number): void {
+  if (bytes === 0) return;
+  requireStableJsonBudget(capture, bytes);
+  capture.remainingBytes -= bytes;
+  capture.parts?.push(fragment);
+}
+
+function beginStableJsonEntry(capture: StableJsonCapture, index: number, depth: number): void {
+  if (capture.pretty) appendStableJsonASCII(capture, (index > 0 ? ",\n" : "\n") + "  ".repeat(depth));
+  else if (index > 0) appendStableJsonASCII(capture, ",");
+}
+
+function endStableJsonContainer(capture: StableJsonCapture, count: number, depth: number, closing: string): void {
+  appendStableJsonASCII(capture, capture.pretty && count > 0 ? "\n" + "  ".repeat(depth - 1) + closing : closing);
+}
+
+function stableJsonValueAtDepth(value: unknown, depth: number, capture: StableJsonCapture): ProofkitJsonValue {
   if (depth > maxJsonNestingDepth) {
     throw new Error("stable JSON value exceeds nesting depth limit");
   }
   if (value === null || typeof value === "boolean") {
+    appendStableJsonASCII(capture, value === null ? "null" : value ? "true" : "false");
     return value;
   }
   if (typeof value === "string") {
-    return assertProofkitScalarString(value);
+    appendStableJsonQuoted(capture, value);
+    return value;
   }
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
@@ -253,22 +290,27 @@ function stableJsonValueAtDepth(value: unknown, depth: number, active: WeakSet<o
     if (Number.isInteger(value) && !Number.isSafeInteger(value)) {
       throw new Error("stable JSON value must not contain unsafe integer numbers");
     }
+    appendStableJsonASCII(capture, JSON.stringify(value));
     return value;
   }
   if (Array.isArray(value)) {
-    if (active.has(value)) {
+    if (capture.active.has(value)) {
       throw new Error("stable JSON value must not contain cycles");
     }
-    active.add(value);
+    capture.active.add(value);
+    const length = value.length;
+    if (!Number.isSafeInteger(length) || length < 0) throw new Error("stable JSON arrays must have a valid length");
+    requireStableJsonBudget(capture, length + 2);
     const arrayKeys = Reflect.ownKeys(value);
     if (arrayKeys.some((key) =>
       typeof key === "symbol" ||
-      (key !== "length" && (!/^(?:0|[1-9][0-9]*)$/u.test(key) || Number(key) >= value.length))
+      (key !== "length" && (!/^(?:0|[1-9][0-9]*)$/u.test(key) || Number(key) >= length))
     )) {
       throw new Error("stable JSON arrays must not contain custom properties");
     }
-    const output: ProofkitJsonValue[] = [];
-    for (let index = 0; index < value.length; index += 1) {
+    const output: ProofkitJsonValue[] | undefined = capture.parts === undefined ? [] : undefined;
+    appendStableJsonASCII(capture, "[");
+    for (let index = 0; index < length; index += 1) {
       const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
       if (descriptor === undefined) {
         throw new Error("stable JSON arrays must be dense");
@@ -276,10 +318,13 @@ function stableJsonValueAtDepth(value: unknown, depth: number, active: WeakSet<o
       if (!("value" in descriptor) || !descriptor.enumerable) {
         throw new Error("stable JSON arrays must contain enumerable own data elements only");
       }
-      output.push(stableJsonValueAtDepth(descriptor.value, depth + 1, active));
+      beginStableJsonEntry(capture, index, depth);
+      const element = stableJsonValueAtDepth(descriptor.value, depth + 1, capture);
+      output?.push(element);
     }
-    active.delete(value);
-    return output;
+    endStableJsonContainer(capture, length, depth, "]");
+    capture.active.delete(value);
+    return output ?? null;
   }
   if (typeof value === "object") {
     const record = value as Record<string, unknown>;
@@ -287,16 +332,19 @@ function stableJsonValueAtDepth(value: unknown, depth: number, active: WeakSet<o
     if (prototype !== Object.prototype && prototype !== null) {
       throw new Error("stable JSON objects must use a plain or null prototype");
     }
-    if (active.has(record)) {
+    if (capture.active.has(record)) {
       throw new Error("stable JSON value must not contain cycles");
     }
-    active.add(record);
-    const output = Object.create(null) as Record<string, ProofkitJsonValue>;
+    capture.active.add(record);
+    const output = capture.parts === undefined ? Object.create(null) as Record<string, ProofkitJsonValue> : undefined;
     const ownKeys = Reflect.ownKeys(record);
     if (ownKeys.some((key) => typeof key === "symbol")) {
       throw new Error("stable JSON objects must not contain symbol keys");
     }
-    for (const key of (ownKeys as string[]).map(assertProofkitScalarString).sort(compareProofkitScalarStrings)) {
+    requireStableJsonBudget(capture, ownKeys.length + 2);
+    const keys = (ownKeys as string[]).map(assertProofkitScalarString).sort(compareProofkitScalarStrings);
+    appendStableJsonASCII(capture, "{");
+    for (const [index, key] of keys.entries()) {
       if (key.length === 0 || key.includes("\0")) {
         throw new Error("stable JSON object keys must be non-empty text");
       }
@@ -304,47 +352,26 @@ function stableJsonValueAtDepth(value: unknown, depth: number, active: WeakSet<o
       if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) {
         throw new Error("stable JSON objects must contain enumerable own data properties only");
       }
-      Object.defineProperty(output, key, {
-        configurable: true,
-        enumerable: true,
-        value: stableJsonValueAtDepth(descriptor.value, depth + 1, active),
-        writable: true,
-      });
+      beginStableJsonEntry(capture, index, depth);
+      appendStableJsonQuoted(capture, key);
+      appendStableJsonASCII(capture, capture.pretty ? ": " : ":");
+      const entry = stableJsonValueAtDepth(descriptor.value, depth + 1, capture);
+      if (output !== undefined) {
+        Object.defineProperty(output, key, { configurable: true, enumerable: true, value: entry, writable: true });
+      }
     }
-    active.delete(record);
-    return output;
+    endStableJsonContainer(capture, keys.length, depth, "}");
+    capture.active.delete(record);
+    return output ?? null;
   }
   throw new Error("stable JSON value must be JSON-serializable");
 }
 
 export function proofkitStableJsonString(value: unknown, layout: "pretty" | "compact" = "pretty"): string {
-  return writeProofkitStableJson(proofkitStableJsonValue(value), 0, layout) + "\n";
-}
-
-function writeProofkitStableJson(value: ProofkitJsonValue, depth: number, layout: "pretty" | "compact"): string {
-  if (value === null) return "null";
-  if (typeof value === "boolean") return value ? "true" : "false";
-  if (typeof value === "number") return JSON.stringify(value);
-  if (typeof value === "string") return quoteProofkitScalarString(value);
-  const pretty = layout === "pretty";
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "[]";
-    const separator = pretty ? ",\n" : ",";
-    const prefix = pretty ? "\n" : "";
-    const suffix = pretty ? "\n" + "  ".repeat(depth) : "";
-    const entries = value.map((entry) => (pretty ? "  ".repeat(depth + 1) : "") + writeProofkitStableJson(entry, depth + 1, layout));
-    return "[" + prefix + entries.join(separator) + suffix + "]";
-  }
-  const record = value as Readonly<Record<string, ProofkitJsonValue>>;
-  const keys = Object.keys(record).sort(compareProofkitScalarStrings);
-  if (keys.length === 0) return "{}";
-  const separator = pretty ? ",\n" : ",";
-  const prefix = pretty ? "\n" : "";
-  const suffix = pretty ? "\n" + "  ".repeat(depth) : "";
-  const entries = keys.map((key) =>
-    (pretty ? "  ".repeat(depth + 1) : "") + quoteProofkitScalarString(key) + (pretty ? ": " : ":") + writeProofkitStableJson(record[key] as ProofkitJsonValue, depth + 1, layout)
-  );
-  return "{" + prefix + entries.join(separator) + suffix + "}";
+  const parts: string[] = [];
+  stableJsonValueAtDepth(value, 1, newStableJsonCapture(layout === "pretty", parts));
+  parts.push("\n");
+  return parts.join("");
 }
 
 function assertProofkitScalarString(value: string): string {
@@ -398,23 +425,40 @@ function isProofkitUnsafeScalar(value: number): boolean {
   return value >= start && value <= end && (value - start) % step === 0;
 }
 
-function quoteProofkitScalarString(value: string): string {
+function appendStableJsonQuoted(capture: StableJsonCapture, value: string): void {
+  requireStableJsonBudget(capture, value.length + 2);
+  if (!/[^\x20-\x21\x23-\x5b\x5d-\x7e]/u.test(value)) {
+    appendStableJsonASCII(capture, "\"" + value + "\"");
+    return;
+  }
   assertProofkitScalarString(value);
-  let output = "\"";
+  appendStableJsonASCII(capture, "\"");
+  let start = 0;
+  let index = 0;
   for (const character of value) {
     const scalar = character.codePointAt(0) as number;
+    let escape: string | undefined;
     switch (scalar) {
-      case 0x22: output += "\\\""; break;
-      case 0x5c: output += "\\\\"; break;
-      case 0x08: output += "\\b"; break;
-      case 0x09: output += "\\t"; break;
-      case 0x0a: output += "\\n"; break;
-      case 0x0c: output += "\\f"; break;
-      case 0x0d: output += "\\r"; break;
-      default: output += isProofkitUnsafeScalar(scalar) ? proofkitUnicodeEscape(scalar) : character;
+      case 0x22: escape = "\\\""; break;
+      case 0x5c: escape = "\\\\"; break;
+      case 0x08: escape = "\\b"; break;
+      case 0x09: escape = "\\t"; break;
+      case 0x0a: escape = "\\n"; break;
+      case 0x0c: escape = "\\f"; break;
+      case 0x0d: escape = "\\r"; break;
+      default: if (isProofkitUnsafeScalar(scalar)) escape = proofkitUnicodeEscape(scalar);
     }
+    if (escape !== undefined) {
+      const raw = value.slice(start, index);
+      appendStableJsonFragment(capture, raw, Buffer.byteLength(raw, "utf8"));
+      appendStableJsonASCII(capture, escape);
+      start = index + character.length;
+    }
+    index += character.length;
   }
-  return output + "\"";
+  const raw = value.slice(start);
+  appendStableJsonFragment(capture, raw, Buffer.byteLength(raw, "utf8"));
+  appendStableJsonASCII(capture, "\"");
 }
 
 function proofkitUnicodeEscape(value: number): string {

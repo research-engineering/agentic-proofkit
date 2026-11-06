@@ -59,7 +59,9 @@ func (arbiter *terminalArbiter) TryCommit(packet map[string]any) bool {
 		return false
 	}
 	arbiter.committed = true
-	arbiter.packets <- packet
+	if packet != nil {
+		arbiter.packets <- packet
+	}
 	return true
 }
 
@@ -160,12 +162,14 @@ func serveHandle(ctx context.Context, handle ServerHandle, options Options, stdo
 	return serveHandleWithOpener(ctx, handle, options, stdout, openBrowser)
 }
 
-func serveHandleWithOpener(ctx context.Context, handle ServerHandle, options Options, stdout io.Writer, open func(context.Context, string) error) error {
+type browserOpenOperation func(context.Context, string) (<-chan error, error)
+
+func serveHandleWithOpener(ctx context.Context, handle ServerHandle, options Options, stdout io.Writer, open browserOpenOperation) error {
 	if options.SessionMode == "one-shot-question" {
-		return serveOneShot(ctx, handle, options, stdout)
+		return serveOneShot(ctx, handle, options, stdout, open)
 	}
 	if options.Open {
-		if err := open(ctx, handle.URL); err != nil {
+		if _, err := open(ctx, handle.URL); err != nil {
 			return errors.Join(err, closeAndWaitServer(handle))
 		}
 	}
@@ -180,10 +184,13 @@ func serveHandleWithOpener(ctx context.Context, handle ServerHandle, options Opt
 	}
 }
 
-func serveOneShot(ctx context.Context, handle ServerHandle, options Options, stdout io.Writer) error {
+func serveOneShot(ctx context.Context, handle ServerHandle, options Options, stdout io.Writer, open browserOpenOperation) error {
+	var launcherDone <-chan error
 	if options.Open {
-		if err := openBrowser(ctx, handle.URL); err != nil {
-			return errors.Join(err, closeAndWaitServer(handle))
+		var err error
+		launcherDone, err = open(ctx, handle.URL)
+		if err != nil {
+			return finishOneShotLaunchFailure(handle, stdout, err)
 		}
 	}
 	timeout := options.SessionTimeout
@@ -193,15 +200,36 @@ func serveOneShot(ctx context.Context, handle ServerHandle, options Options, std
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	var packet map[string]any
-	select {
-	case packet = <-handle.Handoff:
-	case <-timer.C:
-		packet = commitOrReadTerminal(handle, terminalPacket(questionStateExpired, handle))
-	case <-ctx.Done():
-		packet = commitOrReadTerminal(handle, terminalPacket(questionStateCancelled, handle))
-	case err := <-handle.Done():
-		return errors.Join(err, closeHandle(handle))
+	for {
+		select {
+		case packet = <-handle.Handoff:
+		case <-timer.C:
+			packet = commitOrReadTerminal(handle, terminalPacket(questionStateExpired, handle))
+		case <-ctx.Done():
+			packet = commitOrReadTerminal(handle, terminalPacket(questionStateCancelled, handle))
+		case err := <-handle.Done():
+			return errors.Join(err, closeHandle(handle))
+		case launchErr := <-launcherDone:
+			launcherDone = nil
+			if launchErr == nil || ctx.Err() != nil {
+				continue
+			}
+			return finishOneShotLaunchFailure(handle, stdout, fmt.Errorf("open browser: %w", launchErr))
+		}
+		break
 	}
+	return finishOneShot(handle, stdout, packet)
+}
+
+func finishOneShotLaunchFailure(handle ServerHandle, stdout io.Writer, err error) error {
+	// Claim the terminal outcome without emitting a packet or admitting a late handoff.
+	if handle.terminal.TryCommit(nil) {
+		return errors.Join(err, closeAndWaitServer(handle))
+	}
+	return finishOneShot(handle, stdout, <-handle.Handoff)
+}
+
+func finishOneShot(handle ServerHandle, stdout io.Writer, packet map[string]any) error {
 	unsuccessful := packet["state"] != questionStateSubmitted
 	if cleanupErr := closeAndWaitServer(handle); cleanupErr != nil {
 		if unsuccessful {
@@ -290,13 +318,13 @@ func waitServerDone(ctx context.Context, handle ServerHandle) error {
 	}
 }
 
-func openBrowser(ctx context.Context, url string) error {
+func openBrowser(ctx context.Context, url string) (<-chan error, error) {
 	return openBrowserWithLauncher(ctx, runtime.GOOS, url, startBrowserProcess)
 }
 
-type browserLaunchOperation func(context.Context, string, ...string) error
+type browserLaunchOperation func(context.Context, string, ...string) (<-chan error, error)
 
-func openBrowserWithLauncher(ctx context.Context, goos, rawURL string, launch browserLaunchOperation) error {
+func openBrowserWithLauncher(ctx context.Context, goos, rawURL string, launch browserLaunchOperation) (<-chan error, error) {
 	parsed, err := url.Parse(rawURL)
 	if err != nil ||
 		parsed.Scheme != "http" ||
@@ -305,7 +333,7 @@ func openBrowserWithLauncher(ctx context.Context, goos, rawURL string, launch br
 		parsed.RawQuery != "" ||
 		parsed.Fragment != "" ||
 		parsed.Path != "/" {
-		return fmt.Errorf("open browser requires a server-generated loopback URL")
+		return nil, fmt.Errorf("open browser requires a server-generated loopback URL")
 	}
 	var command string
 	var args []string
@@ -323,10 +351,8 @@ func openBrowserWithLauncher(ctx context.Context, goos, rawURL string, launch br
 	return launch(ctx, command, args...)
 }
 
-func startBrowserProcess(ctx context.Context, command string, args ...string) error {
-	process := exec.CommandContext(ctx, command, args...)
-	_, err := startBrowserCommand(process)
-	return err
+func startBrowserProcess(ctx context.Context, command string, args ...string) (<-chan error, error) {
+	return startBrowserCommand(exec.CommandContext(ctx, command, args...))
 }
 
 func startBrowserCommand(process *exec.Cmd) (<-chan error, error) {

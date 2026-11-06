@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:80d2bed711081ca3b92048fed141c91005c1acaf8ae311b2fc65ba4e5c57c4e7"
+const expectedTypeScriptSourceSha256 = "sha256:b93e65f555f2d16c4f73a5e499878768fed44264136c739fce73d07c81e11f66"
 const optionsSnapshotStatement = "  const options = snapshotProofkitRunOptions(callerOptions, mode === \"json-no-input\" ? \"none\" : undefined);"
 const unownedOptionsStatement = "  const options = mode === \"json-no-input\" ? {...callerOptions, inputMode: \"none\" as const} : callerOptions;"
 
