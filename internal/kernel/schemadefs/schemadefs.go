@@ -213,6 +213,38 @@ func (e sharedExpander) definition(name string) (any, error) {
 	return value, nil
 }
 
+// NormalizeDialectDeclarations removes redundant dialect declarations from
+// non-resource subschemas. It preserves declarations on the document root and
+// embedded resources, and never treats annotations or instance data as schemas.
+func NormalizeDialectDeclarations(source map[string]any) (map[string]any, error) {
+	copy := cloneJSON(source).(map[string]any)
+	var normalize func(map[string]any, any, bool) error
+	normalize = func(schema map[string]any, dialect any, resource bool) error {
+		if declared, exists := schema["$schema"]; exists {
+			if resource {
+				dialect = declared
+			} else if text, ok := declared.(string); !ok || text != dialect {
+				return fmt.Errorf("non-resource subschema declares a different dialect")
+			} else {
+				delete(schema, "$schema")
+			}
+		}
+		return eachSubschema(schema, func(_ string, value any, _ func(any)) error {
+			child, ok := value.(map[string]any)
+			if !ok {
+				return nil
+			}
+			_, embedded := child["$id"]
+			return normalize(child, dialect, embedded)
+		})
+	}
+	const draft202012 = "https://json-schema.org/draft/2020-12/schema"
+	if err := normalize(copy, draft202012, true); err != nil {
+		return nil, err
+	}
+	return copy, nil
+}
+
 // eachSubschema visits the subschemas directly below schema in sorted keyword
 // and member order. replace substitutes the visited value in its container.
 func eachSubschema(schema map[string]any, visit func(keyword string, value any, replace func(any)) error) error {

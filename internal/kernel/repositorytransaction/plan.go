@@ -119,6 +119,10 @@ func buildPlanWithDependencies(ctx context.Context, rootPath string, targets []T
 		if err := registerPortablePrefixes(prefixSpellings, targetPath); err != nil {
 			return Plan{}, fmt.Errorf("repository transaction target %d path has an invalid portable identity: %w", index, err)
 		}
+		metadata, err := pathidentity.ContainsComponentEquivalent(targetPath, ".git")
+		if err != nil || metadata {
+			return Plan{}, fmt.Errorf("repository transaction target must not enter Git metadata")
+		}
 		if pathsOverlap(targetPath, ControlRoot) {
 			return Plan{}, fmt.Errorf("repository transaction target must not overlap the transaction control directory")
 		}

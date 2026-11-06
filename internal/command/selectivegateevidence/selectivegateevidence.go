@@ -464,6 +464,7 @@ func validateProducerAdmission(receipts []receiptSummary, expected map[string]co
 		return failures
 	}
 	producerReceipts := producerReceiptsByID(projection.Receipts)
+	producerCommandKeys := make(map[string]string, len(producerReceipts))
 	for _, receipt := range receipts {
 		if receipt.Status != "passed" {
 			continue
@@ -480,6 +481,11 @@ func validateProducerAdmission(receipts []receiptSummary, expected map[string]co
 			failures = append(failures, "passed planned receipt references unknown producer receipt: "+*receipt.ProducerReceiptID)
 			continue
 		}
+		receiptID, commandKey := *receipt.ProducerReceiptID, keyString(receipt.commandKey)
+		if previous, used := producerCommandKeys[receiptID]; used && previous != commandKey {
+			failures = append(failures, "producer receipt is bound to different planned commands: "+receiptID)
+		}
+		producerCommandKeys[receiptID] = commandKey
 		if producerReceipt.SubjectRef != receipt.ID {
 			failures = append(failures, "producer receipt subjectRef does not match planned command id: "+*receipt.ProducerReceiptID)
 		}

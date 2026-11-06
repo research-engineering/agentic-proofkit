@@ -895,3 +895,21 @@ func stringsToAny(values []string) []any {
 	}
 	return result
 }
+
+func TestBuildFailsClosedForDemotionAndBindingRemoval(t *testing.T) {
+	input := validComposeInput(t)
+	current := input["currentRequirementSources"].([]any)[0].(map[string]any)
+	impactSourceGroup(current)["members"].([]any)[0] = requirement("REQ-PROOFKIT-IMPACT-001", "Requirement impact input composition must route active blocking requirement deltas through explicit proof obligations.", "advisory")
+	contract := input["currentCompactProofContract"].(map[string]any)
+	contract["bindings"] = contract["bindings"].([]any)[1:]
+	input["changedPathSources"] = []any{map[string]any{"sourceId": "git_diff", "paths": []any{"docs/specs/proofkit-impact/requirements.v2.json", "docs/contracts/proofkit-impact.json"}}}
+	composed, _, err := Build(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, exit, err := impact.Build(composed)
+	if err != nil || exit != 1 || report["impactState"] != "failed" {
+		t.Fatalf("impact.Build exit=%d state=%v err=%v, want failed", exit, report["impactState"], err)
+	}
+	assertContainsFailure(t, report, "active blocking requirement demoted without a current proof binding: REQ-PROOFKIT-IMPACT-001")
+}

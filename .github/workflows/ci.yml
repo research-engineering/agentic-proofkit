@@ -123,6 +123,26 @@ jobs:
           trap 'sudo umount "${root}/other" && rmdir "${root}/other" "${root}"' EXIT
           PROOFKIT_CROSS_FILESYSTEM_ROOT="${root}" go test ./internal/kernel/repositorytransaction -run '^TestDeletionRejectsDifferentFilesystemBeforeControlMutation$' -count=1 -v
 
+      - name: Run targeted Go race checks
+        run: npm run go:race
+
+      - name: Fuzz parser admission and canonicalization
+        run: npm run go:fuzz
+
+      - name: Analyze Go maintenance and nilness
+        run: npm run go:analyze
+
+      - name: Observe transaction durability barriers
+        run: |
+          set -euo pipefail
+          command -v strace >/dev/null || sudo apt-get install -y strace
+          mkdir -p "$RUNNER_TEMP/proofkit-fsync"
+          go test -count=1 -c -o "$RUNNER_TEMP/proofkit-fsync.test" ./internal/kernel/repositorytransaction
+          TMPDIR="$RUNNER_TEMP/proofkit-fsync" strace -f -yy -e trace=fsync -o "$RUNNER_TEMP/proofkit-fsync.log" \
+            "$RUNNER_TEMP/proofkit-fsync.test" -test.run '^TestApplyCommitsAndRepeatedPlanIsAlreadySatisfied$'
+          grep -E 'fsync\([^<]*<[^>]+/proofkit-fsync/[^>]+/\.agentic-proofkit>\) += 0' "$RUNNER_TEMP/proofkit-fsync.log" >/dev/null
+          grep -E 'fsync\([^<]*<[^>]+/proofkit-fsync/[^>]+/\.agentic-proofkit/[^>]+/journal\.tmp>\) += 0' "$RUNNER_TEMP/proofkit-fsync.log" >/dev/null
+
       - name: Run Go vet
         run: npm run go:vet
 
@@ -165,7 +185,7 @@ jobs:
   platform-smoke:
     name: quality / platform smoke / macos-15
     runs-on: macos-15
-    timeout-minutes: 12
+    timeout-minutes: 30
     steps:
       - name: Verify native Darwin architecture
         run: |
@@ -204,6 +224,12 @@ jobs:
       - name: Run Darwin filesystem and process invariants
         run: go test ./internal/kernel/rootpath ./internal/kernel/repositorytransaction ./internal/kernel/processgroup ./internal/command/projectstatus -count=1
 
+      - name: Install pinned Go test dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run full native Go tests
+        run: npm run go:test
+
       - name: Run platform smoke
         run: |
           set -euo pipefail
@@ -213,7 +239,7 @@ jobs:
   platform-smoke-intel:
     name: quality / platform smoke / macos-15-intel
     runs-on: macos-15-intel
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - name: Verify native Darwin architecture
         run: |
@@ -252,6 +278,12 @@ jobs:
       - name: Run Darwin filesystem and process invariants
         run: go test ./internal/kernel/rootpath ./internal/kernel/repositorytransaction ./internal/kernel/processgroup ./internal/command/projectstatus -count=1
 
+      - name: Install pinned Go test dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run full native Go tests
+        run: npm run go:test -- -timeout=20m
+
       - name: Run platform smoke
         run: |
           set -euo pipefail
@@ -261,7 +293,7 @@ jobs:
   platform-smoke-linux-arm64:
     name: quality / platform smoke / linux-arm64
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Verify native Linux architecture
         run: |
@@ -297,6 +329,12 @@ jobs:
 
       - name: Run Linux filesystem and process invariants
         run: go test ./internal/kernel/rootpath ./internal/kernel/repositorytransaction ./internal/kernel/processgroup ./internal/command/projectstatus -count=1
+
+      - name: Install pinned Go test dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run full native Go tests
+        run: npm run go:test
 
       - name: Run platform smoke
         run: |

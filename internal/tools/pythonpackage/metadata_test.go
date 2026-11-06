@@ -88,7 +88,7 @@ func TestReadPackageJSONRejectsUnsafeWheelMetadata(t *testing.T) {
 		{
 			name:    "license expression disagrees with repository license",
 			content: `{"name":"@research-engineering/agentic-proofkit","version":"1.2.3","description":"Proofkit CLI","license":"Apache-2.0","repository":{"url":"https://example.test/repo"}}`,
-			want:    "license must be MIT AND BSD-3-Clause",
+			want:    "license must be MIT AND BSD-3-Clause AND ISC",
 		},
 	}
 	for _, item := range cases {
@@ -112,7 +112,7 @@ func TestMetadataUsesCoreMetadata24LicenseFields(t *testing.T) {
 	content := metadata(testPackageManifest("1.2.3"))
 	for _, required := range []string{
 		"Metadata-Version: 2.4\n",
-		"License-Expression: MIT AND BSD-3-Clause\n",
+		"License-Expression: MIT AND BSD-3-Clause AND ISC\n",
 		"License-File: LICENSE\n",
 	} {
 		if !strings.Contains(content, required) {
@@ -614,7 +614,7 @@ func writeMinimalWheelFixture(t *testing.T, path string, version string, wheel s
 func testPackageManifest(version string) packageJSON {
 	return packageJSON{
 		Description: "Proofkit CLI",
-		License:     "MIT AND BSD-3-Clause",
+		License:     "MIT AND BSD-3-Clause AND ISC",
 		Name:        npmPackageName,
 		Repository: repositoryJSON{
 			URL: "git+https://example.test/proofkit.git",

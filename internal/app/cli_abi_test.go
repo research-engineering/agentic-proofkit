@@ -1483,7 +1483,7 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			name:       "empty pilot is rejected instead of projecting a present flag as absent",
 			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", ""},
 			wantStatus: 1,
-			wantStderr: "--pilot requires first, stack-diverse, or all\n",
+			wantStderr: "--pilot requires one of: all, first, stack-diverse\n",
 		},
 		{
 			name:       "input pointer is rejected",

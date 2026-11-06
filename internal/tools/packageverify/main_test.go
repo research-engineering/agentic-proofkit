@@ -2114,7 +2114,7 @@ func packageManifestFixture(repositoryURL string) string {
 	return `{
   "name": "@research-engineering/agentic-proofkit",
   "version": "1.2.3",
-  "license": "MIT AND BSD-3-Clause",
+  "license": "MIT AND BSD-3-Clause AND ISC",
   "packageManager": "npm@12.2.0",
   "type": "module",
   "sideEffects": false,

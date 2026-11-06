@@ -153,7 +153,11 @@ func TestDeploymentPolicyShapeAgreesWithNativeAdmission(t *testing.T) {
 		{"empty-normalized-indicator", "native", set("localRefIndicators", []any{"\u00ad"})},
 	}
 	for _, key := range policyKeys {
-		cases = append(cases, policyCase{"missing-" + key, "structural", func(policy map[string]any) { delete(policy, key) }})
+		class := "structural"
+		if key == "endpointEvaluationTime" {
+			class = "accept"
+		}
+		cases = append(cases, policyCase{"missing-" + key, class, func(policy map[string]any) { delete(policy, key) }})
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {

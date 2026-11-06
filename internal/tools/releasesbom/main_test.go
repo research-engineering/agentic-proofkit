@@ -21,7 +21,7 @@ import (
 )
 
 func TestCompoundLicenseUsesCycloneDXExpression(t *testing.T) {
-	manifest := packageJSON{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3", License: "MIT AND BSD-3-Clause"}
+	manifest := packageJSON{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3", License: "MIT AND BSD-3-Clause AND ISC"}
 	path := filepath.Join(t.TempDir(), "artifact.txt")
 	writeFile(t, path, "artifact")
 	files, _, err := releaseFileEvidence(manifest, []string{path}, nil)
@@ -156,13 +156,13 @@ func TestDependencyFreeGoBinaryBuildInfo(t *testing.T) {
 				t.Fatal(err)
 			}
 			modules, err := binaryRuntimeModules(bytes.NewReader(content))
-			if err != nil || len(modules) != 0 {
-				t.Fatalf("binaryRuntimeModules() modules=%v, error=%v, want valid empty inventory", modules, err)
+			if err != nil || len(modules) != 1 || modules[0].Path != "stdlib" || modules[0].Version == "" {
+				t.Fatalf("binaryRuntimeModules() modules=%v, error=%v, want only Go stdlib", modules, err)
 			}
 			binaryPaths := map[string]struct{}{path: {}}
 			component, modules, isBinary, err := admitReleaseFile(packageJSON{}, path, binaryPaths, nil)
-			if err != nil || !isBinary || len(modules) != 0 {
-				t.Fatalf("admitReleaseFile() modules=%v, isBinary=%v, error=%v, want valid empty inventory", modules, isBinary, err)
+			if err != nil || !isBinary || len(modules) != 1 || modules[0].Path != "stdlib" {
+				t.Fatalf("admitReleaseFile() modules=%v, isBinary=%v, error=%v, want only Go stdlib", modules, isBinary, err)
 			}
 			assertReleaseSubjectDigest(t, component, path, content)
 

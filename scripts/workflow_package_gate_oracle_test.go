@@ -21,11 +21,11 @@ const mergeSatisfyingProducerEnv = "PROOFKIT_MERGE_SATISFYING_PRODUCER"
 
 const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild current && ./dist/agentic-proofkit --help >/dev/null && go run ./internal/tools/pythonpackage build-current && go run ./internal/tools/pythonpackage verify-current"
 const setupVerifiedNPMActionSHA256 = "e5b863b6c0c9fac02ed3e00708d760cb3bc3ef6dc33c138b6ca13670d5895339"
-const ciSourceQualityStepInventorySHA256 = "9e7fdac5768a868929325052379a0b6382d18fc47052af7c1a148663b46ad153"
+const ciSourceQualityStepInventorySHA256 = "a705023e9dc89284b1e8a61b29bd2ef2b87fcc3a68f1681b8afc09b9934276e7"
 const ciBrowserRuntimeStepInventorySHA256 = "c157f7ee933119596eecbce7dd03478c84389736fd99248ef884e338f24d9ee4"
 const ciBrowserVisualStepInventorySHA256 = "6f19d5ff18a70bcff69441bdbf8a783b8e0ec9456c971cfb4df3c75e688b741a"
 const ciBrowserMatrixStepInventorySHA256 = "05461faaee041a60936e63dfd20484068ac04d1b91504fbddad78fec80056c6f"
-const releaseCandidateStepInventorySHA256 = "8e5002e046eab875b8549f4e90238f37a5d4d9bc77b4a9abe86d221fe6c7c2d5"
+const releaseCandidateStepInventorySHA256 = "803d41ceed67d60ff8622716c7d6afcef13efac5ff63762646b8e8462921a1f7"
 
 type packageGateWorkflowExpectation struct {
 	label                              string
@@ -438,6 +438,13 @@ func admittedStatusExpressions() []string {
 }
 
 func validateReleaseWorkflowExpressions(workflow githubWorkflow) error {
+	for _, job := range workflow.Jobs {
+		for _, step := range job.Steps {
+			if strings.HasPrefix(step.Uses, "actions/setup-go@") && step.With["cache"] != false {
+				return errors.New("release Go setup must explicitly disable shared caching")
+			}
+		}
+	}
 	if err := validateExactWorkflowRuntimeControls(
 		"release workflow",
 		workflow,
@@ -1976,9 +1983,8 @@ test "${translated:-0}" = "0"
 `
 }
 
-// Both Darwin architectures run the same owner step list. Only the first
-// step's expected architecture and the job topology (name, runner label,
-// timeout) distinguish arm64 from x86_64. The Linux arm64 job runs the same
+// Both Darwin architectures run the same test suite. Intel needs a longer
+// package timeout for the native adapter and CLI contract tests. Linux arm64 runs the same
 // setup, invariant packages and platform smoke after its own architecture
 // check, then the CPython 3.11.0 installed smoke over a fresh release wheel set.
 func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
@@ -1991,6 +1997,8 @@ func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
 		expected = append(expected, platformSmokeSetupSteps()...)
 		expected = append(expected,
 			githubStep{Name: "Run Linux filesystem and process invariants", Run: requiredPlatformInvariantCommand},
+			githubStep{Name: "Install pinned Go test dependencies", Run: "npm ci --ignore-scripts"},
+			githubStep{Name: "Run full native Go tests", Run: "npm run go:test"},
 			githubStep{Name: "Run platform smoke", Run: requiredPlatformSmokeShell},
 			githubStep{Name: "Build release wheel set", Run: requiredReleaseWheelSetShell},
 			githubStep{Name: "Verify Python 3.11.0 installed wheel", Run: requiredMinimumPythonCommand},
@@ -2005,8 +2013,14 @@ func validateExactPlatformSmokeSteps(jobID string, job githubJob) error {
 			Run:  requiredDarwinArchitectureShell(architecture),
 		})
 		expected = append(expected, platformSmokeSetupSteps()...)
+		goTests := "npm run go:test"
+		if jobID == "platform-smoke-intel" {
+			goTests += " -- -timeout=20m"
+		}
 		expected = append(expected,
 			githubStep{Name: "Run Darwin filesystem and process invariants", Run: requiredPlatformInvariantCommand},
+			githubStep{Name: "Install pinned Go test dependencies", Run: "npm ci --ignore-scripts"},
+			githubStep{Name: "Run full native Go tests", Run: goTests},
 			githubStep{Name: "Run platform smoke", Run: requiredPlatformSmokeShell},
 		)
 	}
@@ -2145,9 +2159,9 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		timeoutMinutes int
 	}{
 		"source-quality":             {name: "quality / source", runner: "ubuntu-24.04", timeoutMinutes: 30},
-		"platform-smoke":             {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 12},
-		"platform-smoke-intel":       {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 20},
-		"platform-smoke-linux-arm64": {name: "quality / platform smoke / linux-arm64", runner: "ubuntu-24.04-arm", timeoutMinutes: 15},
+		"platform-smoke":             {name: "quality / platform smoke / macos-15", runner: "macos-15", timeoutMinutes: 30},
+		"platform-smoke-intel":       {name: "quality / platform smoke / macos-15-intel", runner: "macos-15-intel", timeoutMinutes: 45},
+		"platform-smoke-linux-arm64": {name: "quality / platform smoke / linux-arm64", runner: "ubuntu-24.04-arm", timeoutMinutes: 30},
 		"browser-runtime":            {name: "quality / browser runtime", runner: "ubuntu-24.04", timeoutMinutes: 20},
 		"browser-visual":             {name: "quality / browser visual references", runner: "ubuntu-24.04-arm", timeoutMinutes: 20},
 		"browser-matrix":             {name: "quality / browser design matrix", runner: "ubuntu-24.04-arm", timeoutMinutes: 20},

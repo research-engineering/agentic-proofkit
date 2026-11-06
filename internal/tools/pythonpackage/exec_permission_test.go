@@ -22,7 +22,9 @@ func TestPOSIXWrapperRepairsOnlyExecutionDenial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const script = `import errno
+	const script = `from contextlib import redirect_stderr
+import errno
+import io
 import os
 from pathlib import Path
 import runpy
@@ -65,17 +67,19 @@ with tempfile.TemporaryDirectory() as root:
                 raise format_error if case == "format" else first_denied
             if case == "denied-twice":
                 raise retry_denied
-            assert stat.S_IMODE(binary.stat().st_mode) == (0o750 if case == "ready" else 0o751)
+            assert stat.S_IMODE(binary.stat().st_mode) == (0o750 if case == "ready" else 0o740)
             raise Replaced()
         expected = Replaced if terminal is None else type(terminal)
-        with patch.object(os, "execve", execute), patch.object(Path, "chmod", chmod):
+        stderr = io.StringIO()
+        with patch.object(os, "execve", execute), patch.object(Path, "chmod", chmod), redirect_stderr(stderr):
             try:
-                module["main"](["--probe"])
+                result = module["main"](["--probe"])
             except expected as error:
                 if expected is not Replaced:
                     assert error is terminal
             else:
-                raise AssertionError("exec or its error must be terminal")
+                assert case in ("denied-twice", "repair-denied") and result == 126, (case, result)
+                assert "cannot execute embedded CLI binary" in stderr.getvalue(), case
         assert len(attempts) == (2 if case in ("repair", "denied-twice") else 1), (case, attempts)
         assert len(repairs) == (0 if case in ("ready", "format") else 1), (case, repairs)
 `

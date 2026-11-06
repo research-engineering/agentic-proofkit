@@ -3,12 +3,14 @@ package requirementbrowser
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/projectstatus"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/repositorytransaction"
 )
 
 func BuildProjectPlan(ctx context.Context, repositoryRoot string, options Options) (map[string]any, int, error) {
@@ -55,6 +57,9 @@ func prepareProjectWithInspector(ctx context.Context, repositoryRoot string, opt
 		return renderedView{}, Options{}, fmt.Errorf("view requires an explicit --repo-root")
 	}
 	inspection, err := inspect(ctx, repositoryRoot)
+	if errors.Is(err, repositorytransaction.ErrUnsafeControlPermissions) {
+		return renderedView{}, Options{}, err
+	}
 	if err != nil {
 		return renderedView{}, Options{}, fmt.Errorf("view could not inspect the project; use next with the same --repo-root")
 	}

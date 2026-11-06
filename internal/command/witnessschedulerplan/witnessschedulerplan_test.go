@@ -180,3 +180,32 @@ func toJSON(value any) string {
 	}
 	return string(encoded)
 }
+
+func TestBuildRejectsParallelArtifactSelectorOverlap(t *testing.T) {
+	for _, read := range []bool{false, true} {
+		input := validSchedulerPlanInput()
+		command(input)["id"] = "proofkit.left"
+		left := schedulerPolicy(input)
+		left["commandId"] = "proofkit.left"
+		left["sideEffectClass"] = "none"
+		left["resourceReads"] = []any{}
+		left["resourceWrites"] = []any{}
+		rightCommand := cloneMap(command(input))
+		rightCommand["id"] = "proofkit.right"
+		right := cloneMap(left)
+		right["commandId"] = "proofkit.right"
+		want := "overlapping output selectors"
+		if read {
+			rightCommand["expectedArtifacts"] = []any{}
+			right["outputSelectors"] = []any{}
+			right["inputSelectors"] = []any{"artifacts/proofkit/**"}
+			want = "overlapping input and output selectors"
+		}
+		input["commands"] = append(input["commands"].([]any), rightCommand)
+		input["policies"] = append(input["policies"].([]any), right)
+		record, exit, err := Build(input)
+		if err != nil || exit != 1 || !recordContains(record.Diagnostics, want) {
+			t.Fatalf("Build() exit=%d err=%v report=%#v, want %s", exit, err, record, want)
+		}
+	}
+}

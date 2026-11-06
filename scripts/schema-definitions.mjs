@@ -113,3 +113,11 @@ export function compileVariantUnion(createAjv, schemas) {
   union.errors = null;
   return union;
 }
+
+/** Project a standalone schema into a child position without its inherited dialect. */
+export function embeddedSchema(schema) {
+  if (Object.hasOwn(schema, '$id')) return schema;
+  const result = {...schema};
+  delete result.$schema;
+  return result;
+}

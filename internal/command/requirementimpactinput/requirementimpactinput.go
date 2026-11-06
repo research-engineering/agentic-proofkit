@@ -246,7 +246,14 @@ func compose(input input) (map[string]any, error) {
 	changedRequirementIDs := []string{}
 	for _, requirementID := range changedRequirements {
 		requirement, ok := input.CurrentRequirements[requirementID]
-		if !ok || !isActiveBlocking(requirement) {
+		if !ok {
+			continue
+		}
+		if !isActiveBlocking(requirement) {
+			base := input.BaseRequirements[requirementID]
+			if isActiveBlocking(base) && requirement.Lifecycle.State == "active" && len(currentByRequirement[requirementID]) == 0 {
+				failures = append(failures, "active blocking requirement demoted without a current proof binding: "+requirementID)
+			}
 			continue
 		}
 		if _, ok := currentByRequirement[requirementID]; !ok {

@@ -23,6 +23,10 @@ func equalPublishedSchema(published any, native map[string]any) bool {
 	if err != nil {
 		return false
 	}
+	native, err = schemadefs.NormalizeDialectDeclarations(native)
+	if err != nil {
+		return false
+	}
 	left, leftErr := canonicalJSON(expanded)
 	right, rightErr := canonicalJSON(native)
 	return leftErr == nil && rightErr == nil && bytes.Equal(left, right)
@@ -76,6 +80,10 @@ func TestPublishedDefinitionsExpandToNativeOwnersAndSaveBytes(t *testing.T) {
 		for index, builder := range builders {
 			variant := variants[index].(map[string]any)
 			native, err := builder.schema()
+			if err != nil {
+				t.Fatal(err)
+			}
+			native, err = schemadefs.NormalizeDialectDeclarations(native)
 			if err != nil {
 				t.Fatal(err)
 			}

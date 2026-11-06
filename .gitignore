@@ -6,6 +6,7 @@ test-results/
 *.tgz
 !internal/kernel/requirementsourcecodec/testdata/screen-v3.tgz
 .DS_Store
+.agentic-proofkit/
 
 .env
 .env.*

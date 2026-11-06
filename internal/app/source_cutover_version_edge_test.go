@@ -33,7 +33,7 @@ var sourceCutoverDirectionDeltas = []string{
 	"requirement-proof-source-set/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-proof-source-set/output:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-proof-view/input:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"requirement-proof-view/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"requirement-proof-view/output:compatibilitySummary,flagChoices,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-semantic-diff/input:compatibilitySummary,contractId,nativeAdmissionWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-semantic-diff/output:compatibilitySummary,contractId,nativeOutputWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-source-admission/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
@@ -56,11 +56,11 @@ var sourceCutoverDirectionDeltas = []string{
 
 var nativeBoundaryDirectionDeltas = []string{
 	"adoption-contract-envelope/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
-	"adoption-contract-envelope/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"adoption-contract-envelope/output:compatibilitySummary,flagChoices,rootDefinitionDigest,rootDefinitionRef",
 	"adoption-workflow-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"adoption-workflow-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"pilot-admission/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"pilot-admission/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"pilot-admission/output:compatibilitySummary,flagChoices,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption-bootstrap/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption-bootstrap/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption-guidance/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
@@ -296,6 +296,14 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 	delete(priorEnvelope, "contractDefinitions")
 	delete(nextEnvelope, "commands")
 	delete(nextEnvelope, "contractDefinitions")
+	// These later additions have their own process-contract and CLI witnesses.
+	// This historical comparison still rejects every other header change.
+	if process, ok := nextEnvelope["processContract"].(map[string]any); ok {
+		process = clonePublicABIRecord(process)
+		delete(process, "flagGrammar")
+		delete(process, "versionGrammar")
+		nextEnvelope["processContract"] = process
+	}
 	if !reflect.DeepEqual(priorEnvelope, nextEnvelope) {
 		return nil, fmt.Errorf("public contract header or process changed outside the source cutover")
 	}
@@ -361,6 +369,18 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 			}
 			delete(prior, direction)
 			delete(next, direction)
+		}
+		// Later flag grammar is checked against the dispatcher and public
+		// command projection by TestCLIContractMatchesDispatcherAndHelp.
+		switch name {
+		case "adoption-contract-envelope", "pilot-admission", "requirement-proof-view":
+			for _, field := range []string{"flagChoices", "atMostOneOfFlagGroups", "singleOccurrenceFlags"} {
+				if priorValue, present := prior[field]; present {
+					next[field] = priorValue
+				} else {
+					delete(next, field)
+				}
+			}
 		}
 		if !reflect.DeepEqual(prior, next) {
 			return nil, fmt.Errorf("%s command-level CLI behavior changed without declaration", name)

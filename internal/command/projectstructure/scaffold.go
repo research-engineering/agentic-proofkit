@@ -19,7 +19,7 @@ const reportKind = "proofkit.project-structure-scaffold"
 
 // The scaffold always routes these caller-owned workflow inputs, in refId
 // order, for the new_repository scenario; each ref uses its kind as refId.
-var workflowInputKinds = []string{"gradual_adoption_bootstrap", "gradual_adoption_guidance", "repo_profile_scaffold", "requirement_bindings", "witness_plan"}
+var workflowInputKinds = []string{"bootstrap_witness_plan", "gradual_adoption_bootstrap", "gradual_adoption_guidance", "repo_profile_scaffold"}
 
 var workflowInputNonClaims = []string{
 	"Adoption workflow input does not prove file materialization or native witness execution.",
@@ -209,8 +209,7 @@ func adoptionWorkflowInput(bootstrapInput map[string]any, repoProfilePlan map[st
 	if err != nil {
 		return nil, err
 	}
-	proofBindingPath, err := safePath(bootstrapInput["proofBindingPath"], "project structure scaffold proofBindingPath")
-	if err != nil {
+	if _, err := safePath(bootstrapInput["proofBindingPath"], "project structure scaffold proofBindingPath"); err != nil {
 		return nil, err
 	}
 	witnessPlanInputPath, err := safePath(bootstrapPaths["witnessPlanInputPath"], "project structure scaffold witnessPlanInputPath")
@@ -231,7 +230,7 @@ func adoptionWorkflowInput(bootstrapInput map[string]any, repoProfilePlan map[st
 	}
 	refPaths := map[string]string{
 		"gradual_adoption_bootstrap": paths.bootstrapInputPath, "gradual_adoption_guidance": adoptionGuidancePath,
-		"repo_profile_scaffold": paths.repoProfileScaffoldInputPath, "requirement_bindings": proofBindingPath, "witness_plan": witnessPlanInputPath,
+		"repo_profile_scaffold": paths.repoProfileScaffoldInputPath, "bootstrap_witness_plan": witnessPlanInputPath,
 	}
 	inputRefs := make([]any, 0, len(workflowInputKinds))
 	for _, kind := range workflowInputKinds {

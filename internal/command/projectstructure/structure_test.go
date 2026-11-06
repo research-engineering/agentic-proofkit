@@ -75,7 +75,7 @@ func TestScaffoldOutputStructuresDescribeReachableStates(t *testing.T) {
 		}
 	}
 	for _, want := range []string{"state/passed", "state/failed", "plan/blocked", "plan/ready_for_caller_review", "bootstrap/failed",
-		"payload/7", "payload/8", "source/repo_profile_scaffold", "omitted/0", "omitted/1", "envelope/redacted"} {
+		"payload/6", "payload/7", "source/repo_profile_scaffold", "omitted/0", "omitted/1", "envelope/redacted"} {
 		if !seen[want] {
 			t.Fatalf("reachable output domain was not exercised: %s", want)
 		}

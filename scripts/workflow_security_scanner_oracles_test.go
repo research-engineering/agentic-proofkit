@@ -112,10 +112,11 @@ func validateCodeQLStrategy(strategy map[string]any) error {
 			map[string]any{"language": "go", "build-mode": "autobuild"},
 			map[string]any{"language": "javascript-typescript", "build-mode": "none"},
 			map[string]any{"language": "python", "build-mode": "none"},
+			map[string]any{"language": "actions", "build-mode": "none"},
 		}},
 	}
 	if !reflect.DeepEqual(strategy, want) {
-		return fmt.Errorf("CodeQL must scan exactly Go, browser JavaScript/TypeScript and Python; only Go may autobuild")
+		return fmt.Errorf("CodeQL must scan exactly Go, browser JavaScript/TypeScript, Python and GitHub Actions; only Go may autobuild")
 	}
 	return nil
 }

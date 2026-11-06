@@ -849,3 +849,14 @@ func mustWrite(t *testing.T, root, relative string, content []byte) {
 		t.Fatal(err)
 	}
 }
+
+func TestPlanRefusesGitMetadataTargets(t *testing.T) {
+	for _, path := range []string{".git/index.lock", "nested/.GIT/hooks/pre-commit"} {
+		root := t.TempDir()
+		input := validRequest(t, root)
+		input["testEvidenceInventory"].(map[string]any)["path"] = path
+		if _, err := BuildPlan(t.Context(), input, root); err == nil || !strings.Contains(err.Error(), "must not enter Git metadata") {
+			t.Fatalf("BuildPlan(%q) error=%v, want reserved metadata refusal", path, err)
+		}
+	}
+}

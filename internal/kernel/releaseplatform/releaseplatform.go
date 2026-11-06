@@ -4,9 +4,25 @@ import (
 	"fmt"
 	"path"
 	"runtime"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/semversion"
 )
 
 const BinaryName = "agentic-proofkit"
+
+// BinaryBuildArgs supplies the reproducible CLI recipe for packaging and wheel verification.
+func BinaryBuildArgs(version, output string) ([]string, error) {
+	if !semversion.IsExact(version) {
+		return nil, fmt.Errorf("release binary requires an exact semantic version")
+	}
+	return []string{
+		"-trimpath",
+		"-buildvcs=false",
+		"-ldflags=-buildid= -X github.com/research-engineering/agentic-proofkit/internal/app.buildVersion=" + version,
+		"-o", output,
+		"./cmd/agentic-proofkit",
+	}, nil
+}
 
 type Target struct {
 	BinaryPath      string

@@ -554,3 +554,35 @@ func envelopeActionByPhase(t *testing.T, output map[string]any, phase string) ma
 	t.Fatalf("missing action phase %s in %#v", phase, output["actionPlan"])
 	return nil
 }
+
+func TestGuidanceEnforceAllRequiresPassingSource(t *testing.T) {
+	for _, item := range []struct {
+		name        string
+		sourceState string
+		failedRule  bool
+		wantState   string
+		wantExit    int
+	}{
+		{name: "passed", sourceState: "passed", wantState: "passed"},
+		{name: "blocked", sourceState: "blocked", wantState: "blocked", wantExit: 1},
+		{name: "failed", sourceState: "failed", wantState: "failed", wantExit: 1},
+		{name: "skipped", sourceState: "skipped", wantState: "failed", wantExit: 1},
+		{name: "warning", sourceState: "warning", wantState: "failed", wantExit: 1},
+		{name: "inconsistent pass", sourceState: "passed", failedRule: true, wantState: "failed", wantExit: 1},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			input := guidanceInput("enforce-all")
+			source := input["sourceReport"].(map[string]any)
+			source["state"] = item.sourceState
+			if item.failedRule {
+				source["ruleResults"] = []any{map[string]any{"ruleId": "proofkit.test.source-rule", "status": "failed"}}
+			}
+			input["agentGuidance"].(map[string]any)["requiredNextActions"] = []any{"Review the source report."}
+			output, exit, err := BuildGuidance(input, GuidanceOptions{})
+			if err != nil || exit != item.wantExit {
+				t.Fatalf("BuildGuidance exit=%d err=%v, want exit %d", exit, err, item.wantExit)
+			}
+			assertState(t, output, item.wantState)
+		})
+	}
+}

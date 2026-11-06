@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,6 +35,7 @@ func TestBinaryBuildInfoReleaseTargetMatrix(t *testing.T) {
 					if dependency {
 						want = append(want, goModuleRecord{Path: "./dependency", Version: "(devel)"})
 					}
+					want = append(want, goModuleRecord{Path: "stdlib", Version: strings.TrimPrefix(runtime.Version(), "go")})
 					if err != nil || !reflect.DeepEqual(modules, want) {
 						t.Fatalf("modules=%v, err=%v, want source-defined %v", modules, err, want)
 					}

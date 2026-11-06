@@ -38,6 +38,10 @@ func validatePathRoles(uses []pathUse) error {
 			return fmt.Errorf("adoption materialization %s path overlaps the transaction control namespace", use.Role)
 		}
 		if use.Target {
+			metadata, err := pathidentity.ContainsComponentEquivalent(use.Path, ".git")
+			if err != nil || metadata {
+				return fmt.Errorf("adoption materialization %s path must not enter Git metadata", use.Role)
+			}
 			targets = append(targets, use)
 		} else {
 			references = append(references, use)
