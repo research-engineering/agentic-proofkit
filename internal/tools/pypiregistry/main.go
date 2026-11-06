@@ -17,6 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 )
 
 const (
@@ -131,11 +132,11 @@ func main() {
 }
 
 func run() error {
-	manifest, err := readPackageJSON("package.json")
+	manifest, err := readPackageJSON(".", "package.json")
 	if err != nil {
 		return err
 	}
-	candidates, err := readPythonPackageSet(filepath.Join("artifacts", "pypi", "python-packages.json"))
+	candidates, err := readPythonPackageSet(".", "artifacts/pypi/python-packages.json")
 	if err != nil {
 		return err
 	}
@@ -175,8 +176,8 @@ func registryArtifactOutput(version string, evidence []registryWheelEvidence) re
 	}
 }
 
-func readPackageJSON(path string) (packageJSON, error) {
-	out, err := readAdmittedJSON[packageJSON](path)
+func readPackageJSON(root, path string) (packageJSON, error) {
+	out, err := readAdmittedJSON[packageJSON](root, path)
 	if err != nil {
 		return packageJSON{}, err
 	}
@@ -186,8 +187,8 @@ func readPackageJSON(path string) (packageJSON, error) {
 	return out, nil
 }
 
-func readPythonPackageSet(path string) (pythonPackageSet, error) {
-	out, err := readAdmittedJSON[pythonPackageSet](path)
+func readPythonPackageSet(root, path string) (pythonPackageSet, error) {
+	out, err := readAdmittedJSON[pythonPackageSet](root, path)
 	if err != nil {
 		return pythonPackageSet{}, err
 	}
@@ -310,14 +311,13 @@ func requireCandidatePlatformCompleteness(records []wheelRecord) error {
 	return nil
 }
 
-func readAdmittedJSON[T any](path string) (T, error) {
+func readAdmittedJSON[T any](root, path string) (T, error) {
 	var out T
-	file, err := os.Open(path)
+	content, err := artifactfile.ReadBounded(root, path, 16<<20)
 	if err != nil {
 		return out, err
 	}
-	defer file.Close()
-	value, err := admission.DecodeTypedJSON[T](file, 16<<20)
+	value, err := admission.DecodeTypedJSON[T](bytes.NewReader(content), 16<<20)
 	if err != nil {
 		return out, fmt.Errorf("decode %s: %w", path, err)
 	}

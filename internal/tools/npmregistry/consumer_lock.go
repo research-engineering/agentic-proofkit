@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 )
 
 type consumerLock struct {
@@ -25,19 +27,18 @@ type lockedPackage struct {
 }
 
 func verifyConsumerLock(candidatePath, lockPath string) error {
-	records, err := readPackRecords(candidatePath, "release candidate")
+	records, err := readPackRecords(filepath.Dir(candidatePath), filepath.Base(candidatePath), "release candidate")
 	if err != nil {
 		return err
 	}
 	if len(records) != 1 {
 		return fmt.Errorf("registry consumer requires exactly one candidate package")
 	}
-	file, err := os.Open(lockPath)
+	content, err := artifactfile.ReadBounded(filepath.Dir(lockPath), filepath.Base(lockPath), maxPackRecordBytes)
 	if err != nil {
-		return err
+		return fmt.Errorf("read registry consumer lock: %w", err)
 	}
-	defer file.Close()
-	lock, err := admission.DecodeTypedJSON[consumerLock](file, maxPackRecordBytes)
+	lock, err := admission.DecodeTypedJSON[consumerLock](bytes.NewReader(content), maxPackRecordBytes)
 	if err != nil {
 		return fmt.Errorf("admit registry consumer lock: %w", err)
 	}
