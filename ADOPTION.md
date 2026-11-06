@@ -627,7 +627,8 @@ bounded JSON plan and opens no listener. For a single question use `--serve
 cleanup. If an unsuccessful launcher exit is observed while the session is
 active and before a terminal result is committed, the CLI fails without
 waiting for expiry. When the launcher result and the session timeout are ready
-together, either may be observed first.
+together, either may be observed first. If launch failure wins, no terminal
+packet is written and subsequent handoffs cannot be accepted.
 `--session-timeout-seconds` is optional, bounded to 1..7200 and valid
 only in that one-shot mode. Serving does not accept `--json-layout`.
 Cancellation has a separate single request slot, so busy projections do not

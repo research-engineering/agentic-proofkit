@@ -123,7 +123,8 @@ func TestBrowserLauncherStartFailure(t *testing.T) {
 }
 
 func TestOneShotKeepsBrowserLauncherAndTerminalOutcomesDistinct(t *testing.T) {
-	for _, mode := range []string{"failed launch", "submitted before failure", "submitted after successful launch", "submitted while launcher is running", "cancelled during launch"} {
+	startError := errors.New("synthetic launcher start failure")
+	for _, mode := range []string{"failed to start", "failed launch", "submitted before failure", "submitted after successful launch", "submitted while launcher is running", "cancelled during launch"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 			defer cancel()
@@ -133,6 +134,9 @@ func TestOneShotKeepsBrowserLauncherAndTerminalOutcomesDistinct(t *testing.T) {
 			handle := ServerHandle{URL: "http://127.0.0.1:43127/", Handoff: terminal.packets, terminal: terminal, done: done,
 				close: func(context.Context) error {
 					closeCalls++
+					if (mode == "failed to start" || mode == "failed launch") && terminal.TryCommit(map[string]any{"state": questionStateSubmitted}) {
+						t.Error("handoff accepted after the launch failure won")
+					}
 					done <- nil
 					return nil
 				},
@@ -140,6 +144,8 @@ func TestOneShotKeepsBrowserLauncherAndTerminalOutcomesDistinct(t *testing.T) {
 			submitted := map[string]any{"state": questionStateSubmitted}
 			opener := func(ctx context.Context, _ string) (<-chan error, error) {
 				switch mode {
+				case "failed to start":
+					return nil, startError
 				case "failed launch":
 					command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestBrowserLauncherChild$")
 					command.Env = append(os.Environ(), "PROOFKIT_BROWSER_CHILD=failure")
@@ -174,7 +180,13 @@ func TestOneShotKeepsBrowserLauncherAndTerminalOutcomesDistinct(t *testing.T) {
 			if closeCalls != 1 || len(done) != 0 {
 				t.Fatalf("cleanup calls=%d, unread completion=%d", closeCalls, len(done))
 			}
-			if mode == "failed launch" {
+			switch mode {
+			case "failed to start":
+				if !errors.Is(err, startError) || stdout.Len() != 0 {
+					t.Fatalf("launch start failure: error=%v stdout=%q", err, stdout.String())
+				}
+				return
+			case "failed launch":
 				var exit *exec.ExitError
 				if !errors.As(err, &exit) || exit.ExitCode() != 7 || stdout.Len() != 0 || !strings.Contains(err.Error(), "open browser") {
 					t.Fatalf("launch failure: error=%v stdout=%q", err, stdout.String())

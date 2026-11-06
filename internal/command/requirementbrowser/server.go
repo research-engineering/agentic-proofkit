@@ -59,7 +59,9 @@ func (arbiter *terminalArbiter) TryCommit(packet map[string]any) bool {
 		return false
 	}
 	arbiter.committed = true
-	arbiter.packets <- packet
+	if packet != nil {
+		arbiter.packets <- packet
+	}
 	return true
 }
 
@@ -188,7 +190,7 @@ func serveOneShot(ctx context.Context, handle ServerHandle, options Options, std
 		var err error
 		launcherDone, err = open(ctx, handle.URL)
 		if err != nil {
-			return errors.Join(err, closeAndWaitServer(handle))
+			return finishOneShotLaunchFailure(handle, stdout, err)
 		}
 	}
 	timeout := options.SessionTimeout
@@ -212,15 +214,22 @@ func serveOneShot(ctx context.Context, handle ServerHandle, options Options, std
 			if launchErr == nil || ctx.Err() != nil {
 				continue
 			}
-			// A launcher can finish after a browser has already submitted.
-			select {
-			case packet = <-handle.Handoff:
-			default:
-				return errors.Join(fmt.Errorf("open browser: %w", launchErr), closeAndWaitServer(handle))
-			}
+			return finishOneShotLaunchFailure(handle, stdout, fmt.Errorf("open browser: %w", launchErr))
 		}
 		break
 	}
+	return finishOneShot(handle, stdout, packet)
+}
+
+func finishOneShotLaunchFailure(handle ServerHandle, stdout io.Writer, err error) error {
+	// Claim the terminal outcome without emitting a packet or admitting a late handoff.
+	if handle.terminal.TryCommit(nil) {
+		return errors.Join(err, closeAndWaitServer(handle))
+	}
+	return finishOneShot(handle, stdout, <-handle.Handoff)
+}
+
+func finishOneShot(handle ServerHandle, stdout io.Writer, packet map[string]any) error {
 	unsuccessful := packet["state"] != questionStateSubmitted
 	if cleanupErr := closeAndWaitServer(handle); cleanupErr != nil {
 		if unsuccessful {
