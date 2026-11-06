@@ -58,7 +58,7 @@ func TestRunVerifierManifestGuardPrecedesOutsideConsumer(t *testing.T) {
 			writeFileBytes(t, filepath.FromSlash(strings.TrimPrefix(entry, "package/")), []byte(content))
 		}
 		writeFileBytes(t, "internal/tools/packageverify/main.go", []byte("package main\n"))
-		content := mustReadBytes(t, writePackageTarball(t, entries))
+		content := mustReadBytes(t, writePackageTarball(t, entries, "package/README.md"))
 		record := packRecord{Name: rootPackageName, Version: "1.2.3", Filename: "agentic-proofkit-1.2.3.tgz", Integrity: testNPMIntegrity(content), Shasum: testSHA1(content)}
 		writeFileBytes(t, filepath.Join("artifacts", "package", record.Filename), content)
 		encoded, err = json.Marshal([]packRecord{record})
@@ -67,28 +67,35 @@ func TestRunVerifierManifestGuardPrecedesOutsideConsumer(t *testing.T) {
 		}
 		writeFileBytes(t, filepath.Join("artifacts", "package", "npm-pack.json"), encoded)
 	}
-	for _, admitted := range []bool{false, true} {
-		t.Run(map[bool]string{false: "inadmissible repository", true: "restored repository"}[admitted], func(t *testing.T) {
+	for _, item := range []struct {
+		name, url, wantError string
+		changeSourceOwners   bool
+	}{
+		{"inadmissible repository", "git+https://github.com/example/agentic-proofkit.git", "root package repository must be " + repository, false},
+		{"source owners changed", repository, "packed owner record package/LICENSE does not match source owner LICENSE", true},
+		{"restored owners and repository", repository, "", false},
+	} {
+		t.Run(item.name, func(t *testing.T) {
 			withWorkingDirectory(t, t.TempDir())
 			markers := t.TempDir()
 			t.Setenv("PROOFKIT_OPERATION_MARKERS", markers)
-			url := repository
-			if !admitted {
-				url = "git+https://github.com/example/agentic-proofkit.git"
+			writeFixture(t, item.url)
+			if item.changeSourceOwners {
+				writeFileBytes(t, "README.md", []byte("changed readme source\n"))
+				writeFileBytes(t, "LICENSE", []byte("changed license source\n"))
 			}
-			writeFixture(t, url)
 			err := runVerifier()
 			log, logErr := os.ReadFile(filepath.Join(markers, "npm.log"))
 			if logErr != nil && !os.IsNotExist(logErr) {
 				t.Fatal(logErr)
 			}
 			_, binaryErr := os.Stat(filepath.Join(markers, "binary.log"))
-			if !admitted {
+			if item.wantError != "" {
 				if len(log) != 0 || !os.IsNotExist(binaryErr) {
-					t.Fatalf("inadmissible manifest reached an outside consumer: npm=%q binary=%v error=%v", log, binaryErr, err)
+					t.Fatalf("rejected package reached an outside consumer: npm=%q binary=%v error=%v", log, binaryErr, err)
 				}
-				if err == nil || err.Error() != "root package repository must be "+repository {
-					t.Fatalf("expected repository-boundary refusal, got %v", err)
+				if err == nil || err.Error() != item.wantError {
+					t.Fatalf("expected %q, got %v", item.wantError, err)
 				}
 				return
 			}

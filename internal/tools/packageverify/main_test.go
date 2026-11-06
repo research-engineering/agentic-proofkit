@@ -2031,7 +2031,7 @@ func packageDocEntries(content string) map[string]string {
 	}
 }
 
-func writePackageTarball(t *testing.T, entries map[string]string) string {
+func writePackageTarball(t *testing.T, entries map[string]string, leading ...string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "agentic-proofkit.tgz")
 	file, err := os.Create(path)
@@ -2040,7 +2040,17 @@ func writePackageTarball(t *testing.T, entries map[string]string) string {
 	}
 	gzipWriter := gzip.NewWriter(file)
 	tarWriter := tar.NewWriter(gzipWriter)
-	for name, content := range entries {
+	order := slices.Clone(leading)
+	for name := range entries {
+		if !slices.Contains(leading, name) {
+			order = append(order, name)
+		}
+	}
+	for _, name := range order {
+		content, exists := entries[name]
+		if !exists {
+			t.Fatalf("no fixture body for %s", name)
+		}
 		body := []byte(content)
 		mode := int64(0o644)
 		if rootBinaryEntry(name) {

@@ -243,25 +243,38 @@ func runVerifier() error {
 }
 
 func verifyPackedOwnerRecordsMatchSource(content []byte) error {
+	var failedEntry string
+	var ownerErr error
 	_, err := packagearchive.GzipEntries(content, maxCompressedArchiveBytes, verifyTarEntryHeader, func(entry tarEntry, body io.Reader) error {
-		if !sourceOwnedPackageEntry(entry.Name) {
+		if !sourceOwnedPackageEntry(entry.Name) || (ownerErr != nil && entry.Name >= failedEntry) {
 			return nil
 		}
-		packed, err := io.ReadAll(body)
-		if err != nil {
-			return err
-		}
-		sourcePath := strings.TrimPrefix(entry.Name, "package/")
-		source, err := os.ReadFile(filepath.FromSlash(sourcePath))
-		if err != nil {
-			return fmt.Errorf("read source owner for packed entry %s: %w", entry.Name, err)
-		}
-		if !bytes.Equal(packed, source) {
-			return fmt.Errorf("packed owner record %s does not match source owner %s", entry.Name, sourcePath)
+		// Tar order is not necessarily the previous lexical diagnostic order.
+		if err := comparePackedSourceOwner(entry.Name, body); err != nil {
+			failedEntry, ownerErr = entry.Name, err
 		}
 		return nil
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	return ownerErr
+}
+
+func comparePackedSourceOwner(entry string, body io.Reader) error {
+	packed, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	sourcePath := strings.TrimPrefix(entry, "package/")
+	source, err := os.ReadFile(filepath.FromSlash(sourcePath))
+	if err != nil {
+		return fmt.Errorf("read source owner for packed entry %s: %w", entry, err)
+	}
+	if !bytes.Equal(packed, source) {
+		return fmt.Errorf("packed owner record %s does not match source owner %s", entry, sourcePath)
+	}
+	return nil
 }
 
 func verifyPackedPlatformBinariesMatchSource(artifact rootPackageArtifact) error {
