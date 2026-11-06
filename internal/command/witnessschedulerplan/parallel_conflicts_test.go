@@ -86,6 +86,75 @@ func TestDistinctParallelConflictCauses(t *testing.T) {
 	}
 }
 
+func TestBuildPreservesDirectionalAndDestructiveParallelSafety(t *testing.T) {
+	for _, tc := range []struct {
+		name, cause         string
+		leftRead, rightRead string
+		destructive         bool
+	}{
+		{name: "write-read", cause: "has write/read resource collision resource.left", rightRead: "resource.left"},
+		{name: "read-write", cause: "has read/write resource collision resource.right", leftRead: "resource.right"},
+		{name: "destructive", cause: "must not run destructive commands concurrently", destructive: true},
+	} {
+		for _, placement := range []string{"parallel", "separate", "single"} {
+			t.Run(tc.name+"/"+placement, func(t *testing.T) {
+				input := validSchedulerPlanInput()
+				leftCommand, left := command(input), schedulerPolicy(input)
+				rightCommand, right := cloneMap(leftCommand), cloneMap(left)
+				for _, owner := range []struct {
+					name, read      string
+					command, policy map[string]any
+				}{
+					{"left", tc.leftRead, leftCommand, left},
+					{"right", tc.rightRead, rightCommand, right},
+				} {
+					id := "proofkit." + owner.name
+					output := "artifacts/proofkit/" + owner.name + ".json"
+					owner.command["id"] = id
+					owner.command["expectedArtifacts"] = []any{map[string]any{"kind": "report", "path": output, "required": true}}
+					owner.policy["commandId"] = id
+					owner.policy["outputSelectors"] = []any{output}
+					owner.policy["resourceReads"] = []any{}
+					if owner.read != "" {
+						owner.policy["resourceReads"] = []any{owner.read}
+					}
+					owner.policy["resourceWrites"] = []any{"resource." + owner.name}
+				}
+				if tc.destructive {
+					left["sideEffectClass"] = "destructive"
+					left["exclusiveLocks"] = []any{"lock.left"}
+				}
+				if placement != "single" {
+					input["commands"] = []any{leftCommand, rightCommand}
+					input["policies"] = []any{left, right}
+				}
+				if placement == "separate" {
+					input["vocabulary"].(map[string]any)["parallelGroups"] = []any{"local", "separate"}
+					rightCommand["parallelGroup"] = "separate"
+				}
+				record, code, err := Build(input)
+				if err != nil {
+					t.Fatal(err)
+				}
+				failures, ok := record.Diagnostics[1].Value.([]any)
+				safety := record.RuleResults[1]
+				if !ok || record.SchemaVersion != 3 || record.Summary["failureCount"] != len(failures) || len(safety.Diagnostics) != len(failures) {
+					t.Fatalf("inconsistent scheduler outcome: failures=%v summary=%v safety=%v", failures, record.Summary, safety)
+				}
+				if placement == "parallel" {
+					want := "parallel group local " + tc.cause
+					if code != 1 || record.State != "failed" || safety.Status != "failed" || !slices.Equal(failures, []any{want}) ||
+						safety.Diagnostics[0].Key != "failure.001" || safety.Diagnostics[0].Value != want {
+						t.Fatalf("expected only %q: exit=%d state=%s failures=%v safety=%v", want, code, record.State, failures, safety)
+					}
+				} else if code != 0 || record.State != "passed" || safety.Status != "passed" || len(failures) != 0 {
+					t.Fatalf("isolated operation failed: exit=%d state=%s failures=%v safety=%v", code, record.State, failures, safety)
+				}
+			})
+		}
+	}
+}
+
 func TestParallelSelectorConflictsMatchesDirectPairRelation(t *testing.T) {
 	selectors := []struct{ raw, prefix string }{
 		{"", ""}, {"**", ""}, {"a", "a/"}, {"a/**", "a/"},
