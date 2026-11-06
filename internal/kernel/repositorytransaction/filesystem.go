@@ -242,8 +242,11 @@ func validatePrivateDirectory(root *os.Root, relativePath string, mode fs.FileMo
 	}
 	native := filepath.FromSlash(relativePath)
 	routeInfo, err := root.Lstat(native)
-	if err != nil || routeInfo.Mode()&os.ModeSymlink != 0 || !routeInfo.IsDir() || routeInfo.Mode().Perm() != mode.Perm() || routeInfo.Mode()&(fs.ModeSetuid|fs.ModeSetgid|fs.ModeSticky) != 0 {
+	if err != nil || routeInfo.Mode()&os.ModeSymlink != 0 || !routeInfo.IsDir() || routeInfo.Mode()&(fs.ModeSetuid|fs.ModeSetgid|fs.ModeSticky) != 0 {
 		return fmt.Errorf("repository transaction directory is unsafe")
+	}
+	if routeInfo.Mode().Perm() != mode.Perm() {
+		return fmt.Errorf("%w: %s requires mode %04o; keep %s out of version control", ErrUnsafeControlPermissions, relativePath, mode.Perm(), ControlRoot)
 	}
 	owned, err := platformOwnedByCurrentUser(routeInfo)
 	if err != nil || !owned {

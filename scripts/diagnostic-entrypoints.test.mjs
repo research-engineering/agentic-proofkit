@@ -19,6 +19,7 @@ test("repository-owned JavaScript entrypoints use the diagnostic boundary", () =
   assert.deepEqual([...entrypoints].sort(), [
     "scripts/browser-visual-capture-digests.mjs",
     "scripts/source-hygiene.mjs",
+    "scripts/verify-release-sbom.mjs",
     "scripts/write-browser-proof.mjs",
     "scripts/write-browser-visual-proof.mjs",
   ]);

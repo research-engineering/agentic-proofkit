@@ -22,6 +22,7 @@ var scenarios = map[string]struct{}{
 }
 
 var inputKinds = map[string]struct{}{
+	"bootstrap_witness_plan":     {},
 	"adoption_checklist":         {},
 	"branch_authority":           {},
 	"external_consumer":          {},
@@ -332,6 +333,9 @@ func workflowCommandsForPhase(scenario string, presetID *string, refs map[string
 		commands = appendInputCommand(commands, refs, "requirement_bindings", "requirement-bindings", renderer)
 		commands = appendInputCommand(commands, refs, "requirement_bindings", "proof-slice", renderer)
 		commands = appendInputCommand(commands, refs, "witness_plan", "witness-scheduler-plan", renderer)
+		if scenario == "new_repository" {
+			commands = appendInputCommand(commands, refs, "bootstrap_witness_plan", "witness-plan", renderer)
+		}
 		return mapsToAny(commands)
 	}
 	if phase == "migrate" {
@@ -371,7 +375,11 @@ func workflowBlockers(scenario string, presetID *string, refs []inputRef) []bloc
 	if (scenario == "new_repository" || scenario == "existing_gradual_adoption") && presetID == nil {
 		blockers = append(blockers, newBlocker(scenario, "scenario requires caller-selected stack preset", []string{}))
 	}
+	_, bootstrapOnly := byKind["bootstrap_witness_plan"]
 	for _, kind := range requiredKinds(scenario) {
+		if scenario == "new_repository" && bootstrapOnly && (kind == "requirement_bindings" || kind == "witness_plan") {
+			continue
+		}
 		if _, ok := byKind[kind]; !ok {
 			blockers = append(blockers, newBlocker(scenario, fmt.Sprintf("scenario requires %s input ref", kind), []string{kind}))
 		}
@@ -630,7 +638,7 @@ func contextRole(inputKind string) string {
 		return "evidence"
 	case "receipt_producer_admission":
 		return "receipt_source"
-	case "selective_gate_plan", "witness_plan":
+	case "bootstrap_witness_plan", "selective_gate_plan", "witness_plan":
 		return "command_registry"
 	case "branch_authority", "migration_plan", "release_authority":
 		return "owner_surface"

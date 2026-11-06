@@ -67,3 +67,16 @@ func Key(tokens []string) string {
 func Text(tokens []string) string {
 	return strings.Join(tokens, Separator)
 }
+
+// ZeroOperandFlags are the switches that do not consume a following argv
+// token. Other allowed command flags consume exactly one token.
+func ZeroOperandFlags() []string {
+	return []string{
+		"--agent-envelope", "--contract-envelope", "--empty-local-environment-policy", "--help", "--list",
+		"--materialization-manifest", "--normalized-inventory", "--open", "--serve", "--stack-diverse", "--verify", "-h",
+	}
+}
+
+func FlagRequiresValue(flag string) bool {
+	return !slices.Contains(ZeroOperandFlags(), flag)
+}

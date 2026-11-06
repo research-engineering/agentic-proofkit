@@ -233,7 +233,7 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 	for _, id := range keys {
 		wire.ContractDefinitions = append(wire.ContractDefinitions, replacements[id])
 	}
-	encoded, err := encodeContractSource(wire)
+	encoded, err := encodeContractDocument(wire)
 	if err != nil {
 		return nil, err
 	}
@@ -325,4 +325,54 @@ func encodeContractSource(value any) ([]byte, error) {
 		return nil, err
 	}
 	return result.Bytes(), nil
+}
+
+// Keep each top-level record on a separate line for review while preserving
+// compact schema values and the installed contract byte budget.
+func encodeContractDocument(wire contractSource) ([]byte, error) {
+	var out bytes.Buffer
+	out.WriteString("{\n")
+	field := func(key string, raw json.RawMessage) error {
+		fmt.Fprintf(&out, "  %q: ", key)
+		if err := json.Compact(&out, raw); err != nil {
+			return err
+		}
+		out.WriteString(",\n")
+		return nil
+	}
+	for _, item := range []struct {
+		key string
+		raw json.RawMessage
+	}{
+		{"schemaVersion", wire.SchemaVersion}, {"contractId", wire.ContractID},
+		{"packageName", wire.PackageName}, {"processContract", wire.ProcessContract},
+	} {
+		if err := field(item.key, item.raw); err != nil {
+			return nil, err
+		}
+	}
+	array := func(key string, records []json.RawMessage) error {
+		fmt.Fprintf(&out, "  %q: [\n", key)
+		for i, record := range records {
+			out.WriteString("    ")
+			if err := json.Compact(&out, record); err != nil {
+				return err
+			}
+			if i+1 < len(records) {
+				out.WriteByte(',')
+			}
+			out.WriteByte('\n')
+		}
+		out.WriteString("  ]")
+		return nil
+	}
+	if err := array("commands", wire.Commands); err != nil {
+		return nil, err
+	}
+	out.WriteString(",\n")
+	if err := array("contractDefinitions", wire.ContractDefinitions); err != nil {
+		return nil, err
+	}
+	out.WriteString("\n}\n")
+	return out.Bytes(), nil
 }

@@ -26,8 +26,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             os.execve(str(binary), command, environment)
         except PermissionError:
-            ensure_executable(binary)
-            os.execve(str(binary), command, environment)
+            try:
+                ensure_executable(binary)
+                os.execve(str(binary), command, environment)
+            except PermissionError:
+                print(
+                    "agentic-proofkit: cannot execute embedded CLI binary; check permissions or reinstall the package",
+                    file=sys.stderr,
+                )
+                return 126
         raise AssertionError("os.execve returned unexpectedly")
     ensure_executable(binary)
     import subprocess
@@ -38,7 +45,5 @@ def main(argv: Sequence[str] | None = None) -> int:
 def ensure_executable(path: Path) -> None:
     mode = path.stat().st_mode
     wanted = mode | stat.S_IXUSR
-    if os.name != "nt":
-        wanted |= stat.S_IXGRP | stat.S_IXOTH
     if wanted != mode:
         path.chmod(wanted)

@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import test, {after, before} from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
 import {assertCLITransport, spawnWithInputFile} from './cli-process.mjs';
-import {expandSharedDefinitions} from './schema-definitions.mjs';
+import {embeddedSchema, expandSharedDefinitions} from './schema-definitions.mjs';
 
 const root = new URL('../', import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_ADMISSION_RECORDS_CONTRACT || new URL('proofkit/cli-contract.v2.json', root), 'utf8'));
@@ -476,7 +476,8 @@ test('deployment evidence states select one branch and keep caller JSON domains 
   for (const key of ['evidenceRef', 'payload']) refused(command, remove({...base, rawOperatorEvidence: [{evidenceRef: 'operator.note', payload: null}]}, ['rawOperatorEvidence', 0, key]), true, 'operator/' + key);
   const policyKeys = ['expectedDeploymentClaim', 'expectedEvidenceSchema', 'expectedProofScope', 'forbiddenValueIndicators', 'localRefIndicators',
     'requireDigestPinnedImageRefs', 'requireLowercaseSourceCommits', 'requiredFactIds', 'requiredFactKinds', 'requiredNonClaims', 'temporaryEndpointHostSuffixes'];
-  assert.deepEqual(Object.keys(checks.get(command + '/input').schema.properties.policy.properties).sort(), policyKeys);
+  assert.deepEqual(Object.keys(checks.get(command + '/input').schema.properties.policy.properties).sort(), ['endpointEvaluationTime', ...policyKeys]);
+  invoke(command, replace(base, ['policy', 'endpointEvaluationTime'], '2026-01-01T00:00:00Z'));
   for (const key of policyKeys) {
     refused(command, remove(base, ['policy', key]), true, 'policy/' + key);
     const type = key.startsWith('require') && !key.startsWith('required') ? 'boolean' : key.startsWith('expected') ? 'string' : 'array';
@@ -617,12 +618,12 @@ test('spec proof bundle whole chain composes public child commands and reuses th
   const shape = checks.get(command + '/input').schema.properties;
   const published = (name, direction) => checks.get(name + '/' + direction)?.schema ??
     expandSharedDefinitions(definitionOf(contract.commands.find(row => row.command === name)[direction + 'Contract'].rootDefinitionRef).fieldTree.variants[0].schema);
-  assert.deepEqual(shape.requirementBindings, published('requirement-bindings', 'input'));
-  assert.deepEqual(shape.witnessPlan, published('witness-scheduler-plan', 'input'));
+  assert.deepEqual(shape.requirementBindings, embeddedSchema(published('requirement-bindings', 'input')));
+  assert.deepEqual(shape.witnessPlan, embeddedSchema(published('witness-scheduler-plan', 'input')));
   for (const [key, owner] of [['receiptAdmission', 'proof-receipt-admission'], ['receiptProducerAdmission', 'receipt-producer-admission']]) {
     const [nullBranch, child] = shape[key].anyOf;
     assert.deepEqual(nullBranch, {type: 'null'});
-    assert.deepEqual(child.properties.report, published(owner, 'output'));
+    assert.deepEqual(child.properties.report, embeddedSchema(published(owner, 'output')));
     assert.deepEqual(child.properties.receipts, published(owner, 'input').properties.receipts);
     assert.deepEqual(child.properties.nonClaims, published(owner, 'input').properties.nonClaims);
     const bindings = contract.commands.find(row => row.command === command).inputContract.childDefinitionBindings;

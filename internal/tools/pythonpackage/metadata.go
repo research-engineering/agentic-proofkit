@@ -16,7 +16,7 @@ const (
 	artifactKind      = "proofkit.python-package-set.v1"
 	npmPackageName    = "@research-engineering/agentic-proofkit"
 	packageName       = "agentic-proofkit"
-	licenseExpression = "MIT AND BSD-3-Clause"
+	licenseExpression = "MIT AND BSD-3-Clause AND ISC"
 	pythonTag         = "py3"
 	abiTag            = "none"
 	licenseFilename   = "LICENSE"

@@ -570,8 +570,14 @@ func sourceRuleIDs(sourceReport map[string]any, status string) []string {
 func guidanceModeFailures(mode string, checkedScope string, sourceReport map[string]any, agentGuidance map[string]any, modernization map[string]any, enforcementFailedRuleIDs []string) []string {
 	failures := []string{}
 	failures = append(failures, adoptionmode.ScopeFailures(mode, checkedScope)...)
-	if mode == adoptionmode.EnforceAll && sourceReport["state"] == "failed" {
-		failures = append(failures, "enforce-all fails closed when sourceReport is failed")
+	if mode == adoptionmode.EnforceAll {
+		state := sourceReport["state"].(string)
+		if state != "passed" && state != "blocked" {
+			failures = append(failures, "enforce-all requires a passed source report")
+		}
+		if state == "passed" && len(enforcementFailedRuleIDs) > 0 {
+			failures = append(failures, "enforce-all fails closed for failed source rules")
+		}
 	}
 	if mode == adoptionmode.EnforceTouched && len(enforcementFailedRuleIDs) > 0 {
 		failures = append(failures, "enforce-touched fails closed for failed source rules inside checked scope")

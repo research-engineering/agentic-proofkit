@@ -12,7 +12,7 @@ import (
 var (
 	inputKeys               = []string{"admissionId", "evidence", "nonClaims", "policy", "rawOperatorEvidence", "schemaVersion"}
 	rawOperatorEvidenceKeys = []string{"evidenceRef", "payload"}
-	policyKeys              = []string{"expectedDeploymentClaim", "expectedEvidenceSchema", "expectedProofScope", "forbiddenValueIndicators", "localRefIndicators", "requireDigestPinnedImageRefs", "requireLowercaseSourceCommits", "requiredFactIds", "requiredFactKinds", "requiredNonClaims", "temporaryEndpointHostSuffixes"}
+	policyKeys              = []string{"endpointEvaluationTime", "expectedDeploymentClaim", "expectedEvidenceSchema", "expectedProofScope", "forbiddenValueIndicators", "localRefIndicators", "requireDigestPinnedImageRefs", "requireLowercaseSourceCommits", "requiredFactIds", "requiredFactKinds", "requiredNonClaims", "temporaryEndpointHostSuffixes"}
 )
 
 const callerJSONDefinition = "callerJSON"
@@ -70,13 +70,13 @@ func InputStructure() map[string]any {
 func PolicyShape() jsonshape.Shape {
 	text := jsonshape.NonBlankString()
 	ids := jsonshape.Array(trimmedIDShape(), 0)
-	return jsonshape.RequiredObject(policyKeys, map[string]jsonshape.Shape{
-		"expectedDeploymentClaim": text, "expectedEvidenceSchema": text, "expectedProofScope": text,
+	return jsonshape.ObjectFromKeys(policyKeys, map[string]jsonshape.Shape{
+		"endpointEvaluationTime": text, "expectedDeploymentClaim": text, "expectedEvidenceSchema": text, "expectedProofScope": text,
 		"forbiddenValueIndicators": jsonshape.Array(text, 0), "localRefIndicators": jsonshape.Array(text, 1),
 		"requireDigestPinnedImageRefs": jsonshape.Boolean(), "requireLowercaseSourceCommits": jsonshape.Boolean(),
 		"requiredFactIds": ids, "requiredFactKinds": ids, "requiredNonClaims": jsonshape.Array(text, 1),
 		"temporaryEndpointHostSuffixes": jsonshape.Array(text, 0),
-	})
+	}, "endpointEvaluationTime")
 }
 
 func PolicyStructure() map[string]any {
@@ -85,6 +85,7 @@ func PolicyStructure() map[string]any {
 	for _, key := range []string{"requiredFactIds", "requiredFactKinds"} {
 		properties[key].(map[string]any)["items"].(map[string]any)["allOf"] = []any{map[string]any{"pattern": trimmedIDBoundShape().JSONSchema()["pattern"]}}
 	}
+	properties["endpointEvaluationTime"].(map[string]any)["description"] = "Caller-supplied RFC3339 UTC evaluation instant. Required to pass with a temporary endpoint; expiration must be strictly later."
 	schema["anyOf"] = []any{
 		map[string]any{"properties": map[string]any{"requiredFactIds": map[string]any{"minItems": 1}}},
 		map[string]any{"properties": map[string]any{"requiredFactKinds": map[string]any{"minItems": 1}}},

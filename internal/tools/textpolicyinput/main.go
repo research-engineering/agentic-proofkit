@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
@@ -53,7 +56,18 @@ type fileRecord struct {
 	State         string  `json:"state"`
 }
 
+const batchBudget = 8 << 20
+const inputLimit = 32 << 20
+
 func main() {
+	run(os.Args[1:])
+}
+
+func run(args []string) {
+	if len(args) > 1 || len(args) == 1 && args[0] != "--check" {
+		exit(fmt.Errorf("usage: textpolicyinput [--check]"))
+	}
+	check := len(args) == 1
 	repoRoot, err := repoRoot()
 	if err != nil {
 		exit(err)
@@ -62,27 +76,93 @@ func main() {
 	if err != nil {
 		exit(err)
 	}
-	records := make([]fileRecord, 0, len(files))
-	for _, path := range files {
-		record := fileRecord{Path: path, State: "present"}
-		if isBinaryCandidate(path) {
-			records = append(records, record)
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(path)))
-		if os.IsNotExist(err) {
-			record.State = "missing"
-			records = append(records, record)
-			continue
-		}
+	records := []fileRecord{}
+	batchBytes, failures := 0, 0
+	flush := func() {
+		count, err := checkBatch(records)
 		if err != nil {
-			exit(fmt.Errorf("read %s: %w", path, err))
+			exit(err)
 		}
-		contentBase64 := base64.StdEncoding.EncodeToString(data)
-		record.ContentBase64 = &contentBase64
+		failures += count
+		records, batchBytes = nil, 0
+	}
+	for _, path := range files {
+		record, err := readRecord(repoRoot, path)
+		if err != nil {
+			exit(err)
+		}
+		if check {
+			size := len(path)*6 + 128
+			if record.ContentBase64 != nil {
+				size += len(*record.ContentBase64)
+			}
+			if len(records) > 0 && batchBytes+size > batchBudget {
+				flush()
+			}
+			batchBytes += size
+		}
 		records = append(records, record)
 	}
-	payload := input{
+	if check {
+		flush()
+		if failures > 0 {
+			os.Exit(1)
+		}
+		fmt.Printf("Text policy passed for %d inventoried paths.\n", len(files))
+		return
+	}
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(batchInput(records)); err != nil {
+		exit(fmt.Errorf("encode text policy input: %w", err))
+	}
+}
+
+func readRecord(repoRoot, path string) (fileRecord, error) {
+	record := fileRecord{Path: path, State: "present"}
+	if isBinaryCandidate(path) {
+		return record, nil
+	}
+	data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(path)))
+	if os.IsNotExist(err) {
+		record.State = "missing"
+		return record, nil
+	}
+	if err != nil {
+		return fileRecord{}, fmt.Errorf("read %s: %w", path, err)
+	}
+	content := base64.StdEncoding.EncodeToString(data)
+	record.ContentBase64 = &content
+	return record, nil
+}
+
+func checkBatch(records []fileRecord) (int, error) {
+	if len(records) == 0 {
+		return 0, nil
+	}
+	content, err := json.Marshal(batchInput(records))
+	if err != nil {
+		return 0, err
+	}
+	// Use the same input admission and evaluation as the public command.
+	value, err := admission.DecodeJSON(bytes.NewReader(content), inputLimit)
+	if err != nil {
+		return 0, err
+	}
+	report, code, err := textpolicy.Build(value)
+	if err != nil {
+		return 0, err
+	}
+	if code != 0 {
+		if err := json.NewEncoder(os.Stdout).Encode(report.JSONValue()); err != nil {
+			return 0, err
+		}
+	}
+	return code, nil
+}
+
+func batchInput(records []fileRecord) input {
+	return input{
 		SchemaVersion: 1,
 		ReportID:      "proofkit.source.text-policy",
 		NonClaims: []string{
@@ -96,11 +176,6 @@ func main() {
 			RequireFinalNewline:      true,
 		},
 		Files: records,
-	}
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(payload); err != nil {
-		exit(fmt.Errorf("encode text policy input: %w", err))
 	}
 }
 

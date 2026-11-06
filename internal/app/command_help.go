@@ -274,14 +274,16 @@ func commandUsageLine(descriptor commandDescriptor) string {
 			segments = append(segments, optionalUsageSegment(fmt.Sprintf("%s <value>", flag), required))
 		case "--touched-rule-id":
 			segments = append(segments, "[--touched-rule-id <id>]")
-		case "--agent-envelope", "--contract-envelope", "--empty-local-environment-policy", "--help", "-h", "--list", "--materialization-manifest", "--normalized-inventory", "--open", "--serve", "--stack-diverse", "--verify":
-			segments = append(segments, "["+flag+"]")
 		case "--output":
 			segments = append(segments, "[--output <path>]")
 		case "--baseline":
 			segments = append(segments, "[--baseline <path>]")
 		default:
-			segments = append(segments, "["+flag+"]")
+			if flagRequiresValue(flag) {
+				segments = append(segments, optionalUsageSegment(flag+" <value>", required))
+			} else {
+				segments = append(segments, optionalUsageSegment(flag, required))
+			}
 		}
 	}
 	for _, group := range descriptor.exactlyOneOfFlagGroups {

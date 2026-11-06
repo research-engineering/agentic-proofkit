@@ -179,8 +179,9 @@ func TestStructureRefreshPreservesUnrelatedRecordsAndIsIdempotent(t *testing.T) 
 	if err := json.Compact(&compact, updated); err != nil {
 		t.Fatal(err)
 	}
-	if len(updated) > installedclicontract.MaximumContractBytes || !bytes.Equal(compact.Bytes(), bytes.TrimSpace(updated)) {
-		t.Fatal("refreshed machine contract is not compact or exceeds its installed carrier bound")
+	if len(updated) > installedclicontract.MaximumContractBytes ||
+		bytes.Count(updated, []byte("\n")) != len(after["commands"].([]any))+len(after["contractDefinitions"].([]any))+10 {
+		t.Fatal("refreshed machine contract is not record-per-line or exceeds its installed carrier bound")
 	}
 	oldDefinitions, err := admitDefinitions(before)
 	if err != nil {

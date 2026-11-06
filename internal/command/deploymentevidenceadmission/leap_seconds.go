@@ -2,6 +2,7 @@ package deploymentevidenceadmission
 
 import (
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -30,4 +31,11 @@ func validRFC3339UTC(value string) bool {
 	}
 	_, err := time.Parse(time.RFC3339Nano, value[:17]+"59"+value[19:])
 	return err == nil
+}
+
+// utcOrderKey orders admitted UTC timestamps, including a positive leap
+// second. A fixed-width fraction makes omitted and zero fractions equal.
+func utcOrderKey(value string) string {
+	second, fraction, _ := strings.Cut(strings.TrimSuffix(value, "Z"), ".")
+	return second + fraction + strings.Repeat("0", 9-len(fraction))
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
@@ -597,7 +598,7 @@ func parallelGroupFailures(groups []executionGroup, policiesByCommandID map[stri
 func parallelGroupIsConflictFreeByConstruction(group executionGroup, policiesByCommandID map[string]policy) bool {
 	for _, commandID := range group.CommandIDs {
 		policy, ok := policiesByCommandID[commandID]
-		if !ok || policy.SideEffectClass != "none" || len(policy.ExclusiveLocks) > 0 || len(policy.ResourceReads) > 0 || len(policy.ResourceWrites) > 0 {
+		if !ok || policy.SideEffectClass != "none" || len(policy.ExclusiveLocks) > 0 || len(policy.ResourceReads) > 0 || len(policy.ResourceWrites) > 0 || len(policy.OutputSelectors) > 0 {
 			return false
 		}
 	}
@@ -621,7 +622,37 @@ func policyPairFailures(parallelGroup string, left policy, right policy) []strin
 	for _, resource := range intersection(right.ResourceWrites, left.ResourceReads) {
 		failures = append(failures, "parallel group "+parallelGroup+" has read/write resource collision "+resource)
 	}
+	if selectorSetsMayOverlap(left.OutputSelectors, right.OutputSelectors) {
+		failures = append(failures, "parallel group "+parallelGroup+" has overlapping output selectors")
+	}
+	if selectorSetsMayOverlap(left.OutputSelectors, right.InputSelectors) ||
+		selectorSetsMayOverlap(right.OutputSelectors, left.InputSelectors) {
+		failures = append(failures, "parallel group "+parallelGroup+" has overlapping input and output selectors")
+	}
 	return failures
+}
+
+// Selectors are caller declarations. A shared literal prefix before the first
+// wildcard cannot prove disjointness. Require separate groups in that case.
+func selectorSetsMayOverlap(left, right []string) bool {
+	for _, leftSelector := range left {
+		leftPrefix := selectorPrefix(leftSelector)
+		for _, rightSelector := range right {
+			rightPrefix := selectorPrefix(rightSelector)
+			if strings.HasPrefix(leftPrefix, rightPrefix) || strings.HasPrefix(rightPrefix, leftPrefix) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func selectorPrefix(value string) string {
+	prefix, _, wildcard := strings.Cut(value, "*")
+	if wildcard {
+		return prefix
+	}
+	return strings.TrimSuffix(prefix, "/") + "/"
 }
 
 func ruleResults(failures []string) []report.RuleResult {

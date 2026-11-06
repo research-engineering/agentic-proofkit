@@ -91,7 +91,8 @@ execution receipts, and merge policy.
   caller-owned base/current requirement sources, compact proof contracts with
   one or more current bindings per active blocking requirement, changed-path
   facts, generated-artifact policy, local environment policy, and proof-like
-  path policy into a direct `impact` input, treating every referenced surface
+  path policy into a direct `impact` input. It fails closed when an active
+  requirement loses both blocking status and its current bindings. It treats every referenced surface
   semantic change as a change to every referencing binding under the
   proof-binding source-path policy, without scanning repositories, executing
   witnesses, or becoming a second impact evaluator.

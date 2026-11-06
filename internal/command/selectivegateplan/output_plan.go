@@ -95,9 +95,6 @@ func AdmitEvidencePlan(raw any) (EvidencePlanProjection, error) {
 	if err != nil {
 		return EvidencePlanProjection{}, err
 	}
-	if err := validateOutputRelations(state, failures, commands, scanObligation, fallbackCoverage, unknownEdges); err != nil {
-		return EvidencePlanProjection{}, err
-	}
 	normalized := map[string]any{}
 	for key, value := range record {
 		normalized[key] = value
@@ -117,6 +114,9 @@ func AdmitEvidencePlan(raw any) (EvidencePlanProjection, error) {
 	normalized["skippedGates"] = skippedGates
 	normalized["touchedRequirementWitnesses"] = touchedWitnesses
 	normalized["unknownEdges"] = unknownEdges
+	if err := validateOutputRelations(state, failures, commands, normalized); err != nil {
+		return EvidencePlanProjection{}, err
+	}
 	return EvidencePlanProjection{PlanState: state, RequiredCommands: commands, Failures: failures, ChangedPaths: changedPaths, Generated: generated, Raw: normalized}, nil
 }
 

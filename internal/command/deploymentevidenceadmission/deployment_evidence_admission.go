@@ -3,6 +3,7 @@ package deploymentevidenceadmission
 import (
 	"fmt"
 	"net"
+	"net/netip"
 	"net/url"
 	"regexp"
 	"sort"
@@ -41,6 +42,7 @@ type rawOperatorEvidence struct {
 }
 
 type policy struct {
+	EndpointEvaluationTime        string
 	ExpectedEvidenceSchema        string
 	ExpectedProofScope            string
 	ExpectedDeploymentClaim       string
@@ -288,7 +290,15 @@ func admitPolicy(raw any) (policy, error) {
 	if err != nil {
 		return policy{}, err
 	}
+	evaluationTime := ""
+	if rawTime, exists := record["endpointEvaluationTime"]; exists {
+		evaluationTime, err = text(rawTime, "deployment evidence endpointEvaluationTime")
+		if err != nil || !validRFC3339UTC(evaluationTime) {
+			return policy{}, fmt.Errorf("deployment evidence endpointEvaluationTime must be an RFC3339 UTC timestamp")
+		}
+	}
 	return policy{
+		EndpointEvaluationTime:        evaluationTime,
 		ExpectedEvidenceSchema:        expectedEvidenceSchema,
 		ExpectedProofScope:            expectedProofScope,
 		ExpectedDeploymentClaim:       expectedDeploymentClaim,
@@ -463,8 +473,14 @@ func validateEndpoint(endpoint map[string]any, context string, policy policy, bl
 		requireNonLocalRef(stringField(endpoint, "temporaryEndpointApprovalRef", context, blockedReasons), context+".temporaryEndpointApprovalRef", policy, failures)
 		requireNonLocalRef(stringField(endpoint, "replacementPlanRef", context, blockedReasons), context+".replacementPlanRef", policy, failures)
 		expiresAt := stringField(endpoint, "expiresAt", context, blockedReasons)
-		if expiresAt != nil && !validRFC3339UTC(*expiresAt) {
+		switch {
+		case expiresAt == nil:
+		case !validRFC3339UTC(*expiresAt):
 			*failures = append(*failures, context+".expiresAt must be an RFC3339 UTC timestamp")
+		case policy.EndpointEvaluationTime == "":
+			*blockedReasons = append(*blockedReasons, context+" requires policy.endpointEvaluationTime")
+		case utcOrderKey(*expiresAt) <= utcOrderKey(policy.EndpointEvaluationTime):
+			*failures = append(*failures, context+".expiresAt must be after policy.endpointEvaluationTime")
 		}
 	}
 }
@@ -665,6 +681,13 @@ func isLocalRef(value string, policy policy) bool {
 }
 
 func isLocalEndpointHost(canonicalHost string, policy policy) bool {
+	hostIP, ipErr := netip.ParseAddr(canonicalHost)
+	if ipErr == nil && (!hostIP.Unmap().IsGlobalUnicast() || hostIP.Unmap().IsPrivate()) {
+		return true
+	}
+	if canonicalHost == "localhost" || strings.HasSuffix(canonicalHost, ".localhost") {
+		return true
+	}
 	unicodeHost, err := idna.Lookup.ToUnicode(canonicalHost)
 	if err != nil {
 		unicodeHost = canonicalHost
@@ -672,6 +695,12 @@ func isLocalEndpointHost(canonicalHost string, policy policy) bool {
 	asciiWithRoot := strings.ToLower(canonicalHost + ".")
 	unicodeWithRoot := strings.ToLower(norm.NFC.String(unicodeHost) + ".")
 	for _, indicator := range policy.LocalRefIndicators {
+		if indicatorIP, err := netip.ParseAddr(indicator); err == nil {
+			if ipErr == nil && hostIP.Unmap() == indicatorIP.Unmap() {
+				return true
+			}
+			continue
+		}
 		normalized := normalizeLocalHostIndicator(indicator)
 		if strings.Contains(asciiWithRoot, strings.ToLower(normalized)) || strings.Contains(unicodeWithRoot, strings.ToLower(normalized)) {
 			return true
