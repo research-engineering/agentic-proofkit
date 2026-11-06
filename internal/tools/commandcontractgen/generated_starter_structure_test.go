@@ -12,7 +12,7 @@ func TestGeneratedStarterOutputOwnersPreserveNoInputAndRootFields(t *testing.T) 
 		fields  []any
 	}{
 		{"stack-preset", "1", []any{"diagnostics", "nonClaims", "reportId", "reportKind", "ruleResults", "schemaVersion", "state", "summary"}},
-		{"json-report-cli-adapter-source", "2", []any{"artifactKind", "exportedSymbols", "format", "generatorId", "language", "nonClaims", "schemaVersion", "source", "sourceFileName", "sourceSha256", "summary"}},
+		{"json-report-cli-adapter-source", "3", []any{"artifactKind", "exportedSymbols", "format", "generatorId", "language", "nonClaims", "schemaVersion", "source", "sourceFileName", "sourceSha256", "summary"}},
 	} {
 		t.Run(item.command, func(t *testing.T) {
 			owner, ok := nativeStructureOwner("proofkit." + item.command + ".output.v" + item.version + ".json-schema")

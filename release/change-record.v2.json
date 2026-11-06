@@ -10,7 +10,7 @@
     },
     {
       "changeId": "proofkit.generated-adapter.native-output",
-      "summary": "The TypeScript generator advances to v3 and json-report-cli-adapter-source emits output contract v2. The generated JSON helper writes arbitrary values to stdout only; command-specific --output remains supported and the runner consumes the native mirror without reopening the path."
+      "summary": "The TypeScript generator advances to v4 and json-report-cli-adapter-source emits output contract v3. The generated JSON helper writes to stdout only, and in-memory JSON values above 32 MiB of canonical UTF-8 are refused before publication or command execution. Command-specific --output remains supported and the runner consumes the native mirror without reopening the path."
     },
     {
       "changeId": "proofkit.cli.scalar-flag-uniqueness",

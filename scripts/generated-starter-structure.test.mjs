@@ -58,12 +58,12 @@ const helpRows = Object.freeze(["stack-preset--help", "stack-preset-h", "json-re
 // macOS can leave the child blocked forever. The bundle rows carry the source
 // change, its digest and its line count; the texts below are adapter source,
 // compared in their JSON string encoding.
-// Observed from the native v3 adapter CLI. Unchanged starter rows still use
+// Observed from the native v4 adapter CLI. Unchanged starter rows still use
 // their frozen predecessor stream or the two declared help deltas below.
 const currentAdapterStdout = new Map([
-  ["adapter-default", "9c835daf76c75a1a5057f71e48883d48edee2c806e4371abed325c3c083bc1dd"],
-  ["adapter-explicit-json", "9c835daf76c75a1a5057f71e48883d48edee2c806e4371abed325c3c083bc1dd"],
-  ["adapter-compact", "c2be9ea4ecf5b95026b0b0d6458059bb710b7a65139d86e20b02001a686c2192"],
+  ["adapter-default", "39b01eb9b79d8787b4617a3d9a39f4b62496f06f2e70b92b39ea585ac7bd7c2a"],
+  ["adapter-explicit-json", "39b01eb9b79d8787b4617a3d9a39f4b62496f06f2e70b92b39ea585ac7bd7c2a"],
+  ["adapter-compact", "61692e9f336dc19a457fbd06169dd5a55465123b284e142a1f06e33617730a7e"],
 ]);
 const declaredStreamDeltas = Object.freeze([Object.freeze({
   id: "PILOT-D10",
@@ -115,8 +115,8 @@ function invoke(row) {
 }
 function bundleSemantics(value) {
   assert.equal(value.artifactKind, "proofkit.json-report-cli-adapter-source");
-  assert.equal(value.schemaVersion, 2);
-  assert.equal(value.generatorId, "proofkit.json-report-cli-adapter-source.typescript.v3");
+  assert.equal(value.schemaVersion, 3);
+  assert.equal(value.generatorId, "proofkit.json-report-cli-adapter-source.typescript.v4");
   assert.equal(value.sourceFileName, "proofkit-json-report-cli-adapter.ts");
   assert.equal(value.language, "typescript"); assert.equal(value.format, "json");
   assert.equal(value.sourceSha256, `sha256:${hash(value.source)}`);
@@ -262,8 +262,8 @@ test("the new adapter stream is exact, scoped and rejects its predecessor identi
     assert.notEqual(currentAdapterStdout.get(row.name), row.stdoutSHA256);
     assert.equal(hash(current), currentAdapterStdout.get(row.name));
     const report = JSON.parse(current);
-    assert.equal(admitsAdapter({...report, schemaVersion: 1}), false);
-    assert.equal(admitsAdapter({...report, generatorId: "proofkit.json-report-cli-adapter-source.typescript.v2"}), false);
+    assert.equal(admitsAdapter({...report, schemaVersion: 2}), false);
+    assert.equal(admitsAdapter({...report, generatorId: "proofkit.json-report-cli-adapter-source.typescript.v3"}), false);
     assert.equal(report.source.includes('input: options.inputMode'), false, "no spawnSync input option");
   }
 });

@@ -322,9 +322,14 @@ do not concurrently modify the publication directory or destination. The
 generated TypeScript runner uses this flag to return the result without
 reopening the output path. Use the generated adapter with the CLI version
 that produced it; its subprocess buffer limit also applies to mirrored output.
-The v3 `writeProofkitJsonReportOutput` helper serializes caller-owned values to
+The v4 `writeProofkitJsonReportOutput` helper serializes caller-owned values to
 stdout only. It rejects a supplied file path before serializing the value;
 command-specific file publication remains owned by the native CLI.
+In-memory values have a 32 MiB canonical UTF-8 budget, including the trailing
+newline and any selected indentation. Normalization alone uses compact layout
+for this bound. Repeated references count by expanded value; small acyclic
+sharing remains valid. Oversized values are refused before process spawn or
+stdout publication.
 
 1. Start from `proofkit/cli-contract.v2.json` when a machine needs the exact
    command, flags, input mode, output mode, scope class, or `agent-route` input
