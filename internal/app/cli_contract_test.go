@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "b633437b8f260567cb82eeaa08df3c76fb1be9d2c8a228de3d43fc30f6c65fe3"
+	cliContractPublicABISHA256               = "21697b82b1a3731ec1d93d564b3dde6a11a0d64848ffa5a894a617374907558e"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -609,7 +609,7 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.producer-policy-self-proof.output.v1.json-schema":               {},
 			"proofkit.migration-parity-admission.input.v1.json-schema":                {},
 			"proofkit.migration-parity-admission.output.v1.json-schema":               {},
-			"proofkit.json-report-cli-adapter-source.output.v1.json-schema":           {},
+			"proofkit.json-report-cli-adapter-source.output.v2.json-schema":           {},
 			"proofkit.selective-gate-plan.input.v1.json-schema":                       {},
 			"proofkit.selective-gate-plan.output.v1.json-schema":                      {},
 			"proofkit.selective-gate-evidence.input.v1.json-schema":                   {},
@@ -1299,7 +1299,7 @@ func TestCLIContractModeSpecificPromises(t *testing.T) {
 	assertCommand(t, commands["requirement-proof-view"], "required", []string{"--empty-local-environment-policy", "--format", "--input", "--input-pointer", "--local-environment-class", "--scope"}, []string{"html", "json", "markdown"})
 	assertCommand(t, commands["requirement-source-view"], "required", []string{"--format", "--input", "--input-pointer"}, []string{"html", "json", "markdown"})
 	assertCommand(t, commands["requirement-spec-tree"], "required", []string{"--input", "--input-pointer"}, []string{"json"})
-	assertCommand(t, commands["requirement-spec-tree-view"], "required", []string{"--format", "--input", "--input-pointer", "--output"}, []string{"html", "json", "markdown"})
+	assertCommand(t, commands["requirement-spec-tree-view"], "required", []string{"--format", "--input", "--input-pointer", "--mirror-output", "--output"}, []string{"html", "json", "markdown"})
 	assertCommand(t, commands["requirement-browser-server"], "required", []string{"--empty-local-environment-policy", "--host", "--input", "--input-pointer", "--local-environment-class", "--open", "--port", "--scope", "--serve", "--session-mode", "--session-timeout-seconds", "--view"}, []string{"json", "server"})
 	assertCommand(t, commands["test-evidence-inventory"], "required", []string{"--input", "--input-pointer", "--normalized-inventory", "--projection"}, []string{"json", "normalized-inventory"})
 	assertCommand(t, commands["workspace-manifest-facts"], "required", []string{"--input", "--input-pointer"}, []string{"json"})
@@ -1794,7 +1794,7 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host <127.0.0.1|::1>] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <graph|slice>] [--serve] [--session-mode <browse|one-shot-question>] [--session-timeout-seconds <1..7200>] --view <coverage|proof|source|spec-tree|workspace>",
 		"requirement-context-compose":    "agentic-proofkit requirement-context-compose --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 		"requirement-proof-resolver":     "agentic-proofkit requirement-proof-resolver --input <path|-> [--input-pointer <pointer>] (--empty-local-environment-policy | --local-environment-class <id>)",
-		"requirement-source-conversion":  "agentic-proofkit requirement-source-conversion --input <path|-> [--baseline <path>] [--input-pointer <pointer>] [--output <path>] --to <flat|grouped>",
+		"requirement-source-conversion":  "agentic-proofkit requirement-source-conversion --input <path|-> [--baseline <path>] [--input-pointer <pointer>] [--output <path> [--mirror-output]] --to <flat|grouped>",
 		"repository-inventory":           "agentic-proofkit repository-inventory --repo-root <path>",
 		"stack-preset":                   "agentic-proofkit stack-preset --preset <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>",
 		"status":                         "agentic-proofkit status [--color <auto|never>] [--format <json|text>] --repo-root <path>",

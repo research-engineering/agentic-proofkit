@@ -73,7 +73,7 @@ func Text(tokens []string) string {
 func ZeroOperandFlags() []string {
 	return []string{
 		"--agent-envelope", "--contract-envelope", "--empty-local-environment-policy", "--help", "--list",
-		"--materialization-manifest", "--normalized-inventory", "--open", "--serve", "--stack-diverse", "--verify", "-h",
+		"--materialization-manifest", "--mirror-output", "--normalized-inventory", "--open", "--serve", "--stack-diverse", "--verify", "-h",
 	}
 }
 

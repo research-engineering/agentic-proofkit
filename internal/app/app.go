@@ -271,6 +271,7 @@ type requirementViewArgs struct {
 	inputPath                   string
 	inputPointer                string
 	localEnvironmentClasses     []string
+	mirrorOutput                bool
 	outputPath                  string
 	scope                       string
 }

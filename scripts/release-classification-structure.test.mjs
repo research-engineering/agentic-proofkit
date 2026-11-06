@@ -207,7 +207,7 @@ test("Markdown-derived row and status admission prevents report egress without r
     ["duplicate-id", base.markdownText + `\n| DONE | ${id} | Note | Synthetic text |`.repeat(2)],
     ["definition-status", base.markdownText.replace("| DONE | PROD-01", `| ${status} | PROD-01`)],
     ["frontier-status", base.markdownText.replace("| DONE | PROD-09", `| ${status} | PROD-09`)],
-    ["unrelated-id", base.markdownText + `\n### Unrelated\n| DONE | ${id} | Note | Synthetic text |`],
+    ["unrelated-id", base.markdownText + `\n### Unrelated\n| Status | ID | Scope | Completion |\n|---|---|---|---|\n| DONE | ${id} | Note | Synthetic text |`],
   ];
   for (const [name, markdownText] of cases) {
     const result = invoke({...row, input: JSON.stringify({...base, markdownText})});

@@ -130,7 +130,7 @@ var nativeBoundaryDirectionDeltas = []string{
 	"self-check/input:compatibilitySummary,nativeSource,rootDefinitionDigest,rootDefinitionRef",
 	"self-check/output:compatibilitySummary,nativeSource,rootDefinitionDigest,rootDefinitionRef",
 	"stack-preset/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"json-report-cli-adapter-source/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"json-report-cli-adapter-source/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"custom-rule-boundary/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"custom-rule-boundary/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"document-lifecycle-boundary/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
@@ -302,6 +302,13 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 		process = clonePublicABIRecord(process)
 		delete(process, "flagGrammar")
 		delete(process, "versionGrammar")
+		priorStdout := priorEnvelope["processContract"].(map[string]any)["stdout"].(string)
+		const mirrorClause = "For commands admitting --mirror-output, that flag requires --output and writes the same bytes to stdout only after successful file publication. "
+		if process["stdout"] == strings.Replace(priorStdout, "Commands do not write stderr on success.", mirrorClause+"Commands do not write stderr on success.", 1) {
+			process["stdout"] = priorStdout
+		} else {
+			return nil, fmt.Errorf("public stdout contract does not declare the exact output mirror behavior")
+		}
 		nextEnvelope["processContract"] = process
 	}
 	if !reflect.DeepEqual(priorEnvelope, nextEnvelope) {
@@ -373,6 +380,15 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 		// Later flag grammar is checked against the dispatcher and public
 		// command projection by TestCLIContractMatchesDispatcherAndHelp.
 		switch name {
+		case "requirement-spec-tree-view":
+			if !reflect.DeepEqual(next["allowedFlags"], []any{"--format", "--input", "--input-pointer", "--mirror-output", "--output"}) ||
+				!reflect.DeepEqual(next["singleOccurrenceFlags"], []any{"--format", "--mirror-output"}) ||
+				!reflect.DeepEqual(next["flagPresenceRequirements"], []any{map[string]any{"flag": "--mirror-output", "requiredFlags": []any{"--output"}}}) {
+				return nil, fmt.Errorf("%s output mirror flags changed without declaration", name)
+			}
+			next["allowedFlags"] = prior["allowedFlags"]
+			next["singleOccurrenceFlags"] = prior["singleOccurrenceFlags"]
+			delete(next, "flagPresenceRequirements")
 		case "adoption-contract-envelope", "pilot-admission", "requirement-proof-view":
 			for _, field := range []string{"flagChoices", "atMostOneOfFlagGroups", "singleOccurrenceFlags"} {
 				if priorValue, present := prior[field]; present {

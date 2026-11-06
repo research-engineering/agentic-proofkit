@@ -123,7 +123,7 @@ func TestBuildAdmitsMarkdownDerivedReportTextBeforeProjection(t *testing.T) {
 		"duplicate":         base + strings.Repeat("\n| DONE | "+id+" | Note | Synthetic text |", 2),
 		"definition-status": strings.Replace(base, "| DONE | PROD-01", "| "+statusText+" | PROD-01", 1),
 		"frontier-status":   strings.Replace(base, "| DONE | PROD-09", "| "+statusText+" | PROD-09", 1),
-		"unrelated-section": base + "\n### Unrelated\n| DONE | " + id + " | Note | Synthetic text |",
+		"unrelated-section": base + "\n### Unrelated\n| Status | ID | Scope | Completion |\n|---|---|---|---|\n| DONE | " + id + " | Note | Synthetic text |",
 	} {
 		t.Run(name, func(t *testing.T) {
 			record, code, err := Build(minimalCloseoutInput(markdown))

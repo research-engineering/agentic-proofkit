@@ -2001,7 +2001,7 @@ func samplePlatformBinaryEntry() string {
 }
 
 func jsonAdapterSmokeStdout(source string, sourceHash string, artifactKind string) []byte {
-	return []byte(`{"schemaVersion":1,"artifactKind":` + quotedJSON(artifactKind) + `,"format":"json","generatorId":"proofkit.json-report-cli-adapter-source.typescript.v2","language":"typescript","source":` + quotedJSON(source) + `,"sourceFileName":"proofkit-json-report-cli-adapter.ts","sourceSha256":` + quotedJSON(sourceHash) + `,"summary":{"exportedSymbolCount":24,"lineCount":600}}`)
+	return []byte(`{"schemaVersion":2,"artifactKind":` + quotedJSON(artifactKind) + `,"format":"json","generatorId":"proofkit.json-report-cli-adapter-source.typescript.v3","language":"typescript","source":` + quotedJSON(source) + `,"sourceFileName":"proofkit-json-report-cli-adapter.ts","sourceSha256":` + quotedJSON(sourceHash) + `,"summary":{"exportedSymbolCount":24,"lineCount":600}}`)
 }
 
 func quotedJSON(value string) string {

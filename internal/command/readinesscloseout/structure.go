@@ -1,6 +1,8 @@
 package readinesscloseout
 
 import (
+	"fmt"
+
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
@@ -39,7 +41,7 @@ func InputStructure() map[string]any {
 		"negatedNonClaimPhrases": texts, "nonClaims": texts, "phraseRules": jsonshape.Array(phrase, 0),
 		"readinessRowPrefixes": texts, "readinessSections": jsonshape.Array(text, 1),
 	}).JSONSchema()
-	schema["description"] = "All thirteen root fields and six frontier fields are required. Definition forbiddenText and phrase directClaimPhrases are optional; present null is rejected. Definitions/rules and ordinary text arrays may be empty; readinessSections is nonempty. Raw RuleIDs are boundedASCII; row IDs and status text trim by native UnicodeWhiteSpace and have no added length bound. Native admission owns NUL/privacy/display-only command/scoped-negation checks, normalized uniqueness for environmentPreconditions/sections/prefixes/suppressors and unique definition/rule IDs. required/forbidden/phrase arrays retain order and duplicates. Raw Markdown may be empty and stays analysis-only; every recognized derived row ID and status passes the same text admission as explicit declarations before any report or error interpolation. Non-exported owner/completion text and unrecognized rows remain analysis-only. Native Build owns row/phrase parsing, classification honesty and dependent report facts; no execution or readiness proof is inferred."
+	schema["description"] = fmt.Sprintf("All thirteen root fields and six frontier fields are required. Definition forbiddenText and phrase directClaimPhrases are optional; present null is rejected. Definitions/rules and ordinary text arrays may be empty; readinessSections is nonempty. Raw RuleIDs are boundedASCII; row IDs and status text trim by native UnicodeWhiteSpace and have no added length bound. Native admission owns NUL/privacy/display-only command/scoped-negation checks, normalized uniqueness for environmentPreconditions/sections/prefixes/suppressors and unique definition/rule IDs. required/forbidden/phrase arrays retain order and duplicates. Raw Markdown may be empty and stays analysis-only; every recognized derived row ID and status passes the same text admission as explicit declarations before any report or error interpolation. Non-exported owner/completion text and unrecognized rows remain analysis-only. Native Build owns row/phrase parsing, classification honesty and dependent report facts; no execution or readiness proof is inferred. Row authority comes only from top-level GFM tables whose first two literal header cells are Status and ID. Tables in code, comments, or block quotes and ordinary prose do not contribute rows. Before parsing, the native owner refuses Markdown above %d bytes, any physical line above %d bytes, or the physical-line count times the widest possible column count above %d cells.", maxPolicyMarkdownBytes, maxPolicyMarkdownLine, maxPotentialPolicyCells)
 	return schema
 }
 

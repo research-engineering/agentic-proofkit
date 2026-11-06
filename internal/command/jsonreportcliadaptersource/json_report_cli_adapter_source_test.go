@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:35874e850c3ffa7830a665f7cd9a9278308e66ac654a6751b9ad71389fa9be6b"
+const expectedTypeScriptSourceSha256 = "sha256:80d2bed711081ca3b92048fed141c91005c1acaf8ae311b2fc65ba4e5c57c4e7"
 const optionsSnapshotStatement = "  const options = snapshotProofkitRunOptions(callerOptions, mode === \"json-no-input\" ? \"none\" : undefined);"
 const unownedOptionsStatement = "  const options = mode === \"json-no-input\" ? {...callerOptions, inputMode: \"none\" as const} : callerOptions;"
 
@@ -194,14 +194,13 @@ func TestGeneratedSourcePreservesCLIExitCodeAsPublicContract(t *testing.T) {
 		"readonly stderr: string;",
 		"export type ProofkitJsonCommandResult",
 		"status: child.status",
-		"stdout: child.stdout",
+		"stdout: hideStdout ? \"\" : child.stdout",
 		"stderr: child.stderr",
-		"value: parseProofkitJsonStrict(jsonText)",
+		"value: parseProofkitJsonStrict(child.stdout)",
 		"return readProofkitJsonCommandResult<T>(commandRoute, runProofkitCommand(commandRoute, input, args, options));",
-		"function outputPathFromArgs(args: readonly string[])",
-		"function admitWritableOutputTarget",
+		"canonicalArgs.push(\"--mirror-output\")",
 		"prepared = prepareOutputArgs(options.cwd, [...args])",
-		"if (child.status !== 0 && child.stdout.trim().length === 0) {",
+		"if (child.status !== 0 && (hideStdout || child.stdout.trim().length === 0)) {",
 	} {
 		if !strings.Contains(source, required) {
 			t.Fatalf("generated source does not preserve CLI process contract token %q", required)
@@ -360,12 +359,11 @@ func TestGeneratedTypeScriptAdapterExecutesCoreSemantics(t *testing.T) {
 				"text symlink parent cwd cwd-components: filesystem component order differs from direct Node spawn",
 				"no-input symlink parent cwd cwd-components: filesystem component order differs from direct Node spawn",
 			}},
-			{"native output root", "const root = realpathSync.native(cwd);", "const root = realpathSync(cwd);", []string{
+			{"native output root", "const admittedCwd = realpathSync.native(cwd);", "const admittedCwd = realpathSync(cwd);", []string{
 				"json symlink parent output cwd-components: output escaped the physical Node cwd",
 				"text symlink parent output cwd-components: output escaped the physical Node cwd",
-				"writer symlink parent output cwd-components:",
 			}},
-			{"admitted execution root", "cwd: target.cwd", "cwd", []string{
+			{"admitted execution root", "cwd: admittedCwd", "cwd", []string{
 				"json admitted output cwd: output context reread a mutable cwd alias",
 				"text admitted output cwd: output context reread a mutable cwd alias",
 			}},
@@ -452,8 +450,8 @@ func exportedDeclarations(source string) []string {
 
 const fakeProofkitBinarySource = `#!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { fstatSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { fstatSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const commandIndex = process.argv[2] === "--json-layout" ? 4 : 2;
 const command = process.argv[commandIndex];
@@ -472,6 +470,11 @@ if (command === "adopt" && process.argv[commandIndex + 1] === "plan") {
 if (command === "early-refusal") {
   process.stderr.write("early refusal\n");
   process.exit(2);
+}
+function publishFixture(path, content) {
+  mkdirSync(dirname(path), {recursive: true});
+  writeFileSync(path, content);
+  if (process.argv.includes("--mirror-output")) process.stdout.write(content);
 }
 let input = "";
 process.stdin.on("data", (chunk) => {
@@ -514,13 +517,13 @@ process.stdin.on("end", () => {
       process.stderr.write("missing output flag");
       process.exit(2);
     }
-    writeFileSync(process.argv[outputIndex + 1], JSON.stringify({schemaVersion: 1, state: "passed", outputFile: true}) + "\n");
+    publishFixture(process.argv[outputIndex + 1], JSON.stringify({schemaVersion: 1, state: "passed", outputFile: true}) + "\n");
     process.exit(0);
   }
   if (command === "text-pass") {
     const outputIndex = process.argv.indexOf("--output");
     if (outputIndex !== -1 && process.argv[outputIndex + 1] !== undefined) {
-      writeFileSync(process.argv[outputIndex + 1], "text output file");
+      publishFixture(process.argv[outputIndex + 1], "text output file");
       process.exit(0);
     }
     process.stdout.write("text result");
@@ -530,6 +533,7 @@ process.stdin.on("end", () => {
     process.stderr.write("text process failure");
     process.exit(2);
   }
+  if (command === "missing-output-mirror") process.exit(0);
   if (command === "json-no-input") {
     if (process.argv.includes("--input")) {
       process.stderr.write("unexpected input flag");
@@ -799,11 +803,22 @@ assert.equal(accessorExecutions, 0, "stable JSON must never execute accessors");
 let stdout = "";
 writeProofkitJsonReportOutput({z: 1, a: true}, null, {writeStdout: (value) => { stdout += value; }});
 assert.equal(stdout, "{\n  \"a\": true,\n  \"z\": 1\n}\n");
-assert.throws(() => writeProofkitJsonReportOutput({ok: true}, "missing-cwd.json"), /cwd is required/);
-writeFileSync(repositoryRoot + "/atomic.json", "old");
-writeProofkitJsonReportOutput({z: 1, a: true}, "atomic.json", {cwd: repositoryRoot});
-assert.equal(readFileSync(repositoryRoot + "/atomic.json", "utf8"), "{\n  \"a\": true,\n  \"z\": 1\n}\n");
-assert.deepEqual(readdirSync(repositoryRoot).filter((name) => name.includes(".tmp-")), []);
+{
+  mkdirSync(join(repositoryRoot, ".git"));
+  const protectedPath = join(repositoryRoot, ".git/config");
+  writeFileSync(protectedPath, "metadata sentinel");
+  let reads = 0;
+  const value = new Proxy({}, {ownKeys() { reads++; return []; }});
+  for (const path of [".git/config", "new-helper-output/result.json"]) {
+    assert.throws(() => writeProofkitJsonReportOutput(value, path, {
+      cwd: repositoryRoot,
+      writeStdout() { assert.fail("refused output reached stdout"); },
+    }), /writes only to stdout/);
+  }
+  assert.equal(reads, 0, "an unsupported sink must be rejected before serialization");
+  assert.equal(readFileSync(protectedPath, "utf8"), "metadata sentinel");
+  assert.equal(existsSync(join(repositoryRoot, "new-helper-output")), false);
+}
 
 assert.deepEqual(parseProofkitJsonStrict("{\"a\":1,\"b\":[true,null]}"), {a: 1, b: [true, null]});
 assert.deepEqual(parseProofkitJsonStrict("{\"a\":1.25,\"b\":1e-3}"), {a: 1.25, b: 0.001});
@@ -911,41 +926,14 @@ assert.throws(
 assert.equal(existsSync(outsideRoot + "/absolute.json"), false);
 assert.equal(existsSync(outsideRoot + "/traversal.json"), false);
 
-mkdirSync(repositoryRoot + "/canonical-parent");
-symlinkSync("canonical-parent", repositoryRoot + "/inside-parent-link", "dir");
-assert.throws(
-  () => runProofkitJsonCommand(
-    "requirement-spec-tree-view",
-    {ok: true},
-    ["--output", "inside-parent-link/canonical.json"],
-    {binaryPath: fakeProofkitPath, cwd: repositoryRoot},
-  ),
-  /non-symlink directories/,
-);
-assert.equal(existsSync(repositoryRoot + "/canonical-parent/canonical.json"), false);
-
-symlinkSync("../outside", repositoryRoot + "/outside-parent-link", "dir");
-assert.throws(
-  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "outside-parent-link/escaped.json"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
-  /non-symlink directories/,
-);
-assert.equal(existsSync(outsideRoot + "/escaped.json"), false);
-writeFileSync(outsideRoot + "/symlink-target.json", "unchanged");
-symlinkSync("../outside/symlink-target.json", repositoryRoot + "/symlink-output.json");
-assert.throws(
-  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "symlink-output.json"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
-  /regular non-symlink file/,
-);
-assert.throws(
-  () => writeProofkitJsonReportOutput({ok: true}, "symlink-output.json", {cwd: repositoryRoot}),
-  /regular non-symlink file/,
-);
-assert.equal(readFileSync(outsideRoot + "/symlink-target.json", "utf8"), "unchanged");
-mkdirSync(repositoryRoot + "/nonregular-output");
-assert.throws(
-  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "nonregular-output"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
-  /regular non-symlink file/,
-);
+{
+  const options = {binaryPath: fakeProofkitPath, cwd: repositoryRoot};
+  const stalePath = "stale-output.json";
+  writeFileSync(join(repositoryRoot, stalePath), '{"forged":true}\n');
+  for (const run of [runProofkitJsonCommand, runProofkitTextCommand]) {
+    assert.throws(() => run("missing-output-mirror", {}, ["--output", stalePath], options), /did not return the published output/);
+  }
+}
 
 const text = runProofkitTextCommand("text-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(text.status, 0);
@@ -955,6 +943,8 @@ const textOutput = runProofkitTextCommand("text-pass", {}, ["--output", "proofki
 assert.equal(textOutput.status, 0);
 assert.equal(textOutput.stdout, "");
 assert.equal(textOutput.text, "text output file");
+const explicitMirror = runProofkitTextCommand("text-pass", {}, ["--output", "explicit.txt", "--mirror-output"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
+assert.equal(explicitMirror.stdout, explicitMirror.text);
 const nestedTextOutput = runProofkitTextCommand("text-pass", {}, ["--output", "new-parent/nested-output.txt"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(nestedTextOutput.status, 0);
 assert.equal(nestedTextOutput.text, "text output file");
@@ -1144,13 +1134,6 @@ for (const prefix of ["cwd-components", semanticRoot]) {
     assert.equal(readFileSync(decoy, "utf8"), sentinel, "output escaped the physical Node cwd");
     if (kind === "json") assert.deepEqual(result.value, JSON.parse(readFileSync(actual, "utf8")));
     else assert.equal(result.text, readFileSync(actual, "utf8"));
-  });
-  snapshotCase("writer symlink parent output " + prefix, () => {
-    const name = "physical-writer.json", actual = join(expectedCwd, name), decoy = join(semanticRoot, name);
-    writeFileSync(decoy, "outside sentinel");
-    writeProofkitJsonReportOutput({physical: true}, name, {cwd});
-    assert.deepEqual(JSON.parse(readFileSync(actual, "utf8")), {physical: true});
-    assert.equal(readFileSync(decoy, "utf8"), "outside sentinel", "writer escaped the physical Node cwd");
   });
 }
 const replacementLeaf = join(semanticRoot, "replacement", "leaf");

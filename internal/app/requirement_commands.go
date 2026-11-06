@@ -122,6 +122,8 @@ func parseRequirementViewArgs(command string, args []string) (requirementViewArg
 			}
 			options.format = args[index+1]
 			index++
+		case "--mirror-output":
+			options.mirrorOutput = true
 		case "--output":
 			if command != "requirement-spec-tree-view" {
 				return requirementViewArgs{}, fmt.Errorf("--output is valid only for requirement-spec-tree-view")
@@ -230,48 +232,58 @@ func writeCoverageView(input any, options requirementViewArgs, stdout io.Writer,
 func writeSpecTreeView(input any, options requirementViewArgs, stdout io.Writer, stderr io.Writer) int {
 	if options.format == "markdown" {
 		output, exitCode, err := requirementspectree.BuildViewMarkdown(input)
-		return writeViewText(output, exitCode, err, options.outputPath, stdout, stderr)
+		return writeViewText(output, exitCode, err, options, stdout, stderr)
 	}
 	if options.format == "html" {
 		output, exitCode, err := requirementspectree.BuildViewHTML(input)
-		return writeViewText(output, exitCode, err, options.outputPath, stdout, stderr)
+		return writeViewText(output, exitCode, err, options, stdout, stderr)
 	}
 	output, exitCode, err := requirementspectree.BuildViewJSON(input)
 	if options.outputPath != "" {
-		return writeViewJSON(output, exitCode, err, options.outputPath, jsonLayoutFromWriter(stdout), stderr)
+		return writeViewJSON(output, exitCode, err, options, stdout, stderr)
 	}
 	return writeJSON(output, exitCode, err, stdout, stderr)
 }
 
-func writeViewJSON(output any, exitCode int, err error, outputPath string, layout stablejson.Layout, stderr io.Writer) int {
+func writeViewJSON(output any, exitCode int, err error, options requirementViewArgs, stdout, stderr io.Writer) int {
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	bytes, err := stablejson.MarshalLayout(output, layout)
+	bytes, err := stablejson.MarshalLayout(output, jsonLayoutFromWriter(stdout))
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	if err := writeRepoRelativeOutputFile(filepath.FromSlash(outputPath), bytes); err != nil {
+	if err := writeRepoRelativeOutputFile(filepath.FromSlash(options.outputPath), bytes); err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	return exitCode
+	return mirrorPublishedOutput(bytes, exitCode, options.mirrorOutput, stdout, stderr)
 }
 
-func writeViewText(output string, exitCode int, err error, outputPath string, stdout io.Writer, stderr io.Writer) int {
+func writeViewText(output string, exitCode int, err error, options requirementViewArgs, stdout io.Writer, stderr io.Writer) int {
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	if outputPath == "" {
+	if options.outputPath == "" {
 		return writeText(output, exitCode, nil, stdout, stderr)
 	}
-	nativePath := filepath.FromSlash(outputPath)
-	if err := writeRepoRelativeOutputFile(nativePath, []byte(output)); err != nil {
+	content := []byte(output)
+	if err := writeRepoRelativeOutputFile(filepath.FromSlash(options.outputPath), content); err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
+	}
+	return mirrorPublishedOutput(content, exitCode, options.mirrorOutput, stdout, stderr)
+}
+
+func mirrorPublishedOutput(content []byte, exitCode int, mirror bool, stdout, stderr io.Writer) int {
+	if mirror {
+		if err := writeAll(stdout, content); err != nil {
+			writeDiagnostic(stderr, err)
+			return 1
+		}
 	}
 	return exitCode
 }

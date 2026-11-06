@@ -2574,11 +2574,11 @@ func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedS
 	if err != nil {
 		return fmt.Errorf("json adapter source smoke stdout must be one JSON report: %w; stdout=%s", err, result.Stdout)
 	}
-	if report.SchemaVersion != 1 {
-		return fmt.Errorf("schemaVersion=%d, want 1", report.SchemaVersion)
-	}
 	if report.ArtifactKind != "proofkit.json-report-cli-adapter-source" {
 		return fmt.Errorf("artifactKind=%s, want proofkit.json-report-cli-adapter-source", report.ArtifactKind)
+	}
+	if report.SchemaVersion != jsonreportcliadaptersource.BundleSchemaVersion {
+		return fmt.Errorf("schemaVersion=%d, want %d", report.SchemaVersion, jsonreportcliadaptersource.BundleSchemaVersion)
 	}
 	if report.Language != "typescript" {
 		return fmt.Errorf("language=%s, want typescript", report.Language)

@@ -24,6 +24,8 @@ github.com/rhysd/actionlint v1.7.12 h1:vQ4GeJN86C0QH+gTUQcs8McmK62OLT3kmakPMtEWY
 github.com/rhysd/actionlint v1.7.12/go.mod h1:krOUhujIsJusovkaYzQ/VNH8PFexjNKqU0q5XI/4w+g=
 github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
 github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
+github.com/yuin/goldmark/v2 v2.1.15 h1:pbpN8gBduyEjATzLcsZ5pEssSKRiWf//H2MtVl3sd2I=
+github.com/yuin/goldmark/v2 v2.1.15/go.mod h1:G6M4/qOFtfn01/o14BU1UR2Lo5N3S9Qo7xCuz/sHjGQ=
 go.yaml.in/yaml/v3 v3.0.6 h1:zcDfvjXEqTQmpjniUBLc91xYJMB2c4QOFxEF/LCEckM=
 go.yaml.in/yaml/v3 v3.0.6/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
 go.yaml.in/yaml/v4 v4.0.0-rc.3 h1:3h1fjsh1CTAPjW7q/EMe+C8shx5d8ctzZTrLcs/j8Go=

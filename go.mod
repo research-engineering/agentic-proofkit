@@ -15,6 +15,7 @@ tool (
 
 require (
 	github.com/mattn/go-isatty v0.0.24
+	github.com/yuin/goldmark/v2 v2.1.15
 	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/mod v0.42.0
 	golang.org/x/net v0.62.0

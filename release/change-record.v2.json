@@ -5,6 +5,14 @@
   "changeClass": "breaking",
   "breakingChanges": [
     {
+      "changeId": "proofkit.readiness-closeout.policy-table-boundary",
+      "summary": "Readiness closeout classifies rows only from top-level GFM tables with literal Status and ID header cells. Prose, code examples, and quoted tables do not contribute rows. Valid optional table edges and sparse body rows remain meaningful; Markdown parsing has explicit document, line and cell budgets. The JSON wire shape is unchanged."
+    },
+    {
+      "changeId": "proofkit.generated-adapter.native-output",
+      "summary": "The TypeScript generator advances to v3 and json-report-cli-adapter-source emits output contract v2. The generated JSON helper writes arbitrary values to stdout only; command-specific --output remains supported and the runner consumes the native mirror without reopening the path."
+    },
+    {
       "changeId": "proofkit.python-wheel.minimum-python",
       "summary": "Python wheels declare Requires-Python >=3.11 instead of >=3.9, so installers on Python 3.9 and 3.10 no longer select them. The required installed-wheel minimum smoke runs CPython 3.11.0 with a checksum-pinned pip 26.2.1. CLI contract identities are unchanged."
     },
@@ -194,6 +202,8 @@
   "migration": {
     "required": true,
     "steps": [
+      "Put readiness statuses and IDs in top-level GFM tables with a delimiter row and Status and ID as the first two header cells; do not encode policy rows as prose or code examples.",
+      "Regenerate TypeScript adapters using the installed Proofkit CLI. For supported Proofkit commands pass --output to the command runner instead of passing a file path to writeProofkitJsonReportOutput.",
       "Run the Python wheel on Python 3.11 or later; Python 3.9 and 3.10 environments must keep 0.16.0 or upgrade the interpreter.",
       "Refresh every copy of proofkit/cli-contract.v2.json and every pinned contractId that this record names, compile each variant schema as its own document; before embedding a variant elsewhere, inline its shared- $defs and also carry its remaining root $defs, which the pilot-admission, adoption-contract-envelope pilot and deployment-evidence-admission variants reference, and raise contract read limits to at least 8 MiB.",
       "Record proofNodeDigest from the witness-scheduler-plan v3 report in every proof receipt and re-admit receipts; v1 receipts are refused. Consumers counting repeated parallel-conflict messages must instead use the count of distinct emitted causes.",

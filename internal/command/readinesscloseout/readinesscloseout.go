@@ -329,69 +329,6 @@ func buildReport(input closeoutInput) (report.Record, int, error) {
 	return record, exitCode, nil
 }
 
-func parseRows(markdownText string) (parsedRows, error) {
-	rowsByID := map[string]backlogRow{}
-	order := []string{}
-	duplicates := []string{}
-	currentSection := ""
-	lines := strings.Split(markdownText, "\n")
-	for index, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "### ") {
-			currentSection = strings.TrimSpace(strings.TrimPrefix(trimmed, "### "))
-		}
-		if !strings.HasPrefix(trimmed, "|") {
-			continue
-		}
-		cells := strings.Split(trimmed, "|")
-		for cellIndex := range cells {
-			cells[cellIndex] = strings.TrimSpace(cells[cellIndex])
-		}
-		if len(cells) < 6 {
-			continue
-		}
-		status := cells[1]
-		rawID := cells[2]
-		ownerScope := cells[3]
-		completionCondition := cells[4]
-		if !statusPattern.MatchString(status) || !rowIDPattern.MatchString(rawID) {
-			continue
-		}
-		lineNumber := index + 1
-		context := fmt.Sprintf("readiness closeout markdown line %d", lineNumber)
-		id, err := rowID(rawID, context+".rowId")
-		if err != nil {
-			return parsedRows{}, err
-		}
-		status, err = statusText(status, context+".status")
-		if err != nil {
-			return parsedRows{}, err
-		}
-		if existing, ok := rowsByID[id]; ok {
-			duplicates = append(duplicates, fmt.Sprintf("%s appears more than once in backlog tables at lines %d and %d", id, existing.LineNumber, lineNumber))
-			continue
-		}
-		rowsByID[id] = backlogRow{
-			CompletionCondition: completionCondition,
-			LineNumber:          lineNumber,
-			OwnerScope:          ownerScope,
-			RowID:               id,
-			Section:             currentSection,
-			Status:              status,
-		}
-		order = append(order, id)
-	}
-	rows := make([]backlogRow, 0, len(order))
-	for _, rowID := range order {
-		rows = append(rows, rowsByID[rowID])
-	}
-	sort.Slice(rows, func(left int, right int) bool {
-		return rows[left].RowID < rows[right].RowID
-	})
-	sort.Strings(duplicates)
-	return parsedRows{DuplicateFailures: duplicates, Rows: rows}, nil
-}
-
 func frontierChecks(input closeoutInput, rows []backlogRow, rowsByID map[string]backlogRow) []string {
 	failures := []string{}
 	closeoutRow, ok := rowsByID[input.Frontier.RowID]
