@@ -145,10 +145,11 @@ environment already places it on `PATH`; npm examples use explicit offline
 resolution.
 
 <!-- proofkit:platform-python:start -->
-Supported binary targets are macOS 15 or later on arm64 or x64, executed by
-required CI on the GitHub-hosted `macos-15` and `macos-15-intel` runners. Darwin
-binaries declare a macOS 13.0 minimum in their Mach-O build metadata; macOS 13
-and 14 are binary-compatible by that metadata only, not executed or verified.
+macOS 15 or later on arm64 is verified by required CI on the GitHub-hosted
+`macos-15` runner. Darwin x64 binaries are cross-built and packaged without
+native Intel macOS CI qualification. Both Darwin targets declare a macOS 13.0
+minimum in their Mach-O build metadata; macOS 13 and 14 are binary-compatible
+by that metadata only, not executed or verified.
 Linux manylinux 2.17 or later is supported on arm64 or x64, executed by
 required CI on the GitHub-hosted `ubuntu-24.04-arm` and `ubuntu-24.04` runners.
 The manylinux 2.17 floor is the wheel-tag declaration; CI does not execute a

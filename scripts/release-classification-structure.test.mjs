@@ -53,6 +53,7 @@ function expectedHelp(row) {
     `root fields (${variant}): artifactProof{}, channel, consumerContract{}, nonClaims[], package{}, registryAuthority, releaseId, rollback{}, rolloutClaim, schemaVersion=${i + 1}`)
     : ["root fields: environmentPreconditions[], exactCommand, frontier{}, inputDefinitions[], markdownText, negatedNonClaimPhrases[], nonClaims[], phraseRules[], readinessRowPrefixes[], readinessSections[], reportId, runIdentity"];
   return row.predecessorHelp.replace(before, "Input schema summary:\n  " + [...summaries, ...navigation].join("\n  "))
+    .replace("\n\nInput schema summary:", "\n\nFlag constraints:\n  May be specified once: --input\n  May be specified once: --input-pointer\n\nInput schema summary:")
     .replace("  CLI command routing, root JSON shapes,", "  CLI command routing, structural JSON Schemas,");
 }
 function meanings(command, input, output, exitCode) {

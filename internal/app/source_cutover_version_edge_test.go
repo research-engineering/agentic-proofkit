@@ -370,11 +370,19 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 			delete(prior, direction)
 			delete(next, direction)
 		}
-		// Later flag grammar is checked against the dispatcher and public
+		// Scalar flag uniqueness is a later, global CLI policy. Its exact ABI
+		// is pinned separately and TestCLIRejectsRepeatedScalarFlagsBeforeInput
+		// exercises every scalar through the dispatcher.
+		if previous, present := prior["singleOccurrenceFlags"]; present {
+			next["singleOccurrenceFlags"] = previous
+		} else {
+			delete(next, "singleOccurrenceFlags")
+		}
+		// Other later grammar is checked against the dispatcher and public
 		// command projection by TestCLIContractMatchesDispatcherAndHelp.
 		switch name {
 		case "adoption-contract-envelope", "pilot-admission", "requirement-proof-view":
-			for _, field := range []string{"flagChoices", "atMostOneOfFlagGroups", "singleOccurrenceFlags"} {
+			for _, field := range []string{"flagChoices", "atMostOneOfFlagGroups"} {
 				if priorValue, present := prior[field]; present {
 					next[field] = priorValue
 				} else {
