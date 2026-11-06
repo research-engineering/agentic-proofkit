@@ -76,10 +76,11 @@ Each required CLI binary must expose complete Go build info from the immutable
 bytes used for its subject digest. Admission checks the unique ELF/Mach-O
 build-info section against the supported toolchain's canonical inline encoding,
 including module framing and every decoded record. Unreadable, unsupported or
-noncanonical metadata rejects admission; a complete section with no dependency
-modules admits an empty runtime inventory. This does not authenticate the
-metadata or prove dependency reachability. Package and wheel subjects do not
-require Go build info.
+noncanonical metadata rejects admission. Each admitted binary records the Go
+standard library at its recorded Go version, even when it has no external
+dependency modules. This does not authenticate the metadata or prove
+dependency reachability. Package and wheel subjects do not require Go build
+info.
 
 Workflow-local scripts must not own a divergent release manifest or SBOM
 algorithm. PyPI wheels may be built and archived as candidate artifacts before
