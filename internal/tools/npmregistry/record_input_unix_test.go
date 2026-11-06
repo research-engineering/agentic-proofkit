@@ -57,3 +57,39 @@ func TestRegistryInputsRefuseFIFOWithoutBlocking(t *testing.T) {
 		})
 	}
 }
+
+func TestRegistryArgumentsPreserveSymlinkTraversalOrder(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "target")
+	if err := os.MkdirAll(filepath.Join(target, "sub"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("target/sub", filepath.Join(root, "jump")); err != nil {
+		t.Fatal(err)
+	}
+	const pack = `{"name":"@example/cli","version":"1.2.3","filename":"example-cli-1.2.3.tgz","integrity":"sha512-expected","shasum":"abc"}`
+	const lock = `{"lockfileVersion":3,"packages":{"":{"dependencies":{"@example/cli":"1.2.3"}},"node_modules/@example/cli":{"version":"1.2.3","resolved":"https://registry.npmjs.org/@example/cli/-/cli-1.2.3.tgz","integrity":"sha512-expected","bin":{"cli":"dist/cli"}}}}`
+	for name, content := range map[string]string{"candidate.json": "[" + pack + "]", "lock.json": lock, "raw.json": `{"@example/cli":` + pack + `}`} {
+		writeFixture(t, filepath.Join(root, name), content)
+		writeFixture(t, filepath.Join(target, name), strings.Replace(content, "sha512-expected", "sha512-selected", 1))
+	}
+	argument := func(name string) string { return root + "/jump/../" + name }
+	candidate, lockPath := filepath.Join(root, "candidate.json"), filepath.Join(root, "lock.json")
+	if err := verifyConsumerLock(candidate, lockPath); err != nil {
+		t.Fatalf("regular control: %v", err)
+	}
+	if err := verifyConsumerLock(argument("candidate.json"), argument("lock.json")); err != nil {
+		t.Fatalf("selected regular pair: %v", err)
+	}
+	if verifyConsumerLock(argument("candidate.json"), lockPath) == nil || verifyConsumerLock(candidate, argument("lock.json")) == nil {
+		t.Fatal("an argv path selected the lexically cleaned sibling instead of the designated file")
+	}
+	output := filepath.Join(root, "captured.json")
+	if err := capturePackReports(output, []string{argument("raw.json")}); err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(output)
+	if err != nil || !strings.Contains(string(content), "sha512-selected") || strings.Contains(string(content), "sha512-expected") {
+		t.Fatalf("capture did not preserve the selected file identity: %v", err)
+	}
+}

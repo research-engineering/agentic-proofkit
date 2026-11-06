@@ -71,7 +71,8 @@ func capturePackReports(outputPath string, inputPaths []string) error {
 	seenNames := map[string]struct{}{}
 	seenFiles := map[string]struct{}{}
 	for _, inputPath := range inputPaths {
-		content, err := artifactfile.ReadBounded(filepath.Dir(inputPath), filepath.Base(inputPath), maxPackRecordBytes)
+		root, name := splitInputPath(inputPath)
+		content, err := artifactfile.ReadBounded(root, name, maxPackRecordBytes)
 		if err != nil {
 			return fmt.Errorf("read npm pack report: %w", err)
 		}
@@ -93,6 +94,15 @@ func capturePackReports(outputPath string, inputPaths []string) error {
 		return records[left].Name < records[right].Name
 	})
 	return writeJSON(outputPath, records)
+}
+
+func splitInputPath(path string) (string, string) {
+	// Preserve directory traversal semantics, including symlink/.. ordering.
+	root, name := filepath.Split(path)
+	if root == "" {
+		root = "."
+	}
+	return root, name
 }
 
 func run(root string) error {

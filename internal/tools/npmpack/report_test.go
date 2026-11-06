@@ -23,7 +23,7 @@ func TestDecodeNPM12ReportRequiresOneIdentityBoundRecord(t *testing.T) {
 		{
 			name:  "legacy array root",
 			value: `[{"filename":"package.tgz","integrity":"sha512-value","name":"@research-engineering/agentic-proofkit","shasum":"abc","version":"1.2.3"}]`,
-			want:  "cannot unmarshal array",
+			want:  "invalid JSON value type",
 		},
 		{
 			name:  "mismatched key",
@@ -52,5 +52,14 @@ func TestDecodeNPM12ReportRequiresOneIdentityBoundRecord(t *testing.T) {
 				t.Fatalf("DecodeNPM12Report() error = %v, want %q", err, test.want)
 			}
 		})
+	}
+}
+
+func TestDecodeNPM12ReportDoesNotExposeUnadmittedKeysInTypeErrors(t *testing.T) {
+	const key = "UNADMITTED_KEY_MARKER"
+	const input = `{"` + key + `":{"version":7}}`
+	_, err := DecodeNPM12Report(strings.NewReader(input), int64(len(input)))
+	if err == nil || !strings.Contains(err.Error(), "invalid JSON value type") || strings.Contains(err.Error(), key) {
+		t.Fatalf("expected a bounded JSON type diagnostic without the caller key, got %v", err)
 	}
 }
