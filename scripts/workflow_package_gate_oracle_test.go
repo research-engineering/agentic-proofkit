@@ -21,11 +21,11 @@ const mergeSatisfyingProducerEnv = "PROOFKIT_MERGE_SATISFYING_PRODUCER"
 
 const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild current && ./dist/agentic-proofkit --help >/dev/null && go run ./internal/tools/pythonpackage build-current && go run ./internal/tools/pythonpackage verify-current"
 const setupVerifiedNPMActionSHA256 = "e5b863b6c0c9fac02ed3e00708d760cb3bc3ef6dc33c138b6ca13670d5895339"
-const ciSourceQualityStepInventorySHA256 = "a705023e9dc89284b1e8a61b29bd2ef2b87fcc3a68f1681b8afc09b9934276e7"
+const ciSourceQualityStepInventorySHA256 = "2cb3dba2f5ead2be05161f591d5b7b060395b50a68b507e67b1c6451d13a1da6"
 const ciBrowserRuntimeStepInventorySHA256 = "c157f7ee933119596eecbce7dd03478c84389736fd99248ef884e338f24d9ee4"
 const ciBrowserVisualStepInventorySHA256 = "6f19d5ff18a70bcff69441bdbf8a783b8e0ec9456c971cfb4df3c75e688b741a"
 const ciBrowserMatrixStepInventorySHA256 = "05461faaee041a60936e63dfd20484068ac04d1b91504fbddad78fec80056c6f"
-const releaseCandidateStepInventorySHA256 = "803d41ceed67d60ff8622716c7d6afcef13efac5ff63762646b8e8462921a1f7"
+const releaseCandidateStepInventorySHA256 = "90a1509323c1899e2463a9285f241b62c0758d6c5837f22ffe1bf62581b73a21"
 
 type packageGateWorkflowExpectation struct {
 	label                              string
@@ -2083,7 +2083,7 @@ func platformSmokeSetupSteps() []githubStep {
 		},
 		{
 			Name: "Setup Python",
-			Uses: "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+			Uses: pinnedSetupPythonUses,
 			With: map[string]any{"python-version": "3.15.0"},
 		},
 	}

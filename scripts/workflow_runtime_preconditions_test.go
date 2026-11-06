@@ -29,8 +29,8 @@ func TestCISourceQualityInstallsPythonBeforeLifecycleTests(t *testing.T) {
 		t.Fatalf("Setup Python index=%d must precede Go tests index=%d", setupIndex, testIndex)
 	}
 	setup := job.Steps[setupIndex]
-	if setup.Uses != "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" {
-		t.Fatalf("Setup Python uses=%q, want pinned actions/setup-python v7.0.0", setup.Uses)
+	if setup.Uses != pinnedSetupPythonUses {
+		t.Fatalf("Setup Python uses=%q, want %q", setup.Uses, pinnedSetupPythonUses)
 	}
 	if got := withString(setup.With, "python-version"); got != "3.15.0" {
 		t.Fatalf("Setup Python python-version=%q, want 3.15.0", got)
