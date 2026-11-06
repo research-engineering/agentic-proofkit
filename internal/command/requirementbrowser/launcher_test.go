@@ -162,6 +162,7 @@ func TestOneShotKeepsBrowserLauncherAndTerminalOutcomesDistinct(t *testing.T) {
 					return result, nil
 				case "submitted before failure":
 					terminal.TryCommit(submitted)
+					return nil, startError
 				case "submitted while launcher is running":
 					terminal.TryCommit(submitted)
 					return make(chan error), nil
