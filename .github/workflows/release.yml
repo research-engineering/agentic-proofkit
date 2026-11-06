@@ -285,7 +285,8 @@ jobs:
     needs: publish-readiness
     if: ${{ github.event_name == 'push' || inputs.mode == 'publish' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # npm can accept a publish before its scan makes the package installable.
+    timeout-minutes: 30
     environment: npm-production
     permissions:
       contents: read
@@ -384,19 +385,20 @@ jobs:
             report_package_name="${package_name#@}"
             report_package_name="${report_package_name//\//-}"
             report="artifacts/registry/pack-${report_package_name}.json"
-            for attempt in $(seq 1 30); do
+            for attempt in $(seq 1 80); do
               if npm pack "${package_name}@${package_version}" \
                 --json \
+                --prefer-online \
                 --registry="${REGISTRY_URL}" \
                 --pack-destination artifacts/registry > "$report"; then
                 break
               fi
-              if [ "$attempt" = "30" ]; then
-                echo "registry artifact ${package_name}@${package_version} was not available after bounded propagation wait" >&2
+              if [ "$attempt" = "80" ]; then
+                echo "registry artifact ${package_name}@${package_version} was not available after the bounded processing wait; check the registry before rerunning" >&2
                 exit 1
               fi
-              echo "waiting for registry artifact ${package_name}@${package_version} propagation, attempt ${attempt}/30" >&2
-              sleep 10
+              echo "waiting for registry artifact ${package_name}@${package_version} availability, attempt ${attempt}/80" >&2
+              sleep 15
             done
           done < artifacts/registry/package-names.txt
           go run ./internal/tools/npmregistry capture-pack-reports \
@@ -417,6 +419,8 @@ jobs:
           install_cache="$consumer/.npm-install-cache"
           for attempt in $(seq 1 30); do
             if npm install "${package_name}@${package_version}" \
+              --package-lock-only \
+              --save-exact \
               --ignore-scripts \
               --cache "$install_cache" \
               --prefer-online \
@@ -432,6 +436,10 @@ jobs:
             echo "waiting for registry install ${package_name}@${package_version} propagation, attempt ${attempt}/30" >&2
             sleep 10
           done
+          go -C "$repo_root" run ./internal/tools/npmregistry verify-consumer-lock \
+            "$repo_root/artifacts/package/npm-pack.json" "$consumer/package-lock.json"
+          npm ci --ignore-scripts --cache "$install_cache" --no-audit --no-fund \
+            --registry="${REGISTRY_URL}"
           npm audit signatures \
             --registry="${REGISTRY_URL}" > registry-audit-signatures.txt
           ./node_modules/.bin/agentic-proofkit --help > registry-install-help.txt

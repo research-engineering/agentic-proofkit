@@ -52,6 +52,8 @@ func main() {
 		} else {
 			err = capturePackReports(os.Args[2], os.Args[3:])
 		}
+	} else if len(os.Args) == 4 && os.Args[1] == "verify-consumer-lock" {
+		err = verifyConsumerLock(os.Args[2], os.Args[3])
 	} else if len(os.Args) != 1 {
 		err = fmt.Errorf("unsupported npm registry evidence argument")
 	} else {

@@ -451,7 +451,7 @@ func validateReleaseWorkflowExpressions(workflow githubWorkflow) error {
 			"candidate":         {timeoutMinutes: 45},
 			"publish-readiness": {timeoutMinutes: 10},
 			"publish": {
-				timeoutMinutes:     20,
+				timeoutMinutes:     30,
 				environment:        "npm-production",
 				environmentPresent: true,
 			},
@@ -2734,6 +2734,12 @@ jobs:
 			old:         "    timeout-minutes: 45\n",
 			replacement: "    timeout-minutes: 30\n",
 			wantErr:     "timeout-minutes=30",
+		},
+		{
+			name:        "npm publisher previous insufficient job timeout",
+			old:         "timeout-minutes: 30\n    environment: npm-production",
+			replacement: "timeout-minutes: 20\n    environment: npm-production",
+			wantErr:     "timeout-minutes=20",
 		},
 	} {
 		t.Run(mutant.name, func(t *testing.T) {
