@@ -448,7 +448,7 @@ func validateReleaseWorkflowExpressions(workflow githubWorkflow) error {
 		"release workflow",
 		workflow,
 		map[string]jobRuntimeControlsExpectation{
-			"candidate":         {timeoutMinutes: 30},
+			"candidate":         {timeoutMinutes: 45},
 			"publish-readiness": {timeoutMinutes: 10},
 			"publish": {
 				timeoutMinutes:     20,
@@ -2730,10 +2730,10 @@ jobs:
 			wantErr:     "concurrency=",
 		},
 		{
-			name:        "release candidate job timeout",
-			old:         "    timeout-minutes: 30\n",
-			replacement: "    timeout-minutes: 1\n",
-			wantErr:     "timeout-minutes=1",
+			name:        "release candidate previous insufficient job timeout",
+			old:         "    timeout-minutes: 45\n",
+			replacement: "    timeout-minutes: 30\n",
+			wantErr:     "timeout-minutes=30",
 		},
 	} {
 		t.Run(mutant.name, func(t *testing.T) {

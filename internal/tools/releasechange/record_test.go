@@ -284,7 +284,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.17.0",
+		"# @research-engineering/agentic-proofkit 0.17.1",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -340,7 +340,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.17.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.17.1",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",

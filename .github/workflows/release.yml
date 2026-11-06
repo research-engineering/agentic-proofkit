@@ -37,7 +37,8 @@ jobs:
   candidate:
     name: release candidate / package evidence
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # The full serial gate needs headroom for candidate evidence after closeout.
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
