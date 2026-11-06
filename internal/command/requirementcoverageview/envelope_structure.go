@@ -22,7 +22,7 @@ func EnvelopeShape() jsonshape.Shape {
 		ClarificationQuestions: jsonshape.Tuple(), Commands: jsonshape.BoundedArray(command, 0, 1),
 		ContextRefs: jsonshape.BoundedArray(agentenvelope.ContextRefStructure(
 			jsonshape.StringLiteral("json-pointer"), jsonshape.StringLiteral("supporting")), 5, 5),
-		Omitted: jsonshape.Tuple(), ReceiptRefs: jsonshape.Tuple(),
+		Omitted: jsonshape.BoundedArray(agentenvelope.OmissionStructure(), 0, 1), ReceiptRefs: jsonshape.Tuple(),
 		RouteQuestions: jsonshape.BoundedArray(agentenvelope.RouteQuestionStructure(), 3, 3),
 		SourceReport: agentenvelope.SourceReportStructure("proofkit.requirement-coverage-view", text, jsonshape.Null(),
 			jsonshape.Enum(map[string]struct{}{"passed": {}, "failed": {}})),

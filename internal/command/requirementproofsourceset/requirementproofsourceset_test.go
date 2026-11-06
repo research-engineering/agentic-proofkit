@@ -113,6 +113,30 @@ func TestBuildFragmentV3DiagnosticsNameCurrentGrammar(t *testing.T) {
 	}
 }
 
+func TestFragmentV3FormsPreserveInvariantAndRole(t *testing.T) {
+	full := fragmentV3Full("source.alpha", "REQ-PROOFKIT-ALPHA-001", "alpha_invariant")
+	fullRow := full["bindings"].([]any)[0].([]any)
+	if fullRow[2] != "alpha_invariant" || fullRow[3] != "contract" {
+		t.Fatalf("full fragment changed its positional grammar: %#v", fullRow[:4])
+	}
+	output, code, err := Build(validFragmentSourceSetInput(t))
+	if err != nil || code != 0 {
+		t.Fatalf("Build() exit=%d err=%v", code, err)
+	}
+	contract := output.(map[string]any)["contract"].(map[string]any)
+	rows := contract["bindings"].([]any)
+	if len(rows) != 2 {
+		t.Fatalf("binding count=%d, want 2", len(rows))
+	}
+	want := map[string]string{"REQ-PROOFKIT-ALPHA-001": "alpha_invariant", "REQ-PROOFKIT-BETA-001": "beta_invariant"}
+	for _, raw := range rows {
+		row := raw.([]any)
+		if row[3] != "contract" || row[4] != want[row[0].(string)] {
+			t.Fatalf("binding %s role=%v invariant=%v", row[0], row[3], row[4])
+		}
+	}
+}
+
 func mutateFirstFragment(t *testing.T, input map[string]any, mutate func(map[string]any)) {
 	t.Helper()
 	source := input["sources"].([]any)[0].(map[string]any)
@@ -474,8 +498,8 @@ func fragmentV3Full(sourceID string, requirementID string, ownedInvariant string
 			[]any{
 				requirementID,
 				sourceID + "::" + ownedInvariant,
-				"contract",
 				ownedInvariant,
+				"contract",
 				"blocking",
 				[]any{"local-go"},
 				[]any{"internal/" + ownedInvariant + "_test.go::TestPositive", []any{"local-go"}, []any{"go test ./..."}, json.Number("0")},

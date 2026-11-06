@@ -9,6 +9,7 @@ import (
 )
 
 const coverageEnvelopeTokenBudget = 2400
+const coverageEnvelopeBlockerLimit = 12
 
 func agentEnvelope(view map[string]any, renderer cliexec.Renderer) map[string]any {
 	state := stringValue(view["state"])
@@ -24,7 +25,7 @@ func agentEnvelope(view map[string]any, renderer cliexec.Renderer) map[string]an
 	}
 	blockers := []map[string]any{}
 	for index, failure := range failures {
-		if index >= 12 {
+		if index >= coverageEnvelopeBlockerLimit {
 			break
 		}
 		blockers = append(blockers, map[string]any{
@@ -33,6 +34,18 @@ func agentEnvelope(view map[string]any, renderer cliexec.Renderer) map[string]an
 			"nonClaim":       "Coverage blockers are derived from caller-owned input and do not execute native tests.",
 			"owner":          "consumer_repository",
 			"preconditionId": fmt.Sprintf("proofkit.coverage.blocker.%03d", index+1),
+		})
+	}
+	omitted := []map[string]any{}
+	if len(failures) > len(blockers) {
+		omitted = append(omitted, map[string]any{
+			"escalation":   "Inspect the full coverage report before treating its failure list as complete.",
+			"nonClaim":     "Omitted failure counts do not summarize the hidden blockers.",
+			"omissionId":   "proofkit.coverage.omitted.failures",
+			"omittedCount": len(failures) - len(blockers),
+			"omittedKind":  "blockedPrecondition",
+			"reason":       "coverage failures exceeded the bounded blocker limit",
+			"sourceField":  "failures",
 		})
 	}
 	return agentenvelope.Build(agentenvelope.Input{
@@ -55,7 +68,7 @@ func agentEnvelope(view map[string]any, renderer cliexec.Renderer) map[string]an
 			"maxActionItems":  1,
 			"maxCommandRefs":  len(commands),
 			"maxContextRefs":  5,
-			"maxOmittedItems": 0,
+			"maxOmittedItems": len(omitted),
 			"maxReceiptRefs":  0,
 			"maxTokenBudget":  coverageEnvelopeTokenBudget,
 			"nonClaim":        "Bounds describe emitted guidance only and do not prove tokenizer-specific coverage.",
@@ -75,7 +88,7 @@ func agentEnvelope(view map[string]any, renderer cliexec.Renderer) map[string]an
 			"Requirement coverage envelopes do not execute tests or approve merge.",
 			"Requirement coverage envelopes do not prove selector resolution, oracle quality, freshness, trust, sensitivity, or assurance closure.",
 		},
-		Omitted:     []map[string]any{},
+		Omitted:     omitted,
 		ReceiptRefs: []map[string]any{},
 		RouteQuestions: []map[string]any{
 			{"evidenceRefs": []any{"proofkit.requirement-coverage-view.requirements"}, "nonClaim": "Coverage view routes supplied requirement facts only.", "question": "what changed", "questionId": "proofkit.coverage.question.what-changed"},

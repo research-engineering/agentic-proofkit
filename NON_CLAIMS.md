@@ -38,8 +38,9 @@ This repository state does not claim:
   control;
 - execution or verification on macOS 13 or 14: Darwin binaries declare a macOS
   13.0 Mach-O minimum, so those releases are binary-compatible by toolchain
-  metadata only. Required CI executes Darwin arm64 on `macos-15` and x86_64 on
-  `macos-15-intel`; no hosted macOS 13 image exists, and GitHub retires
+  metadata only. Required CI executes Darwin arm64 on `macos-15`. Darwin x86_64 is
+  cross-built and packaged without native Intel macOS CI qualification.
+  No hosted macOS 13 image exists, and GitHub retires
   `macos-14` on 2026-11-02 after failing brownouts
   (actions/runner-images#13518).
 

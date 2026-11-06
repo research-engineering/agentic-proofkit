@@ -340,20 +340,24 @@ func parseRows(markdownText string) (parsedRows, error) {
 		if strings.HasPrefix(trimmed, "### ") {
 			currentSection = strings.TrimSpace(strings.TrimPrefix(trimmed, "### "))
 		}
-		if !strings.HasPrefix(trimmed, "|") {
-			continue
-		}
-		cells := strings.Split(trimmed, "|")
+		// Table edge pipes are optional; interior empty cells remain meaningful.
+		rowText := strings.TrimSuffix(strings.TrimPrefix(trimmed, "|"), "|")
+		cells := strings.Split(rowText, "|")
 		for cellIndex := range cells {
 			cells[cellIndex] = strings.TrimSpace(cells[cellIndex])
 		}
-		if len(cells) < 6 {
+		if len(cells) < 2 {
 			continue
 		}
-		status := cells[1]
-		rawID := cells[2]
-		ownerScope := cells[3]
-		completionCondition := cells[4]
+		// GFM fills missing body cells with empty text. Keep recognizable policy
+		// rows in the inventory even when their descriptive cells are empty.
+		if len(cells) < 4 {
+			cells = append(cells, make([]string, 4-len(cells))...)
+		}
+		status := cells[0]
+		rawID := cells[1]
+		ownerScope := cells[2]
+		completionCondition := cells[3]
 		if !statusPattern.MatchString(status) || !rowIDPattern.MatchString(rawID) {
 			continue
 		}
