@@ -224,7 +224,7 @@ func runVerifier() error {
 	if err := verifyRootManifestBoundary(rootPackage); err != nil {
 		return err
 	}
-	if err := verifyPackedOwnerRecordsMatchSource(rootPackage); err != nil {
+	if err := verifyPackedOwnerRecordsMatchSource(rootPackage.Content); err != nil {
 		return err
 	}
 	if err := verifyPackedPlatformBinariesMatchSource(rootPackage); err != nil {
@@ -242,25 +242,26 @@ func runVerifier() error {
 	return verifyOutsideConsumer(rootPackage)
 }
 
-func verifyPackedOwnerRecordsMatchSource(artifact rootPackageArtifact) error {
-	for _, entry := range artifact.Entries {
-		if !sourceOwnedPackageEntry(entry) {
-			continue
+func verifyPackedOwnerRecordsMatchSource(content []byte) error {
+	_, err := packagearchive.GzipEntries(content, maxCompressedArchiveBytes, verifyTarEntryHeader, func(entry tarEntry, body io.Reader) error {
+		if !sourceOwnedPackageEntry(entry.Name) {
+			return nil
 		}
-		packed, err := readTarFileFromBytes(artifact.Content, entry)
+		packed, err := io.ReadAll(body)
 		if err != nil {
 			return err
 		}
-		sourcePath := strings.TrimPrefix(entry, "package/")
+		sourcePath := strings.TrimPrefix(entry.Name, "package/")
 		source, err := os.ReadFile(filepath.FromSlash(sourcePath))
 		if err != nil {
-			return fmt.Errorf("read source owner for packed entry %s: %w", entry, err)
+			return fmt.Errorf("read source owner for packed entry %s: %w", entry.Name, err)
 		}
 		if !bytes.Equal(packed, source) {
-			return fmt.Errorf("packed owner record %s does not match source owner %s", entry, sourcePath)
+			return fmt.Errorf("packed owner record %s does not match source owner %s", entry.Name, sourcePath)
 		}
-	}
-	return nil
+		return nil
+	})
+	return err
 }
 
 func verifyPackedPlatformBinariesMatchSource(artifact rootPackageArtifact) error {
