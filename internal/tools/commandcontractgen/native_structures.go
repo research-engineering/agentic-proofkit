@@ -158,8 +158,8 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.witness-scheduler-plan.input.v1.root-shape"}, commands: []string{"witness-scheduler-plan"},
 		schema: func() (map[string]any, error) { return witnessschedulerplan.InputStructure(), nil },
 	}, {
-		id: "proofkit.witness-scheduler-plan.output.v2.json-schema", direction: "output",
-		predecessors: []string{"proofkit.witness-scheduler-plan.output.v1.json-schema"}, commands: []string{"witness-scheduler-plan"},
+		id: "proofkit.witness-scheduler-plan.output.v3.json-schema", direction: "output",
+		predecessors: []string{"proofkit.witness-scheduler-plan.output.v2.json-schema"}, commands: []string{"witness-scheduler-plan"},
 		schema: func() (map[string]any, error) { return witnessschedulerplan.OutputStructure(), nil },
 	}, {
 		id:           "proofkit.requirement-source.input.v2.json-schema",

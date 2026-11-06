@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
@@ -14,8 +13,8 @@ import (
 
 const reportKind = "proofkit.witness-scheduler-plan"
 
-// outputSchemaVersion 2 added the proofNodeDigests diagnostic.
-const outputSchemaVersion = 2
+// Version 3 reports parallel conflicts by distinct cause, not by pair.
+const outputSchemaVersion = 3
 
 // proofNodeDigestVersion versions the canonical node record that
 // proofNodeDigest hashes; it is part of the hashed record.
@@ -572,89 +571,6 @@ func commandPolicyFailures(command witnesscommand.Command, policy policy) []stri
 	return failures
 }
 
-func parallelGroupFailures(groups []executionGroup, policiesByCommandID map[string]policy) []string {
-	failures := []string{}
-	for _, group := range groups {
-		if parallelGroupIsConflictFreeByConstruction(group, policiesByCommandID) {
-			continue
-		}
-		for leftIndex := 0; leftIndex < len(group.CommandIDs); leftIndex++ {
-			left, ok := policiesByCommandID[group.CommandIDs[leftIndex]]
-			if !ok {
-				continue
-			}
-			for rightIndex := leftIndex + 1; rightIndex < len(group.CommandIDs); rightIndex++ {
-				right, ok := policiesByCommandID[group.CommandIDs[rightIndex]]
-				if !ok {
-					continue
-				}
-				failures = append(failures, policyPairFailures(group.ParallelGroup, left, right)...)
-			}
-		}
-	}
-	return failures
-}
-
-func parallelGroupIsConflictFreeByConstruction(group executionGroup, policiesByCommandID map[string]policy) bool {
-	for _, commandID := range group.CommandIDs {
-		policy, ok := policiesByCommandID[commandID]
-		if !ok || policy.SideEffectClass != "none" || len(policy.ExclusiveLocks) > 0 || len(policy.ResourceReads) > 0 || len(policy.ResourceWrites) > 0 || len(policy.OutputSelectors) > 0 {
-			return false
-		}
-	}
-	return true
-}
-
-func policyPairFailures(parallelGroup string, left policy, right policy) []string {
-	failures := []string{}
-	if left.SideEffectClass == "destructive" || right.SideEffectClass == "destructive" {
-		failures = append(failures, "parallel group "+parallelGroup+" must not run destructive commands concurrently")
-	}
-	for _, lock := range intersection(left.ExclusiveLocks, right.ExclusiveLocks) {
-		failures = append(failures, "parallel group "+parallelGroup+" has exclusive lock collision "+lock)
-	}
-	for _, resource := range intersection(left.ResourceWrites, right.ResourceWrites) {
-		failures = append(failures, "parallel group "+parallelGroup+" has write/write resource collision "+resource)
-	}
-	for _, resource := range intersection(left.ResourceWrites, right.ResourceReads) {
-		failures = append(failures, "parallel group "+parallelGroup+" has write/read resource collision "+resource)
-	}
-	for _, resource := range intersection(right.ResourceWrites, left.ResourceReads) {
-		failures = append(failures, "parallel group "+parallelGroup+" has read/write resource collision "+resource)
-	}
-	if selectorSetsMayOverlap(left.OutputSelectors, right.OutputSelectors) {
-		failures = append(failures, "parallel group "+parallelGroup+" has overlapping output selectors")
-	}
-	if selectorSetsMayOverlap(left.OutputSelectors, right.InputSelectors) ||
-		selectorSetsMayOverlap(right.OutputSelectors, left.InputSelectors) {
-		failures = append(failures, "parallel group "+parallelGroup+" has overlapping input and output selectors")
-	}
-	return failures
-}
-
-// Selectors are caller declarations. A shared literal prefix before the first
-// wildcard cannot prove disjointness. Require separate groups in that case.
-func selectorSetsMayOverlap(left, right []string) bool {
-	for _, leftSelector := range left {
-		leftPrefix := selectorPrefix(leftSelector)
-		for _, rightSelector := range right {
-			rightPrefix := selectorPrefix(rightSelector)
-			if strings.HasPrefix(leftPrefix, rightPrefix) || strings.HasPrefix(rightPrefix, leftPrefix) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func selectorPrefix(value string) string {
-	prefix, _, wildcard := strings.Cut(value, "*")
-	if wildcard {
-		return prefix
-	}
-	return strings.TrimSuffix(prefix, "/") + "/"
-}
-
 func ruleResults(failures []string) []report.RuleResult {
 	return []report.RuleResult{
 		{
@@ -862,21 +778,6 @@ func flattenPolicyStrings(policies []policy, mapper func(policy) []string) []str
 	for _, policy := range policies {
 		result = append(result, mapper(policy)...)
 	}
-	return result
-}
-
-func intersection(left []string, right []string) []string {
-	rightSet := map[string]struct{}{}
-	for _, value := range right {
-		rightSet[value] = struct{}{}
-	}
-	result := []string{}
-	for _, value := range left {
-		if _, ok := rightSet[value]; ok {
-			result = append(result, value)
-		}
-	}
-	sort.Strings(result)
 	return result
 }
 

@@ -212,6 +212,10 @@ test("witness input variants retain absence null defaults and empty-plan behavio
 
 test("scheduler variants distinguish failed linkage from invalid metadata", () => {
   const command = "witness-scheduler-plan";
+  const current = native(command, schedulerInput());
+  assert.equal(current.schemaVersion, 3);
+  validates(command, "output", current);
+  validates(command, "output", {...current, schemaVersion: 2}, false, "superseded report identity");
   for (const cancellation of [{kind: "not_supported"}, {kind: "not_supported", graceMs: null}, {kind: "cooperative", graceMs: 2}]) {
     const input = schedulerInput(); input.policies[0].cancellationPolicy = cancellation;
     validates(command, "input", input); assert.equal(native(command, input).state, "passed");
