@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,22 @@ import (
 const fixtureVersion = "1.2.3"
 const fixtureNPMName = "@research-engineering/agentic-proofkit"
 const fixtureSBOMPath = "artifacts/release/sbom.cdx.json"
+
+func fileSHA256(path string) (string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", sha256.Sum256(content)), nil
+}
+
+func writeJSON(path string, value any) error {
+	content, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(content, '\n'), 0o644)
+}
 
 type fixtureSBOMComponent struct {
 	Type       string              `json:"type"`
@@ -59,6 +76,41 @@ func writeFixtureSBOM(t *testing.T, components []fixtureSBOMComponent) {
 		"bomFormat": "CycloneDX", "specVersion": "1.6", "components": components,
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestReleaseManifestConfinesMetadataOutput(t *testing.T) {
+	writeReleaseManifestFixture(t, false)
+	if err := run(); err != nil {
+		t.Fatalf("ordinary manifest output: %v", err)
+	}
+	const output = "artifacts/release/metadata-checksums.sha256"
+	manifest, err := fileSHA256("artifacts/release/release-manifest.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	notes, err := fileSHA256("artifacts/release/release-notes.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(output)
+	want := fmt.Sprintf("%s  release-manifest.json\n%s  release-notes.md\n", manifest, notes)
+	if err != nil || string(content) != want {
+		t.Fatalf("metadata checksums = %q, %v; want %q", content, err, want)
+	}
+	if err := os.Remove(output); err != nil {
+		t.Fatal(err)
+	}
+	sentinel := filepath.Join(t.TempDir(), "unrelated.txt")
+	writeFile(t, sentinel, "unrelated bytes")
+	if err := os.Symlink(sentinel, output); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(); err == nil || !strings.Contains(err.Error(), "write metadata-checksums.sha256: artifact destination must be a regular non-symlink file") {
+		t.Fatalf("unsafe metadata output = %v", err)
+	}
+	if content, err := os.ReadFile(sentinel); err != nil || string(content) != "unrelated bytes" {
+		t.Fatalf("unrelated file changed: %q, %v", content, err)
 	}
 }
 
