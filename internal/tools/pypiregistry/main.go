@@ -151,9 +151,6 @@ func run() error {
 		return err
 	}
 	output := registryArtifactOutput(manifest.Version, evidence)
-	if err := os.MkdirAll(filepath.Join("artifacts", "pypi-registry"), 0o755); err != nil {
-		return err
-	}
 	return writeJSON(filepath.Join("artifacts", "pypi-registry", "pypi-release.json"), output)
 }
 
@@ -416,5 +413,5 @@ func writeJSON(path string, value any) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, append(content, '\n'), 0o644)
+	return artifactfile.WriteAtomic(".", path, append(content, '\n'), 0o600)
 }

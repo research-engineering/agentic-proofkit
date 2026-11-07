@@ -19,6 +19,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 )
 
 const (
@@ -132,14 +133,11 @@ func run() error {
 		Components:   components,
 		Dependencies: dependencies,
 	}
-	if err := os.MkdirAll(filepath.Dir(sbomPath), 0o755); err != nil {
-		return err
-	}
 	content, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(sbomPath, append(content, '\n'), 0o644)
+	return artifactfile.WriteAtomic(".", sbomPath, append(content, '\n'), 0o600)
 }
 
 func readPackageJSON(path string) (packageJSON, error) {

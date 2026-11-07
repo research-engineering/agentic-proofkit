@@ -45,6 +45,59 @@ func TestCompoundLicenseUsesCycloneDXExpression(t *testing.T) {
 	}
 }
 
+func TestSBOMConfinesOutput(t *testing.T) {
+	binary, err := os.ReadFile(buildDependencyFreeGoBinary(t, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	withTempWD(t, func() {
+		writeFile(t, "go.mod", "module example.test/release\n")
+		writeFile(t, "package.json", `{"name":"@research-engineering/agentic-proofkit","version":"1.2.3","license":"MIT"}`)
+		for _, path := range releaseplatform.BinaryPaths() {
+			writeFile(t, path, string(binary))
+		}
+		if err := run(); err != nil {
+			t.Fatalf("ordinary SBOM output: %v", err)
+		}
+		want, err := os.ReadFile(sbomPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Remove(sbomPath); err != nil {
+			t.Fatal(err)
+		}
+		sentinel := filepath.Join(t.TempDir(), "unrelated.txt")
+		writeFile(t, sentinel, "unrelated bytes")
+		if err := os.Symlink(sentinel, sbomPath); err != nil {
+			t.Fatal(err)
+		}
+		if err := run(); err == nil || !strings.Contains(err.Error(), "artifact destination must be a regular non-symlink file") {
+			t.Fatalf("unsafe SBOM output = %v", err)
+		}
+		if content, err := os.ReadFile(sentinel); err != nil || string(content) != "unrelated bytes" {
+			t.Fatalf("unrelated file changed: %q, %v", content, err)
+		}
+		if err := os.Remove(sbomPath); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Link(sentinel, sbomPath); err != nil {
+			t.Fatal(err)
+		}
+		if err := run(); err != nil {
+			t.Fatalf("replace existing regular SBOM output: %v", err)
+		}
+		if content, err := os.ReadFile(sentinel); err != nil || string(content) != "unrelated bytes" {
+			t.Fatalf("hardlink peer changed: %q, %v", content, err)
+		}
+		if content, err := os.ReadFile(sbomPath); err != nil || !bytes.Equal(content, want) {
+			t.Fatalf("replacement SBOM bytes differ from ordinary output: %v", err)
+		}
+		if info, err := os.Lstat(sbomPath); err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+			t.Fatalf("replacement SBOM permissions: %v, %v", info, err)
+		}
+	})
+}
+
 func TestArtifactSpecificRuntimeEdgesAndExcludedInventory(t *testing.T) {
 	source := []goModuleRecord{
 		{Path: "example.invalid/runtime", Version: "v1.0.0"},

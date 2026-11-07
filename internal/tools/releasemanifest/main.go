@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -322,16 +321,6 @@ func run() (returnErr error) {
 	if err := artifactSnapshot.RevalidateSources(); err != nil {
 		return err
 	}
-	releaseDir := filepath.Join("artifacts", "release")
-	if err := os.MkdirAll(releaseDir, 0o755); err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(releaseDir, "checksums.sha256"), []byte(strings.Join(checksums, "\n")+"\n"), 0o644); err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(releaseDir, "sbom-subjects.sha256"), []byte(strings.Join(sbomSubjectChecksums, "\n")+"\n"), 0o644); err != nil {
-		return err
-	}
 	release := releaseManifest{
 		ArtifactKind:  artifactKind,
 		SchemaVersion: schemaVersion,
@@ -369,20 +358,33 @@ func run() (returnErr error) {
 			"Native witness execution, consumer adoption, consumer proof freshness, merge policy, and rollout policy remain consumer-owned.",
 		},
 	}
-	if err := writeJSON(filepath.Join(releaseDir, "release-manifest.json"), release); err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(releaseDir, "release-notes.md"), []byte(releasechange.RenderMarkdown(changeRecord, manifest.Name, pythonPackageName, pypiRegistry != nil)), 0o644); err != nil {
-		return err
-	}
-	metadataChecksums, err := checksumLines([]string{
-		filepath.Join(releaseDir, "release-manifest.json"),
-		filepath.Join(releaseDir, "release-notes.md"),
-	})
+	notes := releasechange.RenderMarkdown(changeRecord, manifest.Name, pythonPackageName, pypiRegistry != nil)
+	return publishReleaseMetadata(root, release, notes, checksums, sbomSubjectChecksums)
+}
+
+func publishReleaseMetadata(root string, release releaseManifest, notes string, checksums, sbomSubjectChecksums []string) error {
+	manifestBytes, err := json.MarshalIndent(release, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(releaseDir, "metadata-checksums.sha256"), []byte(strings.Join(metadataChecksums, "\n")+"\n"), 0o644)
+	manifestBytes = append(manifestBytes, '\n')
+	notesBytes := []byte(notes)
+	metadataChecksums := fmt.Sprintf("%x  release-manifest.json\n%x  release-notes.md\n", sha256.Sum256(manifestBytes), sha256.Sum256(notesBytes))
+	for _, output := range []struct {
+		name    string
+		content []byte
+	}{
+		{"checksums.sha256", []byte(strings.Join(checksums, "\n") + "\n")},
+		{"sbom-subjects.sha256", []byte(strings.Join(sbomSubjectChecksums, "\n") + "\n")},
+		{"release-manifest.json", manifestBytes},
+		{"release-notes.md", notesBytes},
+		{"metadata-checksums.sha256", []byte(metadataChecksums)},
+	} {
+		if err := artifactfile.WriteAtomic(root, "artifacts/release/"+output.name, output.content, 0o600); err != nil {
+			return fmt.Errorf("write %s: %w", output.name, err)
+		}
+	}
+	return nil
 }
 
 func readPackageJSON(root, path string) (packageJSON, error) {
@@ -776,19 +778,6 @@ func sortPackRecords(records []packRecord) {
 	})
 }
 
-func checksumLines(paths []string) ([]string, error) {
-	sort.Strings(paths)
-	lines := make([]string, 0, len(paths))
-	for _, path := range paths {
-		sum, err := fileSHA256(path)
-		if err != nil {
-			return nil, err
-		}
-		lines = append(lines, fmt.Sprintf("%s  %s", sum, filepath.Base(path)))
-	}
-	return lines, nil
-}
-
 func optionalGlob(pattern string) ([]string, error) {
 	paths, err := filepath.Glob(pattern)
 	if err != nil {
@@ -851,19 +840,6 @@ func stringSet(values []string) map[string]struct{} {
 		result[value] = struct{}{}
 	}
 	return result
-}
-
-func fileSHA256(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func assetShaByFilename(assets []assetEvidence) map[string]string {
@@ -1074,14 +1050,6 @@ func optionalRegistryInstallEvidence(root, dir string, registry *npmRegistrySet)
 		PublishedArtifactSetSha256: artifactSet,
 		SuccessReportSha256:        successReport,
 	}, nil
-}
-
-func writeJSON(path string, value any) error {
-	content, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, append(content, '\n'), 0o644)
 }
 
 func goModule(root string) (string, error) {
