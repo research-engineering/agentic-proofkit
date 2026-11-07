@@ -112,6 +112,24 @@ func TestReleaseManifestConfinesMetadataOutput(t *testing.T) {
 	if content, err := os.ReadFile(sentinel); err != nil || string(content) != "unrelated bytes" {
 		t.Fatalf("unrelated file changed: %q, %v", content, err)
 	}
+	if err := os.Remove(output); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Link(sentinel, output); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(); err != nil {
+		t.Fatalf("replace existing regular metadata output: %v", err)
+	}
+	if content, err := os.ReadFile(sentinel); err != nil || string(content) != "unrelated bytes" {
+		t.Fatalf("hardlink peer changed: %q, %v", content, err)
+	}
+	if content, err := os.ReadFile(output); err != nil || string(content) != want {
+		t.Fatalf("replacement checksum bytes = %q, %v; want %q", content, err, want)
+	}
+	if info, err := os.Lstat(output); err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+		t.Fatalf("replacement checksum permissions: %v, %v", info, err)
+	}
 }
 
 func writeFixtureNPMRecord(t *testing.T, carrier string) packRecord {

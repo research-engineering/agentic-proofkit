@@ -74,9 +74,11 @@ that SBOM, so SBOM attestations do not make the SBOM file describe itself.
 
 Local SBOM and release-metadata writers reject symlinks and non-regular
 destinations and replace each admitted file atomically with owner-only
-permissions. A failed invocation is not a transaction over the output set;
-do not publish its output. Metadata checksums cover the exact manifest and
-release-note bytes supplied to the writer.
+permissions. Use a dedicated workspace with one writer. A failed or
+interrupted invocation is not a transaction over the output set; do not
+publish its output. A forced termination can leave temporary files, so inspect
+the workspace before retrying. Metadata checksums cover the exact manifest
+and release-note bytes supplied to the writer.
 
 Each required CLI binary must expose complete Go build info from the immutable
 bytes used for its subject digest. Admission checks the unique ELF/Mach-O

@@ -59,6 +59,10 @@ func TestSBOMConfinesOutput(t *testing.T) {
 		if err := run(); err != nil {
 			t.Fatalf("ordinary SBOM output: %v", err)
 		}
+		want, err := os.ReadFile(sbomPath)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if err := os.Remove(sbomPath); err != nil {
 			t.Fatal(err)
 		}
@@ -72,6 +76,24 @@ func TestSBOMConfinesOutput(t *testing.T) {
 		}
 		if content, err := os.ReadFile(sentinel); err != nil || string(content) != "unrelated bytes" {
 			t.Fatalf("unrelated file changed: %q, %v", content, err)
+		}
+		if err := os.Remove(sbomPath); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Link(sentinel, sbomPath); err != nil {
+			t.Fatal(err)
+		}
+		if err := run(); err != nil {
+			t.Fatalf("replace existing regular SBOM output: %v", err)
+		}
+		if content, err := os.ReadFile(sentinel); err != nil || string(content) != "unrelated bytes" {
+			t.Fatalf("hardlink peer changed: %q, %v", content, err)
+		}
+		if content, err := os.ReadFile(sbomPath); err != nil || !bytes.Equal(content, want) {
+			t.Fatalf("replacement SBOM bytes differ from ordinary output: %v", err)
+		}
+		if info, err := os.Lstat(sbomPath); err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+			t.Fatalf("replacement SBOM permissions: %v, %v", info, err)
 		}
 	})
 }
