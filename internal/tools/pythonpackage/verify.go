@@ -33,10 +33,7 @@ import (
 
 const (
 	zipDataDescriptorFlag          = 0x8
-	maximumWheelArchiveBytes       = 96 << 20
-	maximumWheelBinaryBytes        = 64 << 20
 	maximumWheelEntryCount         = 16
-	maximumWheelTextEntryBytes     = 1 << 20
 	machoBuildVersionCommand       = 0x32
 	machoBuildVersionCommandSize   = 24
 	machoMinimumVersionCommand     = 0x24
@@ -63,7 +60,7 @@ func verifyPythonPackagesForTargets(selectedTargets []target) error {
 	if err != nil {
 		return err
 	}
-	packageSet, err := readPackageSet(filepath.Join("artifacts", "pypi", "python-packages.json"))
+	packageSet, err := readPackageSet(".", "artifacts/pypi/python-packages.json")
 	if err != nil {
 		return err
 	}
@@ -98,8 +95,8 @@ func verifyPythonPackagesForTargets(selectedTargets []target) error {
 	return verifyLocalPythonConsumer(recordsBySuffix, admittedWheels)
 }
 
-func readPackageSet(path string) (packageSet, error) {
-	return readAdmittedJSON[packageSet](path)
+func readPackageSet(root, path string) (packageSet, error) {
+	return readAdmittedJSON[packageSet](root, path)
 }
 
 // verifyWheelRecord admits the wheel once through a bounded regular-file read;
@@ -123,9 +120,9 @@ func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) 
 	if hex.EncodeToString(wheelSHA[:]) != record.Sha256 {
 		return nil, fmt.Errorf("python wheel sha256 mismatch for %s", record.Filename)
 	}
-	binary, err := os.ReadFile(target.BinaryPath)
+	binary, err := readPlatformBinary(target.BinaryPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read platform binary %s: %w", target.BinaryPath, err)
 	}
 	binarySHA := sha256.Sum256(binary)
 	if record.BinarySha256 != fmt.Sprintf("%x", binarySHA[:]) {
@@ -1224,16 +1221,6 @@ func readZipFile(file *zip.File) ([]byte, error) {
 		return nil, fmt.Errorf("wheel entry %s exceeds or contradicts its admitted size", file.Name)
 	}
 	return content, nil
-}
-
-func maximumWheelEntryBytes(name string) int64 {
-	if name == "agentic_proofkit/bin/agentic-proofkit" {
-		return maximumWheelBinaryBytes
-	}
-	if name == embeddedCLIContractPath {
-		return installedclicontract.MaximumContractBytes
-	}
-	return maximumWheelTextEntryBytes
 }
 
 // runCommandWithEnvironment returns stdout followed by stderr; it suits tools

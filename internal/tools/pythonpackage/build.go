@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
-	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 type wheelEntry struct {
@@ -93,7 +92,7 @@ func buildPythonPackagesForTargets(selectedTargets []target) error {
 }
 
 func buildWheel(outputDir string, manifest packageJSON, target target) (wheelRecord, error) {
-	binary, err := os.ReadFile(target.BinaryPath)
+	binary, err := readPlatformBinary(target.BinaryPath)
 	if err != nil {
 		return wheelRecord{}, fmt.Errorf("read platform binary %s: %w", target.BinaryPath, err)
 	}
@@ -138,15 +137,9 @@ func wheelEntries(manifest packageJSON, target target, binary []byte) ([]wheelEn
 	}
 	entries := make([]wheelEntry, 0, len(sourceFiles)+6)
 	for _, source := range sourceFiles {
-		var content []byte
-		var err error
-		if source.path == sourceCLIContractPath {
-			content, err = artifactfile.ReadBounded(".", sourceCLIContractPath, installedclicontract.MaximumContractBytes)
-		} else {
-			content, err = os.ReadFile(source.path)
-		}
+		content, err := artifactfile.ReadBounded(".", source.path, maximumWheelEntryBytes(source.wheelPath))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read wheel source %s: %w", source.path, err)
 		}
 		entries = append(entries, wheelEntry{
 			Content: content,
@@ -193,6 +186,11 @@ func wheelEntries(manifest packageJSON, target target, binary []byte) ([]wheelEn
 		Mode:    0o644,
 		Path:    distInfo + "/RECORD",
 	})
+	for _, entry := range entries {
+		if int64(len(entry.Content)) > maximumWheelEntryBytes(entry.Path) {
+			return nil, fmt.Errorf("wheel entry %s exceeds resource limit", entry.Path)
+		}
+	}
 	return entries, nil
 }
 

@@ -25,6 +25,10 @@
     {
       "changeId": "proofkit.release.registry-evidence-admission",
       "summary": "npm, PyPI and release-manifest tools bound local evidence reads and refuse non-regular operands. Explicit npm input paths preserve operating-system parent resolution. Raw pack and lock type errors no longer emit caller map keys, and normalized pack IDs pass report-visible text admission. Release manifests admit installed-consumer evidence before writing output and hash the same npm registry artifact-set bytes they admit."
+    },
+    {
+      "changeId": "proofkit.package.carrier-input-admission",
+      "summary": "The npm and Python carrier verifiers and the Python wheel builder reject non-regular package records and source inputs before blocking or reading their contents. License, wrapper and native binary reads use existing carrier size limits. The wheel builder refuses generated entries that exceed those limits before writing a wheel."
     }
   ],
   "migration": {
