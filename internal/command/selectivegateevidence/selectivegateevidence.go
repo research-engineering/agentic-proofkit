@@ -466,19 +466,23 @@ func validateProducerAdmission(receipts []receiptSummary, expected map[string]co
 	producerReceipts := producerReceiptsByID(projection.Receipts)
 	producerCommandKeys := make(map[string]string, len(producerReceipts))
 	for _, receipt := range receipts {
-		if receipt.Status != "passed" {
-			continue
-		}
 		if _, ok := expected[keyString(receipt.commandKey)]; !ok {
 			continue
 		}
+		passed := receipt.Status == "passed"
 		if receipt.ProducerReceiptID == nil {
-			failures = append(failures, "passed planned receipt lacks producerReceiptId: "+describeKey(receipt.commandKey))
+			if passed {
+				failures = append(failures, "passed planned receipt lacks producerReceiptId: "+describeKey(receipt.commandKey))
+			}
 			continue
 		}
 		producerReceipt, ok := producerReceipts[*receipt.ProducerReceiptID]
 		if !ok {
-			failures = append(failures, "passed planned receipt references unknown producer receipt: "+*receipt.ProducerReceiptID)
+			label := "planned receipt"
+			if passed {
+				label = "passed planned receipt"
+			}
+			failures = append(failures, label+" references unknown producer receipt: "+*receipt.ProducerReceiptID)
 			continue
 		}
 		receiptID, commandKey := *receipt.ProducerReceiptID, keyString(receipt.commandKey)
@@ -498,10 +502,10 @@ func validateProducerAdmission(receipts []receiptSummary, expected map[string]co
 		if !equalStringSlices(producerReceipt.ArtifactRefs, receipt.ArtifactRefs) {
 			failures = append(failures, "producer receipt artifactRefs do not match planned receipt: "+*receipt.ProducerReceiptID)
 		}
-		if !producerReceipt.SatisfiesMergeObligation {
+		if passed && !producerReceipt.SatisfiesMergeObligation {
 			failures = append(failures, "producer receipt does not satisfy merge obligation: "+*receipt.ProducerReceiptID)
 		}
-		if producerReceipt.ProvenanceRef == nil {
+		if passed && producerReceipt.ProvenanceRef == nil {
 			failures = append(failures, "producer receipt lacks provenanceRef for merge-satisfying evidence: "+*receipt.ProducerReceiptID)
 		}
 	}

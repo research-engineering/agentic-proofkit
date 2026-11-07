@@ -17,6 +17,9 @@ import (
 
 const temporaryCollisionLimit = 16
 
+// ErrMissing distinguishes a missing route from an unsafe or unreadable one.
+var ErrMissing = errors.New("open artifact file failed")
+
 func WriteAtomic(rootPath, relativePath string, content []byte, mode fs.FileMode) error {
 	path, err := localPath(relativePath)
 	if err != nil {
@@ -100,6 +103,9 @@ func ReadBounded(rootPath, relativePath string, maxBytes int64) ([]byte, error) 
 	defer root.Close()
 	file, err := rootpath.OpenRegularFile(root, relativePath)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, ErrMissing
+		}
 		if errors.Is(err, rootpath.ErrUnsafeRoute) {
 			return nil, fmt.Errorf("artifact source must be a regular non-symlink file")
 		}

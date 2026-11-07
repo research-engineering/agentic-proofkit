@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"path/filepath"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
@@ -45,7 +44,7 @@ func (evidence releaseManifestEvidence) matches(manifest packageJSON) bool {
 }
 
 func releaseNotesDigest(root string, manifest packageJSON) string {
-	record, err := releasechange.Read(filepath.Join(root, filepath.FromSlash(releasechange.RecordPath)))
+	record, err := releasechange.ReadFrom(root, releasechange.RecordPath)
 	if err != nil || releasechange.RequireVersion(record, manifest.Version) != nil {
 		return ""
 	}

@@ -3,12 +3,13 @@ package releasechange
 import (
 	"bytes"
 	"fmt"
-	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 )
 
 const (
@@ -42,7 +43,15 @@ type Migration struct {
 }
 
 func Read(path string) (Record, error) {
-	content, err := os.ReadFile(path)
+	root, name := filepath.Split(path)
+	if root == "" {
+		root = "."
+	}
+	return ReadFrom(root, name)
+}
+
+func ReadFrom(root, path string) (Record, error) {
+	content, err := artifactfile.ReadBounded(root, path, maxRecordBytes)
 	if err != nil {
 		return Record{}, fmt.Errorf("read release change record: %w", err)
 	}
