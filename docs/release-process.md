@@ -72,8 +72,8 @@ instead of being treated as public release assets.
 `sbom-subjects.sha256` covers only the package and wheel subjects described by
 that SBOM, so SBOM attestations do not make the SBOM file describe itself.
 
-Local SBOM and release-metadata writers reject symlinks and non-regular
-destinations and replace each admitted file atomically with owner-only
+Local SBOM, release-metadata and PyPI registry-evidence writers reject symlinks
+and non-regular destinations and replace each admitted file atomically with owner-only
 permissions. Use a dedicated workspace with one writer. A failed or
 interrupted invocation is not a transaction over the output set; do not
 publish its output. A forced termination can leave temporary files, so inspect
