@@ -190,7 +190,7 @@ func writeVerificationFailure(writer io.Writer, err error) {
 }
 
 func runVerifier() error {
-	records, err := readPackRecords(filepath.Join("artifacts", "package", "npm-pack.json"))
+	records, err := readPackRecords(".", "artifacts/package/npm-pack.json")
 	if err != nil {
 		return err
 	}
@@ -267,7 +267,7 @@ func comparePackedSourceOwner(entry string, body io.Reader) error {
 		return err
 	}
 	sourcePath := strings.TrimPrefix(entry, "package/")
-	source, err := os.ReadFile(filepath.FromSlash(sourcePath))
+	source, err := artifactfile.ReadBounded(".", sourcePath, maxTarEntryBytes)
 	if err != nil {
 		return fmt.Errorf("read source owner for packed entry %s: %w", entry, err)
 	}
@@ -283,7 +283,7 @@ func verifyPackedPlatformBinariesMatchSource(artifact rootPackageArtifact) error
 		if err != nil {
 			return err
 		}
-		source, err := os.ReadFile(filepath.FromSlash(target.BinaryPath))
+		source, err := artifactfile.ReadBounded(".", target.BinaryPath, maxEmbeddedBinaryBytes)
 		if err != nil {
 			return fmt.Errorf("read release binary for %s: %w", target.PlatformSuffix, err)
 		}
@@ -392,17 +392,6 @@ func verifyRequiredRootEntries(entrySet map[string]struct{}) error {
 		}
 	}
 	return nil
-}
-
-func readPackRecords(path string) ([]packRecord, error) {
-	records, err := readAdmittedJSON[[]packRecord](path)
-	if err != nil {
-		return nil, err
-	}
-	if len(records) != 1 {
-		return nil, fmt.Errorf("npm pack must describe exactly the root package, got %d records", len(records))
-	}
-	return records, nil
 }
 
 func recordPath(record packRecord) string {
@@ -1522,20 +1511,6 @@ func looksLikeRepositoryPath(reference string) bool {
 
 func decodeRequirementBindings(content []byte) (requirementBindings, error) {
 	return admission.DecodeTypedJSON[requirementBindings](bytes.NewReader(content), int64(len(content)))
-}
-
-func readAdmittedJSON[T any](path string) (T, error) {
-	var out T
-	file, err := os.Open(path)
-	if err != nil {
-		return out, err
-	}
-	defer file.Close()
-	value, err := admission.DecodeTypedJSON[T](file, 16<<20)
-	if err != nil {
-		return out, fmt.Errorf("decode %s: %w", path, err)
-	}
-	return value, nil
 }
 
 func verifyOutsideConsumer(artifact rootPackageArtifact) error {

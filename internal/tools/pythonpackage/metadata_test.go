@@ -44,7 +44,7 @@ func TestPythonPackageReadersRejectAmbiguousJSON(t *testing.T) {
 			name:    "package set trailing value",
 			content: `{"artifactKind":"proofkit.python-package-set.v1","schemaVersion":1,"packageName":"agentic-proofkit","packageVersion":"1.2.3","packages":[]} true`,
 			read: func(path string) error {
-				_, err := readPackageSet(path)
+				_, err := readPackageSet(filepath.Dir(path), filepath.Base(path))
 				return err
 			},
 			want: "multiple JSON values",
@@ -338,6 +338,17 @@ func TestWheelEntriesIncludeCanonicalLicense(t *testing.T) {
 		entries, err = wheelEntries(testPackageManifest("1.2.3"), releaseTargets()[2], []byte("binary"))
 		if err != nil {
 			t.Fatalf("wheelEntries() error: %v", err)
+		}
+		manifest := testPackageManifest("1.2.3")
+		manifest.Description = ""
+		budget := maximumWheelTextEntryBytes - len(metadata(manifest))
+		manifest.Description = strings.Repeat("x", budget)
+		if _, err := wheelEntries(manifest, releaseTargets()[2], []byte("binary")); err != nil {
+			t.Fatalf("wheelEntries() rejected exact metadata size limit: %v", err)
+		}
+		manifest.Description += "x"
+		if _, err := wheelEntries(manifest, releaseTargets()[2], []byte("binary")); err == nil || !strings.Contains(err.Error(), "METADATA exceeds resource limit") {
+			t.Fatalf("wheelEntries() oversized derived metadata refusal: %v", err)
 		}
 	})
 	wantPath := distInfoDir("1.2.3") + "/licenses/" + licenseFilename

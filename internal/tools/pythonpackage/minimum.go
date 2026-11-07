@@ -262,11 +262,11 @@ func runMinimumPython(ctx context.Context) (receipt minimumReceipt, err error) {
 			return receipt, err
 		}
 	}
-	manifest, err := readAdmittedJSON[packageJSON](filepath.Join(input, "package.json"))
+	manifest, err := readAdmittedJSON[packageJSON](input, "package.json")
 	if err != nil {
 		return receipt, err
 	}
-	set, err := readPackageSet(filepath.Join(input, "artifacts/pypi/python-packages.json"))
+	set, err := readPackageSet(input, "artifacts/pypi/python-packages.json")
 	if err != nil {
 		return receipt, err
 	}

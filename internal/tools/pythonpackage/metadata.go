@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 var pep440VersionPattern = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)+(?:a[0-9]+|b[0-9]+|rc[0-9]+|\.post[0-9]+|\.dev[0-9]+)?$`)
@@ -21,6 +23,10 @@ const (
 	abiTag            = "none"
 	licenseFilename   = "LICENSE"
 	schemaVersion     = 1
+
+	maximumWheelArchiveBytes   = 96 << 20
+	maximumWheelBinaryBytes    = 64 << 20
+	maximumWheelTextEntryBytes = 1 << 20
 )
 
 type target = releaseplatform.Target
@@ -64,7 +70,7 @@ type wheelRecord struct {
 }
 
 func readPackageJSON() (packageJSON, error) {
-	manifest, err := readAdmittedJSON[packageJSON]("package.json")
+	manifest, err := readAdmittedJSON[packageJSON](".", "package.json")
 	if err != nil {
 		return packageJSON{}, err
 	}
@@ -103,7 +109,7 @@ func requireMetadataField(label string, value string) error {
 }
 
 func readLicenseFile() ([]byte, error) {
-	content, err := os.ReadFile(licenseFilename)
+	content, err := artifactfile.ReadBounded(".", licenseFilename, maximumWheelTextEntryBytes)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", licenseFilename, err)
 	}
@@ -113,14 +119,28 @@ func readLicenseFile() ([]byte, error) {
 	return content, nil
 }
 
-func readAdmittedJSON[T any](path string) (T, error) {
-	var out T
-	file, err := os.Open(path)
-	if err != nil {
-		return out, err
+func readPlatformBinary(path string) ([]byte, error) {
+	return artifactfile.ReadBounded(".", path, maximumWheelBinaryBytes)
+}
+
+func maximumWheelEntryBytes(name string) int64 {
+	if name == "agentic_proofkit/bin/agentic-proofkit" {
+		return maximumWheelBinaryBytes
 	}
-	defer file.Close()
-	value, err := admission.DecodeTypedJSON[T](file, 16<<20)
+	if name == embeddedCLIContractPath {
+		return installedclicontract.MaximumContractBytes
+	}
+	return maximumWheelTextEntryBytes
+}
+
+func readAdmittedJSON[T any](root, path string) (T, error) {
+	const limit = 16 << 20
+	var out T
+	content, err := artifactfile.ReadBounded(root, path, limit)
+	if err != nil {
+		return out, fmt.Errorf("read %s: %w", path, err)
+	}
+	value, err := admission.DecodeTypedJSON[T](bytes.NewReader(content), limit)
 	if err != nil {
 		return out, fmt.Errorf("decode %s: %w", path, err)
 	}

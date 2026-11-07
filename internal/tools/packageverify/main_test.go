@@ -36,7 +36,7 @@ func TestPackageVerifyReadersRejectAmbiguousJSON(t *testing.T) {
 			name:    "pack records duplicate key",
 			content: `[{"name":"@research-engineering/agentic-proofkit","name":"other","version":"1.2.3","filename":"agentic-proofkit.tgz","integrity":"sha512-x","shasum":"abc"}]`,
 			read: func(path string) error {
-				_, err := readPackRecords(path)
+				_, err := readPackRecords(filepath.Dir(path), filepath.Base(path))
 				return err
 			},
 			want: "duplicate object key",
