@@ -56,9 +56,9 @@ var sourceCutoverDirectionDeltas = []string{
 
 var nativeBoundaryDirectionDeltas = []string{
 	"adoption-contract-envelope/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
-	"adoption-contract-envelope/output:compatibilitySummary,flagChoices,rootDefinitionDigest,rootDefinitionRef",
+	"adoption-contract-envelope/output:compatibilitySummary,contractId,flagChoices,rootDefinitionDigest,rootDefinitionRef",
 	"adoption-workflow-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"adoption-workflow-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"adoption-workflow-plan/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
 	"pilot-admission/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"pilot-admission/output:compatibilitySummary,flagChoices,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption-bootstrap/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
@@ -68,7 +68,7 @@ var nativeBoundaryDirectionDeltas = []string{
 	"gradual-adoption/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"gradual-adoption/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"scaffold-project-structure/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
-	"scaffold-project-structure/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"scaffold-project-structure/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
 	"adoption-doctor/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"adoption-doctor/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"scaffold-profile-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",

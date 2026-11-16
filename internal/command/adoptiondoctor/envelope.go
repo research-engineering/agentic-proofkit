@@ -14,13 +14,18 @@ func AgentEnvelope(result Result) map[string]any {
 	actions := actionPlan(result)
 	commands := commandRefs(result.Input.OwnerRoutes)
 	context := contextRefs(result.Input.OwnerRoutes, result.Input.CandidateBoundaries, result.Input.StaleAuthority.AuthoritySurfaces)
+	fields := make([]agentenvelope.ContextReferenceField, 0, len(context))
+	for _, ref := range context {
+		fields = append(fields, agentenvelope.ContextReferenceField{ContextRefID: ref["refId"].(string), Field: "path"})
+	}
 	return agentenvelope.Build(agentenvelope.Input{
-		EnvelopeID:            result.Input.DoctorID + ".agent-envelope",
-		ActionPlan:            actions,
-		BlockedPreconditions:  blockedPreconditionRefs(result.Input.BlockedPreconditions),
-		ClarificationQuestion: clarificationQuestions(result),
-		Commands:              commands,
-		ContextRefs:           context,
+		EnvelopeID:             result.Input.DoctorID + ".agent-envelope",
+		ActionPlan:             actions,
+		BlockedPreconditions:   blockedPreconditionRefs(result.Input.BlockedPreconditions),
+		ClarificationQuestion:  clarificationQuestions(result),
+		Commands:               commands,
+		ContextRefs:            context,
+		ContextReferenceFields: fields,
 		NonClaims: []string{
 			"Adoption doctor agent envelopes do not approve edits, enforcement, merge, or proof-owner retirement.",
 			"Adoption doctor agent envelopes expose bounded selectors only and do not expand full repository graphs.",

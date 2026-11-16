@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 const (
@@ -30,19 +31,21 @@ var baseNonClaims = []string{
 }
 
 type Input struct {
-	ActionPlan            []map[string]any
-	BlockedPreconditions  []map[string]any
-	Bounds                map[string]any
-	ClarificationQuestion []map[string]any
-	Commands              []map[string]any
-	ContextRefs           []map[string]any
-	EnvelopeID            string
-	NonClaims             []string
-	Omitted               []map[string]any
-	OperandBindings       []OperandBinding
-	ReceiptRefs           []map[string]any
-	RouteQuestions        []map[string]any
-	SourceReport          map[string]any
+	ActionPlan             []map[string]any
+	BlockedPreconditions   []map[string]any
+	Bounds                 map[string]any
+	ClarificationQuestion  []map[string]any
+	Commands               []map[string]any
+	ContextRefs            []map[string]any
+	ContextReferenceFields []ContextReferenceField
+	EnvelopeID             string
+	NonClaims              []string
+	Omitted                []map[string]any
+	OperandBindings        []OperandBinding
+	ReceiptRefs            []map[string]any
+	Renderer               cliexec.Renderer
+	RouteQuestions         []map[string]any
+	SourceReport           map[string]any
 }
 
 func Build(input Input) map[string]any {
@@ -86,6 +89,12 @@ func Build(input Input) map[string]any {
 	commands, omitted, truncated = limitListPrioritized(commands, "commandRef", "commandId", "maxCommandRefs", hardMaxCommandRefs, priorities.commands, omitted, bounds, truncated)
 	contextRefs, omitted, truncated = limitListPrioritized(contextRefs, "contextRef", "refId", "maxContextRefs", hardMaxContextRefs, priorities.contexts, omitted, bounds, truncated)
 	receiptRefs, omitted, truncated = limitListPrioritized(receiptRefs, "receiptRef", "receiptRefId", "maxReceiptRefs", hardMaxReceiptRefs, priorities.receipts, omitted, bounds, truncated)
+	var missingOperandContexts int
+	commands, missingOperandContexts = commandsWithRetainedOperandContexts(commands, contextRefs, input.OperandBindings)
+	if missingOperandContexts > 0 {
+		omitted = append(omitted, omissionRecord("unavailableOperandContext", "commands", missingOperandContexts))
+		truncated = true
+	}
 	omitted, truncated = limitOmitted(omitted, bounds, truncated)
 	retainedTargets := collectLocalReferenceTargets(commands, contextRefs, receiptRefs)
 	removedReferenceCount := prepared.removedReferenceCount

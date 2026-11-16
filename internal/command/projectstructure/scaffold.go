@@ -212,11 +212,11 @@ func adoptionWorkflowInput(bootstrapInput map[string]any, repoProfilePlan map[st
 	if _, err := safePath(bootstrapInput["proofBindingPath"], "project structure scaffold proofBindingPath"); err != nil {
 		return nil, err
 	}
-	witnessPlanInputPath, err := safePath(bootstrapPaths["witnessPlanInputPath"], "project structure scaffold witnessPlanInputPath")
+	witnessPlanInputPath, err := materializedInputPath(bootstrapPaths["witnessPlanInputPath"], "project structure scaffold witnessPlanInputPath")
 	if err != nil {
 		return nil, err
 	}
-	adoptionGuidancePath, err := safePath(bootstrapPaths["adoptionGuidancePath"], "project structure scaffold adoptionGuidancePath")
+	adoptionGuidancePath, err := materializedInputPath(bootstrapPaths["adoptionGuidancePath"], "project structure scaffold adoptionGuidancePath")
 	if err != nil {
 		return nil, err
 	}

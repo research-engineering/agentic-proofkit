@@ -1,6 +1,7 @@
 package adoptionworkflow
 
 import (
+	"maps"
 	"slices"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
@@ -61,7 +62,7 @@ func OutputStructure() map[string]any {
 		map[string]any{"properties": map[string]any{"planState": map[string]any{"const": planStateReady}, "blockers": map[string]any{"maxItems": 0}}},
 		map[string]any{"properties": map[string]any{"planState": map[string]any{"const": planStateBlocked}, "blockers": map[string]any{"minItems": 1}}},
 	}
-	schema["description"] = "A plan is ready_for_caller_review (exit 0) exactly when it has no blockers, otherwise blocked (exit 1). Phase positions are fixed; each phase lists only its reachable command IDs. Native ordering, reference joins and argv launcher prefixes remain producer-owned. Commands are not executed and no file is written."
+	schema["description"] = "A plan is ready_for_caller_review (exit 0) exactly when it has no blockers, otherwise blocked (exit 1). Each blocker inputAlternatives is an OR of complete AND bundles of still-missing input kinds; only preset-choice blockers have an empty array. New repositories accept bootstrap_witness_plan OR (requirement_bindings AND witness_plan); release consumers accept external_consumer OR registry_consumer. Presets are required only for new_repository and existing_gradual_adoption. Phase positions are fixed; each phase lists only its reachable command IDs. Native ordering, reference joins and argv launcher prefixes remain producer-owned. Commands are not executed and no file is written."
 	return schema
 }
 
@@ -99,7 +100,7 @@ func EnvelopeStructure() map[string]any {
 	}
 	schema := agentenvelope.Structure(envelopeID, parts).JSONSchema()
 	delete(schema, "$schema")
-	schema["description"] = "Workflow routing envelope. Source state is passed exactly for a ready plan. Overlong local context IDs degrade into omissions and bounds violations instead of refusal. Envelope builders redact and order records; references, counts and stop reasons remain native semantics."
+	schema["description"] = "Workflow routing envelope. Source state is passed exactly for a ready plan. Clarification questions render the plan's residual inputAlternatives as OR choices of complete AND bundles, with missing_context_ref answers; scalar preset blockers instead request preset_choice with no input kinds. Overlong local context IDs degrade into omissions and bounds violations instead of refusal. Envelope builders redact and order records; references, counts and stop reasons remain native semantics."
 	return schema
 }
 
@@ -121,17 +122,11 @@ func planShape() jsonshape.Shape {
 			jsonshape.Required("commands", jsonshape.BoundedArray(command, 0, len(ids))), jsonshape.Required("phase", jsonshape.StringLiteral(phase)),
 		))
 	}
-	ids, reasons := reachableBlockers()
-	blocker := jsonshape.Object(
-		jsonshape.Required("blockerId", jsonshape.Enum(ids)), jsonshape.Required("nonClaim", jsonshape.StringLiteral(blockerNonClaim)),
-		jsonshape.Required("reason", jsonshape.Enum(reasons)), jsonshape.Required("requiredInputKinds", jsonshape.Array(jsonshape.Enum(inputKinds), 0)),
-		jsonshape.Required("scenario", jsonshape.Enum(scenarios)),
-	)
 	ref := jsonshape.ObjectFromKeys(inputRefKeys, map[string]jsonshape.Shape{
 		"inputKind": jsonshape.Enum(inputKinds), "path": text(), "refId": ruleID(),
 	})
 	return jsonshape.Object(
-		jsonshape.Required("blockers", jsonshape.Array(blocker, 0)),
+		jsonshape.Required("blockers", blockersShape()),
 		jsonshape.Required("inputRefs", jsonshape.BoundedArray(ref, 0, len(inputKinds))),
 		jsonshape.Required("nonClaims", jsonshape.Array(text(), len(workflowNonClaims)+1)),
 		jsonshape.Required("phases", jsonshape.Tuple(phases...)),
@@ -141,6 +136,66 @@ func planShape() jsonshape.Shape {
 		jsonshape.Required("schemaVersion", jsonshape.IntegerLiteral(1)),
 		jsonshape.Required("workflowId", ruleID()),
 	)
+}
+
+// Each blocker binds its scenario, identity and reason to exactly its reachable
+// residual repairs. The same declaration supports native checks and JSON Schema.
+func blockersShape() jsonshape.Shape {
+	cases := []jsonshape.Shape{}
+	maximum := 0
+	for _, scenario := range slices.Sorted(maps.Keys(scenarios)) {
+		blockers := workflowBlockers(scenario, nil, nil)
+		maximum = max(maximum, len(blockers))
+		for _, item := range blockers {
+			cases = append(cases, jsonshape.Object(
+				jsonshape.Required("blockerId", jsonshape.StringLiteral(item.BlockerID)),
+				jsonshape.Required("inputAlternatives", residualAlternativesShape(item.InputAlternatives)),
+				jsonshape.Required("nonClaim", jsonshape.StringLiteral(blockerNonClaim)),
+				jsonshape.Required("reason", jsonshape.StringLiteral(item.Reason)),
+				jsonshape.Required("scenario", jsonshape.StringLiteral(scenario)),
+			))
+		}
+	}
+	return jsonshape.BoundedArray(jsonshape.OneOf(cases...), 0, maximum)
+}
+
+func residualAlternativesShape(alternatives inputAlternatives) jsonshape.Shape {
+	if len(alternatives) == 0 {
+		return jsonshape.Tuple() // Scalar preset choice, not an empty input bundle.
+	}
+	// The owned prerequisites have at most three distinct operands. Enumerate
+	// their supply masks, not the entire input vocabulary or arbitrary formulas.
+	kinds := alternatives.kinds()
+	seen := []inputAlternatives{}
+	cases := []jsonshape.Shape{}
+	for mask := 0; mask < 1<<len(kinds); mask++ {
+		refs := map[string]inputRef{}
+		for index, kind := range kinds {
+			if mask&(1<<index) != 0 {
+				refs[kind] = inputRef{InputKind: kind}
+			}
+		}
+		remaining := alternatives.remaining(refs)
+		if len(remaining) == 0 || slices.ContainsFunc(seen, func(other inputAlternatives) bool {
+			return slices.EqualFunc(other, remaining, slices.Equal[[]string])
+		}) {
+			continue
+		}
+		seen = append(seen, remaining)
+		bundles := []jsonshape.Shape{}
+		for _, bundle := range remaining {
+			items := []jsonshape.Shape{}
+			for _, kind := range bundle {
+				items = append(items, jsonshape.StringLiteral(kind))
+			}
+			bundles = append(bundles, jsonshape.Tuple(items...))
+		}
+		cases = append(cases, jsonshape.Tuple(bundles...))
+	}
+	if len(cases) == 1 {
+		return cases[0]
+	}
+	return jsonshape.OneOf(cases...)
 }
 
 // Command routes are monotone in available refs and the preset, so the

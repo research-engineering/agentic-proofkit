@@ -141,11 +141,19 @@ set before it are retained.
 
 Adoption workflow output contracts use semantic v2 with wire
 `schemaVersion: 1`, including the workflow carrier of
-`adoption-contract-envelope`. Missing `presetId` requests `preset_choice`;
+`adoption-contract-envelope` and the embedded plan in `scaffold-project-structure`.
+For `new_repository` and `existing_gradual_adoption`, missing `presetId`
+requests `preset_choice`;
 missing prepared inputs request `missing_context_ref`. Envelope actions and
 the `what changed` question refer to exact local `contextRefs[].refId` values,
 not raw plan input IDs. Prepared input paths cannot be the stdin sentinel
 `-`; the workflow command itself can still receive JSON through `--input -`.
+Workflow blockers publish `inputAlternatives` as an OR of complete AND bundles
+of still-missing input kinds. An empty array denotes a scalar preset choice,
+not a satisfied input bundle. Supplying one entire bundle resolves that blocker;
+it does not resolve unrelated blockers or approve the supplied content.
+Prepared scaffold and bootstrap input paths also refuse `-`; ordinary output
+filenames are not subject to that input-role restriction.
 
 `contractId` and `schemaVersion` need not coincide. Adoption
 materialization plan/apply input v3 retains payload `schemaVersion: 2`, while the

@@ -19,7 +19,7 @@ const identities = {
   'adoption-doctor/output': ['proofkit.adoption-doctor.output.v1.json-schema', 'proofkit.adoption-doctor.output.v1',
     [['01-agent-envelope', '--agent-envelope with admitted input'], ['02-report', 'without --agent-envelope'], ['03-invalid-input-envelope', invalidWhen]]],
   'scaffold-project-structure/input': ['proofkit.scaffold-project-structure.input.v2.json-schema', 'proofkit.scaffold-project-structure.input.v2', [['01-root', 'default JSON mode']]],
-  'scaffold-project-structure/output': ['proofkit.scaffold-project-structure.output.v1.json-schema', 'proofkit.scaffold-project-structure.output.v1',
+  'scaffold-project-structure/output': ['proofkit.scaffold-project-structure.output.v2.json-schema', 'proofkit.scaffold-project-structure.output.v2',
     [['01-agent-envelope', '--agent-envelope with admitted input'], ['02-scaffold', 'without --agent-envelope'], ['03-invalid-input-envelope', invalidWhen]]],
   'scaffold-profile-plan/input': ['proofkit.scaffold-profile-plan.input.v1.json-schema', 'proofkit.scaffold-profile-plan.input.v1', [['01-root', 'default JSON mode']]],
   'scaffold-profile-plan/output': ['proofkit.scaffold-profile-plan.output.v1.json-schema', 'proofkit.scaffold-profile-plan.output.v1', [['01-plan', 'default JSON mode']]],

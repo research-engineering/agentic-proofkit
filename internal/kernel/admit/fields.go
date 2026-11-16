@@ -22,7 +22,7 @@ const (
 	secretContextPatternSource       = `authorization` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*:` + secretWhitespacePatternSource + `*[^\r\n]+|bearer` + secretWhitespacePatternSource + `+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*[=:]` + secretWhitespacePatternSource + `*` + secretNonWhitespacePatternSource + `+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
 	secretSharedTokenPatternSource   = `github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
 	secretScalarTokenPatternSource   = secretSharedTokenPatternSource + `|sk-(?:proj-)?[A-Za-z0-9_-]{10,}`
-	secretPathTokenPatternSource     = secretSharedTokenPatternSource + `|sk-(?:proj-[A-Za-z0-9_-]{10,}|[A-Za-z0-9_-]{16,})`
+	secretPathTokenPatternSource     = `sk-(?:proj-[A-Za-z0-9_-]{10,}|[A-Za-z0-9_-]{16,})`
 )
 
 const RuleIDPatternBody = `[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*`
@@ -37,7 +37,7 @@ var (
 	schemeLikePathPattern      = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
 	secretValuePattern         = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `|` + secretScalarTokenPatternSource + `)`)
 	secretPathContextPattern   = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
-	secretPathTokenPattern     = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_])`)
+	secretPathTokenPattern     = regexp.MustCompile(`(?i)(?:` + secretSharedTokenPatternSource + `|(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_]))`)
 	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/` + secretWhitespaceClassSource + `:@]+:[^/` + secretWhitespaceClassSource + `@]+@`)
 	shellControlTokenPattern   = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
 )
@@ -169,6 +169,19 @@ func NonEmptyText(raw any, context string) (string, error) {
 	}
 	value = strings.TrimSpace(value)
 	if ContainsSecretLikeValue(value) {
+		return "", fmt.Errorf("%s must not contain secret-like values", context)
+	}
+	return value, nil
+}
+
+// NonEmptyPathText preserves text framing while using the path privacy policy.
+func NonEmptyPathText(raw any, context string) (string, error) {
+	value, ok := raw.(string)
+	if !ok || strings.TrimSpace(value) == "" {
+		return "", fmt.Errorf("%s must be non-empty text", context)
+	}
+	value = strings.TrimSpace(value)
+	if ContainsSecretLikePathValue(value) {
 		return "", fmt.Errorf("%s must not contain secret-like values", context)
 	}
 	return value, nil
@@ -615,6 +628,18 @@ func SafeRepoRelativePath(value string, context string) (string, error) {
 		return "", fmt.Errorf("%s must not escape the repository root", context)
 	}
 	return normalized, nil
+}
+
+// MaterializedInputPath names a prepared CLI input file, never stdin.
+func MaterializedInputPath(value string, context string) (string, error) {
+	pathValue, err := SafeRepoRelativePath(value, context)
+	if err != nil {
+		return "", err
+	}
+	if pathValue == "-" {
+		return "", fmt.Errorf("%s must name a materialized file, not stdin", context)
+	}
+	return pathValue, nil
 }
 
 func containsControlRune(value string) bool {

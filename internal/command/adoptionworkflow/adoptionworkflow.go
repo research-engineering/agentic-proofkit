@@ -73,12 +73,12 @@ type inputRef struct {
 }
 
 type blocker struct {
-	AnswerKind         string
-	BlockerID          string
-	NonClaim           string
-	Reason             string
-	RequiredInputKinds []string
-	Scenario           string
+	AnswerKind        string
+	BlockerID         string
+	InputAlternatives inputAlternatives
+	NonClaim          string
+	Reason            string
+	Scenario          string
 }
 
 type result struct {
@@ -261,12 +261,9 @@ func sortedInputRefs(raw any) ([]inputRef, error) {
 		if !ok {
 			return nil, fmt.Errorf("adoption workflow input path must be a repository-relative POSIX path")
 		}
-		pathValue, err := admit.SafeRepoRelativePath(pathValueRaw, "adoption workflow input path")
+		pathValue, err := admit.MaterializedInputPath(pathValueRaw, "adoption workflow input path")
 		if err != nil {
 			return nil, err
-		}
-		if pathValue == "-" {
-			return nil, fmt.Errorf("adoption workflow input path must name a materialized file, not stdin")
 		}
 		refs = append(refs, inputRef{InputKind: inputKind, Path: pathValue, RefID: refID})
 	}
@@ -380,44 +377,24 @@ func workflowCommandsForPhase(scenario string, presetID *string, refs map[string
 func workflowBlockers(scenario string, presetID *string, refs []inputRef) []blocker {
 	byKind := refsByKind(refs)
 	blockers := []blocker{}
-	if (scenario == "new_repository" || scenario == "existing_gradual_adoption") && presetID == nil {
-		missingPreset := newBlocker(scenario, "scenario requires caller-selected stack preset", []string{})
-		missingPreset.AnswerKind = presetChoiceAnswer
-		blockers = append(blockers, missingPreset)
-	}
-	_, bootstrapOnly := byKind["bootstrap_witness_plan"]
-	for _, kind := range requiredKinds(scenario) {
-		if scenario == "new_repository" && bootstrapOnly && (kind == "requirement_bindings" || kind == "witness_plan") {
-			continue
+	for _, prerequisite := range workflowPrerequisites(scenario) {
+		alternatives := inputAlternatives{}
+		if prerequisite.AnswerKind == presetChoiceAnswer {
+			if presetID != nil {
+				continue
+			}
+		} else {
+			alternatives = prerequisite.InputAlternatives.remaining(byKind)
+			if len(alternatives) == 0 {
+				continue
+			}
 		}
-		if _, ok := byKind[kind]; !ok {
-			blockers = append(blockers, newBlocker(scenario, fmt.Sprintf("scenario requires %s input ref", kind), []string{kind}))
-		}
-	}
-	if scenario == "release_channel" {
-		_, hasExternal := byKind["external_consumer"]
-		_, hasRegistry := byKind["registry_consumer"]
-		if !hasExternal && !hasRegistry {
-			blockers = append(blockers, newBlocker(scenario, "release channel requires external or registry consumer evidence input ref", []string{"external_consumer", "registry_consumer"}))
-		}
+		blockers = append(blockers, newBlocker(scenario, prerequisite, alternatives))
 	}
 	sort.Slice(blockers, func(left int, right int) bool {
 		return blockers[left].BlockerID < blockers[right].BlockerID
 	})
 	return blockers
-}
-
-func requiredKinds(scenario string) []string {
-	switch scenario {
-	case "new_repository":
-		return []string{"gradual_adoption_bootstrap", "gradual_adoption_guidance", "repo_profile_scaffold", "requirement_bindings", "witness_plan"}
-	case "existing_gradual_adoption":
-		return []string{"gradual_adoption_bootstrap", "gradual_adoption_guidance", "repo_profile_scaffold", "requirement_bindings", "selective_gate_evidence", "selective_gate_plan", "witness_plan"}
-	case "legacy_proof_migration":
-		return []string{"migration_plan", "requirement_bindings", "selective_gate_evidence", "selective_gate_plan"}
-	default:
-		return []string{"release_authority"}
-	}
 }
 
 func command(commandID string, argv []string, inputRefIDs []string, renderer cliexec.Renderer) map[string]any {
@@ -438,15 +415,14 @@ func appendInputCommand(commands []map[string]any, refs map[string]inputRef, inp
 	return append(commands, command(cliCommand, []string{cliCommand, "--input", ref.Path}, []string{ref.RefID}, renderer))
 }
 
-func newBlocker(scenario string, reason string, requiredKinds []string) blocker {
-	sort.Strings(requiredKinds)
+func newBlocker(scenario string, prerequisite prerequisite, alternatives inputAlternatives) blocker {
 	return blocker{
-		AnswerKind:         missingContextAnswer,
-		BlockerID:          "proofkit.adoption-workflow.blocker." + scenario + "." + blockerSlug(reason),
-		NonClaim:           blockerNonClaim,
-		Reason:             reason,
-		RequiredInputKinds: requiredKinds,
-		Scenario:           scenario,
+		AnswerKind:        prerequisite.AnswerKind,
+		BlockerID:         "proofkit.adoption-workflow.blocker." + scenario + "." + blockerSlug(prerequisite.Reason),
+		InputAlternatives: alternatives,
+		NonClaim:          blockerNonClaim,
+		Reason:            prerequisite.Reason,
+		Scenario:          scenario,
 	}
 }
 
@@ -473,7 +449,7 @@ func workflowRuleResults(blockers []blocker) []report.RuleResult {
 			Message: item.Reason,
 			Diagnostics: []report.Diagnostic{
 				{Key: "scenario", Value: item.Scenario},
-				{Key: "requiredInputKinds", Value: admit.StringSliceToAny(item.RequiredInputKinds)},
+				{Key: "inputAlternatives", Value: item.InputAlternatives.json()},
 			},
 		})
 	}
@@ -500,9 +476,6 @@ func envelope(result result) map[string]any {
 			commandID := commandRef["commandId"].(string)
 			commandIDs = append(commandIDs, commandID)
 			argv := anyToStrings(commandRef["argv"].([]any))
-			if result.Renderer.Profile() == cliexec.ProfilePythonModule {
-				operandBindings = append(operandBindings, agentenvelope.OperandBinding{CommandID: commandID, ArgvIndex: 0, Role: agentenvelope.PythonLauncherOperand})
-			}
 			commands = append(commands, map[string]any{
 				"argv":      admit.StringSliceToAny(argv),
 				"command":   cliexec.DisplayArgv(argv),
@@ -514,7 +487,7 @@ func envelope(result result) map[string]any {
 			for _, refID := range anyToStrings(commandRef["inputRefIds"].([]any)) {
 				contextID := workflowContextRefID(refID)
 				evidenceRefs = append(evidenceRefs, contextID)
-				operandBindings = append(operandBindings, agentenvelope.OperandBinding{CommandID: commandID, ArgvIndex: len(argv) - 1, ContextRefID: contextID, Role: agentenvelope.ContextPathOperand})
+				operandBindings = append(operandBindings, agentenvelope.OperandBinding{CommandID: commandID, ArgvIndex: len(argv) - 1, ContextRefID: contextID})
 			}
 		}
 		sort.Strings(commandIDs)
@@ -554,7 +527,7 @@ func envelope(result result) map[string]any {
 	for _, item := range blockers {
 		blockedPreconditions = append(blockedPreconditions, map[string]any{
 			"description":    item.Reason,
-			"evidenceRefs":   admit.StringSliceToAny(item.RequiredInputKinds),
+			"evidenceRefs":   admit.StringSliceToAny(item.InputAlternatives.kinds()),
 			"nonClaim":       item.NonClaim,
 			"owner":          "consumer_repository",
 			"preconditionId": item.BlockerID,
@@ -587,6 +560,7 @@ func envelope(result result) map[string]any {
 	}
 	return agentenvelope.Build(agentenvelope.Input{
 		EnvelopeID:      envelopeID,
+		Renderer:        result.Renderer,
 		SourceReport:    sourceReportIdentity(result.Record),
 		Bounds:          bounds,
 		ContextRefs:     contextRefs,
@@ -686,14 +660,14 @@ func blockedWorkflowActions() []map[string]any {
 func clarificationQuestions(blockers []blocker) []map[string]any {
 	questions := make([]map[string]any, 0, len(blockers))
 	for _, item := range blockers {
-		question := fmt.Sprintf("Provide caller-owned input refs for: %s.", strings.Join(item.RequiredInputKinds, ", "))
+		question := fmt.Sprintf("Provide caller-owned input refs for one complete bundle: %s.", item.InputAlternatives.description())
 		if item.AnswerKind == presetChoiceAnswer {
 			question = fmt.Sprintf("Select presetId from: %s.", strings.Join(stackpreset.IDs(), ", "))
 		}
 		questions = append(questions, map[string]any{
 			"askWhen":            item.Reason,
 			"blocking":           true,
-			"evidenceRefs":       admit.StringSliceToAny(item.RequiredInputKinds),
+			"evidenceRefs":       admit.StringSliceToAny(item.InputAlternatives.kinds()),
 			"expectedAnswerKind": item.AnswerKind,
 			"nonClaim":           "Clarification questions do not infer repository state.",
 			"owner":              "consumer_repository",
@@ -732,11 +706,11 @@ func blockersJSON(blockers []blocker) []any {
 	result := make([]any, 0, len(blockers))
 	for _, item := range blockers {
 		result = append(result, map[string]any{
-			"blockerId":          item.BlockerID,
-			"nonClaim":           item.NonClaim,
-			"reason":             item.Reason,
-			"requiredInputKinds": admit.StringSliceToAny(item.RequiredInputKinds),
-			"scenario":           item.Scenario,
+			"blockerId":         item.BlockerID,
+			"inputAlternatives": item.InputAlternatives.json(),
+			"nonClaim":          item.NonClaim,
+			"reason":            item.Reason,
+			"scenario":          item.Scenario,
 		})
 	}
 	return result

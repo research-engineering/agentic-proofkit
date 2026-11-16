@@ -65,7 +65,8 @@ func outputMemberShapes() map[string]jsonshape.Shape {
 	workflowPlan := jsonshape.Object(
 		jsonshape.Required("blockers", jsonshape.Array(jsonshape.Object(
 			jsonshape.Required("blockerId", text), jsonshape.Required("nonClaim", text), jsonshape.Required("reason", text),
-			jsonshape.Required("requiredInputKinds", jsonshape.Array(text, 0)), jsonshape.Required("scenario", scenario),
+			// All scaffold input bundles are supplied; only preset choice can block.
+			jsonshape.Required("inputAlternatives", jsonshape.Tuple()), jsonshape.Required("scenario", scenario),
 		), 0)),
 		jsonshape.Required("inputRefs", jsonshape.Tuple(refs...)), jsonshape.Required("nonClaims", jsonshape.Array(text, len(workflowInputNonClaims))),
 		jsonshape.Required("phases", jsonshape.Tuple(phases...)), jsonshape.Required("planKind", jsonshape.StringLiteral("proofkit.adoption-workflow-plan")),

@@ -129,7 +129,10 @@ func TestRouteStructuresAdmitEveryNativeProjection(t *testing.T) {
 			if err := brief.CheckGenerated(packet, "brief"); err != nil {
 				t.Fatal(err)
 			}
-			envelope := FullAgentEnvelope(report)
+			envelope, _, err := BuildEnvelopeWithRenderer(item.input, item.renderer)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if err := envelopeID.CheckGenerated(envelope["envelopeId"], "envelopeId"); err != nil {
 				t.Fatal(err)
 			}

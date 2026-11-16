@@ -34,15 +34,15 @@ func projectPaths(raw any) (projectPathSet, error) {
 	if err != nil {
 		return projectPathSet{}, err
 	}
-	repoProfileScaffoldInputPath, err := safePath(record["repoProfileScaffoldInputPath"], "project structure scaffold repoProfileScaffoldInputPath")
+	repoProfileScaffoldInputPath, err := materializedInputPath(record["repoProfileScaffoldInputPath"], "project structure scaffold repoProfileScaffoldInputPath")
 	if err != nil {
 		return projectPathSet{}, err
 	}
-	bootstrapInputPath, err := safePath(record["bootstrapInputPath"], "project structure scaffold bootstrapInputPath")
+	bootstrapInputPath, err := materializedInputPath(record["bootstrapInputPath"], "project structure scaffold bootstrapInputPath")
 	if err != nil {
 		return projectPathSet{}, err
 	}
-	workflowInputPath, err := safePath(record["workflowInputPath"], "project structure scaffold workflowInputPath")
+	workflowInputPath, err := materializedInputPath(record["workflowInputPath"], "project structure scaffold workflowInputPath")
 	if err != nil {
 		return projectPathSet{}, err
 	}

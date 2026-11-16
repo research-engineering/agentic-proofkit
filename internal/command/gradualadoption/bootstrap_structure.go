@@ -8,6 +8,8 @@ import (
 )
 
 func BootstrapContractInputStructure() map[string]any {
+	paths := bootstrapPathsStructure()
+	paths["type"], paths["additionalProperties"] = "object", true
 	input := structureOpenObject(map[string]any{
 		"budget":          evaluatedObject("Forwarded into the generated adoption profile."),
 		"module":          evaluatedJSON("Failure-collecting bootstrap module projection."),
@@ -19,7 +21,7 @@ func BootstrapContractInputStructure() map[string]any {
 	bootstrap := structureOpenObject(map[string]any{
 		"bootstrapId": ruleIDStructure(), "commands": textArrayStructure(0),
 		"defaultMode": jsonshape.Enum(adoptionmode.ValuesMap()).JSONSchema(), "nonClaims": textArrayStructure(0),
-		"paths":         evaluatedObject("Bootstrap paths are projected with collected failures."),
+		"paths":         paths,
 		"scopeEvidence": structureOpenObject(map[string]any{"checkedScope": textStructure(), "touchedRuleIds": textArrayStructure(0)}),
 	})
 	return inputDescription(structureObject([]string{"bootstrap", "guidance", "input", "schema"}, map[string]any{

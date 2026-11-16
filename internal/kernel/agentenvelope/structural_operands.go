@@ -6,53 +6,21 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
-const (
-	ContextPathOperand    = "context_path"
-	PythonLauncherOperand = "python_launcher"
-)
-
 // OperandBinding is internal metadata, not a wire field. The command owner
-// identifies the exact argv position; matching text alone never grants a role.
+// identifies the exact argv position; equal-valued text never grants a role.
 type OperandBinding struct {
 	CommandID    string
 	ArgvIndex    int
 	ContextRefID string
-	Role         string
+	ContextField string // Empty selects the standard ref member.
 }
 
-// Only role-specific admission creates this type. Serialization unwraps the
-// admitted value once; arbitrary caller text still follows scalar redaction.
+// Only role-specific admission creates this value. Serialization unwraps it
+// once; arbitrary caller text still follows scalar redaction.
 type admittedStructuralOperand string
 
-func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[string]struct{}, bindings []OperandBinding) {
-	paths := map[string]admittedStructuralOperand{}
-	contexts := make([]map[string]any, 0, len(prepared.contextRefs))
-	omitted := 0
-	for _, context := range prepared.contextRefs {
-		value, exists := context["ref"]
-		if !exists {
-			contexts = append(contexts, context)
-			continue
-		}
-		text, isText := value.(string)
-		canonical, pathErr := admit.SafeRepoRelativePath(text, "agent envelope path operand")
-		isPath := context["kind"] == "path"
-		if !isText || !unicodepolicy.ValidScalarString(text) || unicodepolicy.ContainsUnsafeScalar(text) ||
-			(admit.RedactStructuralText(text) != text && (!isPath || pathErr != nil)) {
-			rejected[context["refId"].(string)] = struct{}{}
-			omitted++
-			continue
-		}
-		operand := admittedStructuralOperand(text)
-		if isPath {
-			if pathErr == nil {
-				operand = admittedStructuralOperand(canonical)
-			}
-			paths[context["refId"].(string)] = operand
-		}
-		context["ref"] = operand
-		contexts = append(contexts, context)
-	}
+func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[string]struct{}, bindings []OperandBinding, fields []ContextReferenceField, renderer cliexec.Renderer) {
+	contexts, paths, omitted := admitContextOperands(prepared.contextRefs, fields, rejected)
 	prepared.contextRefs = contexts
 	byCommand := map[string][]OperandBinding{}
 	for _, binding := range bindings {
@@ -66,7 +34,7 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[str
 			commands = append(commands, command)
 			continue
 		}
-		argv, ok := admitStructuralArgv(value, byCommand[id], paths)
+		argv, ok := admitStructuralArgv(value, byCommand[id], paths, renderer)
 		delete(byCommand, id)
 		if !ok {
 			rejected[id] = struct{}{}
@@ -85,7 +53,7 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[str
 	}
 }
 
-func admitStructuralArgv(raw any, bindings []OperandBinding, paths map[string]admittedStructuralOperand) ([]any, bool) {
+func admitStructuralArgv(raw any, bindings []OperandBinding, paths map[contextOperandKey]admittedStructuralOperand, renderer cliexec.Renderer) ([]any, bool) {
 	var items []any
 	switch values := raw.(type) {
 	case []any:
@@ -99,6 +67,22 @@ func admitStructuralArgv(raw any, bindings []OperandBinding, paths map[string]ad
 		return nil, false
 	}
 	bound := map[int]admittedStructuralOperand{}
+	if renderer.Profile() == cliexec.ProfilePythonModule {
+		prefix := renderer.Argv()
+		matches := len(items) >= len(prefix)
+		for index, expected := range prefix {
+			if index >= len(items) || items[index] != expected {
+				matches = false
+				break
+			}
+		}
+		if matches {
+			if !unicodepolicy.ValidScalarString(prefix[0]) || unicodepolicy.ContainsUnsafeScalar(prefix[0]) {
+				return nil, false
+			}
+			bound[0] = admittedStructuralOperand(prefix[0])
+		}
+	}
 	for _, binding := range bindings {
 		index := binding.ArgvIndex
 		if index < 0 || index >= len(items) {
@@ -107,28 +91,16 @@ func admitStructuralArgv(raw any, bindings []OperandBinding, paths map[string]ad
 		if _, duplicate := bound[index]; duplicate {
 			return nil, false
 		}
+		field := binding.ContextField
+		if field == "" {
+			field = "ref"
+		}
 		text, ok := items[index].(string)
-		if !ok {
+		path, admitted := paths[contextOperandKey{binding.ContextRefID, field}]
+		if !ok || !admitted || string(path) != text {
 			return nil, false
 		}
-		switch binding.Role {
-		case ContextPathOperand:
-			path, admitted := paths[binding.ContextRefID]
-			if !admitted || string(path) != text {
-				return nil, false
-			}
-			bound[index] = path
-		case PythonLauncherOperand:
-			if index != 0 || binding.ContextRefID != "" || !unicodepolicy.ValidScalarString(text) || unicodepolicy.ContainsUnsafeScalar(text) {
-				return nil, false
-			}
-			if _, err := cliexec.AdmitLauncherProfile(cliexec.ProfilePythonModule, text); err != nil {
-				return nil, false
-			}
-			bound[index] = admittedStructuralOperand(text)
-		default:
-			return nil, false
-		}
+		bound[index] = path
 	}
 	result := make([]any, len(items))
 	for index, value := range items {
@@ -145,4 +117,24 @@ func admitStructuralArgv(raw any, bindings []OperandBinding, paths map[string]ad
 		}
 	}
 	return result, true
+}
+
+func commandsWithRetainedOperandContexts(commands []map[string]any, contexts []map[string]any, bindings []OperandBinding) ([]map[string]any, int) {
+	retained := idSet(contexts, "refId")
+	missing := map[string]struct{}{}
+	for _, binding := range bindings {
+		if _, exists := retained[binding.ContextRefID]; !exists {
+			missing[binding.CommandID] = struct{}{}
+		}
+	}
+	result := make([]map[string]any, 0, len(commands))
+	omitted := 0
+	for _, command := range commands {
+		if _, absent := missing[command["commandId"].(string)]; absent {
+			omitted++
+			continue
+		}
+		result = append(result, command)
+	}
+	return result, omitted
 }

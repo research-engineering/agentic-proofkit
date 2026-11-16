@@ -45,6 +45,14 @@ func safePath(raw any, context string) (string, error) {
 	return admit.SafeRepoRelativePath(strings.TrimSpace(value), context)
 }
 
+func materializedInputPath(raw any, context string) (string, error) {
+	value, err := safePath(raw, context)
+	if err != nil {
+		return "", err
+	}
+	return admit.MaterializedInputPath(value, context)
+}
+
 func stringValue(raw any) string {
 	value, _ := raw.(string)
 	return value

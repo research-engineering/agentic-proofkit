@@ -49,6 +49,7 @@ func agentEnvelope(view map[string]any, renderer cliexec.Renderer) map[string]an
 		})
 	}
 	return agentenvelope.Build(agentenvelope.Input{
+		Renderer: renderer,
 		ActionPlan: []map[string]any{
 			{
 				"commandIds":   []any{},

@@ -775,8 +775,8 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.scaffold-project-structure.input.v1.root-shape"}, commands: []string{"scaffold-project-structure"},
 		schema: func() (map[string]any, error) { return projectstructure.InputStructure(), nil },
 	}, {
-		id: "proofkit.scaffold-project-structure.output.v1.json-schema", direction: "output", aggregateVersion: "1",
-		predecessors: []string{"proofkit.scaffold-project-structure.output.v1.root-shape"}, commands: []string{"scaffold-project-structure"},
+		id: "proofkit.scaffold-project-structure.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.scaffold-project-structure.output.v1.root-shape", "proofkit.scaffold-project-structure.output.v1.json-schema"}, commands: []string{"scaffold-project-structure"},
 		variants: []nativeStructureVariant{
 			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return projectstructure.EnvelopeStructure(), nil }},
 			{id: "02-scaffold", when: "without --agent-envelope", schema: func() (map[string]any, error) { return projectstructure.OutputStructure(), nil }},

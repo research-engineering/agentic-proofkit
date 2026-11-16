@@ -73,7 +73,7 @@ const workflowRequired = ['inputRefs', 'nonClaims', 'scenario', 'schemaVersion',
 const workflowOptional = ['presetId'];
 const refKeys = ['inputKind', 'path', 'refId'];
 const planKeys = ['blockers', 'inputRefs', 'nonClaims', 'phases', 'planKind', 'planState', 'scenario', 'schemaVersion', 'workflowId'];
-const blockerKeys = ['blockerId', 'nonClaim', 'reason', 'requiredInputKinds', 'scenario'];
+const blockerKeys = ['blockerId', 'inputAlternatives', 'nonClaim', 'reason', 'scenario'];
 const planCommandKeys = ['argv', 'commandId', 'inputRefIds', 'nonClaim', 'owner'];
 const phases = ['profile', 'bootstrap', 'bind', 'migrate', 'plan-gates', 'collect-evidence', 'release'];
 const scenarios = ['existing_gradual_adoption', 'legacy_proof_migration', 'new_repository', 'release_channel'];
@@ -536,7 +536,7 @@ test('workflow plan and envelope carriers reject independent drift', () => {
   reject('02-workflow-plan', replace(ready, ['phases', 6, 'commands', 0, 'argv'], []), 'empty argv');
   reject('02-workflow-plan', replace(ready, ['phases', 6, 'commands', 0, 'owner'], 'proofkit'), 'owner');
   reject('02-workflow-plan', replace(blocked, ['blockers', 0, 'blockerId'], 'proofkit.adoption-workflow.blocker.invented'), 'blocker vocabulary');
-  reject('02-workflow-plan', replace(blocked, ['blockers', 0, 'requiredInputKinds'], ['unknown_kind']), 'blocker kinds');
+  reject('02-workflow-plan', replace(blocked, ['blockers', 0, 'inputAlternatives'], [['unknown_kind']]), 'blocker kinds');
   reject('02-workflow-plan', replace(ready, ['nonClaims'], ready.nonClaims.slice(1)), 'builtin claim removed');
   reject('02-workflow-plan', replace(ready, ['inputRefs', 0, 'inputKind'], 'unknown'), 'ref kind');
   const envelope = invoke(command, workflowInput(), ['--agent-envelope'], 'passed');

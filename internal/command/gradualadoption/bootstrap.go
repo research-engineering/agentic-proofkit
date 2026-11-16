@@ -3,6 +3,7 @@ package gradualadoption
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -179,7 +180,10 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	if err != nil {
 		return BootstrapResult{}, err
 	}
-	paths := admitBootstrapPaths(object(record["paths"]), &failures)
+	paths, err := admitBootstrapPaths(object(record["paths"]), &failures)
+	if err != nil {
+		return BootstrapResult{}, err
+	}
 	module := admitBootstrapModule(object(record["module"]), &failures)
 	ownerRoute := admitBootstrapOwnerRoute(object(record["ownerRoute"]), &failures)
 	proofBindingPath, err := safePath(record["proofBindingPath"], "bootstrap proofBindingPath")
@@ -340,7 +344,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	}, nil
 }
 
-func admitBootstrapPaths(raw map[string]any, failures *[]string) map[string]any {
+func admitBootstrapPaths(raw map[string]any, failures *[]string) (map[string]any, error) {
 	if err := admit.KnownKeys(raw, []string{"adoptionGuidancePath", "adoptionProfilePath", "adoptionReportArtifactPath", "guidanceReportArtifactPath", "witnessPlanInputPath"}, "bootstrap paths"); err != nil {
 		addErr(failures, err)
 	}
@@ -348,9 +352,16 @@ func admitBootstrapPaths(raw map[string]any, failures *[]string) map[string]any 
 	for _, key := range []string{"adoptionProfilePath", "adoptionGuidancePath", "witnessPlanInputPath", "adoptionReportArtifactPath", "guidanceReportArtifactPath"} {
 		path, err := safePath(raw[key], "bootstrap "+key)
 		addErr(failures, err)
+		// Preserve collected path failures, but never route a prepared file to stdin.
+		if err == nil && slices.Contains(bootstrapPreparedInputPathKeys, key) {
+			path, err = admit.MaterializedInputPath(path, "bootstrap "+key)
+			if err != nil {
+				return nil, err
+			}
+		}
 		paths[key] = path
 	}
-	return paths
+	return paths, nil
 }
 
 func admitBootstrapModule(raw map[string]any, failures *[]string) map[string]any {

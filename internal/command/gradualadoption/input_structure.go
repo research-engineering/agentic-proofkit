@@ -14,6 +14,7 @@ var guidanceInputKeys = []string{"agentGuidance", "guidanceId", "guidanceMode", 
 var bootstrapInputKeys = []string{"bootstrapId", "budget", "checkedScope", "commands", "guidanceMode", "module", "nativeWitnesses", "nonClaims", "ownerRoute", "packageVersionRef", "paths", "proofBindingPath", "repository", "rollback", "schemaVersion", "touchedRuleIds"}
 var sourceReportKeys = []string{"diagnostics", "nonClaims", "reportId", "reportKind", "ruleResults", "schemaVersion", "state", "summary"}
 var sourceRuleKeys = []string{"diagnostics", "message", "ruleId", "status"}
+var bootstrapPreparedInputPathKeys = []string{"adoptionGuidancePath", "adoptionProfilePath", "witnessPlanInputPath"}
 
 // Input structures describe admitted JSON, including policy-failing inputs.
 // Evaluation-only members cannot acquire success-only type requirements here.
@@ -59,7 +60,7 @@ func BootstrapInputStructure() map[string]any {
 		"nonClaims":         evaluatedJSON("Unsorted unique caller claims are normalized to sorted text. Missing, malformed or duplicate caller claims collect failures. Caller claims are then merged with builtin claims; a duplicate in that merge collects failure and normalizes report nonClaims to an empty array."),
 		"ownerRoute":        evaluatedJSON("Owner routes normalize through failure-collecting projections."),
 		"packageVersionRef": textStructure(),
-		"paths":             evaluatedJSON("Paths normalize through failure-collecting projections; no filesystem access or file write occurs."),
+		"paths":             bootstrapPathsStructure(),
 		"proofBindingPath":  evaluatedJSON("Malformed binding paths collect failures and normalize to empty text."),
 		"repository":        evaluatedObject("Repository content is preserved and evaluated by the generated adoption profile."),
 		"rollback":          evaluatedObject("Rollback content is preserved; optional owner/versionPin text is redacted before egress."),
@@ -67,6 +68,17 @@ func BootstrapInputStructure() map[string]any {
 		"touchedRuleIds":    evaluatedJSON("Invalid ID arrays collect failures; bootstrap expects an empty touched scope."),
 	}
 	return inputDescription(structureObject(bootstrapInputKeys, fields, "checkedScope", "commands", "module", "nonClaims", "ownerRoute", "paths", "proofBindingPath", "touchedRuleIds"), "The full decoded root is strictly serialized and detached, then secret-shaped keys/values are rejected before decisions or egress. Budget/repository/rollback and packageVersionRef are hard constraints inherited from the generated adoption profile. GuidanceMode must be a supported mode even for failed reports; only observe with scope none can pass initial bootstrap. Native witness policy, input byte limits and privacy are not replaced by this structural description.")
+}
+
+func bootstrapPathsStructure() map[string]any {
+	fields := map[string]any{}
+	for _, key := range bootstrapPreparedInputPathKeys {
+		fields[key] = map[string]any{"not": map[string]any{"const": "-"}}
+	}
+	return map[string]any{
+		"properties":  fields,
+		"description": "Prepared CLI input paths must not be the stdin sentinel '-'. Other malformed or missing paths retain failure-collecting projection; no filesystem access or file write occurs.",
+	}
 }
 
 func ContractInputStructure() map[string]any {

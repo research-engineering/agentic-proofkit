@@ -3,6 +3,8 @@ package agentenvelope
 import (
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 func TestBuildPreservesCanonicalPathOperandsWithoutScalarExemptions(t *testing.T) {
@@ -16,8 +18,8 @@ func TestBuildPreservesCanonicalPathOperandsWithoutScalarExemptions(t *testing.T
 		{"commandId": "proofkit.command.two", "argv": []string{"tool", "--input", paths[1]}},
 	}
 	bindings := []OperandBinding{
-		{CommandID: "proofkit.command.one", ArgvIndex: 2, ContextRefID: "proofkit.context.one", Role: ContextPathOperand},
-		{CommandID: "proofkit.command.two", ArgvIndex: 2, ContextRefID: "proofkit.context.two", Role: ContextPathOperand},
+		{CommandID: "proofkit.command.one", ArgvIndex: 2, ContextRefID: "proofkit.context.one"},
+		{CommandID: "proofkit.command.two", ArgvIndex: 2, ContextRefID: "proofkit.context.two"},
 	}
 	envelope := Build(Input{ContextRefs: contexts, Commands: commands, OperandBindings: bindings})
 	refs := envelope["contextRefs"].([]any)
@@ -54,27 +56,46 @@ func TestBuildPreservesCanonicalPathOperandsWithoutScalarExemptions(t *testing.T
 
 func TestBuildBindsLauncherRoleToItsExactPosition(t *testing.T) {
 	interpreter := "/opt/task-validation/bin/python"
+	renderer, err := cliexec.AdmitLauncherProfile(cliexec.ProfilePythonModule, interpreter)
+	if err != nil {
+		t.Fatal(err)
+	}
 	command := map[string]any{"commandId": "proofkit.command.one", "argv": []any{interpreter, "-m", "agentic_proofkit"}}
-	binding := OperandBinding{CommandID: "proofkit.command.one", ArgvIndex: 0, Role: PythonLauncherOperand}
-	envelope := Build(Input{Commands: []map[string]any{command}, OperandBindings: []OperandBinding{binding}})
+	envelope := Build(Input{Commands: []map[string]any{command}, Renderer: renderer})
 	commands := envelope["commands"].([]any)
 	if len(commands) != 1 || commands[0].(map[string]any)["argv"].([]any)[0] != interpreter {
 		t.Fatal("renderer-admitted interpreter was not preserved")
 	}
-	for _, bad := range []OperandBinding{
-		{CommandID: binding.CommandID, ArgvIndex: -1, Role: PythonLauncherOperand},
-		{CommandID: binding.CommandID, ArgvIndex: 1, Role: PythonLauncherOperand},
-		{CommandID: binding.CommandID, ArgvIndex: 3, Role: PythonLauncherOperand},
-		{CommandID: binding.CommandID, ArgvIndex: 0, Role: ContextPathOperand, ContextRefID: "proofkit.missing"},
-		{CommandID: binding.CommandID, ArgvIndex: 0, Role: PythonLauncherOperand, ContextRefID: "proofkit.unexpected"},
-		{CommandID: binding.CommandID, ArgvIndex: 0, Role: "unknown"},
+	for _, argv := range [][]any{
+		{interpreter, "-m", "another_module"},
+		{"tool", "--input", interpreter},
+		{interpreter, 1, "agentic_proofkit"},
 	} {
-		refused := Build(Input{Commands: []map[string]any{command}, OperandBindings: []OperandBinding{bad}})
+		refused := Build(Input{Commands: []map[string]any{{"commandId": "proofkit.command.one", "argv": argv}}, Renderer: renderer})
+		if len(refused["commands"].([]any)) != 0 {
+			t.Fatal("a different argv position or module inherited the launcher role")
+		}
+	}
+}
+
+func TestBuildRejectsInvalidPathOperandBindings(t *testing.T) {
+	path := "inputs/task-requirements.json"
+	command := map[string]any{"commandId": "proofkit.command.one", "argv": []any{"tool", "--input", path}}
+	context := map[string]any{"refId": "proofkit.context.one", "kind": "path", "ref": path}
+	binding := OperandBinding{CommandID: "proofkit.command.one", ArgvIndex: 2, ContextRefID: "proofkit.context.one"}
+	for _, bad := range []OperandBinding{
+		{CommandID: binding.CommandID, ArgvIndex: -1, ContextRefID: binding.ContextRefID},
+		{CommandID: binding.CommandID, ArgvIndex: 3, ContextRefID: binding.ContextRefID},
+		{CommandID: binding.CommandID, ArgvIndex: 0, ContextRefID: binding.ContextRefID},
+		{CommandID: binding.CommandID, ArgvIndex: 2, ContextRefID: "proofkit.missing"},
+		{CommandID: binding.CommandID, ArgvIndex: 2, ContextRefID: binding.ContextRefID, ContextField: "missing"},
+	} {
+		refused := Build(Input{ContextRefs: []map[string]any{context}, Commands: []map[string]any{command}, OperandBindings: []OperandBinding{bad}})
 		if len(refused["commands"].([]any)) != 0 {
 			t.Fatal("invalid operand binding retained a command")
 		}
 	}
-	duplicate := Build(Input{Commands: []map[string]any{command}, OperandBindings: []OperandBinding{binding, binding}})
+	duplicate := Build(Input{ContextRefs: []map[string]any{context}, Commands: []map[string]any{command}, OperandBindings: []OperandBinding{binding, binding}})
 	if len(duplicate["commands"].([]any)) != 0 {
 		t.Fatal("duplicate operand roles were not refused")
 	}

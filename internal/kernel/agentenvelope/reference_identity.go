@@ -58,7 +58,7 @@ func prepareLocalReferences(input Input) preparedLocalReferences {
 	prepared.commands = removeAmbiguousTargets(prepared.commands, "commandId", ambiguous)
 	prepared.contextRefs = removeAmbiguousTargets(prepared.contextRefs, "refId", ambiguous)
 	prepared.receiptRefs = removeAmbiguousTargets(prepared.receiptRefs, "receiptRefId", ambiguous)
-	admitStructuralOperands(&prepared, rejectedTargets, input.OperandBindings)
+	admitStructuralOperands(&prepared, rejectedTargets, input.OperandBindings, input.ContextReferenceFields, input.Renderer)
 
 	if unsafeTargets > 0 {
 		prepared.omitted = append(prepared.omitted, omissionRecord("unsafeLocalIdentity", "localTargetIds", unsafeTargets))

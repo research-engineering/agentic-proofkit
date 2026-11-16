@@ -5,12 +5,16 @@
   "changeClass": "breaking",
   "breakingChanges": [
     {
+      "changeId": "proofkit.workflow.input-alternatives",
+      "summary": "Workflow plan blockers replace requiredInputKinds with inputAlternatives: an OR of complete AND bundles of still-missing input kinds. Empty alternatives mean scalar preset choice. New repository repairs preserve bootstrap_witness_plan OR (requirement_bindings AND witness_plan); release repairs preserve external_consumer OR registry_consumer. The same semantics apply to embedded scaffold and aggregate workflow plans."
+    },
+    {
       "changeId": "proofkit.workflow.materialized-inputs",
-      "summary": "adoption-workflow-plan refuses inputRefs[].path equal to the CLI stdin sentinel -. Direct, contract-wrapped and selected aggregate workflow inputs require materialized repository-relative file paths. Top-level --input - remains supported. Input contract IDs and wire versions are unchanged for this narrowing defect correction; their exact definition and command fingerprints change."
+      "summary": "Workflow, scaffold and bootstrap prepared child-input paths refuse the CLI stdin sentinel -. Direct, contract-wrapped and selected aggregate inputs require materialized repository-relative file paths. Top-level --input - and ordinary output filenames remain supported. Input contract IDs and wire versions are unchanged for this narrowing defect correction; their exact definition and command fingerprints change."
     },
     {
       "changeId": "proofkit.workflow.typed-repair-linkage",
-      "summary": "adoption-workflow-plan and the workflow mode of adoption-contract-envelope request preset_choice when presetId is missing, instead of missing_context_ref. The question lists the supported preset IDs. Both output contract IDs and structural definition identities advance to v2 while outer wire schemaVersion remains 1. Action and what-changed evidence references now name the same local context IDs as contextRefs, including caller IDs that resemble generated context IDs."
+      "summary": "adoption-workflow-plan and the workflow mode of adoption-contract-envelope request preset_choice when a required presetId is missing, instead of missing_context_ref. The question lists supported preset IDs. Those output contracts and scaffold-project-structure output advance to semantic v2 while wire schemaVersion remains 1. Action and what-changed evidence references name the same local context IDs as contextRefs, including caller IDs that resemble generated IDs."
     }
   ],
   "additions": [
@@ -20,14 +24,15 @@
     },
     {
       "changeId": "proofkit.agent-envelope.structural-operands",
-      "summary": "Agent envelopes preserve safe structural context refs without diagnostic truncation. Workflow command owners bind path and Python-launcher roles to exact argv positions; matching text in another argument does not gain a path role. Unrepresentable context refs or argv cause explicit target omission and dependent-reference pruning, not an executable redaction marker. Command-free workflow repair actions carry no invented local input refs. Scalar text and actual secret values retain their existing protection."
+      "summary": "Agent envelopes preserve safe structural context references without diagnostic truncation. Workflow and route owners bind prepared paths to exact argv positions; all argv-producing envelope owners preserve their admitted Python launcher. Equal text elsewhere gains no structural role. Unsafe references or argv cause explicit target omission and dependent-reference pruning, not an executable redaction marker. Missing bounded contexts remove their dependent commands. Secret signatures remain refused inside paths, and scalar text retains its existing protection."
     }
   ],
   "migration": {
     "required": true,
     "steps": [
-      "Materialize workflow child inputs and replace any inputRefs[].path equal to - with its repository-relative file path; the workflow command itself may still read JSON from stdin.",
-      "Refresh pinned machine-contract digests and both workflow output v2 validators without changing the outer workflow wire header. Handle preset_choice by selecting presetId from the question's supported vocabulary; handle missing_context_ref by supplying the named input refs.",
+      "Read inputAlternatives as alternative complete bundles, not a flattened all-required list; an empty alternatives array requests a scalar preset choice. Existing workflow acceptance policy is unchanged.",
+      "Materialize workflow, scaffold and bootstrap child inputs and replace any prepared input path equal to - with its repository-relative file path; top-level commands may still read JSON from stdin.",
+      "Refresh pinned machine-contract digests and semantic v2 output validators for adoption-workflow-plan, adoption-contract-envelope and scaffold-project-structure without changing wire headers. Handle preset_choice with a supported presetId; handle missing_context_ref with one complete inputAlternatives bundle per input blocker.",
       "Resolve action and what-changed evidenceRefs against contextRefs by exact refId instead of treating them as raw plan inputRefIds. Planned commands remain non-executing caller-owned routes."
     ]
   },

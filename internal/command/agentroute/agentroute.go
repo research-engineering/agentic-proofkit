@@ -162,6 +162,22 @@ const (
 	routeFamilyUnknown                  routeFamily = "unknown"
 )
 
+type builtRouteResult struct {
+	report   map[string]any
+	commands []compiledRouteCommand
+	renderer cliexec.Renderer
+}
+
+type compiledRouteCommand struct {
+	report       map[string]any
+	pathOperands []routePathOperand
+}
+
+type routePathOperand struct {
+	index int
+	ref   string
+}
+
 type commandSpec struct {
 	Command   string
 	InputKind string
@@ -420,16 +436,21 @@ func Build(raw any) (map[string]any, int, error) {
 }
 
 func BuildWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
+	result, code, err := buildRouteWithRenderer(raw, renderer)
+	return result.report, code, err
+}
+
+func buildRouteWithRenderer(raw any, renderer cliexec.Renderer) (builtRouteResult, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
-		return nil, 1, err
+		return builtRouteResult{}, 1, err
 	}
 	if input.Goal == "unknown" {
-		return buildUnknownGoal(input, renderer), 1, nil
+		return builtRouteResult{report: buildUnknownGoal(input, renderer), renderer: renderer}, 1, nil
 	}
 	spec, ok := routeSpecs[input.Goal]
 	if !ok {
-		return buildUnknownGoal(input, renderer), 1, nil
+		return builtRouteResult{report: buildUnknownGoal(input, renderer), renderer: renderer}, 1, nil
 	}
 	missing := missingRequiredInputs(spec, input)
 	state := stateRouted
@@ -698,7 +719,7 @@ func admitAvailableInputs(raw any) (map[string]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		refText, err := admit.NonEmptyText(record["ref"], fmt.Sprintf("agent route availableInputs[%d].ref", index))
+		refText, err := admit.NonEmptyPathText(record["ref"], fmt.Sprintf("agent route availableInputs[%d].ref", index))
 		if err != nil {
 			return nil, err
 		}
@@ -754,7 +775,7 @@ func admitObservedReports(raw any) ([]observedReport, error) {
 		if err != nil {
 			return nil, err
 		}
-		refText, err := admit.NonEmptyText(record["ref"], fmt.Sprintf("agent route observedReports[%d].ref", index))
+		refText, err := admit.NonEmptyPathText(record["ref"], fmt.Sprintf("agent route observedReports[%d].ref", index))
 		if err != nil {
 			return nil, err
 		}
@@ -929,13 +950,17 @@ func buildUnknownGoal(input routeInput, renderer cliexec.Renderer) map[string]an
 	}
 }
 
-func buildReport(input routeInput, spec routeSpec, state string, missing []map[string]any, renderer cliexec.Renderer) map[string]any {
+func buildReport(input routeInput, spec routeSpec, state string, missing []map[string]any, renderer cliexec.Renderer) builtRouteResult {
 	availableCommands := commandReports(spec.NextCommands, input, renderer)
-	nextCommands := availableCommands
-	if state != stateRouted {
-		nextCommands = []any{}
+	selected := []compiledRouteCommand{}
+	nextCommands := []any{}
+	if state == stateRouted {
+		selected = availableCommands
+		for _, command := range selected {
+			nextCommands = append(nextCommands, command.report)
+		}
 	}
-	return map[string]any{
+	report := map[string]any{
 		"diagnostics":         diagnostics(input, state, missing),
 		"escalations":         admit.StringSliceToAny(spec.Escalations),
 		"nextCommands":        nextCommands,
@@ -964,21 +989,24 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 			"openBrowser":           input.OpenBrowser,
 		},
 	}
+	return builtRouteResult{report: report, commands: selected, renderer: renderer}
 }
 
-func commandReports(commands []commandSpec, input routeInput, renderer cliexec.Renderer) []any {
-	result := []any{}
+func commandReports(commands []commandSpec, input routeInput, renderer cliexec.Renderer) []compiledRouteCommand {
+	result := []compiledRouteCommand{}
 	for _, command := range commands {
 		if !commandInputsAvailable(command, input.AvailableInputs) {
 			continue
 		}
 		argv := renderer.Argv(command.Command)
 		argv = append(argv, command.ExtraArgs...)
+		operands := []routePathOperand{}
 		for _, arg := range command.ArgInputs {
 			ref, ok := input.AvailableInputs[arg.InputKind]
 			if !ok {
 				continue
 			}
+			operands = append(operands, routePathOperand{index: len(argv) + 1, ref: ref})
 			argv = append(argv, arg.Flag, ref)
 		}
 		if command.Command == "requirement-browser-server" && input.BrowserMode == "serve_local_view" {
@@ -992,6 +1020,7 @@ func commandReports(commands []commandSpec, input routeInput, renderer cliexec.R
 			if !ok {
 				continue
 			}
+			operands = append(operands, routePathOperand{index: len(argv) + 1, ref: ref})
 			argv = append(argv, "--input", ref)
 		}
 		report := map[string]any{
@@ -1002,7 +1031,7 @@ func commandReports(commands []commandSpec, input routeInput, renderer cliexec.R
 		if browserMode := browserModeForCommand(command, input); browserMode != nil {
 			report["browserMode"] = browserMode
 		}
-		result = append(result, report)
+		result = append(result, compiledRouteCommand{report: report, pathOperands: operands})
 	}
 	return result
 }
