@@ -27,6 +27,8 @@ func InputStructure() map[string]any {
 		"schemaVersion": jsonshape.IntegerLiteral(1),
 		"workflowId":    ruleID(),
 	}, "presetId").JSONSchema()
+	refSchema := schema["properties"].(map[string]any)["inputRefs"].(map[string]any)["items"].(map[string]any)
+	refSchema["properties"].(map[string]any)["path"].(map[string]any)["not"] = map[string]any{"const": "-"}
 	nonClaims := schema["properties"].(map[string]any)["nonClaims"].(map[string]any)
 	nonClaims["uniqueItems"] = true
 	nonClaims["items"].(map[string]any)["not"] = map[string]any{"enum": admit.StringSliceToAny(workflowNonClaims)}
@@ -83,7 +85,7 @@ func EnvelopeStructure() map[string]any {
 		ActionPlan:             jsonshape.BoundedArray(agentenvelope.ActionStructure(jsonshape.Enum(phases)), 0, agentenvelope.MaxActionItems),
 		BlockedPreconditions:   jsonshape.BoundedArray(agentenvelope.BlockedStructure(), 0, agentenvelope.MaxBlockedPreconditions),
 		Bounds:                 agentenvelope.CompatibilityBoundsStructure(),
-		ClarificationQuestions: jsonshape.BoundedArray(agentenvelope.ClarificationStructure(jsonshape.StringLiteral("missing_context_ref")), 0, agentenvelope.MaxClarificationQuestions),
+		ClarificationQuestions: jsonshape.BoundedArray(agentenvelope.ClarificationStructure(jsonshape.Enum(set(missingContextAnswer, presetChoiceAnswer))), 0, agentenvelope.MaxClarificationQuestions),
 		Commands: jsonshape.BoundedArray(jsonshape.Object(
 			jsonshape.Required("argv", jsonshape.Array(t, 1)), jsonshape.Required("command", t), jsonshape.Required("commandId", t),
 			jsonshape.Required("nonClaim", jsonshape.StringLiteral(agentCommandNonClaim)),

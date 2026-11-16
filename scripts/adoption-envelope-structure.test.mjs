@@ -26,8 +26,8 @@ const expected = {
       ['13-pilot-stack-diverse', ['--mode pilot --pilot stack-diverse']], ['14-workflow', ['--mode workflow']]],
   },
   'adoption-contract-envelope/output': {
-    id: 'proofkit.adoption-contract-envelope.output.v1.json-schema', contractId: 'proofkit.adoption-contract-envelope.output.v1', schemaVersion: 1, rootType: 'union',
-    predecessor: 'proofkit.adoption-contract-envelope.output.v1.root-shape',
+    id: 'proofkit.adoption-contract-envelope.output.v2.json-schema', contractId: 'proofkit.adoption-contract-envelope.output.v2', schemaVersion: 1, rootType: 'union',
+    predecessor: 'proofkit.adoption-contract-envelope.output.v1.json-schema',
     variants: [['01-adoption-report', [aggregateCondition('absent', 'absent', 'adoption', 'absent')]],
       ['02-bootstrap', [aggregateCondition('absent', 'absent', 'bootstrap', 'absent')]],
       ['03-bootstrap-agent', [aggregateCondition('present', 'absent', 'bootstrap', 'absent')]],
@@ -46,8 +46,8 @@ const expected = {
     variants: [['01-contract-envelope', ['--contract-envelope']], ['02-direct', ['without --contract-envelope']]],
   },
   'adoption-workflow-plan/output': {
-    id: 'proofkit.adoption-workflow-plan.output.v1.json-schema', contractId: 'proofkit.adoption-workflow-plan.output.v1', schemaVersion: 1, rootType: 'object',
-    predecessor: 'proofkit.adoption-workflow-plan.output.v1.root-shape',
+    id: 'proofkit.adoption-workflow-plan.output.v2.json-schema', contractId: 'proofkit.adoption-workflow-plan.output.v2', schemaVersion: 1, rootType: 'object',
+    predecessor: 'proofkit.adoption-workflow-plan.output.v1.json-schema',
     variants: [['01-agent-envelope', ['--agent-envelope']], ['02-workflow-plan', ['without --agent-envelope']]],
   },
   'pilot-admission/input': {
@@ -467,6 +467,39 @@ test('workflow plan variants, clauses and boundaries agree with the CLI', () => 
   const long = replace(base, ['inputRefs', 0, 'refId'], 'A'.repeat(250));
   const degraded = invoke(command, long, ['--agent-envelope'], 'passed', {label: 'degraded'});
   assert.equal(degraded.bounds.truncated, true); assert(degraded.omitted.length > 0);
+});
+
+test('workflow prepared input and clarification linkage survives every CLI carrier', () => {
+  const base = workflowInput('new_repository', ['repo_profile_scaffold', 'gradual_adoption_bootstrap', 'gradual_adoption_guidance', 'bootstrap_witness_plan'], 'python_service');
+  base.inputRefs[0].refId = 'p';
+  base.inputRefs[3].refId = 'proofkit.adoption-workflow.context.p';
+  const carriers = [
+    ['adoption-workflow-plan', [], value => value],
+    ['adoption-workflow-plan', ['--contract-envelope'], value => ({schema: 'proofkit.adoption-workflow.v1', workflow: value})],
+    ['adoption-contract-envelope', ['--mode', 'workflow'], value => replace(aggregate(), ['workflow', 'workflow'], value)],
+  ];
+  for (const [command, flags, wrap] of carriers) {
+    // The workflow itself is read from stdin; its prepared child inputs are files.
+    invoke(command, wrap(base), flags, 'passed');
+    const envelope = invoke(command, wrap(base), [...flags, '--agent-envelope'], 'passed');
+    const bind = envelope.actionPlan.find(row => row.stepId === 'proofkit.adoption-workflow.action.bind');
+    const witness = envelope.commands.find(row => row.commandId === 'proofkit.adoption-workflow.command.witness-plan');
+    assert.deepEqual(bind.evidenceRefs.map(id => envelope.contextRefs.find(ref => ref.refId === id)?.ref), [base.inputRefs[3].path]);
+    assert.equal(witness.argv.at(-1), base.inputRefs[3].path);
+    const bad = replace(base, ['inputRefs', 3, 'path'], '-');
+    invoke(command, wrap(bad), flags, 'refused');
+    invoke(command, wrap(bad), [...flags, '--agent-envelope'], 'repair');
+    for (const value of [remove(base, ['presetId']), {...base, presetId: null}]) {
+      const blocked = invoke(command, wrap(value), [...flags, '--agent-envelope'], 'failed');
+      assert.equal(blocked.clarificationQuestions.length, 1);
+      const question = blocked.clarificationQuestions[0];
+      assert.equal(question.expectedAnswerKind, 'preset_choice');
+      assert.match(question.question, /presetId/);
+      for (const preset of presets) assert(question.question.includes(preset));
+    }
+  }
+  const unselected = replace(aggregate(), ['workflow', 'workflow', 'inputRefs', 0, 'path'], '-');
+  invoke('adoption-contract-envelope', unselected, ['--mode', 'adoption'], 'passed');
 });
 
 test('workflow plan and envelope carriers reject independent drift', () => {

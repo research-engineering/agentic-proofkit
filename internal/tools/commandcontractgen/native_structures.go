@@ -919,8 +919,8 @@ func nativeStructures() []nativeStructure {
 			{id: "02-direct", when: "without --contract-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.InputStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.adoption-workflow-plan.output.v1.json-schema", direction: "output",
-		predecessors: []string{"proofkit.adoption-workflow-plan.output.v1.root-shape"}, commands: []string{"adoption-workflow-plan"},
+		id: "proofkit.adoption-workflow-plan.output.v2.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.adoption-workflow-plan.output.v1.root-shape", "proofkit.adoption-workflow-plan.output.v1.json-schema"}, commands: []string{"adoption-workflow-plan"},
 		variants: []nativeStructureVariant{
 			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.EnvelopeOutputStructure(), nil }},
 			{id: "02-workflow-plan", when: "without --agent-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.OutputStructure(), nil }},
@@ -957,8 +957,8 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.adoption-contract-envelope.input.v2.root-shape"}, commands: []string{"adoption-contract-envelope"},
 		variants: adoptionContractInputVariants(),
 	}, {
-		id: "proofkit.adoption-contract-envelope.output.v1.json-schema", direction: "output", aggregateVersion: "1", conditionModel: "cli_flag_conjunction_v1",
-		predecessors: []string{"proofkit.adoption-contract-envelope.output.v1.root-shape"}, commands: []string{"adoption-contract-envelope"},
+		id: "proofkit.adoption-contract-envelope.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2, conditionModel: "cli_flag_conjunction_v1",
+		predecessors: []string{"proofkit.adoption-contract-envelope.output.v1.root-shape", "proofkit.adoption-contract-envelope.output.v1.json-schema"}, commands: []string{"adoption-contract-envelope"},
 		variants: adoptionContractOutputVariants(),
 	}}
 }

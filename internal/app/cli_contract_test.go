@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "86e88a10e28db6efa2391f79445b8519d4742cfc6dc97c884fc0cf0f48f89435"
+	cliContractPublicABISHA256               = "bbfb30f10a9c042b18ac97c0deb131c6f1b3bdadae035509f10d894dd12c52fb"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -410,7 +410,7 @@ func TestCLIContractRootShapeVariantInventoryIsClosedAndModeComplete(t *testing.
 func TestCLIConditionModelClosesAdoptionOutputRoutes(t *testing.T) {
 	contract := readCLIContract(t)
 	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
-	definition := definitions["proofkit.adoption-contract-envelope.output.v1.json-schema"]
+	definition := definitions["proofkit.adoption-contract-envelope.output.v2.json-schema"]
 	if definition == nil {
 		t.Fatal("adoption output structural definition is missing")
 	}
@@ -563,9 +563,9 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.change-workflow-plan.output.v1.json-schema":                     {},
 			"proofkit.native-evidence-guidance.output.v1.json-schema":                 {},
 			"proofkit.adoption-contract-envelope.input.v3.json-schema":                {},
-			"proofkit.adoption-contract-envelope.output.v1.json-schema":               {},
+			"proofkit.adoption-contract-envelope.output.v2.json-schema":               {},
 			"proofkit.adoption-workflow-plan.input.v1.json-schema":                    {},
-			"proofkit.adoption-workflow-plan.output.v1.json-schema":                   {},
+			"proofkit.adoption-workflow-plan.output.v2.json-schema":                   {},
 			"proofkit.pilot-admission.input.v2.json-schema":                           {},
 			"proofkit.pilot-admission.output.v1.json-schema":                          {},
 			"proofkit.requirement-source-conversion.input.v1.json-schema":             {},

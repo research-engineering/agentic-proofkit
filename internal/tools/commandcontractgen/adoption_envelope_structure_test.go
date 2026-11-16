@@ -53,8 +53,8 @@ func adoptionEnvelopeOwners() []adoptionEnvelopeOwner {
 			"12-pilot-first": {"--mode pilot --pilot first", "--mode pilot without --pilot (defaults first)"},
 		},
 	}, {
-		id: "proofkit.adoption-contract-envelope.output.v1.json-schema", command: "adoption-contract-envelope", wire: "1",
-		contractID: "proofkit.adoption-contract-envelope.output.v1", rootType: "union", predecessor: "proofkit.adoption-contract-envelope.output.v1.root-shape",
+		id: "proofkit.adoption-contract-envelope.output.v2.json-schema", command: "adoption-contract-envelope", wire: "1",
+		contractID: "proofkit.adoption-contract-envelope.output.v2", rootType: "union", predecessor: "proofkit.adoption-contract-envelope.output.v1.json-schema",
 		variants: map[string]func() map[string]any{
 			"01-adoption-report": gradualadoption.OutputStructure, "02-bootstrap": gradualadoption.BootstrapOutputStructure,
 			"03-bootstrap-agent": agent("bootstrap"), "04-bootstrap-materialization": gradualadoption.BootstrapMaterializationStructure,
@@ -73,8 +73,8 @@ func adoptionEnvelopeOwners() []adoptionEnvelopeOwner {
 		contractID: "proofkit.adoption-workflow-plan.input.v1", rootType: "object", predecessor: "proofkit.adoption-workflow-plan.input.v1.root-shape",
 		variants: map[string]func() map[string]any{"01-contract-envelope": adoptionworkflow.ContractInputStructure, "02-direct": adoptionworkflow.InputStructure},
 	}, {
-		id: "proofkit.adoption-workflow-plan.output.v1.json-schema", command: "adoption-workflow-plan", wire: "1",
-		contractID: "proofkit.adoption-workflow-plan.output.v1", rootType: "object", predecessor: "proofkit.adoption-workflow-plan.output.v1.root-shape",
+		id: "proofkit.adoption-workflow-plan.output.v2.json-schema", command: "adoption-workflow-plan", wire: "1",
+		contractID: "proofkit.adoption-workflow-plan.output.v2", rootType: "object", predecessor: "proofkit.adoption-workflow-plan.output.v1.json-schema",
 		variants: map[string]func() map[string]any{"01-agent-envelope": adoptionworkflow.EnvelopeOutputStructure, "02-workflow-plan": adoptionworkflow.OutputStructure},
 	}, {
 		id: "proofkit.pilot-admission.input.v2.json-schema", command: "pilot-admission", wire: "2",
@@ -166,7 +166,7 @@ func TestAdoptionEnvelopeConditionModelMovesToTheStructuralOwner(t *testing.T) {
 		t.Fatalf("aggregate output condition cases=%d want 12", conditions)
 	}
 	for name, mutate := range map[string]func(*nativeStructure){
-		"wrong-owner": func(o *nativeStructure) { o.id = "proofkit.adoption-contract-envelope.output.v2.json-schema" },
+		"wrong-owner": func(o *nativeStructure) { o.id = "proofkit.adoption-contract-envelope.output.v1.json-schema" },
 		"unknown":     func(o *nativeStructure) { o.conditionModel = "free_text" },
 		"overlap": func(o *nativeStructure) {
 			o.variants = slices.Clone(o.variants)
@@ -191,7 +191,7 @@ func TestAdoptionEnvelopeConditionModelMovesToTheStructuralOwner(t *testing.T) {
 
 func TestArrayAndSumRootsRemainOwnerBounded(t *testing.T) {
 	pilot, _ := nativeStructureOwner("proofkit.pilot-admission.output.v1.json-schema")
-	workflow, _ := nativeStructureOwner("proofkit.adoption-workflow-plan.output.v1.json-schema")
+	workflow, _ := nativeStructureOwner("proofkit.adoption-workflow-plan.output.v2.json-schema")
 	input, _ := nativeStructureOwner("proofkit.pilot-admission.input.v2.json-schema")
 	for name, mutant := range map[string]nativeStructure{
 		"array-input": func() nativeStructure {

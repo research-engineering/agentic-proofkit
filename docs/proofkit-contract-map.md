@@ -139,6 +139,14 @@ behavior already contradicted is a defect correction, not a change of
 specified meaning. The rule governs changes made after its adoption; identities
 set before it are retained.
 
+Adoption workflow output contracts use semantic v2 with wire
+`schemaVersion: 1`, including the workflow carrier of
+`adoption-contract-envelope`. Missing `presetId` requests `preset_choice`;
+missing prepared inputs request `missing_context_ref`. Envelope actions and
+the `what changed` question refer to exact local `contextRefs[].refId` values,
+not raw plan input IDs. Prepared input paths cannot be the stdin sentinel
+`-`; the workflow command itself can still receive JSON through `--input -`.
+
 `contractId` and `schemaVersion` need not coincide. Adoption
 materialization plan/apply input v3 retains payload `schemaVersion: 2`, while the
 six adoption/integration lifecycle output contracts use semantic v2 with outer
