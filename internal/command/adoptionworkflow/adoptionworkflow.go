@@ -83,6 +83,7 @@ type blocker struct {
 
 type result struct {
 	Blockers []blocker
+	Renderer cliexec.Renderer
 	ExitCode int
 	Plan     map[string]any
 	Record   report.Record
@@ -231,7 +232,7 @@ func build(raw any, renderer cliexec.Renderer) (result, error) {
 		RuleResults: workflowRuleResults(blockers),
 		NonClaims:   admit.StringSliceToAny(allNonClaims),
 	}
-	return result{Blockers: blockers, ExitCode: exitCode, Plan: plan, Record: rec}, nil
+	return result{Blockers: blockers, Renderer: renderer, ExitCode: exitCode, Plan: plan, Record: rec}, nil
 }
 
 func sortedInputRefs(raw any) ([]inputRef, error) {
@@ -483,6 +484,7 @@ func envelope(result result) map[string]any {
 	plan := result.Plan
 	phases := plan["phases"].([]any)
 	commands := []map[string]any{}
+	operandBindings := []agentenvelope.OperandBinding{}
 	actionPlan := []map[string]any{}
 	for _, rawPhase := range phases {
 		phase := rawPhase.(map[string]any)
@@ -498,6 +500,9 @@ func envelope(result result) map[string]any {
 			commandID := commandRef["commandId"].(string)
 			commandIDs = append(commandIDs, commandID)
 			argv := anyToStrings(commandRef["argv"].([]any))
+			if result.Renderer.Profile() == cliexec.ProfilePythonModule {
+				operandBindings = append(operandBindings, agentenvelope.OperandBinding{CommandID: commandID, ArgvIndex: 0, Role: agentenvelope.PythonLauncherOperand})
+			}
 			commands = append(commands, map[string]any{
 				"argv":      admit.StringSliceToAny(argv),
 				"command":   cliexec.DisplayArgv(argv),
@@ -507,7 +512,9 @@ func envelope(result result) map[string]any {
 				"purpose":   fmt.Sprintf("Run the %s workflow route only after caller review.", phaseName),
 			})
 			for _, refID := range anyToStrings(commandRef["inputRefIds"].([]any)) {
-				evidenceRefs = append(evidenceRefs, workflowContextRefID(refID))
+				contextID := workflowContextRefID(refID)
+				evidenceRefs = append(evidenceRefs, contextID)
+				operandBindings = append(operandBindings, agentenvelope.OperandBinding{CommandID: commandID, ArgvIndex: len(argv) - 1, ContextRefID: contextID, Role: agentenvelope.ContextPathOperand})
 			}
 		}
 		sort.Strings(commandIDs)
@@ -554,7 +561,7 @@ func envelope(result result) map[string]any {
 		})
 	}
 	if len(actionPlan) == 0 && len(blockedPreconditions) > 0 {
-		actionPlan = blockedWorkflowActions(blockedPreconditions)
+		actionPlan = blockedWorkflowActions()
 	}
 	commandIDs := make([]string, 0, len(commands))
 	for _, command := range commands {
@@ -579,10 +586,11 @@ func envelope(result result) map[string]any {
 		"omittedCount":    0,
 	}
 	return agentenvelope.Build(agentenvelope.Input{
-		EnvelopeID:   envelopeID,
-		SourceReport: sourceReportIdentity(result.Record),
-		Bounds:       bounds,
-		ContextRefs:  contextRefs,
+		EnvelopeID:      envelopeID,
+		SourceReport:    sourceReportIdentity(result.Record),
+		Bounds:          bounds,
+		ContextRefs:     contextRefs,
+		OperandBindings: operandBindings,
 		RouteQuestions: []map[string]any{
 			{
 				"evidenceRefs": admit.StringSliceToAny(refIDs),
@@ -659,14 +667,10 @@ func contextRole(inputKind string) string {
 	}
 }
 
-func blockedWorkflowActions(blocked []map[string]any) []map[string]any {
-	evidence := []string{}
-	for _, item := range blocked {
-		evidence = append(evidence, anyToStrings(item["evidenceRefs"].([]any))...)
-	}
+func blockedWorkflowActions() []map[string]any {
 	return []map[string]any{{
 		"commandIds":   []any{},
-		"evidenceRefs": admit.StringSliceToAny(uniqueSorted(evidence)),
+		"evidenceRefs": []any{},
 		"instruction":  "Resolve the blocked caller-owned workflow preconditions before running any Proofkit command route.",
 		"nonClaims": []any{
 			"Blocked workflow action items do not execute commands.",
@@ -674,7 +678,7 @@ func blockedWorkflowActions(blocked []map[string]any) []map[string]any {
 		},
 		"owner":     "consumer_repository",
 		"phase":     "route",
-		"rationale": "The workflow plan has no executable command refs until the caller supplies the missing input refs.",
+		"rationale": "The workflow plan has no executable command refs until the caller resolves its named preconditions.",
 		"stepId":    "proofkit.adoption-workflow.action.resolve-preconditions",
 	}}
 }

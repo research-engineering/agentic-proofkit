@@ -39,6 +39,7 @@ type Input struct {
 	EnvelopeID            string
 	NonClaims             []string
 	Omitted               []map[string]any
+	OperandBindings       []OperandBinding
 	ReceiptRefs           []map[string]any
 	RouteQuestions        []map[string]any
 	SourceReport          map[string]any
@@ -625,6 +626,10 @@ func sanitizeArgvValue(value any) any {
 	case []any:
 		result := make([]any, 0, len(typed))
 		for _, item := range typed {
+			if path, ok := item.(admittedStructuralOperand); ok {
+				result = append(result, string(path))
+				continue
+			}
 			text, ok := item.(string)
 			if !ok {
 				result = append(result, "<unsupported-report-visible-value>")
@@ -646,6 +651,8 @@ func sanitizeArgvValue(value any) any {
 
 func sanitizeValue(value any) any {
 	switch typed := value.(type) {
+	case admittedStructuralOperand:
+		return string(typed)
 	case nil:
 		return nil
 	case bool:
@@ -775,7 +782,7 @@ func sortedUnique(values []string) []any {
 func mapsToAny(values []map[string]any) []any {
 	result := make([]any, 0, len(values))
 	for _, value := range values {
-		result = append(result, sanitizeMap(value))
+		result = append(result, value)
 	}
 	return result
 }

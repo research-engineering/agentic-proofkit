@@ -486,6 +486,21 @@ test('workflow prepared input and clarification linkage survives every CLI carri
     const witness = envelope.commands.find(row => row.commandId === 'proofkit.adoption-workflow.command.witness-plan');
     assert.deepEqual(bind.evidenceRefs.map(id => envelope.contextRefs.find(ref => ref.refId === id)?.ref), [base.inputRefs[3].path]);
     assert.equal(witness.argv.at(-1), base.inputRefs[3].path);
+    for (const path of ['inputs/task-requirements.json', 'd/'.repeat(256) + 'x']) {
+      const operand = replace(base, ['inputRefs', 3, 'path'], path);
+      const routed = invoke(command, wrap(operand), [...flags, '--agent-envelope'], 'passed');
+      const bindAction = routed.actionPlan.find(row => row.stepId === 'proofkit.adoption-workflow.action.bind');
+      const witnessCommand = routed.commands.find(row => row.commandId === 'proofkit.adoption-workflow.command.witness-plan');
+      assert.deepEqual(bindAction.evidenceRefs.map(id => routed.contextRefs.find(ref => ref.refId === id)?.ref), [path]);
+      assert.equal(witnessCommand.argv.at(-1), path);
+      assert.equal(routed.omitted.length, 0);
+    }
+    const missingAll = workflowInput('release_channel', []);
+    const repair = invoke(command, wrap(missingAll), [...flags, '--agent-envelope'], 'failed');
+    assert.equal(repair.commands.length, 0);
+    assert.equal(repair.actionPlan.length, 1);
+    assert.deepEqual(repair.actionPlan[0].evidenceRefs, []);
+    assert(repair.blockedPreconditions.length > 0);
     const bad = replace(base, ['inputRefs', 3, 'path'], '-');
     invoke(command, wrap(bad), flags, 'refused');
     invoke(command, wrap(bad), [...flags, '--agent-envelope'], 'repair');

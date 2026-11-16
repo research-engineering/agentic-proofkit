@@ -195,20 +195,19 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 }
 
 var currentBreakingChanges = []Change{
-	{ChangeID: "proofkit.selective-evidence.negative-producer-binding", Summary: "When producerAdmission is supplied, selective-gate-evidence and selective-gate-obligation-decision-input validate supplied producer receipt links for failed, blocked and not_run planned commands as well as passed commands. A supplied link must name the same command subject, evidence, status and artifacts and cannot be reused across different commands. Incorrect links now cause producer admission failure instead of contributing unrelated evidence. Existing passing-receipt qualification and provenance rules are unchanged. Structural schema versions and contract IDs are unchanged; the machine contract fingerprints change."},
+	{ChangeID: "proofkit.workflow.materialized-inputs", Summary: "adoption-workflow-plan refuses inputRefs[].path equal to the CLI stdin sentinel -. Direct, contract-wrapped and selected aggregate workflow inputs require materialized repository-relative file paths. Top-level --input - remains supported. Input contract IDs and wire versions are unchanged for this narrowing defect correction; their exact definition and command fingerprints change."},
+	{ChangeID: "proofkit.workflow.typed-repair-linkage", Summary: "adoption-workflow-plan and the workflow mode of adoption-contract-envelope request preset_choice when presetId is missing, instead of missing_context_ref. The question lists the supported preset IDs. Both output contract IDs and structural definition identities advance to v2 while outer wire schemaVersion remains 1. Action and what-changed evidence references now name the same local context IDs as contextRefs, including caller IDs that resemble generated context IDs."},
 }
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.browser.static-history-navigation", Summary: "Static HTML views restore the fragment target on browser Back and Forward, expanding hidden ancestor sections. Search and filters stay in place if they do not hide the target; when the target remains hidden, the view clears search and filters together."},
-	{ChangeID: "proofkit.self-hosting.proof-source-binding", Summary: "Repository snapshot tools keep Git inventory and revision bound to the designated checkout without refreshing its index. Command-oracle compilation ignores inherited Go flags and ambient workspace selection while retaining legitimate Go settings. Release closeout binds retained evidence through bounded regular-file reads."},
-	{ChangeID: "proofkit.release.npm-installed-identity", Summary: "Release automation gives npm registry reads a bounded processing window and checks that the exact install lock names the verified candidate tarball and integrity before the isolated installed-consumer smoke."},
-	{ChangeID: "proofkit.release.registry-evidence-admission", Summary: "npm, PyPI and release-manifest tools bound local evidence reads and refuse non-regular operands. Explicit npm input paths preserve operating-system parent resolution. Raw pack and lock type errors no longer emit caller map keys, and normalized pack IDs pass report-visible text admission. Release manifests admit installed-consumer evidence before writing output and hash the same npm registry artifact-set bytes they admit."},
-	{ChangeID: "proofkit.package.carrier-input-admission", Summary: "The npm and Python carrier verifiers and the Python wheel builder reject non-regular package records and source inputs before blocking or reading their contents. License, wrapper and native binary reads use existing carrier size limits. The wheel builder refuses generated entries that exceed those limits before writing a wheel."},
+	{ChangeID: "proofkit.release.metadata-output-confinement", Summary: "Release manifest, SBOM and PyPI evidence tools use repository-owned atomic file publication for generated metadata. They refuse symlink or special-file destinations, preserve hard-linked peer contents and publish regular files with private mode. This is per-file single-writer protection, not a multi-file crash transaction or protection against hostile concurrent namespace mutation."},
+	{ChangeID: "proofkit.agent-envelope.structural-operands", Summary: "Agent envelopes preserve safe structural context refs without diagnostic truncation. Workflow command owners bind path and Python-launcher roles to exact argv positions; matching text in another argument does not gain a path role. Unrepresentable context refs or argv cause explicit target omission and dependent-reference pruning, not an executable redaction marker. Command-free workflow repair actions carry no invented local input refs. Scalar text and actual secret values retain their existing protection."},
 }
 
 var currentMigrationSteps = []string{
-	"Correct supplied negative selective receipt links to match the actual producer receipt, or omit an optional producerReceiptId when no producer evidence exists. Do not synthesize passing qualification or provenance for a failure.",
-	"Refresh pinned CLI contract digests and rerun the repository-owned selective evidence and obligation-decision chain with correctly bound receipts.",
+	"Materialize workflow child inputs and replace any inputRefs[].path equal to - with its repository-relative file path; the workflow command itself may still read JSON from stdin.",
+	"Refresh pinned machine-contract digests and both workflow output v2 validators without changing the outer workflow wire header. Handle preset_choice by selecting presetId from the question's supported vocabulary; handle missing_context_ref by supplying the named input refs.",
+	"Resolve action and what-changed evidenceRefs against contextRefs by exact refId instead of treating them as raw plan inputRefIds. Planned commands remain non-executing caller-owned routes.",
 }
 
 func validateCurrentChangeRecord(record Record, notes string) error {
@@ -229,7 +228,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.18.0",
+		"# @research-engineering/agentic-proofkit 0.19.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -285,7 +284,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.18.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -297,7 +296,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.17.1 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.17.1`.",
+		"- Pin npm consumers to the previous admitted version 0.18.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.18.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

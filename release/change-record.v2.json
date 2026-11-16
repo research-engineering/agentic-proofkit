@@ -17,6 +17,10 @@
     {
       "changeId": "proofkit.release.metadata-output-confinement",
       "summary": "Release manifest, SBOM and PyPI evidence tools use repository-owned atomic file publication for generated metadata. They refuse symlink or special-file destinations, preserve hard-linked peer contents and publish regular files with private mode. This is per-file single-writer protection, not a multi-file crash transaction or protection against hostile concurrent namespace mutation."
+    },
+    {
+      "changeId": "proofkit.agent-envelope.structural-operands",
+      "summary": "Agent envelopes preserve safe structural context refs without diagnostic truncation. Workflow command owners bind path and Python-launcher roles to exact argv positions; matching text in another argument does not gain a path role. Unrepresentable context refs or argv cause explicit target omission and dependent-reference pruning, not an executable redaction marker. Command-free workflow repair actions carry no invented local input refs. Scalar text and actual secret values retain their existing protection."
     }
   ],
   "migration": {

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/schemacheck"
 )
 
@@ -97,10 +98,15 @@ func TestWorkflowActionInputsResolveToCommandOperands(t *testing.T) {
 			if matched == 0 {
 				t.Fatalf("%s did not exercise an input-bearing action", scenario)
 			}
+			changedQuestions := 0
 			for _, raw := range envelope["routeQuestions"].([]any) {
 				question := raw.(map[string]any)
-				if question["question"] != "what changed" {
+				if question["questionId"] != "proofkit.adoption-workflow.question.what-changed" {
 					continue
+				}
+				changedQuestions++
+				if question["question"] != "what changed" {
+					t.Fatal("what-changed question lost its declared role")
 				}
 				got := []string{}
 				for _, id := range anyToStrings(question["evidenceRefs"].([]any)) {
@@ -119,6 +125,97 @@ func TestWorkflowActionInputsResolveToCommandOperands(t *testing.T) {
 				if !slices.Equal(got, want) {
 					t.Fatalf("what changed paths=%v, supplied=%v", got, want)
 				}
+			}
+			if changedQuestions != 1 {
+				t.Fatalf("what-changed question count=%d, want 1", changedQuestions)
+			}
+		}
+	}
+}
+
+func TestWorkflowBlockedActionDoesNotInventContextRefs(t *testing.T) {
+	for scenario := range scenarios {
+		input := validWorkflowInput()
+		input["scenario"], input["inputRefs"] = scenario, []any{}
+		envelope, code, err := BuildEnvelope(input)
+		if err != nil || code != 1 {
+			t.Fatalf("%s blocked envelope: exit=%d err=%v", scenario, code, err)
+		}
+		actions := envelope["actionPlan"].([]any)
+		if len(actions) != 1 || len(envelope["commands"].([]any)) != 0 {
+			t.Fatalf("%s did not reach the command-free repair action", scenario)
+		}
+		action := actions[0].(map[string]any)
+		if len(action["evidenceRefs"].([]any)) != 0 {
+			t.Fatalf("repair action invented local refs: %v", action["evidenceRefs"])
+		}
+		if len(envelope["blockedPreconditions"].([]any)) == 0 || len(envelope["clarificationQuestions"].([]any)) == 0 {
+			t.Fatal("missing-input obligations disappeared from the repair packet")
+		}
+	}
+}
+
+func TestWorkflowContextPathPreservesCommandOperand(t *testing.T) {
+	for _, size := range []int{511, 512, 513, 600} {
+		input := validWorkflowInput()
+		path := strings.Repeat("d/", (size-1)/2) + strings.Repeat("x", 1+(size-1)%2)
+		input["inputRefs"].([]any)[0].(map[string]any)["path"] = path
+		envelope, code, err := BuildEnvelope(input)
+		if err != nil || code != 0 {
+			t.Fatalf("%d-byte path: exit=%d err=%v", size, code, err)
+		}
+		matched := 0
+		for _, raw := range envelope["contextRefs"].([]any) {
+			ref := raw.(map[string]any)
+			if ref["refId"] == "proofkit.adoption-workflow.context.proofkit.release-authority" {
+				matched++
+				if ref["ref"] != path {
+					t.Fatalf("%d-byte structural path changed", size)
+				}
+			}
+		}
+		if matched != 1 {
+			t.Fatalf("context match count=%d, want 1", matched)
+		}
+		for _, raw := range envelope["commands"].([]any) {
+			command := raw.(map[string]any)
+			if command["commandId"] == "proofkit.adoption-workflow.command.release-authority" && command["argv"].([]any)[3] != path {
+				t.Fatal("command path differs from the caller operand")
+			}
+		}
+	}
+}
+
+func TestWorkflowPathRolesPreserveExactRenderedArgv(t *testing.T) {
+	python, err := cliexec.AdmitLauncherProfile(cliexec.ProfilePythonModule, "/opt/task-validation/bin/python")
+	if err != nil {
+		t.Fatal(err)
+	}
+	npm, err := cliexec.AdmitLauncherProfile(cliexec.ProfileNPMOffline, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, renderer := range []cliexec.Renderer{cliexec.PathRenderer(), npm, python} {
+		input := validWorkflowInput()
+		input["inputRefs"].([]any)[0].(map[string]any)["path"] = "inputs/task-requirements.json"
+		input["inputRefs"].([]any)[1].(map[string]any)["path"] = "inputs/task-validation.json"
+		plan, code, err := BuildWithRenderer(input, renderer)
+		if err != nil || code != 0 {
+			t.Fatalf("control: exit=%d err=%v", code, err)
+		}
+		envelope, code, err := BuildEnvelopeWithRenderer(input, renderer)
+		if err != nil || code != 0 || len(envelope["omitted"].([]any)) != 0 {
+			t.Fatalf("envelope: exit=%d err=%v", code, err)
+		}
+		commands := envelope["commands"].([]any)
+		if len(commands) != 2 {
+			t.Fatal("ready route lost a declared command")
+		}
+		for _, raw := range commands {
+			command := raw.(map[string]any)
+			original := workflowCommand(t, plan, command["commandId"].(string))
+			if !slices.Equal(anyToStrings(command["argv"].([]any)), anyToStrings(original["argv"].([]any))) {
+				t.Fatal("envelope changed a renderer-admitted command operand")
 			}
 		}
 	}
