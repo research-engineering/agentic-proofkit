@@ -494,7 +494,7 @@ function carrierValuePredicates(command, index, output, value, path, label) {
       'evidenceRole', 'admissionState', 'bindingFormat', 'materializationStatus', 'contentKind', 'payloadKey', 'key'].includes(key)) reject('foreign-fixture-value');
     if (envelope && (path[0] === 'contextRefs' && ['kind', 'role'].includes(key) || ['bounds.fanout', 'costContract.stopReason'].includes(name))) reject('foreign-fixture-value');
     if (envelope && path[0] === 'contextRefs' && ['kind', 'role'].includes(key)) {
-      const values = key === 'kind' ? ['path', 'rule', 'candidate-boundary']
+      const values = key === 'kind' ? ['path', 'rule', 'candidate-boundary', ...(command === 'gradual-adoption-guidance' ? ['owner'] : [])]
         : ['evidence', 'proof_binding', 'spec_source', 'rule_reference', 'candidate_boundary', 'command_registry', 'owner_surface', 'supporting'];
       for (const member of values) schema(command, 'output', index, replace(output, path, member), true, label + '/enum/' + name);
     }
@@ -777,6 +777,7 @@ test('all described finite enums retain the independently authored owner vocabul
         if (node.enum) {
           const key = path[path.lastIndexOf('properties') + 1];
           let expected = domains[key];
+          if (key === 'kind' && command === 'gradual-adoption-guidance') expected = ['candidate-boundary', 'owner', 'path', 'rule'];
           if (key === 'state' || key === 'status') {
             expected = direction === 'input' ? sourceStates : command === 'gradual-adoption-guidance'
               ? key === 'status' || path.includes('diagnostics') ? sourceStates : guidanceStates

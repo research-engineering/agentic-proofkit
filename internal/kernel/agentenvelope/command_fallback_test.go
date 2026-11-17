@@ -107,3 +107,30 @@ func TestCallerFallbackMetadataCoalescesOrphansWithoutPoisoningContext(t *testin
 		t.Fatal("caller text acquired a structural role without argv")
 	}
 }
+
+func TestCallerFallbackRetainsCurrentAdmittedSiblingFields(t *testing.T) {
+	for _, limit := range []int{0, 1} {
+		input := fallbackInput()
+		input.Bounds = map[string]any{"maxContextRefs": limit}
+		input.Commands[0]["evidenceRefs"] = []any{"bad target"}
+		input.Commands[0]["purpose"] = "independent caller declaration"
+		input.ContextRefs = append(input.ContextRefs, map[string]any{
+			"refId": "bad target", "kind": "path", "ref": "inputs/other.json",
+		})
+		envelope := Build(input)
+		commands := envelope["commands"].([]any)
+		if len(commands) != 1 {
+			t.Fatal("scalar downgrade lost the independent caller declaration")
+		}
+		command := commands[0].(map[string]any)
+		if !reflect.DeepEqual(command["evidenceRefs"], []any{}) || command["purpose"] != "independent caller declaration" {
+			t.Fatal("fallback restored stale evidence or changed an unrelated admitted field")
+		}
+		if envelope["bounds"].(map[string]any)["prunedLocalReferenceCount"] != 1 {
+			t.Fatal("the rejected sibling reference must be pruned exactly once")
+		}
+		if (command["argv"] != nil) != (limit == 1) {
+			t.Fatal("fixture did not distinguish retained argv from late scalar fallback")
+		}
+	}
+}

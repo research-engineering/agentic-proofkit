@@ -40,7 +40,7 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[str
 		delete(byCommand, id)
 		if !ok || !projectCommandDisplay(command, argv, displayField) {
 			if fallback, exists := fallbacks[id]; exists {
-				commands = append(commands, fallback)
+				commands = append(commands, fallback.apply(command))
 			} else {
 				rejected[id] = struct{}{}
 			}
@@ -86,9 +86,8 @@ func projectCommandDisplay(command map[string]any, argv []any, field string) boo
 			return false
 		}
 	}
-	display := cliexec.DisplayArgv(values)
-	// Joining safe words can create a contextual secret signature.
-	if admit.ContainsSecretLikePathValue(display) {
+	display, err := cliexec.SafeDisplayArgv(values, "agent envelope command")
+	if err != nil {
 		return false
 	}
 	command[field] = admittedStructuralOperand(display)
@@ -161,7 +160,7 @@ func admitStructuralArgv(raw any, bindings []OperandBinding, paths map[contextOp
 	return result, true
 }
 
-func commandsWithRetainedOperandContexts(commands []map[string]any, contexts []map[string]any, bindings []OperandBinding, fallbacks map[string]map[string]any) ([]map[string]any, int) {
+func commandsWithRetainedOperandContexts(commands []map[string]any, contexts []map[string]any, bindings []OperandBinding, fallbacks map[string]callerDisplayFallback) ([]map[string]any, int) {
 	retained := idSet(contexts, "refId")
 	missing := map[string]struct{}{}
 	for _, binding := range bindings {
@@ -179,7 +178,7 @@ func commandsWithRetainedOperandContexts(commands []map[string]any, contexts []m
 		if _, absent := missing[command["commandId"].(string)]; absent {
 			omitted++
 			if fallback, exists := fallbacks[command["commandId"].(string)]; exists {
-				result = append(result, fallback)
+				result = append(result, fallback.apply(command))
 			}
 			continue
 		}

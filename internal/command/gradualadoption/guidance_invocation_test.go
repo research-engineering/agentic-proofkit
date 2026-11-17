@@ -117,6 +117,7 @@ func TestGuidancePortableSourceAndPublicRendererReadmission(t *testing.T) {
 					want = append(want, cliexec.DisplayArgv(argv))
 				}
 				assertInvocationCommands(t, report, want)
+				assertInvocationNativeCommands(t, report, []string{"go test ./internal/command/gradualadoption"})
 				envelope, code, err := BuildGuidanceEnvelope(decoded, options)
 				if err != nil || code != 0 {
 					t.Fatalf("%s envelope exit=%d err=%v", target.name, code, err)
@@ -393,18 +394,104 @@ func assertInvocationCommands(t *testing.T, report map[string]any, want []string
 	if !reflect.DeepEqual(anyStrings(guidance["commands"]), want) || report["summary"].(map[string]any)["commandCount"] != len(want) {
 		t.Fatalf("derived union/totals disagree: want %#v", want)
 	}
+}
+
+func assertInvocationNativeCommands(t *testing.T, report map[string]any, native []string) {
+	t.Helper()
+	guidance := invocationGuidance(t, report)
 	found := false
 	for _, raw := range guidance["agentActionPlan"].([]any) {
 		action := raw.(map[string]any)
 		if action["phase"] == "verify" {
 			found = true
-			if !reflect.DeepEqual(anyStrings(action["commands"]), want) {
-				t.Fatal("verify action lost the combined commands")
+			if !reflect.DeepEqual(anyStrings(action["commands"]), native) {
+				t.Fatal("verify action must contain only independently admitted caller commands")
 			}
 		}
 	}
 	if !found {
 		t.Fatal("verify action was not exercised")
+	}
+}
+
+func TestGuidanceActionsKeepPreparedAndCallerCommandsSeparate(t *testing.T) {
+	prepared := "agentic-proofkit witness-plan --input inputs/witness.json"
+	caller := "go test ./internal/command/gradualadoption -count=1"
+	for _, item := range []struct {
+		name     string
+		caller   []string
+		prepared bool
+		union    []string
+	}{
+		{"only prepared", []string{}, true, []string{prepared}},
+		{"only caller", []string{caller}, false, []string{caller}},
+		{"mixed", []string{caller}, true, []string{caller, prepared}},
+		{"dual display", []string{prepared}, true, []string{prepared}},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			input := validGuidanceInput()
+			agent := input["agentGuidance"].(map[string]any)
+			agent["commands"] = admit.StringSliceToAny(item.caller)
+			if item.prepared {
+				agent["proofkitCommands"] = map[string]any{"witness-plan": "inputs/witness.json"}
+			}
+			report, code, err := BuildGuidance(input, GuidanceOptions{})
+			if err != nil || code != 0 {
+				t.Fatalf("guidance exit=%d err=%v", code, err)
+			}
+			assertInvocationCommands(t, report, item.union)
+			assertInvocationNativeCommands(t, report, item.caller)
+			guidance := invocationGuidance(t, report)
+			wantPrepared := []string{}
+			if item.prepared {
+				wantPrepared = append(wantPrepared, prepared)
+			}
+			for _, raw := range guidance["agentActionPlan"].([]any) {
+				action := raw.(map[string]any)
+				if action["stepId"] == "proofkit.agent.route-owner" && !reflect.DeepEqual(anyStrings(action["commands"]), wantPrepared) {
+					t.Fatal("planning operations must remain available on the route step")
+				}
+			}
+			envelope, code, err := BuildGuidanceEnvelope(input, GuidanceOptions{})
+			if err != nil || code != 0 {
+				t.Fatalf("envelope exit=%d err=%v", code, err)
+			}
+			byID := map[any]string{}
+			for _, raw := range envelope["commands"].([]any) {
+				command := raw.(map[string]any)
+				byID[command["commandId"]] = command["command"].(string)
+				if item.prepared && command["command"] == prepared && !strings.Contains(command["purpose"].(string), "planning or inspection") {
+					t.Fatal("prepared operation was labelled as only a native witness")
+				}
+			}
+			for _, raw := range envelope["actionPlan"].([]any) {
+				action := raw.(map[string]any)
+				want := []string{}
+				switch action["stepId"] {
+				case "proofkit.agent.route-owner":
+					want = wantPrepared
+				case "proofkit.agent.run-native-witnesses":
+					want = item.caller
+				}
+				got := []string{}
+				for _, id := range action["commandIds"].([]any) {
+					command, exists := byID[id]
+					if !exists {
+						t.Fatal("action retained an unresolved command ID")
+					}
+					got = append(got, command)
+				}
+				if !reflect.DeepEqual(got, want) {
+					t.Fatalf("%s: commands=%#v want %#v", action["stepId"], got, want)
+				}
+			}
+			if err := schemacheck.Validate(GuidanceOutputStructure(), report); err != nil {
+				t.Fatal(err)
+			}
+			if err := schemacheck.Validate(GuidanceEnvelopeStructure(), envelope); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

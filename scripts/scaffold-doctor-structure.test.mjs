@@ -244,6 +244,41 @@ test('scaffold routes only admitted materialized payloads', () => {
   assert(!routed.some(name => ['witness-scheduler-plan', 'requirement-bindings', 'proof-slice'].includes(name)));
 });
 
+test('scaffold partial child commands preserve failed reports and admit actual output', () => {
+  const fields = ['adoptionProfilePath', 'adoptionGuidancePath', 'witnessPlanInputPath'];
+  const operations = ['gradual-adoption', 'gradual-adoption-guidance', 'witness-plan'];
+  for (let mask = 0; mask < 8; mask++) {
+    const input = scaffold();
+    const child = [];
+    fields.forEach((field, index) => {
+      if (mask & 1 << index) child.push(`agentic-proofkit ${operations[index]} --input ${input.bootstrap.paths[field]}`);
+      else input.bootstrap.paths[field] = `proofkit/child-${index}\u202e.json`;
+    });
+    const state = mask === 7 ? 'passed' : 'failed';
+    const value = invoke('scaffold-project-structure', input, state);
+    const expected = [
+      `agentic-proofkit scaffold-profile-plan --input ${input.paths.repoProfileScaffoldInputPath}`,
+      `agentic-proofkit gradual-adoption-bootstrap --input ${input.paths.bootstrapInputPath}`,
+      `agentic-proofkit adoption-workflow-plan --input ${input.paths.workflowInputPath}`,
+      ...child,
+    ];
+    assert.deepEqual(value.materializationManifest.nextCommands, expected, `mask ${mask}: exact commands without placeholders`);
+    assert.deepEqual(value.bootstrapReport.nextCommands, child);
+    assert.equal(value.bootstrapReport.report.state, state);
+    assert.equal(value.bootstrapReport.exitCode, mask === 7 ? 0 : 1);
+    assert.equal(value.materializationManifest.sourceReports.find(row => row.reportKind === 'proofkit.gradual-adoption-bootstrap').state, state);
+    const refs = [mask & 4 ? 'bootstrap_witness_plan' : null, 'gradual_adoption_bootstrap',
+      mask & 2 ? 'gradual_adoption_guidance' : null, 'repo_profile_scaffold'].filter(Boolean);
+    assert.deepEqual(value.adoptionWorkflowInput.inputRefs.map(row => row.inputKind), refs);
+    assert.deepEqual(value.adoptionWorkflowPlan.inputRefs.map(row => row.inputKind), refs);
+    if ((mask & 6) !== 6) assert.equal(value.adoptionWorkflowPlan.planState, 'blocked');
+    for (const count of [2, 7]) {
+      const commands = Array.from({length: count}, (_, index) => expected[index % expected.length]);
+      schema('scaffold-project-structure', 'output', 1, replace(value, ['materializationManifest', 'nextCommands'], commands), false, `count-${count}`);
+    }
+  }
+});
+
 test('public identities conserve contract and wire versions and retire root-shape predecessors', () => {
   for (const [key, [definitionId, contractId, variants]] of Object.entries(identities)) {
     const [command, direction] = key.split('/');
@@ -521,8 +556,8 @@ function outputArrayRange(command, index, name, value) {
     if (/^ruleResults\.\d+\.diagnostics$/.test(name)) return value.length ? [3, 3] : [0, 0];
     return undefined;
   }
-  return {'materializationManifest.files': [9, 9], 'materializationManifest.nextCommands': [6, 6], 'materializationManifest.nonClaims': [4, 4],
-    'materializationManifest.sourceReports': [3, 3], 'adoptionWorkflowInput.inputRefs': [4, 4], 'adoptionWorkflowPlan.inputRefs': [4, 4],
+  return {'materializationManifest.files': [9, 9], 'materializationManifest.nextCommands': [3, 6], 'materializationManifest.nonClaims': [4, 4],
+    'materializationManifest.sourceReports': [3, 3], 'adoptionWorkflowInput.inputRefs': [2, 4], 'adoptionWorkflowPlan.inputRefs': [2, 4],
     'adoptionWorkflowPlan.phases': [7, 7], 'report.diagnostics': [1, 1], 'report.diagnostics.0.value.files': [9, 9], 'report.ruleResults': [1, null]}[name];
 }
 

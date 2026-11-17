@@ -6,7 +6,6 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 var preparedOperations = []string{"gradual-adoption", "gradual-adoption-guidance", "witness-plan"}
@@ -76,13 +75,9 @@ func admitPreparedCommand(operation, path string, renderer cliexec.Renderer, con
 	if err != nil {
 		return PreparedCommand{}, err
 	}
-	if unicodepolicy.ContainsUnsafeScalar(path) {
-		return PreparedCommand{}, fmt.Errorf("%s must contain only safe Unicode scalars", context)
-	}
 	command := PreparedCommand{command: operation, inputRef: path, renderer: renderer}
-	display := command.DisplayCommand()
-	if unicodepolicy.ContainsUnsafeScalar(display) || admit.ContainsSecretLikePathValue(display) {
-		return PreparedCommand{}, fmt.Errorf("%s must render safe prepared command text", context)
+	if _, err := cliexec.SafeDisplayArgv(command.Argv(), context); err != nil {
+		return PreparedCommand{}, err
 	}
 	return command, nil
 }

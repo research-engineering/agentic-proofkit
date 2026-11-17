@@ -217,7 +217,7 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 	}
 	state := guidanceState(guidanceMode, sourceReport, agentGuidance, failures)
 	guidance := map[string]any{
-		"agentActionPlan":                  guidanceActionPlan(guidanceMode, ownerRoute, agentGuidance, modernization, sourceFailedRuleIDs, sourceWarningRuleIDs),
+		"agentActionPlan":                  guidanceActionPlan(guidanceMode, ownerRoute, agentGuidance, modernization, sourceFailedRuleIDs, sourceWarningRuleIDs, callerCommands, preparedCommands),
 		"blockedPreconditions":             anyStringArrayFromMap(agentGuidance, "blockedPreconditions"),
 		"callerSuggestedAutofixCandidates": anyStringArrayFromMap(agentGuidance, "callerSuggestedAutofixCandidates"),
 		"candidateBoundaries":              modernization["candidateBoundaries"],
@@ -617,17 +617,17 @@ func guidanceState(mode string, sourceReport map[string]any, agentGuidance map[s
 	return "passed"
 }
 
-func guidanceActionPlan(mode string, ownerRoute map[string]any, agentGuidance map[string]any, modernization map[string]any, sourceFailedRuleIDs []string, sourceWarningRuleIDs []string) []any {
+func guidanceActionPlan(mode string, ownerRoute map[string]any, agentGuidance map[string]any, modernization map[string]any, sourceFailedRuleIDs []string, sourceWarningRuleIDs []string, callerCommands []string, preparedCommands []PreparedCommand) []any {
 	routeRefs := append(append(stringArrayFromMap(ownerRoute, "specPaths"), stringArrayFromMap(ownerRoute, "proofBindingPaths")...), stringArrayFromMap(ownerRoute, "evidencePaths")...)
 	routeRefs = uniqueStrings(routeRefs)
 	witnessRefs := append(append(sourceFailedRuleIDs, sourceWarningRuleIDs...), stringArrayFromMap(agentGuidance, "blockedPreconditions")...)
 	witnessRefs = uniqueStrings(witnessRefs)
 	actions := []any{
 		map[string]any{
-			"commands":     []any{},
+			"commands":     admit.StringSliceToAny(preparedCommandDisplays(nil, preparedCommands)),
 			"evidenceRefs": admit.StringSliceToAny(routeRefs),
-			"instruction":  "Load only the caller-owned spec, proof binding, and evidence routes needed for this module before editing.",
-			"nonClaims":    []any{"This step does not make proofkit the owner of caller repository specifications."},
+			"instruction":  "Load only the caller-owned spec, proof binding, and evidence routes needed for this module before editing; use the prepared Proofkit operations for planning and inspection only.",
+			"nonClaims":    []any{"This step does not make proofkit the owner of caller repository specifications.", "Prepared Proofkit operations are not native witnesses and do not prove native witness execution."},
 			"owner":        "consumer_repository",
 			"phase":        "route",
 			"stepId":       "proofkit.agent.route-owner",
@@ -656,7 +656,7 @@ func guidanceActionPlan(mode string, ownerRoute map[string]any, agentGuidance ma
 			"stepId":       "proofkit.agent.bind-requirements",
 		},
 		map[string]any{
-			"commands":     anyStringArrayFromMap(agentGuidance, "commands"),
+			"commands":     admit.StringSliceToAny(callerCommands),
 			"evidenceRefs": admit.StringSliceToAny(witnessRefs),
 			"instruction":  "Run the caller-owned native witness commands outside proofkit and feed their source report back into guidance.",
 			"nonClaims":    []any{"Proofkit guidance does not execute native witnesses or turn skipped commands into passing proof."},

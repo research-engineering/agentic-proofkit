@@ -50,10 +50,7 @@ func newContextCatalog(input Input) contextCatalog {
 func (catalog *contextCatalog) add(origin inputRecordOrigin, owner, role string, paths []string) {
 	for _, path := range paths {
 		id := fmt.Sprintf("%s.%s.context.%03d", origin.kind, origin.id, len(catalog.byOrigin[origin])+1)
-		if id == catalog.doctorID {
-			// Ordinary IDs end in a numeric ordinal, so this cannot alias one.
-			id += ".local"
-		}
+		id = catalog.localTargetID(id)
 		catalog.refs = append(catalog.refs, map[string]any{
 			"kind": origin.kind, "role": role, "sourceId": origin.id,
 			"nonClaim": "Context refs are caller-owned selectors only; they do not prove freshness, semantic correctness, or execution authority.",
@@ -61,6 +58,14 @@ func (catalog *contextCatalog) add(origin inputRecordOrigin, owner, role string,
 		})
 		catalog.byOrigin[origin] = append(catalog.byOrigin[origin], id)
 	}
+}
+
+func (catalog contextCatalog) localTargetID(id string) string {
+	if id == catalog.doctorID {
+		// All ordinary local target IDs end in a numeric ordinal.
+		return id + ".local"
+	}
+	return id
 }
 
 func (catalog contextCatalog) evidenceForGap(item gap) []string {

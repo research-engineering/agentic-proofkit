@@ -15,19 +15,23 @@ type preparedCommand struct {
 	source   string
 }
 
-func projectCommands(paths projectPathSet, bootstrap gradualadoption.BootstrapResult, renderer cliexec.Renderer) []preparedCommand {
+func projectCommands(paths projectPathSet, bootstrap gradualadoption.BootstrapResult, renderer cliexec.Renderer) ([]preparedCommand, error) {
 	commands := []preparedCommand{}
 	for _, item := range []struct{ operation, path string }{
 		{"scaffold-profile-plan", paths.repoProfileScaffoldInputPath},
 		{"gradual-adoption-bootstrap", paths.bootstrapInputPath},
 		{"adoption-workflow-plan", paths.workflowInputPath},
 	} {
-		commands = append(commands, preparedCommand{renderer.Argv(item.operation, "--input", item.path), item.path, "project_scaffold"})
+		argv := renderer.Argv(item.operation, "--input", item.path)
+		if _, err := cliexec.SafeDisplayArgv(argv, "project structure prepared command"); err != nil {
+			return nil, err
+		}
+		commands = append(commands, preparedCommand{argv, item.path, "project_scaffold"})
 	}
 	for _, child := range bootstrap.PreparedCommands() {
 		commands = append(commands, preparedCommand{child.Argv(), child.InputRef(), "bootstrap_manifest"})
 	}
-	return commands
+	return commands, nil
 }
 
 func commandDisplays(commands []preparedCommand) []any {

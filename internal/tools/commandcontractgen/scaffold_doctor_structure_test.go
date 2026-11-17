@@ -53,6 +53,9 @@ func TestScaffoldDoctorOwnersConserveIdentityAndRetirePredecessors(t *testing.T)
 		t.Run(id, func(t *testing.T) {
 			owner, ok := nativeStructureOwner(id)
 			predecessors := []string{"proofkit." + want.command + "." + want.direction + ".v" + want.wire + ".root-shape"}
+			if id == "proofkit.scaffold-project-structure.input.v3.json-schema" {
+				predecessors = []string{"proofkit.scaffold-project-structure.input.v1.root-shape", "proofkit.scaffold-project-structure.input.v2.root-shape", "proofkit.scaffold-project-structure.input.v2.json-schema"}
+			}
 			if id == "proofkit.scaffold-project-structure.output.v2.json-schema" {
 				predecessors = append(predecessors, "proofkit.scaffold-project-structure.output.v1.json-schema")
 			}
@@ -121,6 +124,22 @@ func TestScaffoldDoctorOwnersConserveIdentityAndRetirePredecessors(t *testing.T)
 				if admitNativeStructureDefinition(id, changed) == nil {
 					t.Fatalf("accepted rehashed %s drift", mutation)
 				}
+			}
+		})
+	}
+}
+
+func TestScaffoldInputV3RejectsEveryRetiredPredecessor(t *testing.T) {
+	for _, id := range []string{
+		"proofkit.scaffold-project-structure.input.v1.root-shape",
+		"proofkit.scaffold-project-structure.input.v2.root-shape",
+		"proofkit.scaffold-project-structure.input.v2.json-schema",
+	} {
+		t.Run(id, func(t *testing.T) {
+			contract := map[string]any{"commands": []any{}}
+			definitions := map[string]definitionRecord{id: {ID: id}}
+			if err := admitNativeStructureConsumers(contract, definitions); err == nil || err.Error() != "obsolete native structure "+id+" remains" {
+				t.Fatalf("retired predecessor escaped its independent guard: %v", err)
 			}
 		})
 	}
@@ -216,10 +235,24 @@ func TestScaffoldStructureOutputRejectsRehashedBlockerDrift(t *testing.T) {
 		changed.variants[1].schema = func() (map[string]any, error) {
 			schema := projectstructure.OutputStructure()
 			workflow := schema["properties"].(map[string]any)["adoptionWorkflowPlan"].(map[string]any)
-			blocker := workflow["properties"].(map[string]any)["blockers"].(map[string]any)["items"].(map[string]any)
+			blockers := workflow["properties"].(map[string]any)["blockers"].(map[string]any)["items"].(map[string]any)["oneOf"].([]any)
+			var blocker map[string]any
+			for _, raw := range blockers {
+				candidate := raw.(map[string]any)
+				alternatives := candidate["properties"].(map[string]any)["inputAlternatives"].(map[string]any)
+				if alternatives["maxItems"] == 0 {
+					if blocker != nil {
+						t.Fatal("multiple scalar preset-choice blockers")
+					}
+					blocker = candidate
+				}
+			}
+			if blocker == nil {
+				t.Fatal("missing scalar preset-choice blocker")
+			}
 			properties := blocker["properties"].(map[string]any)
 			if !reflect.DeepEqual(properties["inputAlternatives"], map[string]any{"type": "array", "items": false, "minItems": 0, "maxItems": 0}) {
-				t.Fatal("all bundled refs are supplied; only an empty scalar-preset repair is reachable")
+				t.Fatal("the preset-choice blocker must retain its empty scalar repair")
 			}
 			switch mutation {
 			case "retired blocker field":

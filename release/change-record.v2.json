@@ -18,31 +18,36 @@
     },
     {
       "changeId": "proofkit.guidance.portable-prepared-commands",
-      "summary": "Generated agentGuidance now stores optional proofkitCommands, a closed map from gradual-adoption, gradual-adoption-guidance or witness-plan to its materialized input path. commands contains caller-authored text only. Public guidance renders generated displays and argv with the actual invocation launcher, including Python interpreters with benign task-like path components. Guidance input/output and bootstrap output use semantic v2; aggregate input uses v4. Wire headers do not change."
+      "summary": "Generated agentGuidance now stores optional proofkitCommands, a closed map from gradual-adoption, gradual-adoption-guidance or witness-plan to its materialized input path. commands contains caller-authored text only. Public guidance renders generated displays and argv with the actual invocation launcher, including Python interpreters with benign task-like path components. Guidance input/output and bootstrap output use semantic v2; aggregate input uses v4. Wire headers do not change. Derived displays retain the command union, but native-witness actions contain only independently declared caller commands; prepared operations remain planning or inspection routes."
     },
     {
       "changeId": "proofkit.agent-envelope.reference-catalogs",
-      "summary": "Agent-route output semantic v4 preserves structural paths and selectors for observed-report blockers as local contexts. Adoption-doctor output semantic v2 replaces duplicated path selectors with source-role-aware context IDs and top-level action evidenceRefs. Scalar diagnostic text still follows its existing redaction and length policy; bounded omissions never authorize argv with lost context."
+      "summary": "Agent-route output semantic v4 preserves structural paths and selectors for observed-report blockers as local contexts. Adoption-doctor output semantic v2 replaces duplicated path selectors with source-role-aware context IDs and top-level action evidenceRefs. Guidance action and ownership references resolve through source-role contexts. Doctor local command and context IDs reserve external source-report identities. Scalar diagnostic text still follows its existing redaction and length policy; bounded omissions never authorize argv with lost context."
     }
   ],
   "additions": [
+    {
+      "changeId": "proofkit.receipt.structural-path-admission",
+      "summary": "Receipt producer, selective evidence and obligation decision adapters preserve exact canonical path references under path-specific privacy, including benign task-like names and significant whitespace. Prose privacy, list ordering and uniqueness, null handling, producer identity, currentness and trust policies remain separate and unchanged. These reports classify caller facts; they do not prove file existence or native execution."
+    },
     {
       "changeId": "proofkit.release.metadata-output-confinement",
       "summary": "Release manifest, SBOM and PyPI evidence tools use repository-owned atomic file publication for generated metadata. They refuse symlink or special-file destinations, preserve hard-linked peer contents and publish regular files with private mode. This is per-file single-writer protection, not a multi-file crash transaction or protection against hostile concurrent namespace mutation."
     },
     {
       "changeId": "proofkit.agent-envelope.structural-operands",
-      "summary": "Agent envelopes preserve safe structural context references without diagnostic truncation. Workflow and route owners bind prepared paths to exact argv positions; all argv-producing envelope owners preserve their admitted Python launcher. Equal text elsewhere gains no structural role. Unsafe references or argv cause explicit target omission and dependent-reference pruning, not an executable redaction marker. Missing bounded contexts remove dependent argv. If an independently admitted caller command has the same display, its local ID and action references remain as scalar diagnostic text without argv; otherwise the command is omitted. Secret signatures remain refused inside paths, and scalar text retains its existing protection."
+      "summary": "Agent envelopes preserve safe structural context references without diagnostic truncation. Workflow and route owners bind prepared paths to exact argv positions; all argv-producing envelope owners preserve their admitted Python launcher. Equal text elsewhere gains no structural role. Unsafe references or argv cause explicit target omission and dependent-reference pruning, not an executable redaction marker. Missing bounded contexts remove dependent argv. If an independently admitted caller command has the same display, its local ID and action references remain as scalar diagnostic text without argv; otherwise the command is omitted. Scalar fallback changes only display and argv on the current admitted command, without restoring pruned sibling references. Secret signatures remain refused inside paths, and scalar text retains its existing protection."
     }
   ],
   "migration": {
     "required": true,
     "steps": [
+      "Refresh receipt-admission contract digests. Paths now retain exact canonical bytes; leading or trailing whitespace names a literal filename. Do not apply prose normalization to a structural reference.",
       "Read inputAlternatives as alternative complete bundles, not a flattened all-required list; an empty alternatives array requests a scalar preset choice. Existing workflow acceptance policy is unchanged.",
       "Materialize workflow, scaffold and bootstrap child inputs and replace any prepared input path equal to - with its repository-relative file path; top-level commands may still read JSON from stdin.",
       "Refresh pinned machine-contract digests and semantic v2 output validators for adoption-workflow-plan, adoption-contract-envelope and scaffold-project-structure without changing wire headers. Handle preset_choice with a supported presetId; handle missing_context_ref with one complete inputAlternatives bundle per input blocker.",
       "Resolve action and what-changed evidenceRefs against contextRefs by exact refId instead of treating them as raw plan inputRefIds. Planned commands remain non-executing caller-owned routes.",
-      "Regenerate bootstrap guidance payloads, or replace their generated commands suffix with proofkitCommands operation-to-path associations. Keep only caller-authored strings in commands. Do not persist a launcher: saved guidance is rendered under its actual later invocation profile. Refresh guidance input/output, bootstrap input/output, scaffold input, aggregate input, doctor output and route output validators to their new semantic identities while preserving wire versions."
+      "Regenerate bootstrap guidance payloads, or replace their generated commands suffix with proofkitCommands operation-to-path associations. Keep only caller-authored strings in commands. Do not persist a launcher: saved guidance is rendered under its actual later invocation profile. Refresh guidance input/output, bootstrap output, scaffold input, aggregate input, doctor output and route output validators to their new semantic identities while preserving wire versions. Refresh the pinned bootstrap input digest; its semantic v2 identity and wire header are unchanged."
     ]
   },
   "platformRequirements": [

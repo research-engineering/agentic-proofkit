@@ -18,6 +18,7 @@ const materializedFileCount = 9
 func OutputStructure() map[string]any {
 	shapes := outputMemberShapes()
 	properties := map[string]any{
+		"adoptionWorkflowPlan":    workflowPlanStructure(),
 		"bootstrapReport":         gradualadoption.BootstrapOutputStructure(),
 		"repoProfileScaffoldPlan": scaffoldprofileplan.OutputStructure(),
 	}
@@ -34,7 +35,7 @@ func OutputStructure() map[string]any {
 	return map[string]any{
 		"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false,
 		"properties": properties, "required": required,
-		"description": "Complete scaffold result for admitted input, including failed reports with exitCode 1. The embedded bootstrap result and repo-profile plan use their own command output structures. The workflow input and plan always describe the new_repository scenario with four caller-owned refs; the plan is blocked when no preset is available. The manifest lists nine sorted unique files: three scaffold payloads plus six bootstrap files, one of which may be replaced by the repo-profile draft. Native owners determine path consistency, hashes, ordering, renderer-specific commands and state/exit consistency; structural validity does not prove files exist, witnesses ran or caller approval.",
+		"description": "Complete scaffold result for admitted input, including failed reports with exitCode 1. The embedded bootstrap result, workflow plan and repo-profile plan use their own command output structures. The workflow input and plan describe the new_repository scenario with two scaffold-owned refs plus available child-operation refs; missing child operations or preset can block the plan. The manifest lists nine sorted unique files: three scaffold payloads plus six bootstrap files, one of which may be replaced by the repo-profile draft. Its next commands are three scaffold-owned commands plus zero to three prepared bootstrap commands. Native owners determine path consistency, hashes, ordering, renderer-specific commands and state/exit consistency; structural validity does not prove files exist, witnesses ran or caller approval.",
 	}
 }
 
@@ -43,31 +44,10 @@ func outputMemberShapes() map[string]jsonshape.Shape {
 	id, count := identifierShape(), jsonshape.IntegerMinimum(0)
 	text, path := jsonshape.StringGrammar(`[\s\S]+`), jsonshape.StringGrammar(`[\s\S]+`)
 	sha := jsonshape.StringGrammar(`sha256:[0-9a-f]{64}`)
-	refs := make([]jsonshape.Shape, 0, len(workflowInputKinds))
-	for _, kind := range workflowInputKinds {
-		refs = append(refs, jsonshape.Object(jsonshape.Required("inputKind", jsonshape.StringLiteral(kind)),
-			jsonshape.Required("path", text), jsonshape.Required("refId", jsonshape.StringLiteral(kind))))
-	}
 	scenario := jsonshape.StringLiteral("new_repository")
 	workflowInput := jsonshape.Object(
-		jsonshape.Required("inputRefs", jsonshape.Tuple(refs...)), jsonshape.Required("nonClaims", jsonshape.Array(text, len(workflowInputNonClaims))),
+		jsonshape.Required("inputRefs", workflowRefsShape()), jsonshape.Required("nonClaims", jsonshape.Array(text, len(workflowInputNonClaims))),
 		jsonshape.Optional("presetId", scaffoldprofileplan.PresetShape()), jsonshape.Required("scenario", scenario),
-		jsonshape.Required("schemaVersion", jsonshape.IntegerLiteral(1)), jsonshape.Required("workflowId", id),
-	)
-	command := jsonshape.Object(
-		jsonshape.Required("argv", jsonshape.Array(text, 1)), jsonshape.Required("commandId", text),
-		jsonshape.Required("inputRefIds", jsonshape.Array(text, 0)), jsonshape.Required("nonClaim", text),
-		jsonshape.Required("owner", jsonshape.StringLiteral("consumer_repository")),
-	)
-	phases := []jsonshape.Shape{}
-	for _, phase := range []string{"profile", "bootstrap", "bind", "migrate", "plan-gates", "collect-evidence", "release"} {
-		phases = append(phases, jsonshape.Object(jsonshape.Required("commands", jsonshape.Array(command, 0)), jsonshape.Required("phase", jsonshape.StringLiteral(phase))))
-	}
-	workflowPlan := jsonshape.Object(
-		jsonshape.Required("blockers", jsonshape.BoundedArray(adoptionworkflow.PresetChoiceBlockerShape("new_repository"), 0, 1)),
-		jsonshape.Required("inputRefs", jsonshape.Tuple(refs...)), jsonshape.Required("nonClaims", jsonshape.Array(text, len(workflowInputNonClaims))),
-		jsonshape.Required("phases", jsonshape.Tuple(phases...)), jsonshape.Required("planKind", jsonshape.StringLiteral("proofkit.adoption-workflow-plan")),
-		jsonshape.Required("planState", valuesShape("blocked", "ready_for_caller_review")), jsonshape.Required("scenario", scenario),
 		jsonshape.Required("schemaVersion", jsonshape.IntegerLiteral(1)), jsonshape.Required("workflowId", id),
 	)
 	twoClaims := jsonshape.Tuple(text, text)
@@ -96,7 +76,7 @@ func outputMemberShapes() map[string]jsonshape.Shape {
 		jsonshape.Required("files", jsonshape.BoundedArray(file, materializedFileCount, materializedFileCount)),
 		jsonshape.Required("manifestId", manifestID),
 		jsonshape.Required("manifestKind", jsonshape.StringLiteral("proofkit.project-structure-scaffold-materialization-manifest")),
-		jsonshape.Required("nextCommands", jsonshape.Tuple(text, text, text, text, text, text)),
+		jsonshape.Required("nextCommands", jsonshape.BoundedArray(text, 3, 6)),
 		jsonshape.Required("nonClaims", jsonshape.Tuple(text, text, text, text)), jsonshape.Required("payloadFileCount", count),
 		jsonshape.Required("schemaVersion", jsonshape.IntegerLiteral(1)),
 		jsonshape.Required("sourceReports", jsonshape.Tuple(
@@ -125,9 +105,41 @@ func outputMemberShapes() map[string]jsonshape.Shape {
 		jsonshape.Array(rules, 1),
 	)
 	return map[string]jsonshape.Shape{
-		"adoptionWorkflowInput": workflowInput, "adoptionWorkflowPlan": workflowPlan, "exitCode": jsonshape.IntegerRange(0, 1),
+		"adoptionWorkflowInput": workflowInput, "exitCode": jsonshape.IntegerRange(0, 1),
 		"materializationManifest": manifest, "report": record,
 	}
+}
+
+func workflowRefsShape() jsonshape.Shape {
+	refs := make([]jsonshape.Shape, 0, len(workflowInputKinds))
+	for _, kind := range workflowInputKinds {
+		refs = append(refs, jsonshape.Object(jsonshape.Required("inputKind", jsonshape.StringLiteral(kind)),
+			jsonshape.Required("path", jsonshape.StringGrammar(`[\s\S]+`)), jsonshape.Required("refId", jsonshape.StringLiteral(kind))))
+	}
+	// Only witness and guidance refs depend on child prepared operations.
+	return jsonshape.OneOf(jsonshape.Tuple(refs...), jsonshape.Tuple(refs[0], refs[1], refs[3]),
+		jsonshape.Tuple(refs[1], refs[2], refs[3]), jsonshape.Tuple(refs[1], refs[3]))
+}
+
+func workflowPlanStructure() map[string]any {
+	schema := adoptionworkflow.OutputStructure()
+	properties := schema["properties"].(map[string]any)
+	properties["inputRefs"] = fragment(workflowRefsShape())
+	properties["scenario"] = fragment(jsonshape.StringLiteral("new_repository"))
+	// Retain child-owned blocker identities and repairs for this scenario.
+	blockers := properties["blockers"].(map[string]any)
+	items := blockers["items"].(map[string]any)
+	cases := []any{}
+	for _, raw := range items["oneOf"].([]any) {
+		candidate := raw.(map[string]any)
+		scenario := candidate["properties"].(map[string]any)["scenario"].(map[string]any)
+		if scenario["const"] == "new_repository" {
+			cases = append(cases, candidate)
+		}
+	}
+	items["oneOf"] = cases
+	blockers["maxItems"] = len(cases)
+	return schema
 }
 
 // EnvelopeShape describes Build's sanitized carrier for one admitted scaffold.

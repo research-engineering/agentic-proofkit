@@ -174,6 +174,17 @@ If bounds remove a generated command's required context, its argv is omitted.
 An independently admitted caller command with the same display may remain under
 the same local ID as scalar diagnostic text, without argv; text equality alone
 does not confer caller provenance or a structural role.
+The native-witness action uses only independently declared caller commands;
+prepared Proofkit operations remain planning or inspection routes. Guidance
+references resolve through source-role contexts, including the declared owner,
+rather than interpreting raw caller text as a local ID. Scalar fallback changes
+only display/argv and cannot restore previously pruned sibling references.
+
+Receipt producer, selective evidence, projection and obligation-decision
+adapters preserve canonical path references through path-specific admission,
+including significant whitespace. Prose privacy remains separate. These
+corrections refresh contract digests without inventing a new wire shape;
+canonical references are not evidence of file existence or native execution.
 
 Agent-route output semantic v4 separates exact structural references from
 redacted or truncated diagnostic text. Observed-report blockers reference local

@@ -13,7 +13,7 @@ func AgentEnvelope(result Result) map[string]any {
 	reportValue := result.Record.JSONValue()
 	catalog := newContextCatalog(result.Input)
 	actions := actionPlan(result, catalog)
-	commands := commandRefs(result.Input.OwnerRoutes)
+	commands := commandRefs(result.Input.OwnerRoutes, catalog)
 	context := catalog.refs
 	fields := make([]agentenvelope.ContextReferenceField, 0, len(context))
 	for _, ref := range context {
@@ -52,13 +52,13 @@ func AgentEnvelope(result Result) map[string]any {
 	})
 }
 
-func commandRefs(routes []ownerRoute) []map[string]any {
+func commandRefs(routes []ownerRoute, catalog contextCatalog) []map[string]any {
 	commands := []map[string]any{}
 	for _, route := range routes {
 		for index, command := range route.Commands {
 			commands = append(commands, map[string]any{
 				"command":   command,
-				"commandId": fmt.Sprintf("%s.command.%03d", route.RouteID, index+1),
+				"commandId": catalog.localTargetID(fmt.Sprintf("%s.command.%03d", route.RouteID, index+1)),
 				"nonClaim":  "Command refs are display-only; the consuming repository owns execution and receipt admission.",
 				"owner":     route.Owner,
 			})
@@ -123,7 +123,7 @@ func actionForGap(input Input, item gap, catalog contextCatalog) map[string]any 
 	selector := selectorsForGap(item, route, hasRoute, candidate, hasCandidate)
 	return map[string]any{
 		"candidateAction": candidateAction(item),
-		"commandIds":      commandIDsForRoute(route, hasRoute),
+		"commandIds":      commandIDsForRoute(route, hasRoute, catalog),
 		"evidenceRefs":    admit.StringSliceToAny(evidence),
 		"instruction":     actionInstruction(item),
 		"missingWitness":  missingWitness(item, route, hasRoute, candidate, hasCandidate),
@@ -196,13 +196,13 @@ func selectorsForGap(item gap, route ownerRoute, hasRoute bool, candidate candid
 	return selector
 }
 
-func commandIDsForRoute(route ownerRoute, ok bool) []any {
+func commandIDsForRoute(route ownerRoute, ok bool, catalog contextCatalog) []any {
 	if !ok || len(route.Commands) == 0 {
 		return []any{}
 	}
 	out := make([]any, 0, len(route.Commands))
 	for index := range route.Commands {
-		out = append(out, fmt.Sprintf("%s.command.%03d", route.RouteID, index+1))
+		out = append(out, catalog.localTargetID(fmt.Sprintf("%s.command.%03d", route.RouteID, index+1)))
 	}
 	return out
 }

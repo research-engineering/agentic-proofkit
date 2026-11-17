@@ -19,6 +19,10 @@ func envelopeStructure(bootstrap bool) map[string]any {
 	if bootstrap {
 		argv = jsonshape.Required("argv", stringsShape())
 	}
+	contextKinds := []string{"path", "rule", "candidate-boundary"}
+	if !bootstrap {
+		contextKinds = append(contextKinds, "owner")
+	}
 	parts := agentenvelope.StructureParts{
 		ActionPlan:           jsonshape.BoundedArray(agentenvelope.ActionStructure(statesShape("route", "modernize-boundary", "bind", "verify", "promote")), 0, agentenvelope.MaxActionItems),
 		BlockedPreconditions: jsonshape.BoundedArray(agentenvelope.BlockedStructure(), 0, agentenvelope.MaxBlockedPreconditions), Bounds: agentenvelope.CompatibilityBoundsStructure(),
@@ -28,7 +32,7 @@ func envelopeStructure(bootstrap bool) map[string]any {
 			jsonshape.Required("nonClaim", t), jsonshape.Required("owner", jsonshape.StringLiteral("consumer_repository")),
 			jsonshape.Required("purpose", t), argv,
 		), 0, agentenvelope.MaxCommandRefs),
-		ContextRefs: jsonshape.BoundedArray(agentenvelope.ContextRefStructure(statesShape("path", "rule", "candidate-boundary"),
+		ContextRefs: jsonshape.BoundedArray(agentenvelope.ContextRefStructure(statesShape(contextKinds...),
 			statesShape("evidence", "proof_binding", "spec_source", "rule_reference", "candidate_boundary", "command_registry", "owner_surface", "supporting")), 0, agentenvelope.MaxContextRefs),
 		Omitted: jsonshape.BoundedArray(agentenvelope.OmissionStructure(), 0, agentenvelope.MaxOmittedItems), ReceiptRefs: jsonshape.Tuple(),
 		RouteQuestions: jsonshape.BoundedArray(agentenvelope.RouteQuestionStructure(), 3, 3),

@@ -40,6 +40,10 @@ func TestGuidanceSharedDisplayRetainsIndependentCallerOrigin(t *testing.T) {
 					t.Fatalf("guidance failed: exit=%d err=%v", exit, err)
 				}
 				commands := envelope["commands"].([]any)
+				verifyIDs := envelopeActionByPhase(t, envelope, "verify")["commandIds"].([]any)
+				if !caller && len(verifyIDs) != 0 {
+					t.Fatal("prepared-only command acquired native witness provenance")
+				}
 				if bounded && !caller {
 					if len(commands) != 0 {
 						t.Fatal("generated-only command survived loss of its typed context")
@@ -52,6 +56,9 @@ func TestGuidanceSharedDisplayRetainsIndependentCallerOrigin(t *testing.T) {
 				command := commands[0].(map[string]any)
 				if command["commandId"] != "proofkit.agent.command.001" {
 					t.Fatal("caller fallback changed command identity")
+				}
+				if caller && (len(verifyIDs) != 1 || verifyIDs[0] != command["commandId"]) {
+					t.Fatal("dual display lost its independently admitted caller witness origin")
 				}
 				if bounded {
 					if command["argv"] != nil || command["command"] != admit.RedactDiagnosticValue(display) || command["command"] == display {

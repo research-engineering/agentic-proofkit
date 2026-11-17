@@ -13,7 +13,7 @@ type preparedLocalReferences struct {
 	routeQuestions         []map[string]any
 	removedReferenceCount  int
 	identityDegraded       bool
-	callerDisplayFallbacks map[string]map[string]any
+	callerDisplayFallbacks map[string]callerDisplayFallback
 }
 
 type localIdentityMultiplicity struct {

@@ -121,7 +121,7 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
-	workflowInput, err := adoptionWorkflowInput(bootstrapManifest, repoProfile.Plan, paths, workflow)
+	workflowInput, err := adoptionWorkflowInput(bootstrap, bootstrapManifest, repoProfile.Plan, paths, workflow)
 	if err != nil {
 		return Result{}, err
 	}
@@ -140,7 +140,10 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
-	commands := projectCommands(paths, bootstrap, renderer)
+	commands, err := projectCommands(paths, bootstrap, renderer)
+	if err != nil {
+		return Result{}, err
+	}
 	manifest, err := buildMaterializationManifest(materializationInput{
 		adoptionWorkflowInput: workflowInput,
 		bootstrapInput:        bootstrapInput,
@@ -213,7 +216,7 @@ func (result Result) JSONValue() map[string]any {
 	}
 }
 
-func adoptionWorkflowInput(bootstrapManifest map[string]any, repoProfilePlan map[string]any, paths projectPathSet, workflow map[string]any) (map[string]any, error) {
+func adoptionWorkflowInput(bootstrap gradualadoption.BootstrapResult, bootstrapManifest map[string]any, repoProfilePlan map[string]any, paths projectPathSet, workflow map[string]any) (map[string]any, error) {
 	workflowID, err := admit.RuleID(workflow["workflowId"], "project structure scaffold workflowId")
 	if err != nil {
 		return nil, err
@@ -238,12 +241,22 @@ func adoptionWorkflowInput(bootstrapManifest map[string]any, repoProfilePlan map
 		return nil, err
 	}
 	refPaths := map[string]string{
-		"gradual_adoption_bootstrap": paths.bootstrapInputPath, "gradual_adoption_guidance": adoptionGuidancePath,
-		"repo_profile_scaffold": paths.repoProfileScaffoldInputPath, "bootstrap_witness_plan": witnessPlanInputPath,
+		"gradual_adoption_bootstrap": paths.bootstrapInputPath,
+		"repo_profile_scaffold":      paths.repoProfileScaffoldInputPath,
+	}
+	for _, command := range bootstrap.PreparedCommands() {
+		if command.Command() == "gradual-adoption-guidance" && command.InputRef() == adoptionGuidancePath {
+			refPaths["gradual_adoption_guidance"] = adoptionGuidancePath
+		}
+		if command.Command() == "witness-plan" && command.InputRef() == witnessPlanInputPath {
+			refPaths["bootstrap_witness_plan"] = witnessPlanInputPath
+		}
 	}
 	inputRefs := make([]any, 0, len(workflowInputKinds))
 	for _, kind := range workflowInputKinds {
-		inputRefs = append(inputRefs, map[string]any{"inputKind": kind, "path": refPaths[kind], "refId": kind})
+		if path, admitted := refPaths[kind]; admitted {
+			inputRefs = append(inputRefs, map[string]any{"inputKind": kind, "path": path, "refId": kind})
+		}
 	}
 	input := map[string]any{
 		"inputRefs":     inputRefs,
