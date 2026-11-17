@@ -26,11 +26,17 @@ import (
 const fixtureManifest = `{"name":"pack-fixture","version":"1.2.3","description":"A small fixture"}`
 
 func TestPackCapturedHandoffAndPhaseFailures(t *testing.T) {
-	for _, phase := range []string{"success", "child", "child-cleanup", "report", "missing", "symlink", "executable", "digest", "metadata", "cleanup", "tar-publish", "report-publish"} {
+	for _, phase := range []string{"success", "child", "child-cleanup", "report", "missing", "symlink", "executable", "digest", "integrity", "source-name", "source-version", "metadata", "cleanup", "tar-publish", "report-publish"} {
 		t.Run(phase, func(t *testing.T) {
 			manifest := fixtureManifest
 			if phase == "metadata" {
 				manifest = strings.Replace(manifest, "A small fixture", "api_key=syntheticvalue0123456789012345", 1)
+			}
+			if phase == "source-name" {
+				manifest = strings.Replace(manifest, "pack-fixture", "different-fixture", 1)
+			}
+			if phase == "source-version" {
+				manifest = strings.Replace(manifest, "1.2.3", "9.9.9", 1)
 			}
 			archive := fixtureArchive(t, []string{"package/package.json"}, []string{manifest})
 			root := preparePackChild(t, archive, phase)
@@ -62,7 +68,8 @@ func TestPackCapturedHandoffAndPhaseFailures(t *testing.T) {
 					"child": "npm pack:", "child-cleanup": "npm pack:",
 					"report": "invalid", "missing": "open artifact file failed",
 					"symlink": "non-symlink", "executable": "non-executable",
-					"digest": "digests do not match", "metadata": "secret",
+					"digest": "digests do not match", "integrity": "digests do not match", "metadata": "secret",
+					"source-name": "record must match source", "source-version": "record must match source",
 					"cleanup": "controlled cleanup refusal", "tar-publish": "controlled publication refusal",
 					"report-publish": "controlled publication refusal",
 				}[phase]
@@ -168,6 +175,7 @@ func TestPackArchiveAdmissionUsesCompleteCapturedBytes(t *testing.T) {
 		{"duplicate manifest", []string{"package/package.json", "package/package.json"}, []string{fixtureManifest, fixtureManifest}, false},
 		{"unsafe path after manifest", []string{"package/package.json", "../escape"}, []string{fixtureManifest, "data"}, false},
 		{"mismatched version", []string{"package/package.json"}, []string{strings.Replace(fixtureManifest, "1.2.3", "2.0.0", 1)}, false},
+		{"mismatched name", []string{"package/package.json"}, []string{strings.Replace(fixtureManifest, "pack-fixture", "different-fixture", 1)}, false},
 		{"corrupt trailer", []string{"package/package.json"}, []string{fixtureManifest}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -224,6 +232,12 @@ func TestNpmPackChildHelper(t *testing.T) {
 		os.Exit(89)
 	}
 	record := fixtureRecord(content)
+	if phase == "source-name" {
+		record.Name, record.ID, record.Filename = "different-fixture", "different-fixture@1.2.3", "different-fixture-1.2.3.tgz"
+	}
+	if phase == "source-version" {
+		record.Version, record.ID, record.Filename = "9.9.9", "pack-fixture@9.9.9", "pack-fixture-9.9.9.tgz"
+	}
 	name := filepath.Join(stage, record.Filename)
 	if phase == "symlink" {
 		err = os.Symlink(os.Getenv("PROOFKIT_NPM_ARCHIVE"), name)
@@ -238,8 +252,11 @@ func TestNpmPackChildHelper(t *testing.T) {
 			os.Exit(90)
 		}
 	}
-	if phase == "digest" {
+	switch phase {
+	case "digest":
 		record.Shasum = strings.Repeat("0", 40)
+	case "integrity":
+		record.Integrity = "sha512-" + base64.StdEncoding.EncodeToString(make([]byte, 64))
 	}
 	if json.NewEncoder(os.Stdout).Encode(map[string]npmpack.Record{record.Name: record}) != nil {
 		os.Exit(91)
