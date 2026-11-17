@@ -22,7 +22,7 @@ var hostPythonConsumer = regexp.MustCompile(`\bpython3\b|npm run (check|go:test|
 // Jobs whose run steps consume the host Python. Every other job must not.
 var expectedPythonJobs = map[string][]string{
 	"ci.yml":      {"platform-smoke", "platform-smoke-linux-arm64", "source-quality"},
-	"release.yml": {"candidate", "publish-pypi", "publish-readiness"},
+	"release.yml": {"candidate", "candidate-intel", "publish-pypi", "publish-readiness"},
 }
 
 func validateWorkflowPythonRuntime(file string, workflow githubWorkflow) error {
@@ -132,6 +132,10 @@ func TestWorkflowPythonRuntimeRejectsUnpinnedConsumers(t *testing.T) {
 		change          func(*githubJob)
 	}{
 		{"candidate setup omitted", "release.yml", "candidate", func(job *githubJob) {
+			index := setupStep(*job)
+			job.Steps = append(job.Steps[:index], job.Steps[index+1:]...)
+		}},
+		{"Intel candidate setup omitted", "release.yml", "candidate-intel", func(job *githubJob) {
 			index := setupStep(*job)
 			job.Steps = append(job.Steps[:index], job.Steps[index+1:]...)
 		}},

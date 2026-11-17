@@ -146,8 +146,10 @@ resolution.
 
 <!-- proofkit:platform-python:start -->
 macOS 15 or later on arm64 is verified by required CI on the GitHub-hosted
-`macos-15` runner. Darwin x64 binaries are cross-built and packaged without
-native Intel macOS CI qualification. Both Darwin targets declare a macOS 13.0
+`macos-15` runner. Darwin x64 binaries are cross-built; the release workflow
+requires native Intel macOS 15 qualification of the original npm and Python
+candidates before publication. This is separate from per-PR CI and does not
+retroactively qualify earlier releases. Both Darwin targets declare a macOS 13.0
 minimum in their Mach-O build metadata; macOS 13 and 14 are binary-compatible
 by that metadata only, not executed or verified.
 Linux manylinux 2.17 or later is supported on arm64 or x64, executed by

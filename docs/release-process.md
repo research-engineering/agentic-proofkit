@@ -11,12 +11,14 @@ reviewed source
   -> version tag
   -> release workflow
   -> candidate package evidence
-  -> deterministic SBOM, release manifest, and checksums
-  -> public npm publish or exact existing-byte match
-  -> optional PyPI publish or exact existing-byte match
-  -> post-publish npm registry identity with publication mode
-  -> optional post-publish PyPI registry identity with publication mode
-  -> root-only npm registry install and JSON CLI ABI proof
+  -> candidate SBOM, release manifest, and checksums
+  -> native Intel macOS qualification of the original candidate archives
+  -> publish readiness
+  -> npm leg: publication or exact-byte match, registry identity,
+     root-only registry install, signatures and JSON CLI ABI proof
+     + optional parallel PyPI leg: publication or exact-byte match and registry identity
+  -> final registry-bound release manifest, release notes, and checksums
+     (the candidate SBOM is retained, not regenerated)
   -> optional checksum-bound GitHub artifact attestations
   -> GitHub Release archive assets and release evidence
 ```
@@ -171,6 +173,16 @@ authentication, or provider admission.
 
 The dry-run package identity proves candidate tarball shape only. It does not
 prove the bytes served by the registry after publish.
+
+Before publish readiness, the release workflow's read-only `candidate-intel`
+job requires native Intel macOS execution and downloads the original candidate
+artifact. It builds source reference binaries without repacking either archive,
+then the existing npm and Python verifiers compare the candidate binaries to
+those references and execute each installed native consumer. Failure or absence
+of this job prevents publication through the workflow. Its provider run is
+separate from local advisory receipts and post-publish registry identity.
+Intel macOS 15 execution does not establish execution on macOS 13 or 14, nor
+does this gate retroactively qualify earlier releases.
 
 Candidate preflight also admits the npm registry `latest` identity. For an
 unpublished candidate, `latest` must equal the change record

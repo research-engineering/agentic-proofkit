@@ -449,6 +449,7 @@ func validateReleaseWorkflowExpressions(workflow githubWorkflow) error {
 		workflow,
 		map[string]jobRuntimeControlsExpectation{
 			"candidate":         {timeoutMinutes: 45},
+			"candidate-intel":   {timeoutMinutes: 30},
 			"publish-readiness": {timeoutMinutes: 10},
 			"publish": {
 				timeoutMinutes:     30,
@@ -472,6 +473,7 @@ func validateReleaseWorkflowExpressions(workflow githubWorkflow) error {
 	}
 	jobExpressions := map[string]string{
 		"candidate":            "",
+		"candidate-intel":      "",
 		"publish-readiness":    "github.event_name=='push'||inputs.mode=='publish'",
 		"publish":              "github.event_name=='push'||inputs.mode=='publish'",
 		"publish-pypi":         "(github.event_name=='push'||inputs.mode=='publish')&&vars.proofkit_enable_pypi_publish=='true'",

@@ -4057,6 +4057,25 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-013",
       "scenarioId": "proofkit.supply-chain-quality.workflow-package-gate-oracle",
+      "witnessId": "proofkit.workflow-native-intel.typed-oracle",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_native_carrier_oracle_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReleaseNativeIntelCandidateAndBarrier",
+          "command": "go test ./scripts -run '^TestReleaseNativeIntelCandidateAndBarrier$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-013",
+      "scenarioId": "proofkit.supply-chain-quality.workflow-package-gate-oracle",
       "witnessId": "proofkit.workflow-package-gate.typed-oracle",
       "witnessKind": "contract",
       "witnessPath": "scripts/workflow_package_gate_oracle_test.go",
