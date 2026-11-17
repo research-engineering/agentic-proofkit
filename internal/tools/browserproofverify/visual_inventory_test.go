@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/npmmanifest"
 )
 
 func TestVisualInventoryIsTheExactViewEngineSchemeWidthProduct(t *testing.T) {
@@ -546,22 +547,20 @@ func TestBrowserVisualScriptIsSeparateFromThePackageGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var manifest struct {
-		Scripts map[string]string `json:"scripts"`
-	}
-	if err := json.Unmarshal(raw, &manifest); err != nil {
+	scripts, err := npmmanifest.Scripts(raw)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if manifest.Scripts["browser:visual"] != "go run ./internal/tools/browserproofverify --manifest scripts/browser-visual-proof-inputs.v1.json --run" {
-		t.Fatalf("browser:visual must delegate to the single Go orchestrator with the visual manifest, got %q", manifest.Scripts["browser:visual"])
+	if scripts["browser:visual"] != "go run ./internal/tools/browserproofverify --manifest scripts/browser-visual-proof-inputs.v1.json --run" {
+		t.Fatalf("browser:visual must delegate to the single Go orchestrator with the visual manifest, got %q", scripts["browser:visual"])
 	}
-	for name, script := range manifest.Scripts {
+	for name, script := range scripts {
 		if name != "browser:visual" && strings.Contains(script, "browser:visual") || strings.Contains(script, visualProofManifestPath) && name != "browser:visual" {
 			t.Fatalf("script %q composes the visual gate; it must stay outside npm run check", name)
 		}
 	}
 	for _, hook := range []string{"prebrowser:visual", "postbrowser:visual"} {
-		if _, exists := manifest.Scripts[hook]; exists {
+		if _, exists := scripts[hook]; exists {
 			t.Fatalf("browser:visual must not have lifecycle hook %q", hook)
 		}
 	}

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/npmmanifest"
 )
 
 const nativeIntelArchitectureRun = `set -euo pipefail
@@ -62,13 +64,9 @@ func validateNativeIntelCandidateWorkflow(workflow githubWorkflow, manifestBytes
 	if !reflect.DeepEqual(needsList(workflow.Jobs["publish-readiness"].Needs), []string{"candidate", "candidate-intel"}) {
 		return fmt.Errorf("publish readiness must require both candidate and native Intel qualification")
 	}
-	var manifest map[string]json.RawMessage
-	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
-		return fmt.Errorf("parse native consumer package manifest: %w", err)
-	}
-	var scripts map[string]string
-	if err := json.Unmarshal(manifest["scripts"], &scripts); err != nil {
-		return fmt.Errorf("parse exact native consumer scripts: %w", err)
+	scripts, err := npmmanifest.Scripts(manifestBytes)
+	if err != nil {
+		return err
 	}
 	if scripts["python:verify"] != "go run ./internal/tools/pythonpackage verify" {
 		return fmt.Errorf("native Python consumer must execute the exact wheel verifier")

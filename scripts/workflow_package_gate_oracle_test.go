@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/npmmanifest"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -1867,13 +1868,11 @@ func readPackageManifestForTest(t *testing.T) []byte {
 }
 
 func validatePlatformSmokeOwnerScript(raw []byte) error {
-	var manifest struct {
-		Scripts map[string]string `json:"scripts"`
+	scripts, err := npmmanifest.Scripts(raw)
+	if err != nil {
+		return err
 	}
-	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return fmt.Errorf("parse package manifest: %w", err)
-	}
-	if actual := manifest.Scripts["platform:smoke"]; actual != requiredPlatformSmokeOwnerCommand {
+	if actual := scripts["platform:smoke"]; actual != requiredPlatformSmokeOwnerCommand {
 		return fmt.Errorf(
 			"package platform:smoke=%q, want exact owner command %q",
 			actual,
