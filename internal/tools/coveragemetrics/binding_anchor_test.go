@@ -1,11 +1,93 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 )
+
+func TestBindingPathIdentityAgreesWithPublicOwner(t *testing.T) {
+	const primary = "internal/tools/workflowsmoke/workflow_smoke_test.go"
+	const scenario = "proofkit.spec-proof-core.source-conversion-installed-carrier"
+	const supplement = "proofkit.test.canonical-supplement"
+	root := filepath.Join("..", "..", "..")
+	for _, tc := range []struct{ name, path, refusal, canonical string }{
+		{"distinct", "AGENTS.md", "", "AGENTS.md"},
+		{"exact", primary, "binding is duplicated", primary},
+		{"trailing", primary + " ", "binding witness path must use canonical witness framing", primary},
+		{"leading", " " + primary, "binding witness path must use canonical witness framing", primary},
+		{"unicode-framing", primary + "\u2003", "binding witness path must use canonical witness framing", primary},
+		{"dot", "./" + primary, "binding witness path ", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw, err := readAnyJSON(filepath.Join(root, "proofkit", "requirement-bindings.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			doc := raw.(map[string]any)
+			rows := doc["bindings"].([]any)
+			var extra map[string]any
+			for _, row := range rows {
+				binding := row.(map[string]any)
+				if binding["scenarioId"] == scenario && binding["witnessPath"] == primary {
+					extra = maps.Clone(binding)
+					break
+				}
+			}
+			if extra == nil {
+				t.Fatal("the oracle did not identify its independently named primary")
+			}
+			extra["witnessId"], extra["witnessPath"] = supplement, tc.path
+			delete(extra, "witnessSelectors")
+			doc["bindings"] = append(rows, extra)
+			wire, err := json.Marshal(doc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			metricInput, err := admission.DecodeTypedJSON[bindingFile](bytes.NewReader(wire), int64(len(wire)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			metricErr := validateBindingWitnessSelectorsAtRoot(root, metricInput)
+			if tc.refusal == "" && metricErr != nil || tc.refusal != "" && (metricErr == nil || !strings.Contains(metricErr.Error(), tc.refusal)) {
+				t.Fatalf("metric path identity: %v, expected %q", metricErr, tc.refusal)
+			}
+			publicInput, err := admission.DecodeJSON(bytes.NewReader(wire), int64(len(wire)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := requirementbinding.Build(publicInput)
+			if tc.canonical == "" {
+				if err == nil {
+					t.Fatal("public owner admitted a noncanonical dot path")
+				}
+				return
+			}
+			if err != nil || result.Record.State != "passed" {
+				t.Fatalf("public owner control failed: %v", err)
+			}
+			matches := 0
+			for _, binding := range result.Input.Bindings {
+				if binding.WitnessID == supplement {
+					matches++
+					if binding.WitnessPath != tc.canonical {
+						t.Fatal("public canonical path differs from the independent expected identity")
+					}
+				}
+			}
+			if matches != 1 {
+				t.Fatal("canonical public supplement was absent or duplicated")
+			}
+		})
+	}
+}
 
 func TestRequiredBindingAnchorWithSupplement(t *testing.T) {
 	const requirement = "REQ-PROOFKIT-SPEC-044"

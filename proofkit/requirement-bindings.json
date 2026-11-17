@@ -11737,6 +11737,10 @@
       "witnessPath": "internal/tools/coveragemetrics/binding_anchor_test.go",
       "witnessSelectors": [
         {
+          "selector": "TestBindingPathIdentityAgreesWithPublicOwner",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestBindingPathIdentityAgreesWithPublicOwner$'"
+        },
+        {
           "selector": "TestRequiredBindingAnchorWithSupplement",
           "command": "go test ./internal/tools/coveragemetrics -run '^TestRequiredBindingAnchorWithSupplement$'"
         }

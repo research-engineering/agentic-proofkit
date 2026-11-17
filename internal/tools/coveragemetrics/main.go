@@ -266,7 +266,14 @@ func validateBindingWitnessSelectorsAtRoot(root string, bindings bindingFile) er
 		if binding.WitnessPath == "" && len(binding.WitnessSelectors) == 0 {
 			continue
 		}
-		if _, err := admit.SafeRepoRelativePath(binding.WitnessPath, "binding witness path"); err != nil {
+		canonical, err := admit.NonEmptyText(binding.WitnessPath, "binding witness path")
+		if err != nil {
+			return err
+		}
+		if canonical != binding.WitnessPath {
+			return fmt.Errorf("binding witness path must use canonical witness framing")
+		}
+		if _, err := admit.SafeRepoRelativePath(canonical, "binding witness path"); err != nil {
 			return err
 		}
 	}
