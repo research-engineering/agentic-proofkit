@@ -139,6 +139,79 @@ behavior already contradicted is a defect correction, not a change of
 specified meaning. The rule governs changes made after its adoption; identities
 set before it are retained.
 
+Adoption workflow output contracts use semantic v2 with wire
+`schemaVersion: 1`, including the workflow carrier of
+`adoption-contract-envelope` and the embedded plan in `scaffold-project-structure`.
+For `new_repository` and `existing_gradual_adoption`, missing `presetId`
+requests `preset_choice`;
+missing prepared inputs request `missing_context_ref`. Envelope actions and
+the `what changed` question refer to exact local `contextRefs[].refId` values,
+not raw plan input IDs. Prepared input paths cannot be the stdin sentinel
+`-`; the workflow command itself can still receive JSON through `--input -`.
+Workflow blockers publish `inputAlternatives` as an OR of complete AND bundles
+of still-missing input kinds. An empty array denotes a scalar preset choice,
+not a satisfied input bundle. Supplying one entire bundle resolves that blocker;
+it does not resolve unrelated blockers or approve the supplied content.
+Prepared scaffold and bootstrap input paths also refuse `-`; ordinary output
+filenames are not subject to that input-role restriction.
+Bootstrap input uses semantic v2 and scaffold input semantic v3, both with wire
+schemaVersion 1. Scaffold-owned input paths are normalized; child-owned bootstrap
+references preserve their exact admitted paths. Materialization rejects both
+equal file paths and file/descendant conflicts. Child roles come from their
+owner, not filenames, and executable input bindings require the expected
+materialization source, JSON content and available-payload status.
+
+Generated gradual-adoption guidance is portable source data. Its optional
+`agentGuidance.proofkitCommands` maps the closed operations `gradual-adoption`,
+`gradual-adoption-guidance` and `witness-plan` to exact materialized input paths;
+`agentGuidance.commands` remains caller-authored text. The actual invocation
+profile renders generated commands on read, so saving guidance never pins a
+launcher or Python interpreter. The guidance input/output and bootstrap output
+contracts use semantic v2; the delegating aggregate input uses semantic v4.
+Their wire headers are unchanged. Invalid optional guidance values retain the
+existing collected-failure behavior rather than creating executable routes.
+If bounds remove a generated command's required context, its argv is omitted.
+An independently admitted caller command with the same display may remain under
+the same local ID as scalar diagnostic text, without argv; text equality alone
+does not confer caller provenance or a structural role.
+The native-witness action uses only independently declared caller commands;
+prepared Proofkit operations remain planning or inspection routes. Guidance
+references resolve through source-role contexts, including the declared owner,
+rather than interpreting raw caller text as a local ID. Scalar fallback changes
+only display/argv and cannot restore previously pruned sibling references.
+
+Guidance keeps source failed-rule and warning-rule identities separate from
+report identity. A failed report without failing-rule attribution remains
+visible as a report-level failure; `enforce-touched` fails closed because its
+location cannot be proven outside the checked scope. Attributed failures
+outside touched scope remain nonblocking. A report ID is never a substitute
+for an absent rule ID.
+
+Selective-evidence output uses semantic v2 with unchanged report wire headers.
+Its envelope joins planned command tuples through generated local command IDs;
+unplanned receipts remain diagnostics rather than planned retry commands.
+`receipt_artifact.ref` resolves to a local path context whose `ref` preserves
+the exact admitted locator. Required receipt classes remain distinct from
+artifacts. Command and receipt losses are counted independently before
+filtering; a locator that cannot survive wire admission withholds the whole
+artifact record rather than publishing a diagnostic replacement as a path.
+
+Receipt producer, selective evidence, projection and obligation-decision
+adapters preserve canonical path references through path-specific admission,
+including significant whitespace. Prose privacy remains separate. These
+corrections refresh contract digests without inventing a new wire shape.
+Previously trimmed producer/selective/trust locators can now fail exact linkage;
+align corresponding fields to the intended literal filename, not just a new
+digest, and do not blindly trim significant spaces. Canonical references are
+not evidence of file existence or native execution. Guidance owner-route path
+lists likewise preserve the exact planned filenames in persisted payloads.
+
+Agent-route output semantic v4 separates exact structural references from
+redacted or truncated diagnostic text. Observed-report blockers reference local
+contexts by ID. Adoption-doctor output semantic v2 likewise uses source-role-aware
+contexts and top-level action `evidenceRefs`, rather than duplicated path-valued
+selectors. These representations route inspection, not evidence authentication.
+
 `contractId` and `schemaVersion` need not coincide. Adoption
 materialization plan/apply input v3 retains payload `schemaVersion: 2`, while the
 six adoption/integration lifecycle output contracts use semantic v2 with outer

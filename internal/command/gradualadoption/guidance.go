@@ -3,11 +3,13 @@ package gradualadoption
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/adoptionmode"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/contractenv"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
@@ -32,12 +34,16 @@ type GuidanceOptions struct {
 	CheckedScope   string
 	GuidanceMode   string
 	TouchedRuleIDs []string
+	Renderer       cliexec.Renderer
 }
 
 type guidanceResult struct {
-	ExitCode int
-	Guidance map[string]any
-	Record   report.Record
+	ExitCode         int
+	Guidance         map[string]any
+	Record           report.Record
+	preparedCommands []PreparedCommand
+	callerCommands   []string
+	renderer         cliexec.Renderer
 }
 
 func BuildGuidance(raw any, options GuidanceOptions) (map[string]any, int, error) {
@@ -61,7 +67,7 @@ func BuildGuidanceFromContractEnvelope(raw any, options GuidanceOptions) (map[st
 	if err != nil {
 		return nil, 1, err
 	}
-	return BuildGuidance(input, GuidanceOptions{})
+	return BuildGuidance(input, GuidanceOptions{Renderer: options.Renderer})
 }
 
 func BuildGuidanceEnvelopeFromContractEnvelope(raw any, options GuidanceOptions) (map[string]any, int, error) {
@@ -69,7 +75,7 @@ func BuildGuidanceEnvelopeFromContractEnvelope(raw any, options GuidanceOptions)
 	if err != nil {
 		return agentenvelope.InvalidInput(err.Error()), 1, nil
 	}
-	return BuildGuidanceEnvelope(input, GuidanceOptions{})
+	return BuildGuidanceEnvelope(input, GuidanceOptions{Renderer: options.Renderer})
 }
 
 func GuidanceInputFromContractEnvelope(raw any, options GuidanceOptions) (map[string]any, error) {
@@ -181,7 +187,7 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 	}
 	scopeEvidence := admitScopeEvidence(object(record["scopeEvidence"]), options, &failures)
 	ownerRoute := admitOwnerRoute(object(record["ownerRoute"]), &failures, "ownerRoute")
-	agentGuidance := admitAgentGuidance(object(record["agentGuidance"]), &failures)
+	agentGuidance, preparedCommands, callerCommands := admitAgentGuidance(object(record["agentGuidance"]), options.Renderer, &failures)
 	modernization := admitModernization(record["modernization"], &failures)
 	nonClaims, err := admit.SortedTextArray(record["nonClaims"], "gradual adoption guidance nonClaims", false)
 	if err != nil {
@@ -203,7 +209,7 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 			}
 		}
 	}
-	failures = append(failures, guidanceModeFailures(guidanceMode, scopeEvidence["checkedScope"].(string), sourceReport, agentGuidance, modernization, enforcementFailedRuleIDs)...)
+	failures = append(failures, guidanceModeFailures(guidanceMode, scopeEvidence["checkedScope"].(string), sourceReport, agentGuidance, modernization, sourceFailedRuleIDs, enforcementFailedRuleIDs)...)
 	if scopeEvidence["checkedScope"] == adoptionmode.ScopeNone && len(stringArrayFromMap(scopeEvidence, "touchedRuleIds")) > 0 {
 		failures = append(failures, "checkedScope none must not declare touchedRuleIds")
 	}
@@ -212,7 +218,7 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 	}
 	state := guidanceState(guidanceMode, sourceReport, agentGuidance, failures)
 	guidance := map[string]any{
-		"agentActionPlan":                  guidanceActionPlan(guidanceMode, ownerRoute, agentGuidance, modernization, sourceFailedRuleIDs, sourceWarningRuleIDs),
+		"agentActionPlan":                  guidanceActionPlan(guidanceMode, ownerRoute, agentGuidance, modernization, sourceFailedRuleIDs, sourceWarningRuleIDs, callerCommands, preparedCommands),
 		"blockedPreconditions":             anyStringArrayFromMap(agentGuidance, "blockedPreconditions"),
 		"callerSuggestedAutofixCandidates": anyStringArrayFromMap(agentGuidance, "callerSuggestedAutofixCandidates"),
 		"candidateBoundaries":              modernization["candidateBoundaries"],
@@ -258,7 +264,7 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 		RuleResults: guidanceRuleResults(guidanceMode, sourceReport["state"].(string), agentGuidance, modernization, failures, sourceFailedRuleIDs, sourceWarningRuleIDs, enforcementFailedRuleIDs),
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
-	return guidanceResult{ExitCode: exitCode(rec), Guidance: guidance, Record: rec}, nil
+	return guidanceResult{ExitCode: exitCode(rec), Guidance: guidance, Record: rec, preparedCommands: preparedCommands, callerCommands: callerCommands, renderer: options.Renderer}, nil
 }
 
 func admitSourceReport(raw any) (map[string]any, error) {
@@ -349,14 +355,12 @@ func admitScopeEvidence(raw map[string]any, options GuidanceOptions, failures *[
 		checkedScope, err = adoptionmode.ValidateScopeValue(checkedScope, "checkedScope")
 	}
 	addErr(failures, err)
-	touchedRuleIDs := options.TouchedRuleIDs
-	if len(touchedRuleIDs) == 0 {
-		touchedRuleIDs, err = sortedRuleIDArray(raw["touchedRuleIds"], "scopeEvidence touchedRuleIds")
-		addErr(failures, err)
-	} else {
-		touchedRuleIDs, err = admit.SortedText(touchedRuleIDs, "scopeEvidence touchedRuleIds", true)
-		addErr(failures, err)
+	touchedRuleIDsRaw := raw["touchedRuleIds"]
+	if len(options.TouchedRuleIDs) > 0 {
+		touchedRuleIDsRaw = admit.StringSliceToAny(options.TouchedRuleIDs)
 	}
+	touchedRuleIDs, err := sortedRuleIDArray(touchedRuleIDsRaw, "scopeEvidence touchedRuleIds")
+	addErr(failures, err)
 	return map[string]any{
 		"basis":          "caller_provided_touched_rule_ids",
 		"checkedScope":   checkedScope,
@@ -390,8 +394,8 @@ func admitOwnerRoute(raw map[string]any, failures *[]string, context string) map
 	}
 }
 
-func admitAgentGuidance(raw map[string]any, failures *[]string) map[string]any {
-	if err := admit.KnownKeys(raw, []string{"artifactPath", "blockedPreconditions", "callerSuggestedAutofixCandidates", "commands", "minimalAdoptionPath", "proofBindingsMissing", "reportKind", "requiredNextActions", "routeQuestions", "schemaId"}, "agentGuidance"); err != nil {
+func admitAgentGuidance(raw map[string]any, renderer cliexec.Renderer, failures *[]string) (map[string]any, []PreparedCommand, []string) {
+	if err := admit.KnownKeys(raw, []string{"artifactPath", "blockedPreconditions", "callerSuggestedAutofixCandidates", "commands", "minimalAdoptionPath", "proofkitCommands", "proofBindingsMissing", "reportKind", "requiredNextActions", "routeQuestions", "schemaId"}, "agentGuidance"); err != nil {
 		addErr(failures, err)
 	}
 	if raw["reportKind"] != "proofkit.gradual-adoption-guidance" {
@@ -416,6 +420,9 @@ func admitAgentGuidance(raw map[string]any, failures *[]string) map[string]any {
 	addErr(failures, err)
 	commands, err := preserveDisplayCommands(raw["commands"], "agentGuidance commands", true)
 	addErr(failures, err)
+	preparedCommands := admitPreparedCommands(raw, renderer, failures)
+	callerCommands := commands
+	commands = preparedCommandDisplays(callerCommands, preparedCommands)
 	missing, err := sortedRuleIDArray(raw["proofBindingsMissing"], "agentGuidance proofBindingsMissing")
 	addErr(failures, err)
 	blocked, err := admit.SortedTextArray(raw["blockedPreconditions"], "agentGuidance blockedPreconditions", true)
@@ -431,7 +438,7 @@ func admitAgentGuidance(raw map[string]any, failures *[]string) map[string]any {
 		"requiredNextActions":              admit.StringSliceToAny(requiredNextActions),
 		"routeQuestions":                   admit.StringSliceToAny(questions),
 		"schemaId":                         schemaID,
-	}
+	}, preparedCommands, callerCommands
 }
 
 func admitModernization(raw any, failures *[]string) map[string]any {
@@ -561,13 +568,10 @@ func sourceRuleIDs(sourceReport map[string]any, status string) []string {
 		}
 	}
 	sort.Strings(ids)
-	if status == "failed" && sourceReport["state"] == "failed" && len(ids) == 0 {
-		return []string{sourceReport["reportId"].(string)}
-	}
 	return ids
 }
 
-func guidanceModeFailures(mode string, checkedScope string, sourceReport map[string]any, agentGuidance map[string]any, modernization map[string]any, enforcementFailedRuleIDs []string) []string {
+func guidanceModeFailures(mode string, checkedScope string, sourceReport map[string]any, agentGuidance map[string]any, modernization map[string]any, sourceFailedRuleIDs []string, enforcementFailedRuleIDs []string) []string {
 	failures := []string{}
 	failures = append(failures, adoptionmode.ScopeFailures(mode, checkedScope)...)
 	if mode == adoptionmode.EnforceAll {
@@ -579,8 +583,13 @@ func guidanceModeFailures(mode string, checkedScope string, sourceReport map[str
 			failures = append(failures, "enforce-all fails closed for failed source rules")
 		}
 	}
-	if mode == adoptionmode.EnforceTouched && len(enforcementFailedRuleIDs) > 0 {
-		failures = append(failures, "enforce-touched fails closed for failed source rules inside checked scope")
+	if mode == adoptionmode.EnforceTouched {
+		// Without rule attribution the failure cannot be proven outside scope.
+		if sourceReport["state"] == "failed" && len(sourceFailedRuleIDs) == 0 {
+			failures = append(failures, "enforce-touched fails closed for a source report failure without rule attribution")
+		} else if len(enforcementFailedRuleIDs) > 0 {
+			failures = append(failures, "enforce-touched fails closed for failed source rules inside checked scope")
+		}
 	}
 	if adoptionmode.IsEnforcing(mode) && len(stringArrayFromMap(agentGuidance, "proofBindingsMissing")) > 0 {
 		failures = append(failures, "enforcement modes fail closed for missing proof bindings")
@@ -609,17 +618,17 @@ func guidanceState(mode string, sourceReport map[string]any, agentGuidance map[s
 	return "passed"
 }
 
-func guidanceActionPlan(mode string, ownerRoute map[string]any, agentGuidance map[string]any, modernization map[string]any, sourceFailedRuleIDs []string, sourceWarningRuleIDs []string) []any {
+func guidanceActionPlan(mode string, ownerRoute map[string]any, agentGuidance map[string]any, modernization map[string]any, sourceFailedRuleIDs []string, sourceWarningRuleIDs []string, callerCommands []string, preparedCommands []PreparedCommand) []any {
 	routeRefs := append(append(stringArrayFromMap(ownerRoute, "specPaths"), stringArrayFromMap(ownerRoute, "proofBindingPaths")...), stringArrayFromMap(ownerRoute, "evidencePaths")...)
 	routeRefs = uniqueStrings(routeRefs)
 	witnessRefs := append(append(sourceFailedRuleIDs, sourceWarningRuleIDs...), stringArrayFromMap(agentGuidance, "blockedPreconditions")...)
 	witnessRefs = uniqueStrings(witnessRefs)
 	actions := []any{
 		map[string]any{
-			"commands":     []any{},
+			"commands":     admit.StringSliceToAny(preparedCommandDisplays(nil, preparedCommands)),
 			"evidenceRefs": admit.StringSliceToAny(routeRefs),
-			"instruction":  "Load only the caller-owned spec, proof binding, and evidence routes needed for this module before editing.",
-			"nonClaims":    []any{"This step does not make proofkit the owner of caller repository specifications."},
+			"instruction":  "Load only the caller-owned spec, proof binding, and evidence routes needed for this module before editing; use the prepared Proofkit operations for planning and inspection only.",
+			"nonClaims":    []any{"This step does not make proofkit the owner of caller repository specifications.", "Prepared Proofkit operations are not native witnesses and do not prove native witness execution."},
 			"owner":        "consumer_repository",
 			"phase":        "route",
 			"stepId":       "proofkit.agent.route-owner",
@@ -648,7 +657,7 @@ func guidanceActionPlan(mode string, ownerRoute map[string]any, agentGuidance ma
 			"stepId":       "proofkit.agent.bind-requirements",
 		},
 		map[string]any{
-			"commands":     anyStringArrayFromMap(agentGuidance, "commands"),
+			"commands":     admit.StringSliceToAny(callerCommands),
 			"evidenceRefs": admit.StringSliceToAny(witnessRefs),
 			"instruction":  "Run the caller-owned native witness commands outside proofkit and feed their source report back into guidance.",
 			"nonClaims":    []any{"Proofkit guidance does not execute native witnesses or turn skipped commands into passing proof."},
@@ -781,7 +790,7 @@ func sortedPaths(raw any, context string) ([]string, error) {
 		}
 		paths = append(paths, path)
 	}
-	return admit.SortedText(paths, context, true)
+	return admit.NormalizeSortedPaths(paths, context, true)
 }
 
 func preserveText(raw any, context string, allowEmpty bool) ([]string, error) {
@@ -828,6 +837,7 @@ func stringSet(values []string) map[string]struct{} {
 }
 
 func uniqueStrings(values []string) []string {
+	values = slices.Clone(values)
 	sort.Strings(values)
 	result := []string{}
 	for _, value := range values {

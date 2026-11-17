@@ -178,7 +178,11 @@ func TestCleanupDurabilityFailureDoesNotClaimRecoverableState(t *testing.T) {
 
 func TestControlNamespaceRequiresPrivateMode(t *testing.T) {
 	root := t.TempDir()
-	if err := os.Mkdir(filepath.Join(root, ControlRoot), 0o755); err != nil {
+	control := filepath.Join(root, ControlRoot)
+	if err := os.Mkdir(control, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(control, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := BuildPlan(context.Background(), root, []Target{{Path: "proofkit/state.json", Content: []byte("desired\n"), Mode: 0o644}}); err == nil {

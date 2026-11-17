@@ -122,15 +122,15 @@ docker run --rm --platform linux/arm64 --user 1001 --ipc=host --init \
     tools="$(mktemp -d)"
     cd "$tools"
     curl -fsSLO https://nodejs.org/dist/v26.11.1/node-v26.11.1-linux-arm64.tar.gz
-    curl -fsSLO https://go.dev/dl/go1.27.3.linux-arm64.tar.gz
+    curl -fsSLO https://go.dev/dl/go1.27.4.linux-arm64.tar.gz
     curl -fsSLO https://registry.npmjs.org/npm/-/npm-12.2.0.tgz
     sha256sum -c - <<SUMS
 170454fb022f5e9b5f6cc76c25fa32ef5100895be44eb04e92f9780591491bbf  node-v26.11.1-linux-arm64.tar.gz
-a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49  go1.27.3.linux-arm64.tar.gz
+3392582988a273a87ab5043ee1b2c9c17a2c3c00580bf9326c47a2e0aaaeac92  go1.27.4.linux-arm64.tar.gz
 6666b48816b39b86c3febac7b51a4ee4de6c5ca589c382ad8004b6b113f86677  npm-12.2.0.tgz
 SUMS
     tar -xzf node-v26.11.1-linux-arm64.tar.gz
-    tar -xzf go1.27.3.linux-arm64.tar.gz
+    tar -xzf go1.27.4.linux-arm64.tar.gz
     tar -xzf npm-12.2.0.tgz
     mkdir bin
     printf "#!/bin/sh\nexec node %s/package/bin/npm-cli.js \"\$@\"\n" "$tools" > bin/npm

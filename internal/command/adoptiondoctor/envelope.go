@@ -11,16 +11,22 @@ import (
 
 func AgentEnvelope(result Result) map[string]any {
 	reportValue := result.Record.JSONValue()
-	actions := actionPlan(result)
-	commands := commandRefs(result.Input.OwnerRoutes)
-	context := contextRefs(result.Input.OwnerRoutes, result.Input.CandidateBoundaries, result.Input.StaleAuthority.AuthoritySurfaces)
+	catalog := newContextCatalog(result.Input)
+	actions := actionPlan(result, catalog)
+	commands := commandRefs(result.Input.OwnerRoutes, catalog)
+	context := catalog.refs
+	fields := make([]agentenvelope.ContextReferenceField, 0, len(context))
+	for _, ref := range context {
+		fields = append(fields, agentenvelope.ContextReferenceField{ContextRefID: ref["refId"].(string), Field: "path"})
+	}
 	return agentenvelope.Build(agentenvelope.Input{
-		EnvelopeID:            result.Input.DoctorID + ".agent-envelope",
-		ActionPlan:            actions,
-		BlockedPreconditions:  blockedPreconditionRefs(result.Input.BlockedPreconditions),
-		ClarificationQuestion: clarificationQuestions(result),
-		Commands:              commands,
-		ContextRefs:           context,
+		EnvelopeID:             result.Input.DoctorID + ".agent-envelope",
+		ActionPlan:             actions,
+		BlockedPreconditions:   blockedPreconditionRefs(result.Input.BlockedPreconditions, catalog),
+		ClarificationQuestion:  clarificationQuestions(result),
+		Commands:               commands,
+		ContextRefs:            context,
+		ContextReferenceFields: fields,
 		NonClaims: []string{
 			"Adoption doctor agent envelopes do not approve edits, enforcement, merge, or proof-owner retirement.",
 			"Adoption doctor agent envelopes expose bounded selectors only and do not expand full repository graphs.",
@@ -46,13 +52,13 @@ func AgentEnvelope(result Result) map[string]any {
 	})
 }
 
-func commandRefs(routes []ownerRoute) []map[string]any {
+func commandRefs(routes []ownerRoute, catalog contextCatalog) []map[string]any {
 	commands := []map[string]any{}
 	for _, route := range routes {
 		for index, command := range route.Commands {
 			commands = append(commands, map[string]any{
 				"command":   command,
-				"commandId": fmt.Sprintf("%s.command.%03d", route.RouteID, index+1),
+				"commandId": catalog.localTargetID(fmt.Sprintf("%s.command.%03d", route.RouteID, index+1)),
 				"nonClaim":  "Command refs are display-only; the consuming repository owns execution and receipt admission.",
 				"owner":     route.Owner,
 			})
@@ -64,44 +70,12 @@ func commandRefs(routes []ownerRoute) []map[string]any {
 	return commands
 }
 
-func contextRefs(routes []ownerRoute, candidates []candidateBoundary, surfaces []authoritySurface) []map[string]any {
-	refs := []map[string]any{}
-	for _, route := range routes {
-		paths := append(append([]string{}, route.SpecPaths...), append(route.ProofBindingPaths, route.NativeWitnessRefs...)...)
-		for index, path := range paths {
-			refs = append(refs, contextRef(fmt.Sprintf("%s.context.%03d", route.RouteID, index+1), path, route.Owner, contextKindOwnerRoute))
-		}
-	}
-	for _, candidate := range candidates {
-		for index, path := range candidate.AffectedPaths {
-			refs = append(refs, contextRef(fmt.Sprintf("%s.context.%03d", candidate.BoundaryID, index+1), path, candidate.CandidateOwner, contextKindCandidateBoundary))
-		}
-	}
-	for _, surface := range surfaces {
-		refs = append(refs, contextRef(surface.SurfaceID+".context", surface.Path, surface.Owner, contextKindStaleAuthoritySurface))
-	}
-	sort.Slice(refs, func(left int, right int) bool {
-		return refs[left]["refId"].(string) < refs[right]["refId"].(string)
-	})
-	return refs
-}
-
-func contextRef(id string, path string, owner string, kind string) map[string]any {
-	return map[string]any{
-		"kind":     kind,
-		"nonClaim": "Context refs are selectors only; they do not prove file freshness or semantic correctness.",
-		"owner":    owner,
-		"path":     path,
-		"refId":    id,
-	}
-}
-
-func blockedPreconditionRefs(preconditions []precondition) []map[string]any {
+func blockedPreconditionRefs(preconditions []precondition, catalog contextCatalog) []map[string]any {
 	out := make([]map[string]any, 0, len(preconditions))
 	for _, item := range preconditions {
 		out = append(out, map[string]any{
 			"description":    item.Reason,
-			"evidenceRefs":   admit.StringSliceToAny(item.EvidenceRefs),
+			"evidenceRefs":   admit.StringSliceToAny(catalog.byOrigin[inputRecordOrigin{recordKindBlockedPrecondition, item.PreconditionID}]),
 			"nonClaim":       item.NonClaim,
 			"owner":          item.Owner,
 			"preconditionId": item.PreconditionID,
@@ -110,7 +84,7 @@ func blockedPreconditionRefs(preconditions []precondition) []map[string]any {
 	return out
 }
 
-func actionPlan(result Result) []map[string]any {
+func actionPlan(result Result, catalog contextCatalog) []map[string]any {
 	if len(result.Gaps) == 0 {
 		return []map[string]any{{
 			"candidateAction": "Keep the caller-owned routes under review and run the consumer repository proof gate before promotion.",
@@ -127,8 +101,7 @@ func actionPlan(result Result) []map[string]any {
 			"proofCommand": consumerRepositoryFullGate,
 			"rationale":    "Promotion remains caller-owned even when Proofkit reports no adoption gaps.",
 			"selectors": map[string]any{
-				"evidenceRefs": []any{result.Input.DoctorID},
-				"ruleRefs":     []any{},
+				"ruleRefs": []any{},
 			},
 			"stepId":      noGapsRuleID,
 			"uncertainty": "Proofkit did not execute native witnesses or authenticate receipts.",
@@ -136,21 +109,22 @@ func actionPlan(result Result) []map[string]any {
 	}
 	actions := make([]map[string]any, 0, len(result.Gaps))
 	for _, item := range result.Gaps {
-		actions = append(actions, actionForGap(result.Input, item))
+		actions = append(actions, actionForGap(result.Input, item, catalog))
 	}
 	return actions
 }
 
-func actionForGap(input Input, item gap) map[string]any {
+func actionForGap(input Input, item gap, catalog contextCatalog) map[string]any {
 	route, hasRoute := routeForGap(input.OwnerRoutes, item)
 	candidate, hasCandidate := candidateForGap(input.CandidateBoundaries, item)
 	observedFacts := observedFactsForGap(item, candidate, hasCandidate)
 	uncertainties := uncertaintiesForGap(item, candidate, hasCandidate)
+	evidence := catalog.evidenceForGap(item)
 	selector := selectorsForGap(item, route, hasRoute, candidate, hasCandidate)
 	return map[string]any{
 		"candidateAction": candidateAction(item),
-		"commandIds":      commandIDsForRoute(route, hasRoute),
-		"evidenceRefs":    admit.StringSliceToAny(item.EvidenceRefs),
+		"commandIds":      commandIDsForRoute(route, hasRoute, catalog),
+		"evidenceRefs":    admit.StringSliceToAny(evidence),
 		"instruction":     actionInstruction(item),
 		"missingWitness":  missingWitness(item, route, hasRoute, candidate, hasCandidate),
 		"nonClaims": []any{
@@ -172,11 +146,11 @@ func actionForGap(input Input, item gap) map[string]any {
 }
 
 func routeForGap(routes []ownerRoute, item gap) (ownerRoute, bool) {
-	if item.RouteID == "" {
+	if item.origin.kind != recordKindOwnerRoute {
 		return ownerRoute{}, false
 	}
 	for _, route := range routes {
-		if route.RouteID == item.RouteID {
+		if route.RouteID == item.origin.id {
 			return route, true
 		}
 	}
@@ -184,11 +158,11 @@ func routeForGap(routes []ownerRoute, item gap) (ownerRoute, bool) {
 }
 
 func candidateForGap(candidates []candidateBoundary, item gap) (candidateBoundary, bool) {
-	if item.CandidateBoundaryID == "" {
+	if item.origin.kind != recordKindCandidateBoundary {
 		return candidateBoundary{}, false
 	}
 	for _, candidate := range candidates {
-		if candidate.BoundaryID == item.CandidateBoundaryID {
+		if candidate.BoundaryID == item.origin.id {
 			return candidate, true
 		}
 	}
@@ -211,32 +185,24 @@ func uncertaintiesForGap(item gap, candidate candidateBoundary, hasCandidate boo
 
 func selectorsForGap(item gap, route ownerRoute, hasRoute bool, candidate candidateBoundary, hasCandidate bool) map[string]any {
 	selector := map[string]any{
-		"evidenceRefs": admit.StringSliceToAny(item.EvidenceRefs),
-		"ruleRefs":     admit.StringSliceToAny(item.RuleRefs),
+		"ruleRefs": admit.StringSliceToAny(item.RuleRefs),
 	}
 	if hasRoute {
-		selector["nativeWitnessRefs"] = admit.StringSliceToAny(route.NativeWitnessRefs)
 		selector["ownerRouteId"] = route.RouteID
-		selector["proofBindingPaths"] = admit.StringSliceToAny(route.ProofBindingPaths)
-		selector["specPaths"] = admit.StringSliceToAny(route.SpecPaths)
 	}
 	if hasCandidate {
-		selector["affectedPaths"] = admit.StringSliceToAny(candidate.AffectedPaths)
 		selector["candidateBoundaryId"] = candidate.BoundaryID
-		selector["contractWitnessRefs"] = admit.StringSliceToAny(candidate.ContractWitnessRefs)
-		selector["nativeWitnessRefs"] = admit.StringSliceToAny(candidate.NativeWitnessRefs)
-		selector["proofBindingRefs"] = admit.StringSliceToAny(candidate.ProofBindingRefs)
 	}
 	return selector
 }
 
-func commandIDsForRoute(route ownerRoute, ok bool) []any {
+func commandIDsForRoute(route ownerRoute, ok bool, catalog contextCatalog) []any {
 	if !ok || len(route.Commands) == 0 {
 		return []any{}
 	}
 	out := make([]any, 0, len(route.Commands))
 	for index := range route.Commands {
-		out = append(out, fmt.Sprintf("%s.command.%03d", route.RouteID, index+1))
+		out = append(out, catalog.localTargetID(fmt.Sprintf("%s.command.%03d", route.RouteID, index+1)))
 	}
 	return out
 }

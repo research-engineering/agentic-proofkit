@@ -32,7 +32,7 @@ func plain(build func() map[string]any) func() (map[string]any, error) {
 func agentWorkflowOwnerRows() []agentWorkflowOwnerRow {
 	return []agentWorkflowOwnerRow{
 		{"agent-route", "input", "2", "1", [][2]string{{"01-direct", "default JSON mode"}}, []func() (map[string]any, error){plain(agentroute.InputStructure)}},
-		{"agent-route", "output", "3", "3", [][2]string{
+		{"agent-route", "output", "4", "3", [][2]string{
 			{"01-agent-brief", "--agent-envelope=present --agent-envelope-mode=absent|brief; admitted route input"},
 			{"02-agent-envelope-full", "--agent-envelope=present --agent-envelope-mode=full; admitted route input"},
 			{"03-invalid-input-repair", "--agent-envelope=present; route input or input-pointer admission failed"},
@@ -71,12 +71,17 @@ func TestAgentWorkflowOwnersConservePublishedIdentityAndVariants(t *testing.T) {
 		id := agentWorkflowDefinitionID(row)
 		t.Run(id, func(t *testing.T) {
 			owner, ok := nativeStructureOwner(id)
-			predecessor := "proofkit." + row.command + "." + row.direction + ".v" + row.semantic + ".root-shape"
-			if !ok || owner.direction != row.direction || !slices.Equal(owner.commands, []string{row.command}) || !slices.Equal(owner.predecessors, []string{predecessor}) {
+			predecessors := []string{"proofkit." + row.command + "." + row.direction + ".v" + row.semantic + ".root-shape"}
+			if row.command == "agent-route" && row.direction == "output" {
+				predecessors = []string{"proofkit.agent-route.output.v3.root-shape", "proofkit.agent-route.output.v3.json-schema"}
+			}
+			if !ok || owner.direction != row.direction || !slices.Equal(owner.commands, []string{row.command}) || !slices.Equal(owner.predecessors, predecessors) {
 				t.Fatalf("wrong native owner registration: %s", id)
 			}
-			if _, retired := published[predecessor]; retired {
-				t.Fatalf("predecessor %s remains published", predecessor)
+			for _, predecessor := range predecessors {
+				if _, retired := published[predecessor]; retired {
+					t.Fatalf("predecessor %s remains published", predecessor)
+				}
 			}
 			definition, err := owner.definition()
 			if err != nil {
@@ -184,7 +189,7 @@ func TestAgentRouteConsumerIdentityRejectsWireOrSemanticDrift(t *testing.T) {
 }
 
 func TestAgentWorkflowEnrichmentRetiresEveryPredecessorAnnotation(t *testing.T) {
-	route, ok := nativeStructureOwner("proofkit.agent-route.output.v3.json-schema")
+	route, ok := nativeStructureOwner("proofkit.agent-route.output.v4.json-schema")
 	if !ok {
 		t.Fatal("agent-route output owner absent")
 	}

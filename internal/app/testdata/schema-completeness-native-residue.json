@@ -1170,6 +1170,16 @@
    "observation": 307,
    "route": "adoption-contract-envelope",
    "pointer": "/nonClaims"
+  },
+  {
+   "observation": 316,
+   "route": "adoption-contract-envelope",
+   "pointer": "/workflow/workflow/nonClaims"
+  },
+  {
+   "observation": 317,
+   "route": "adoption-workflow-plan",
+   "pointer": "/nonClaims"
   }
  ],
  "residue": [

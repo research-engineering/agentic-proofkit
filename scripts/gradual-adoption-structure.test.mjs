@@ -459,10 +459,10 @@ function outputArrayRange(command, index, path) {
     if (name === 'diagnostics.0.value.agentActionPlan') return [4, 5];
   }
   if (command === 'gradual-adoption-bootstrap') {
-    if (index === 1) return {files: [6, 6], nextCommands: [3, 3]}[name];
-    const exact = {agentActionPlan: [3, 3], nextCommands: [3, 3], plannedFiles: [6, 6],
+    if (index === 1) return {files: [6, 6], nextCommands: [0, 3]}[name];
+    const exact = {agentActionPlan: [3, 3], nextCommands: [0, 3], plannedFiles: [6, 6],
       'report.diagnostics': [4, 4], 'report.diagnostics.0.value': [3, 3],
-      'report.diagnostics.1.value': [3, 3], 'report.diagnostics.2.value': [6, 6],
+      'report.diagnostics.1.value': [0, 3], 'report.diagnostics.2.value': [6, 6],
       'payloads.adoptionGuidance.sourceReport.diagnostics': [6, 6]};
     if (exact[name]) return exact[name];
     if (/^(report|payloads\.adoptionGuidance\.sourceReport)\.ruleResults\.\d+\.diagnostics$/.test(name)) return [0, 0];
@@ -494,7 +494,7 @@ function carrierValuePredicates(command, index, output, value, path, label) {
       'evidenceRole', 'admissionState', 'bindingFormat', 'materializationStatus', 'contentKind', 'payloadKey', 'key'].includes(key)) reject('foreign-fixture-value');
     if (envelope && (path[0] === 'contextRefs' && ['kind', 'role'].includes(key) || ['bounds.fanout', 'costContract.stopReason'].includes(name))) reject('foreign-fixture-value');
     if (envelope && path[0] === 'contextRefs' && ['kind', 'role'].includes(key)) {
-      const values = key === 'kind' ? ['path', 'rule', 'candidate-boundary']
+      const values = key === 'kind' ? ['path', 'rule', 'candidate-boundary', ...(command === 'gradual-adoption-guidance' ? ['owner'] : [])]
         : ['evidence', 'proof_binding', 'spec_source', 'rule_reference', 'candidate_boundary', 'command_registry', 'owner_surface', 'supporting'];
       for (const member of values) schema(command, 'output', index, replace(output, path, member), true, label + '/enum/' + name);
     }
@@ -561,6 +561,12 @@ function carrierPredicates(command, index, output, label) {
       schema(command, 'output', index, replace(output, [...path, 'foreign'], true), false, label);
       for (const key of Object.keys(value)) {
         if (path.join('.') === 'bounds' && optionalBounds.has(key)) continue;
+        if (command === 'gradual-adoption-guidance' && /^commands\.\d+$/.test(path.join('.')) && key === 'argv') continue;
+        if (path.join('.') === 'payloads.adoptionGuidance.agentGuidance.proofkitCommands') {
+          const missing = structuredClone(output); delete at(missing, path)[key];
+          schema(command, 'output', index, missing, true, label + '/optional-operation/' + key);
+          continue;
+        }
         const missing = structuredClone(output); delete at(missing, path)[key];
         schema(command, 'output', index, missing, false, label + '/required/' + [...path, key]);
         if (key === 'schemaVersion') for (const version of [0, 2]) schema(command, 'output', index, replace(output, [...path, key], version), false, label + '/wire-version');
@@ -771,6 +777,7 @@ test('all described finite enums retain the independently authored owner vocabul
         if (node.enum) {
           const key = path[path.lastIndexOf('properties') + 1];
           let expected = domains[key];
+          if (key === 'kind' && command === 'gradual-adoption-guidance') expected = ['candidate-boundary', 'owner', 'path', 'rule'];
           if (key === 'state' || key === 'status') {
             expected = direction === 'input' ? sourceStates : command === 'gradual-adoption-guidance'
               ? key === 'status' || path.includes('diagnostics') ? sourceStates : guidanceStates
@@ -839,25 +846,120 @@ test('caller/generated intersections preserve the prefix without duplicate instr
       const expected = [...caller, ...generated.filter((_, index) => !(mask & 1 << index))];
       const input = {...bootstrap(), commands: caller};
       const ordinary = invoke('gradual-adoption-bootstrap', input, 'passed', [], 0, launcher.env);
-      assert.deepEqual(ordinary.payloads.adoptionGuidance.agentGuidance.commands, expected);
+      assert.deepEqual(ordinary.payloads.adoptionGuidance.agentGuidance.commands, caller);
+      assert.deepEqual(ordinary.payloads.adoptionGuidance.agentGuidance.proofkitCommands, {
+        'gradual-adoption': 'proofkit/adoption.json', 'gradual-adoption-guidance': 'proofkit/guidance.json', 'witness-plan': 'proofkit/witness.json',
+      });
       assert.deepEqual(ordinary.nextCommands, generated);
-      invoke('gradual-adoption-guidance', ordinary.payloads.adoptionGuidance, 'passed', [], 0, launcher.env);
+      const readmitted = invoke('gradual-adoption-guidance', ordinary.payloads.adoptionGuidance, 'passed', [], 0, launcher.env);
+      assert.deepEqual(readmitted.diagnostics.find(row => row.key === 'guidance').value.commands, expected);
+      assert.equal(readmitted.summary.commandCount, expected.length);
       const agent = invoke('gradual-adoption-bootstrap', input, 'passed', ['--agent-envelope'], 0, launcher.env);
       assert.deepEqual(agent.commands.map(row => row.command), generated);
       const manifest = invoke('gradual-adoption-bootstrap', input, 'passed', ['--materialization-manifest'], 0, launcher.env);
-      assert.deepEqual(JSON.parse(manifest.files.find(file => file.payloadKey === 'adoptionGuidance').content).agentGuidance.commands, expected);
+      assert.deepEqual(JSON.parse(manifest.files.find(file => file.payloadKey === 'adoptionGuidance').content).agentGuidance.commands, caller);
       const aggregate = envelope(); aggregate.bootstrap.commands = caller;
       for (const flags of [[], ['--agent-envelope'], ['--materialization-manifest']]) {
         const value = invoke('gradual-adoption-bootstrap', aggregate, 'passed', ['--contract-envelope', ...flags], 1, launcher.env);
         if (flags.includes('--agent-envelope')) assert.deepEqual(value.commands.map(row => row.command), generated);
-        else if (flags.includes('--materialization-manifest')) assert.deepEqual(JSON.parse(value.files.find(file => file.payloadKey === 'adoptionGuidance').content).agentGuidance.commands, expected);
-        else assert.deepEqual(value.payloads.adoptionGuidance.agentGuidance.commands, expected);
+        else if (flags.includes('--materialization-manifest')) assert.deepEqual(JSON.parse(value.files.find(file => file.payloadKey === 'adoptionGuidance').content).agentGuidance.commands, caller);
+        else assert.deepEqual(value.payloads.adoptionGuidance.agentGuidance.commands, caller);
       }
     }
     for (const flags of [[], ['--agent-envelope'], ['--materialization-manifest']]) {
       invoke('gradual-adoption-bootstrap', {...bootstrap(), commands: ['agentic-proofkit witness-scheduler-plan --input proofkit/witness.json']}, 'passed', flags, 0, launcher.env);
       invoke('gradual-adoption-bootstrap', {...bootstrap(), commands: ['go test ./...', 'go test ./...']}, 'failed', flags, 0, launcher.env);
     }
+  }
+});
+
+test('collected prepared-path failures emit zero to three real commands in every bootstrap carrier', () => {
+  const fields = ['adoptionProfilePath', 'adoptionGuidancePath', 'witnessPlanInputPath'];
+  const operations = ['gradual-adoption', 'gradual-adoption-guidance', 'witness-plan'];
+  for (let mask = 0; mask < 8; mask++) {
+    const input = bootstrap();
+    const expected = [];
+    for (const [index, field] of fields.entries()) {
+      if (mask & 1 << index) expected.push(`agentic-proofkit ${operations[index]} --input ${input.paths[field]}`);
+      else delete input.paths[field];
+    }
+    const phase = mask === 7 ? 'passed' : 'failed';
+    for (const wrapped of [false, true]) {
+      const value = wrapped ? envelope() : input;
+      if (wrapped) value.bootstrap.paths = input.paths;
+      const flags = wrapped ? ['--contract-envelope'] : [];
+      const report = invoke('gradual-adoption-bootstrap', value, phase, flags, wrapped ? 1 : 0);
+      assert.deepEqual(report.nextCommands, expected);
+      assert.deepEqual(report.report.diagnostics.find(row => row.key === 'nextCommands').value, expected);
+      const manifest = invoke('gradual-adoption-bootstrap', value, phase, [...flags, '--materialization-manifest'], wrapped ? 1 : 0);
+      assert.deepEqual(manifest.nextCommands, expected);
+      const fourth = ['first', 'second', 'third', 'fourth'];
+      schema('gradual-adoption-bootstrap', 'output', 0, {...report, nextCommands: fourth}, false, 'four-root-commands');
+      schema('gradual-adoption-bootstrap', 'output', 0,
+        replace(report, ['report', 'diagnostics', 1, 'value'], fourth), false, 'four-diagnostic-commands');
+      schema('gradual-adoption-bootstrap', 'output', 1, {...manifest, nextCommands: fourth}, false, 'four-manifest-commands');
+    }
+  }
+});
+
+test('prepared command construction collects unsafe Unicode before display or argv projection', () => {
+  const slots = [
+    ['gradual-adoption', 'adoptionProfilePath'],
+    ['gradual-adoption-guidance', 'adoptionGuidancePath'],
+    ['witness-plan', 'witnessPlanInputPath'],
+  ];
+  for (const scalar of ['\u202e', '\u2066', '\u200b', '\u0085', '\u2028', '\u2029', '\n']) {
+    const path = `inputs/unsafe${scalar}path.json`;
+    for (const [operation, field] of slots) {
+      const direct = guidance(); direct.agentGuidance.proofkitCommands = {[operation]: path};
+      const report = invoke('gradual-adoption-guidance', direct, 'failed');
+      assert.deepEqual(report.diagnostics.find(row => row.key === 'guidance').value.commands, []);
+      const agent = invoke('gradual-adoption-guidance', direct, 'failed', ['--agent-envelope']);
+      assert.equal(agent.commands.some(row => 'argv' in row), false);
+      const input = bootstrap(); input.paths[field] = path;
+      const ordinary = invoke('gradual-adoption-bootstrap', input, 'failed');
+      assert.equal(ordinary.nextCommands.length, 2);
+      assert.equal(operation in ordinary.payloads.adoptionGuidance.agentGuidance.proofkitCommands, false);
+      assert.equal(ordinary.nextCommands.some(command => command.includes(scalar)), false);
+      const manifest = invoke('gradual-adoption-bootstrap', input, 'failed', ['--materialization-manifest']);
+      assert.deepEqual(manifest.nextCommands, ordinary.nextCommands);
+    }
+  }
+  for (const path of ['inputs/file.json ', "inputs/quoted'file.json", 'inputs/task-validation.json', 'inputs/caf\u00e9.json', ' - ']) {
+    const input = guidance(); input.agentGuidance.proofkitCommands = {'witness-plan': path};
+    const agent = invoke('gradual-adoption-guidance', input, 'passed', ['--agent-envelope']);
+    assert.deepEqual(agent.commands.filter(row => row.argv).map(row => row.argv), [['agentic-proofkit', 'witness-plan', '--input', path]]);
+    const child = bootstrap(); child.paths.witnessPlanInputPath = path;
+    if (path === 'inputs/task-validation.json') invoke('gradual-adoption-bootstrap', child, 'refused');
+    else {
+      const result = invoke('gradual-adoption-bootstrap', child);
+      assert.equal(result.payloads.adoptionGuidance.agentGuidance.proofkitCommands['witness-plan'], path);
+    }
+  }
+  const strict = guidance();
+  strict.agentGuidance.commands = ['go test --input inputs/task-validation.json'];
+  strict.agentGuidance.proofkitCommands = {'witness-plan': 'inputs/task-validation.json'};
+  invoke('gradual-adoption-guidance', strict, 'failed');
+});
+
+test('safe path leaves cannot acquire protected final display signatures through quoting', () => {
+  const slots = [
+    ['gradual-adoption', 'adoptionProfilePath'],
+    ['gradual-adoption-guidance', 'adoptionGuidancePath'],
+    ['witness-plan', 'witnessPlanInputPath'],
+  ];
+  const control = guidance(); control.agentGuidance.proofkitCommands = {'witness-plan': 'inputs/authorization:'};
+  invoke('gradual-adoption-guidance', control);
+  for (const [operation, field] of slots) {
+    const path = 'inputs/a b/authorization:';
+    const input = guidance(); input.agentGuidance.proofkitCommands = {[operation]: path};
+    const report = invoke('gradual-adoption-guidance', input, 'failed');
+    assert.deepEqual(report.diagnostics.find(row => row.key === 'guidance').value.commands, []);
+    const agent = invoke('gradual-adoption-guidance', input, 'failed', ['--agent-envelope']);
+    assert.deepEqual(agent.commands, []);
+    const child = bootstrap(); child.paths[field] = path;
+    // The existing whole-source privacy boundary rejects this bootstrap sooner.
+    invoke('gradual-adoption-bootstrap', child, 'refused');
   }
 });
 
@@ -869,7 +971,8 @@ test('reachable envelope degradation preserves bounded arrays, omissions and req
     carrierPredicates('gradual-adoption-guidance', 1, value, 'commands/' + count);
   }
   for (const count of [47, 48, 49, 97]) {
-    const input = guidance(); input.ownerRoute.evidencePaths = Array.from({length: count - 2}, (_, index) => `artifacts/evidence-${String(index).padStart(3, '0')}.json`);
+    // The fixed contexts are the spec path, proof binding and declared owner.
+    const input = guidance(); input.ownerRoute.evidencePaths = Array.from({length: count - 3}, (_, index) => `artifacts/evidence-${String(index).padStart(3, '0')}.json`);
     const value = invoke('gradual-adoption-guidance', input, 'passed', ['--agent-envelope']);
     assert.equal(value.contextRefs.length, Math.min(count, 48));
     carrierPredicates('gradual-adoption-guidance', 1, value, 'contexts/' + count);

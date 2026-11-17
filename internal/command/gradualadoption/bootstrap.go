@@ -3,6 +3,8 @@ package gradualadoption
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -21,13 +23,32 @@ var bootstrapNonClaims = []string{
 }
 
 type BootstrapResult struct {
-	AgentActionPlan []any
-	ExitCode        int
-	NextCommands    []string
-	Payloads        map[string]any
-	PlannedFiles    []any
-	Record          report.Record
-	WitnessPlan     map[string]any
+	AgentActionPlan          []any
+	ExitCode                 int
+	NextCommands             []string
+	Payloads                 map[string]any
+	PlannedFiles             []any
+	Record                   report.Record
+	WitnessPlan              map[string]any
+	preparedCommands         []PreparedCommand
+	renderer                 cliexec.Renderer
+	repositoryProfilePath    string
+	materializationFileRoles map[string]string
+	materialization          map[string]any
+}
+
+func (result BootstrapResult) RepositoryProfilePath() string {
+	return result.repositoryProfilePath
+}
+
+func (result BootstrapResult) MaterializationFileRoles() map[string]string {
+	return maps.Clone(result.materializationFileRoles)
+}
+
+// MaterializationInput projects the child-owned source for parent consistency
+// and persistence; neither the caller input nor writable output owns it.
+func (result BootstrapResult) MaterializationInput() (map[string]any, error) {
+	return contractenv.ObjectField(result.materialization, "input", "bootstrap result")
 }
 
 func BuildBootstrap(raw any) (map[string]any, int, error) {
@@ -179,7 +200,10 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	if err != nil {
 		return BootstrapResult{}, err
 	}
-	paths := admitBootstrapPaths(object(record["paths"]), &failures)
+	paths, err := admitBootstrapPaths(object(record["paths"]), &failures)
+	if err != nil {
+		return BootstrapResult{}, err
+	}
 	module := admitBootstrapModule(object(record["module"]), &failures)
 	ownerRoute := admitBootstrapOwnerRoute(object(record["ownerRoute"]), &failures)
 	proofBindingPath, err := safePath(record["proofBindingPath"], "bootstrap proofBindingPath")
@@ -211,11 +235,8 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	addErr(&failures, err)
 	nonClaims, err := admit.SortedText(append(append([]string{}, bootstrapNonClaims...), callerNonClaims...), "bootstrap merged nonClaims", false)
 	addErr(&failures, err)
-	nextCommands := []string{
-		renderer.DisplayCommand("gradual-adoption", "--input", stringFromMap(paths, "adoptionProfilePath")),
-		renderer.DisplayCommand("gradual-adoption-guidance", "--input", stringFromMap(paths, "adoptionGuidancePath")),
-		renderer.DisplayCommand("witness-plan", "--input", stringFromMap(paths, "witnessPlanInputPath")),
-	}
+	preparedCommands := bootstrapPreparedCommands(paths, renderer, &failures)
+	nextCommands := preparedCommandDisplays(nil, preparedCommands)
 	adoptionProfile := map[string]any{
 		"adoptionId":      bootstrapID,
 		"adoptionMode":    "non_blocking",
@@ -248,7 +269,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		failures = append(failures, "generated adoptionProfile must be accepted before bootstrap can pass")
 	}
 	adoptionGuidance := map[string]any{
-		"agentGuidance": bootstrapAgentGuidance(paths, commands, nextCommands),
+		"agentGuidance": bootstrapAgentGuidance(paths, commands, preparedCommands),
 		"guidanceId":    bootstrapID + ".guidance",
 		"guidanceMode":  guidanceMode,
 		"nonClaims": admit.StringSliceToAny([]string{
@@ -265,7 +286,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		},
 		"sourceReport": source.Record.JSONValue(),
 	}
-	guidance, err := buildGuidance(adoptionGuidance, GuidanceOptions{})
+	guidance, err := buildGuidance(adoptionGuidance, GuidanceOptions{Renderer: renderer})
 	if err != nil {
 		return BootstrapResult{}, err
 	}
@@ -290,6 +311,24 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		"profilePath":      source.ProfilePath,
 		"proofBindingPath": proofBindingPath,
 	})
+	seenPaths := map[string]struct{}{}
+	fileRoles := map[string]string{}
+	for _, rawFile := range plannedFiles {
+		file := rawFile.(map[string]any)
+		path := file["path"].(string)
+		// Empty paths already have collected admission failures.
+		if path == "" {
+			continue
+		}
+		fileRoles[path] = bootstrapFileRole(file)
+		for prior := range seenPaths {
+			if admit.RepoFilePathsOverlap(path, prior) {
+				failures = append(failures, "bootstrap planned file paths must be unique and non-overlapping")
+				break
+			}
+		}
+		seenPaths[path] = struct{}{}
+	}
 	agentActionPlan := bootstrapAgentActionPlan(nextCommands, plannedFiles)
 	state := "passed"
 	if len(failures) > 0 {
@@ -324,7 +363,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
 	exit := exitCode(rec)
-	return BootstrapResult{
+	result := BootstrapResult{
 		AgentActionPlan: agentActionPlan,
 		ExitCode:        exit,
 		NextCommands:    nextCommands,
@@ -334,13 +373,29 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 			"proofBinding":     proofBindingPayload,
 			"witnessPlanInput": record["nativeWitnesses"],
 		},
-		PlannedFiles: plannedFiles,
-		Record:       rec,
-		WitnessPlan:  witnessPlan,
-	}, nil
+		PlannedFiles:             plannedFiles,
+		Record:                   rec,
+		WitnessPlan:              witnessPlan,
+		preparedCommands:         preparedCommands,
+		renderer:                 renderer,
+		repositoryProfilePath:    source.ProfilePath,
+		materializationFileRoles: fileRoles,
+	}
+	// Seal materialization before publishing writable projections. Reuse the
+	// existing clone primitive; do not readmit or reserialize the source input.
+	inputSnapshot, err := contractenv.ObjectField(map[string]any{"input": record}, "input", "bootstrap result")
+	if err != nil {
+		return BootstrapResult{}, err
+	}
+	manifest, err := bootstrapMaterializationManifest(result)
+	if err != nil {
+		return BootstrapResult{}, err
+	}
+	result.materialization = map[string]any{"input": inputSnapshot, "manifest": manifest}
+	return result, nil
 }
 
-func admitBootstrapPaths(raw map[string]any, failures *[]string) map[string]any {
+func admitBootstrapPaths(raw map[string]any, failures *[]string) (map[string]any, error) {
 	if err := admit.KnownKeys(raw, []string{"adoptionGuidancePath", "adoptionProfilePath", "adoptionReportArtifactPath", "guidanceReportArtifactPath", "witnessPlanInputPath"}, "bootstrap paths"); err != nil {
 		addErr(failures, err)
 	}
@@ -348,9 +403,16 @@ func admitBootstrapPaths(raw map[string]any, failures *[]string) map[string]any 
 	for _, key := range []string{"adoptionProfilePath", "adoptionGuidancePath", "witnessPlanInputPath", "adoptionReportArtifactPath", "guidanceReportArtifactPath"} {
 		path, err := safePath(raw[key], "bootstrap "+key)
 		addErr(failures, err)
+		// Preserve collected path failures, but never route a prepared file to stdin.
+		if err == nil && slices.Contains(bootstrapPreparedInputPathKeys, key) {
+			path, err = admit.MaterializedInputPath(path, "bootstrap "+key)
+			if err != nil {
+				return nil, err
+			}
+		}
 		paths[key] = path
 	}
-	return paths
+	return paths, nil
 }
 
 func admitBootstrapModule(raw map[string]any, failures *[]string) map[string]any {
@@ -423,18 +485,13 @@ func bootstrapAgentReport(paths map[string]any) map[string]any {
 	}
 }
 
-func bootstrapAgentGuidance(paths map[string]any, commands []string, nextCommands []string) map[string]any {
-	combined := append([]string{}, commands...)
-	for _, next := range nextCommands {
-		if !contains(combined, next) {
-			combined = append(combined, next)
-		}
-	}
+func bootstrapAgentGuidance(paths map[string]any, commands []string, preparedCommands []PreparedCommand) map[string]any {
 	return map[string]any{
 		"artifactPath":                     paths["guidanceReportArtifactPath"],
 		"blockedPreconditions":             []any{},
 		"callerSuggestedAutofixCandidates": []any{},
-		"commands":                         admit.StringSliceToAny(combined),
+		"commands":                         admit.StringSliceToAny(commands),
+		"proofkitCommands":                 preparedCommandSource(preparedCommands),
 		"minimalAdoptionPath": admit.StringSliceToAny([]string{
 			"Start with one bounded module and observe-mode guidance.",
 			"Bind every declared requirement to caller-owned native witnesses.",

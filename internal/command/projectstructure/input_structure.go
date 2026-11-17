@@ -25,7 +25,7 @@ func InputStructure() map[string]any {
 	text := jsonshape.NonBlankString()
 	properties := map[string]any{
 		"bootstrap": bootstrapInputStructure(), "nonClaims": fragment(jsonshape.Array(text, 1)),
-		"paths":               openObject(pathKeys, map[string]jsonshape.Shape{"bootstrapInputPath": text, "repoProfileScaffoldInputPath": text, "workflowInputPath": text}, "Native scaffold paths are trimmed safe repository-relative POSIX paths; members outside this inventory are ignored."),
+		"paths":               materializedInputPathsObject(pathKeys, map[string]jsonshape.Shape{"bootstrapInputPath": text, "repoProfileScaffoldInputPath": text, "workflowInputPath": text}, "Native scaffold paths are trimmed safe repository-relative POSIX paths naming prepared input files, never the stdin sentinel '-'; members outside this inventory are ignored."),
 		"repoProfileScaffold": scaffoldprofileplan.InputStructure(), "scaffoldId": fragment(identifierShape()),
 		"schemaVersion": fragment(jsonshape.IntegerLiteral(1)),
 		"workflow": openObject(workflowKeys, map[string]jsonshape.Shape{
@@ -42,7 +42,7 @@ func InputStructure() map[string]any {
 	return map[string]any{
 		"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false,
 		"properties": properties, "required": required,
-		"description": "All seven root members are required and the root is closed. repoProfileScaffold reuses the scaffold-profile-plan input structure; bootstrap reuses the direct gradual-adoption-bootstrap input structure narrowed to the members this composition reads or materializes. Root and workflow nonClaims trim to nonempty secret-safe text and duplicates are merged. Native admission also owns IDs without secret/timestamp components, safe path grammar and privacy, the detached secret-shaped bootstrap snapshot, unique materialized file paths and builtin nonClaim collisions. Path drift between the repository profile, bootstrap and owner route, failed bootstrap reports and blocked workflow plans produce failed scaffold reports rather than refusal. schemaVersion requires the literal integer token 1 while the semantic contract is v2.",
+		"description": "All seven root members are required and the root is closed. repoProfileScaffold reuses the scaffold-profile-plan input structure; bootstrap reuses the direct gradual-adoption-bootstrap input structure narrowed to the members this composition reads or materializes. Root and workflow nonClaims trim to nonempty secret-safe text and duplicates are merged. Native admission also owns IDs without secret/timestamp components, safe path grammar and privacy, the detached secret-shaped bootstrap snapshot, unique materialized file paths and builtin nonClaim collisions. Path drift between the repository profile, bootstrap and owner route, failed bootstrap reports and blocked workflow plans produce failed scaffold reports rather than refusal. schemaVersion requires the literal integer token 1 while the semantic contract is v3.",
 	}
 }
 
@@ -52,9 +52,9 @@ func bootstrapInputStructure() map[string]any {
 	schema := gradualadoption.BootstrapInputStructure()
 	properties := schema["properties"].(map[string]any)
 	properties["module"] = openObject([]string{"specPath"}, map[string]jsonshape.Shape{"specPath": path}, "The module specPath becomes a materialized file path; other module members keep bootstrap failure-collecting evaluation.")
-	properties["paths"] = openObject(bootstrapPathKeys, map[string]jsonshape.Shape{
+	properties["paths"] = materializedInputPathsObject(bootstrapPathKeys, map[string]jsonshape.Shape{
 		"adoptionGuidancePath": text, "adoptionProfilePath": path, "witnessPlanInputPath": text,
-	}, "These paths become workflow refs or materialized files; workflow refs are trimmed. Other path members keep bootstrap failure-collecting evaluation.")
+	}, "These child bootstrap paths name prepared CLI input files, never the stdin sentinel '-'; their exact admitted framing is preserved in the materialization manifest and workflow refs. The three scaffold-owned paths are separately normalized. Other path members keep bootstrap failure-collecting evaluation.")
 	properties["proofBindingPath"] = fragment(text)
 	repository := properties["repository"].(map[string]any)
 	repository["properties"] = map[string]any{"profilePath": fragment(path)}
@@ -74,6 +74,15 @@ func bootstrapInputStructure() map[string]any {
 	})
 	schema["required"] = required
 	schema["description"] = "Direct gradual-adoption-bootstrap input as composed by scaffold-project-structure. Members materialized as scaffold files or workflow refs are required here; empty or duplicate materialized paths refuse the scaffold. All other bootstrap admission, failure-collecting evaluation and secret-shaped snapshot rejection remain owned by the bootstrap command."
+	return schema
+}
+
+func materializedInputPathsObject(keys []string, fields map[string]jsonshape.Shape, description string) map[string]any {
+	schema := openObject(keys, fields, description)
+	properties := schema["properties"].(map[string]any)
+	for _, key := range keys {
+		properties[key].(map[string]any)["not"] = map[string]any{"const": "-"}
+	}
 	return schema
 }
 

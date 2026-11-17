@@ -13,7 +13,7 @@ import (
 )
 
 // The wire version stays 1; the delegated bootstrap safety boundary changes.
-const InputContractID = "proofkit.scaffold-project-structure.input.v2"
+const InputContractID = "proofkit.scaffold-project-structure.input.v3"
 
 const reportKind = "proofkit.project-structure-scaffold"
 
@@ -42,6 +42,62 @@ type Result struct {
 	Manifest              map[string]any
 	Record                report.Record
 	RepoProfile           scaffoldprofileplan.Result
+	commands              []preparedCommand
+	renderer              cliexec.Renderer
+	fileRoles             map[string]string
+}
+
+type scaffoldChildren struct {
+	bootstrap        gradualadoption.BootstrapResult
+	bootstrapInput   map[string]any
+	repoProfile      scaffoldprofileplan.Result
+	repoProfileInput map[string]any
+}
+
+func buildScaffoldChildren(input map[string]any, renderer cliexec.Renderer) (scaffoldChildren, error) {
+	repoProfileInput, err := object(input["repoProfileScaffold"], "project structure scaffold repoProfileScaffold")
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	repoProfileInput = scaffoldProfileSnapshot(repoProfileInput).(map[string]any)
+	bootstrapInput, err := object(input["bootstrap"], "project structure scaffold bootstrap")
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	repoProfile, err := scaffoldprofileplan.BuildResult(repoProfileInput)
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	bootstrap, err := gradualadoption.BuildBootstrapResultWithRenderer(bootstrapInput, renderer)
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	bootstrapInput, err = bootstrap.MaterializationInput()
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	return scaffoldChildren{bootstrap: bootstrap, bootstrapInput: bootstrapInput, repoProfile: repoProfile, repoProfileInput: repoProfileInput}, nil
+}
+
+// Unlike contract-envelope cloning, this boundary must not normalize native
+// containers that the child or strict persistence owner would otherwise refuse.
+func scaffoldProfileSnapshot(raw any) any {
+	switch value := raw.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(value))
+		for key, item := range value {
+			result[key] = scaffoldProfileSnapshot(item)
+		}
+		return result
+	case []any:
+		result := make([]any, len(value))
+		for index, item := range value {
+			result[index] = scaffoldProfileSnapshot(item)
+		}
+		return result
+	default:
+		return raw
+	}
 }
 
 func Build(raw any) (map[string]any, int, error) {
@@ -98,27 +154,17 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 	if workflow["scenario"] != "new_repository" {
 		return Result{}, fmt.Errorf("project structure scaffold workflow.scenario must be new_repository")
 	}
-	repoProfileInput, err := object(input["repoProfileScaffold"], "project structure scaffold repoProfileScaffold")
+	children, err := buildScaffoldChildren(input, renderer)
 	if err != nil {
 		return Result{}, err
 	}
-	bootstrapInput, err := object(input["bootstrap"], "project structure scaffold bootstrap")
-	if err != nil {
-		return Result{}, err
-	}
-	repoProfile, err := scaffoldprofileplan.BuildResult(repoProfileInput)
-	if err != nil {
-		return Result{}, err
-	}
-	bootstrap, err := gradualadoption.BuildBootstrapResultWithRenderer(bootstrapInput, renderer)
-	if err != nil {
-		return Result{}, err
-	}
+	bootstrap, bootstrapInput := children.bootstrap, children.bootstrapInput
+	repoProfile, repoProfileInput := children.repoProfile, children.repoProfileInput
 	bootstrapManifest, err := gradualadoption.BootstrapMaterializationManifest(bootstrap)
 	if err != nil {
 		return Result{}, err
 	}
-	workflowInput, err := adoptionWorkflowInput(bootstrapInput, repoProfile.Plan, paths, workflow)
+	workflowInput, err := adoptionWorkflowInput(bootstrap, bootstrapManifest, repoProfile.Plan, paths, workflow)
 	if err != nil {
 		return Result{}, err
 	}
@@ -137,20 +183,26 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
+	commands, err := projectCommands(paths, bootstrap, renderer)
+	if err != nil {
+		return Result{}, err
+	}
 	manifest, err := buildMaterializationManifest(materializationInput{
 		adoptionWorkflowInput: workflowInput,
 		bootstrapInput:        bootstrapInput,
 		bootstrapManifest:     bootstrapManifest,
+		bootstrapProfilePath:  bootstrap.RepositoryProfilePath(),
 		paths:                 paths,
 		repoProfileInput:      repoProfileInput,
 		repoProfilePlan:       repoProfile.Plan,
 		scaffoldID:            scaffoldID,
+		commands:              commands,
 		sourceReports: []report.Record{
 			repoProfile.Record,
 			bootstrap.Record,
 			adoptionWorkflow.Record,
 		},
-	}, renderer)
+	})
 	if err != nil {
 		return Result{}, err
 	}
@@ -177,6 +229,10 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 		RuleResults: ruleResults(failures),
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
+	roles := bootstrap.MaterializationFileRoles()
+	roles[paths.repoProfileScaffoldInputPath] = "owner_surface"
+	roles[paths.bootstrapInputPath] = "router"
+	roles[paths.workflowInputPath] = "command_registry"
 	return Result{
 		AdoptionWorkflowInput: workflowInput,
 		AdoptionWorkflowPlan:  adoptionWorkflow.Plan,
@@ -185,6 +241,9 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 		Manifest:              manifest,
 		Record:                record,
 		RepoProfile:           repoProfile,
+		commands:              commands,
+		renderer:              renderer,
+		fileRoles:             roles,
 	}, nil
 }
 
@@ -200,23 +259,19 @@ func (result Result) JSONValue() map[string]any {
 	}
 }
 
-func adoptionWorkflowInput(bootstrapInput map[string]any, repoProfilePlan map[string]any, paths projectPathSet, workflow map[string]any) (map[string]any, error) {
+func adoptionWorkflowInput(bootstrap gradualadoption.BootstrapResult, bootstrapManifest map[string]any, repoProfilePlan map[string]any, paths projectPathSet, workflow map[string]any) (map[string]any, error) {
 	workflowID, err := admit.RuleID(workflow["workflowId"], "project structure scaffold workflowId")
 	if err != nil {
 		return nil, err
 	}
-	bootstrapPaths, err := object(bootstrapInput["paths"], "project structure scaffold bootstrap paths")
+	if _, err := bootstrapPayloadPath(bootstrapManifest, "proofBinding"); err != nil {
+		return nil, err
+	}
+	witnessPlanInputPath, err := bootstrapPayloadPath(bootstrapManifest, "witnessPlanInput")
 	if err != nil {
 		return nil, err
 	}
-	if _, err := safePath(bootstrapInput["proofBindingPath"], "project structure scaffold proofBindingPath"); err != nil {
-		return nil, err
-	}
-	witnessPlanInputPath, err := safePath(bootstrapPaths["witnessPlanInputPath"], "project structure scaffold witnessPlanInputPath")
-	if err != nil {
-		return nil, err
-	}
-	adoptionGuidancePath, err := safePath(bootstrapPaths["adoptionGuidancePath"], "project structure scaffold adoptionGuidancePath")
+	adoptionGuidancePath, err := bootstrapPayloadPath(bootstrapManifest, "adoptionGuidance")
 	if err != nil {
 		return nil, err
 	}
@@ -229,12 +284,22 @@ func adoptionWorkflowInput(bootstrapInput map[string]any, repoProfilePlan map[st
 		return nil, err
 	}
 	refPaths := map[string]string{
-		"gradual_adoption_bootstrap": paths.bootstrapInputPath, "gradual_adoption_guidance": adoptionGuidancePath,
-		"repo_profile_scaffold": paths.repoProfileScaffoldInputPath, "bootstrap_witness_plan": witnessPlanInputPath,
+		"gradual_adoption_bootstrap": paths.bootstrapInputPath,
+		"repo_profile_scaffold":      paths.repoProfileScaffoldInputPath,
+	}
+	for _, command := range bootstrap.PreparedCommands() {
+		if command.Command() == "gradual-adoption-guidance" && command.InputRef() == adoptionGuidancePath {
+			refPaths["gradual_adoption_guidance"] = adoptionGuidancePath
+		}
+		if command.Command() == "witness-plan" && command.InputRef() == witnessPlanInputPath {
+			refPaths["bootstrap_witness_plan"] = witnessPlanInputPath
+		}
 	}
 	inputRefs := make([]any, 0, len(workflowInputKinds))
 	for _, kind := range workflowInputKinds {
-		inputRefs = append(inputRefs, map[string]any{"inputKind": kind, "path": refPaths[kind], "refId": kind})
+		if path, admitted := refPaths[kind]; admitted {
+			inputRefs = append(inputRefs, map[string]any{"inputKind": kind, "path": path, "refId": kind})
+		}
 	}
 	input := map[string]any{
 		"inputRefs":     inputRefs,

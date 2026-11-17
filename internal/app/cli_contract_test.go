@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "86e88a10e28db6efa2391f79445b8519d4742cfc6dc97c884fc0cf0f48f89435"
+	cliContractPublicABISHA256               = "a816957912244e64a94b5248c0cc3ef33d9ddbbebcd06518aaa1b2d4d21a0172"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -410,7 +410,7 @@ func TestCLIContractRootShapeVariantInventoryIsClosedAndModeComplete(t *testing.
 func TestCLIConditionModelClosesAdoptionOutputRoutes(t *testing.T) {
 	contract := readCLIContract(t)
 	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
-	definition := definitions["proofkit.adoption-contract-envelope.output.v1.json-schema"]
+	definition := definitions["proofkit.adoption-contract-envelope.output.v2.json-schema"]
 	if definition == nil {
 		t.Fatal("adoption output structural definition is missing")
 	}
@@ -558,28 +558,28 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.spec-proof-bundle-admission.input.v2.json-schema":               {},
 			"proofkit.spec-proof-bundle-admission.output.v1.json-schema":              {},
 			"proofkit.agent-route.input.v2.json-schema":                               {},
-			"proofkit.agent-route.output.v3.json-schema":                              {},
+			"proofkit.agent-route.output.v4.json-schema":                              {},
 			"proofkit.change-workflow-plan.input.v1.json-schema":                      {},
 			"proofkit.change-workflow-plan.output.v1.json-schema":                     {},
 			"proofkit.native-evidence-guidance.output.v1.json-schema":                 {},
-			"proofkit.adoption-contract-envelope.input.v3.json-schema":                {},
-			"proofkit.adoption-contract-envelope.output.v1.json-schema":               {},
+			"proofkit.adoption-contract-envelope.input.v4.json-schema":                {},
+			"proofkit.adoption-contract-envelope.output.v2.json-schema":               {},
 			"proofkit.adoption-workflow-plan.input.v1.json-schema":                    {},
-			"proofkit.adoption-workflow-plan.output.v1.json-schema":                   {},
+			"proofkit.adoption-workflow-plan.output.v2.json-schema":                   {},
 			"proofkit.pilot-admission.input.v2.json-schema":                           {},
 			"proofkit.pilot-admission.output.v1.json-schema":                          {},
 			"proofkit.requirement-source-conversion.input.v1.json-schema":             {},
 			"proofkit.requirement-source-conversion.output.v1.json-schema":            {},
 			"proofkit.gradual-adoption.input.v1.json-schema":                          {},
 			"proofkit.gradual-adoption.output.v1.json-schema":                         {},
-			"proofkit.gradual-adoption-guidance.input.v1.json-schema":                 {},
-			"proofkit.gradual-adoption-guidance.output.v1.json-schema":                {},
+			"proofkit.gradual-adoption-guidance.input.v2.json-schema":                 {},
+			"proofkit.gradual-adoption-guidance.output.v2.json-schema":                {},
 			"proofkit.gradual-adoption-bootstrap.input.v2.json-schema":                {},
-			"proofkit.gradual-adoption-bootstrap.output.v1.json-schema":               {},
+			"proofkit.gradual-adoption-bootstrap.output.v2.json-schema":               {},
 			"proofkit.adoption-doctor.input.v1.json-schema":                           {},
-			"proofkit.adoption-doctor.output.v1.json-schema":                          {},
-			"proofkit.scaffold-project-structure.input.v2.json-schema":                {},
-			"proofkit.scaffold-project-structure.output.v1.json-schema":               {},
+			"proofkit.adoption-doctor.output.v2.json-schema":                          {},
+			"proofkit.scaffold-project-structure.input.v3.json-schema":                {},
+			"proofkit.scaffold-project-structure.output.v2.json-schema":               {},
 			"proofkit.scaffold-profile-plan.input.v1.json-schema":                     {},
 			"proofkit.scaffold-profile-plan.output.v1.json-schema":                    {},
 			"proofkit.status.output.v1.json-schema":                                   {},
@@ -613,7 +613,7 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.selective-gate-plan.input.v1.json-schema":                       {},
 			"proofkit.selective-gate-plan.output.v1.json-schema":                      {},
 			"proofkit.selective-gate-evidence.input.v1.json-schema":                   {},
-			"proofkit.selective-gate-evidence.output.v1.json-schema":                  {},
+			"proofkit.selective-gate-evidence.output.v2.json-schema":                  {},
 			"proofkit.selective-gate-obligation-decision-input.input.v1.json-schema":  {},
 			"proofkit.selective-gate-obligation-decision-input.output.v1.json-schema": {},
 			"proofkit.obligation-decision.input.v1.json-schema":                       {},

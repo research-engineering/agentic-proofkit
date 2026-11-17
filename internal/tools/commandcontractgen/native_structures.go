@@ -453,8 +453,8 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.selective-gate-evidence.input.v1.root-shape"}, commands: []string{"selective-gate-evidence"},
 		schema: func() (map[string]any, error) { return selectivegateevidence.InputStructure(), nil },
 	}, {
-		id: "proofkit.selective-gate-evidence.output.v1.json-schema", direction: "output",
-		predecessors: []string{"proofkit.selective-gate-evidence.output.v1.root-shape"}, commands: []string{"selective-gate-evidence"},
+		id: "proofkit.selective-gate-evidence.output.v2.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.selective-gate-evidence.output.v1.root-shape", "proofkit.selective-gate-evidence.output.v1.json-schema"}, commands: []string{"selective-gate-evidence"},
 		variants: []nativeStructureVariant{
 			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return selectivegateevidence.EnvelopeStructure(), nil }},
 			{id: "02-invalid-input-envelope", when: "--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
@@ -731,12 +731,12 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.gradual-adoption.output.v1.root-shape"}, commands: []string{"gradual-adoption"},
 		schema: func() (map[string]any, error) { return gradualadoption.OutputStructure(), nil },
 	}, {
-		id: "proofkit.gradual-adoption-guidance.input.v1.json-schema", direction: "input", aggregateVersion: "1",
-		predecessors: []string{"proofkit.gradual-adoption-guidance.input.v1.root-shape"}, commands: []string{"gradual-adoption-guidance"},
+		id: "proofkit.gradual-adoption-guidance.input.v2.json-schema", direction: "input", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.gradual-adoption-guidance.input.v1.root-shape", "proofkit.gradual-adoption-guidance.input.v1.json-schema"}, commands: []string{"gradual-adoption-guidance"},
 		variants: gradualGuidanceInputVariants(),
 	}, {
-		id: "proofkit.gradual-adoption-guidance.output.v1.json-schema", direction: "output",
-		predecessors: []string{"proofkit.gradual-adoption-guidance.output.v1.root-shape"}, commands: []string{"gradual-adoption-guidance"},
+		id: "proofkit.gradual-adoption-guidance.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.gradual-adoption-guidance.output.v1.root-shape", "proofkit.gradual-adoption-guidance.output.v1.json-schema"}, commands: []string{"gradual-adoption-guidance"},
 		variants: []nativeStructureVariant{
 			{id: "01-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return gradualadoption.GuidanceOutputStructure(), nil }},
 			{id: "02-envelope", when: "--agent-envelope and admitted input", schema: func() (map[string]any, error) { return gradualadoption.GuidanceEnvelopeStructure(), nil }},
@@ -750,8 +750,8 @@ func nativeStructures() []nativeStructure {
 			{id: "02-contract", when: "--contract-envelope", schema: func() (map[string]any, error) { return gradualadoption.BootstrapContractInputStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.gradual-adoption-bootstrap.output.v1.json-schema", direction: "output", aggregateVersion: "1",
-		predecessors: []string{"proofkit.gradual-adoption-bootstrap.output.v1.root-shape"}, commands: []string{"gradual-adoption-bootstrap"},
+		id: "proofkit.gradual-adoption-bootstrap.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.gradual-adoption-bootstrap.output.v1.root-shape", "proofkit.gradual-adoption-bootstrap.output.v1.json-schema"}, commands: []string{"gradual-adoption-bootstrap"},
 		variants: []nativeStructureVariant{
 			{id: "01-payloads", when: "without --agent-envelope or --materialization-manifest", schema: func() (map[string]any, error) { return gradualadoption.BootstrapOutputStructure(), nil }},
 			{id: "02-materialization-manifest", when: "--materialization-manifest", schema: func() (map[string]any, error) { return gradualadoption.BootstrapMaterializationStructure(), nil }},
@@ -763,20 +763,20 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.adoption-doctor.input.v1.root-shape"}, commands: []string{"adoption-doctor"},
 		schema: func() (map[string]any, error) { return adoptiondoctor.InputStructure(), nil },
 	}, {
-		id: "proofkit.adoption-doctor.output.v1.json-schema", direction: "output",
-		predecessors: []string{"proofkit.adoption-doctor.output.v1.root-shape"}, commands: []string{"adoption-doctor"},
+		id: "proofkit.adoption-doctor.output.v2.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.adoption-doctor.output.v1.root-shape", "proofkit.adoption-doctor.output.v1.json-schema"}, commands: []string{"adoption-doctor"},
 		variants: []nativeStructureVariant{
 			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return adoptiondoctor.EnvelopeStructure(), nil }},
 			{id: "02-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return adoptiondoctor.OutputStructure(), nil }},
 			{id: "03-invalid-input-envelope", when: "--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.scaffold-project-structure.input.v2.json-schema", direction: "input", semanticVersion: 2,
-		predecessors: []string{"proofkit.scaffold-project-structure.input.v1.root-shape"}, commands: []string{"scaffold-project-structure"},
+		id: "proofkit.scaffold-project-structure.input.v3.json-schema", direction: "input", semanticVersion: 3,
+		predecessors: []string{"proofkit.scaffold-project-structure.input.v1.root-shape", "proofkit.scaffold-project-structure.input.v2.root-shape", "proofkit.scaffold-project-structure.input.v2.json-schema"}, commands: []string{"scaffold-project-structure"},
 		schema: func() (map[string]any, error) { return projectstructure.InputStructure(), nil },
 	}, {
-		id: "proofkit.scaffold-project-structure.output.v1.json-schema", direction: "output", aggregateVersion: "1",
-		predecessors: []string{"proofkit.scaffold-project-structure.output.v1.root-shape"}, commands: []string{"scaffold-project-structure"},
+		id: "proofkit.scaffold-project-structure.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.scaffold-project-structure.output.v1.root-shape", "proofkit.scaffold-project-structure.output.v1.json-schema"}, commands: []string{"scaffold-project-structure"},
 		variants: []nativeStructureVariant{
 			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return projectstructure.EnvelopeStructure(), nil }},
 			{id: "02-scaffold", when: "without --agent-envelope", schema: func() (map[string]any, error) { return projectstructure.OutputStructure(), nil }},
@@ -883,8 +883,8 @@ func nativeStructures() []nativeStructure {
 			{id: "01-direct", when: "default JSON mode", schema: func() (map[string]any, error) { return agentroute.InputStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.agent-route.output.v3.json-schema", direction: "output", aggregateVersion: "3",
-		predecessors: []string{"proofkit.agent-route.output.v3.root-shape"}, commands: []string{"agent-route"},
+		id: "proofkit.agent-route.output.v4.json-schema", direction: "output", aggregateVersion: "3", semanticVersion: 4,
+		predecessors: []string{"proofkit.agent-route.output.v3.root-shape", "proofkit.agent-route.output.v3.json-schema"}, commands: []string{"agent-route"},
 		variants: []nativeStructureVariant{
 			{id: "01-agent-brief", when: "--agent-envelope=present --agent-envelope-mode=absent|brief; admitted route input", schema: func() (map[string]any, error) { return agentroute.BriefStructure(), nil }},
 			{id: "02-agent-envelope-full", when: "--agent-envelope=present --agent-envelope-mode=full; admitted route input", schema: func() (map[string]any, error) { return agentroute.FullEnvelopeStructure(), nil }},
@@ -919,8 +919,8 @@ func nativeStructures() []nativeStructure {
 			{id: "02-direct", when: "without --contract-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.InputStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.adoption-workflow-plan.output.v1.json-schema", direction: "output",
-		predecessors: []string{"proofkit.adoption-workflow-plan.output.v1.root-shape"}, commands: []string{"adoption-workflow-plan"},
+		id: "proofkit.adoption-workflow-plan.output.v2.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.adoption-workflow-plan.output.v1.root-shape", "proofkit.adoption-workflow-plan.output.v1.json-schema"}, commands: []string{"adoption-workflow-plan"},
 		variants: []nativeStructureVariant{
 			{id: "01-agent-envelope", when: "--agent-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.EnvelopeOutputStructure(), nil }},
 			{id: "02-workflow-plan", when: "without --agent-envelope", schema: func() (map[string]any, error) { return adoptionworkflow.OutputStructure(), nil }},
@@ -953,12 +953,12 @@ func nativeStructures() []nativeStructure {
 			}, schema: func() (map[string]any, error) { return pilotadmission.ReportStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.adoption-contract-envelope.input.v3.json-schema", direction: "input", aggregateVersion: "2", semanticVersion: 3,
-		predecessors: []string{"proofkit.adoption-contract-envelope.input.v2.root-shape"}, commands: []string{"adoption-contract-envelope"},
+		id: "proofkit.adoption-contract-envelope.input.v4.json-schema", direction: "input", aggregateVersion: "2", semanticVersion: 4,
+		predecessors: []string{"proofkit.adoption-contract-envelope.input.v2.root-shape", "proofkit.adoption-contract-envelope.input.v3.root-shape", "proofkit.adoption-contract-envelope.input.v3.json-schema"}, commands: []string{"adoption-contract-envelope"},
 		variants: adoptionContractInputVariants(),
 	}, {
-		id: "proofkit.adoption-contract-envelope.output.v1.json-schema", direction: "output", aggregateVersion: "1", conditionModel: "cli_flag_conjunction_v1",
-		predecessors: []string{"proofkit.adoption-contract-envelope.output.v1.root-shape"}, commands: []string{"adoption-contract-envelope"},
+		id: "proofkit.adoption-contract-envelope.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2, conditionModel: "cli_flag_conjunction_v1",
+		predecessors: []string{"proofkit.adoption-contract-envelope.output.v1.root-shape", "proofkit.adoption-contract-envelope.output.v1.json-schema"}, commands: []string{"adoption-contract-envelope"},
 		variants: adoptionContractOutputVariants(),
 	}}
 }
@@ -1583,24 +1583,16 @@ func admitNativeStructureConsumers(contract map[string]any, definitions map[stri
 					return fmt.Errorf("%s %s contract violates native structure consumer ownership", name, direction)
 				}
 				if isConsumer {
-					if owner.semanticVersion != 0 || owner.aggregateVersion != "" {
-						definition, exists := definitions[owner.id]
-						if !exists {
-							return fmt.Errorf("%s %s contract lacks its native structural owner", name, direction)
-						}
-						wireVersion, err := owner.contractVersion(definition.Content)
-						if err != nil {
-							return err
-						}
-						if binding["schemaVersion"] != wireVersion || binding["contractId"] != owner.contractID(name, wireVersion) {
-							return fmt.Errorf("%s %s contract violates native semantic contract identity", name, direction)
-						}
+					definition, exists := definitions[owner.id]
+					if !exists || definition.Content == nil {
+						return fmt.Errorf("%s %s contract lacks its native structural owner", name, direction)
 					}
-					if owner.outOfBandVersion != "" {
-						expectedID := "proofkit." + name + "." + direction + ".v" + string(owner.outOfBandVersion)
-						if binding["schemaVersion"] != owner.outOfBandVersion || binding["contractId"] != expectedID {
-							return fmt.Errorf("%s %s contract violates native out-of-band contract identity", name, direction)
-						}
+					wireVersion, err := owner.contractVersion(definition.Content)
+					if err != nil {
+						return err
+					}
+					if binding["schemaVersion"] != wireVersion || binding["contractId"] != owner.contractID(name, wireVersion) {
+						return fmt.Errorf("%s %s contract violates native semantic contract identity", name, direction)
 					}
 					seen[name] = true
 				}

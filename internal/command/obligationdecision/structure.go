@@ -13,7 +13,7 @@ func InputStructure() map[string]any {
 		jsonshape.Required("nonClaims", jsonshape.Array(jsonshape.StringGrammar(`[\s\S]+`), 1)),
 		jsonshape.Required("obligations", jsonshape.Array(jsonshape.Object(obligationFields()...), 1)),
 	).JSONSchema()
-	schema["description"] = "Every member is required and nonnull; obligations, candidateStates, evidenceRefs and nonClaims are nonempty. Native admission owns privacy, canonical repository-relative evidence paths, normalized uniqueness, unique obligation IDs and sorting. Candidate states are sorted by the shared decision priority before selecting the first state. Root nonClaims must not duplicate builtin boundary claims after normalization. Structure is not evidence truth or merge approval."
+	schema["description"] = "Every member is required and nonnull; obligations, candidateStates, evidenceRefs and nonClaims are nonempty. Native admission owns privacy, canonical repository-relative evidence paths, normalized uniqueness, unique obligation IDs and sorting. Evidence paths retain exact bytes, including significant whitespace, under path-specific privacy and are not readmitted as prose. Candidate states are sorted by the shared decision priority before selecting the first state. Root nonClaims must not duplicate builtin boundary claims after normalization. Structure is not evidence truth or merge approval."
 	return schema
 }
 

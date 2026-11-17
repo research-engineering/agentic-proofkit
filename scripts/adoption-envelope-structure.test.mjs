@@ -18,16 +18,16 @@ const aggregateCondition = (agent, manifest, mode, pilot) =>
 const guidanceIds = [0, 1, 2, 3, 4, 5, 6, 7].map(mask => `${String(mask + 3).padStart(2, '0')}-guidance-${mask.toString(2).padStart(3, '0')}`);
 const expected = {
   'adoption-contract-envelope/input': {
-    id: 'proofkit.adoption-contract-envelope.input.v3.json-schema', contractId: 'proofkit.adoption-contract-envelope.input.v3', schemaVersion: 2, rootType: 'object',
-    predecessor: 'proofkit.adoption-contract-envelope.input.v2.root-shape',
+    id: 'proofkit.adoption-contract-envelope.input.v4.json-schema', contractId: 'proofkit.adoption-contract-envelope.input.v4', schemaVersion: 2, rootType: 'object',
+    predecessor: 'proofkit.adoption-contract-envelope.input.v3.json-schema',
     variants: [['01-adoption', ['--mode adoption']], ['02-bootstrap', ['--mode bootstrap']],
       ...guidanceIds.map((id, mask) => [id, [`--mode guidance; guidance-mode override=${Boolean(mask & 1)}, checked-scope override=${Boolean(mask & 2)}, touched-rule-id override=${Boolean(mask & 4)}`]]),
       ['11-pilot-all', ['--mode pilot --pilot all']], ['12-pilot-first', ['--mode pilot --pilot first', '--mode pilot without --pilot (defaults first)']],
       ['13-pilot-stack-diverse', ['--mode pilot --pilot stack-diverse']], ['14-workflow', ['--mode workflow']]],
   },
   'adoption-contract-envelope/output': {
-    id: 'proofkit.adoption-contract-envelope.output.v1.json-schema', contractId: 'proofkit.adoption-contract-envelope.output.v1', schemaVersion: 1, rootType: 'union',
-    predecessor: 'proofkit.adoption-contract-envelope.output.v1.root-shape',
+    id: 'proofkit.adoption-contract-envelope.output.v2.json-schema', contractId: 'proofkit.adoption-contract-envelope.output.v2', schemaVersion: 1, rootType: 'union',
+    predecessor: 'proofkit.adoption-contract-envelope.output.v1.json-schema',
     variants: [['01-adoption-report', [aggregateCondition('absent', 'absent', 'adoption', 'absent')]],
       ['02-bootstrap', [aggregateCondition('absent', 'absent', 'bootstrap', 'absent')]],
       ['03-bootstrap-agent', [aggregateCondition('present', 'absent', 'bootstrap', 'absent')]],
@@ -46,8 +46,8 @@ const expected = {
     variants: [['01-contract-envelope', ['--contract-envelope']], ['02-direct', ['without --contract-envelope']]],
   },
   'adoption-workflow-plan/output': {
-    id: 'proofkit.adoption-workflow-plan.output.v1.json-schema', contractId: 'proofkit.adoption-workflow-plan.output.v1', schemaVersion: 1, rootType: 'object',
-    predecessor: 'proofkit.adoption-workflow-plan.output.v1.root-shape',
+    id: 'proofkit.adoption-workflow-plan.output.v2.json-schema', contractId: 'proofkit.adoption-workflow-plan.output.v2', schemaVersion: 1, rootType: 'object',
+    predecessor: 'proofkit.adoption-workflow-plan.output.v1.json-schema',
     variants: [['01-agent-envelope', ['--agent-envelope']], ['02-workflow-plan', ['without --agent-envelope']]],
   },
   'pilot-admission/input': {
@@ -73,7 +73,7 @@ const workflowRequired = ['inputRefs', 'nonClaims', 'scenario', 'schemaVersion',
 const workflowOptional = ['presetId'];
 const refKeys = ['inputKind', 'path', 'refId'];
 const planKeys = ['blockers', 'inputRefs', 'nonClaims', 'phases', 'planKind', 'planState', 'scenario', 'schemaVersion', 'workflowId'];
-const blockerKeys = ['blockerId', 'nonClaim', 'reason', 'requiredInputKinds', 'scenario'];
+const blockerKeys = ['blockerId', 'inputAlternatives', 'nonClaim', 'reason', 'scenario'];
 const planCommandKeys = ['argv', 'commandId', 'inputRefIds', 'nonClaim', 'owner'];
 const phases = ['profile', 'bootstrap', 'bind', 'migrate', 'plan-gates', 'collect-evidence', 'release'];
 const scenarios = ['existing_gradual_adoption', 'legacy_proof_migration', 'new_repository', 'release_channel'];
@@ -469,6 +469,54 @@ test('workflow plan variants, clauses and boundaries agree with the CLI', () => 
   assert.equal(degraded.bounds.truncated, true); assert(degraded.omitted.length > 0);
 });
 
+test('workflow prepared input and clarification linkage survives every CLI carrier', () => {
+  const base = workflowInput('new_repository', ['repo_profile_scaffold', 'gradual_adoption_bootstrap', 'gradual_adoption_guidance', 'bootstrap_witness_plan'], 'python_service');
+  base.inputRefs[0].refId = 'p';
+  base.inputRefs[3].refId = 'proofkit.adoption-workflow.context.p';
+  const carriers = [
+    ['adoption-workflow-plan', [], value => value],
+    ['adoption-workflow-plan', ['--contract-envelope'], value => ({schema: 'proofkit.adoption-workflow.v1', workflow: value})],
+    ['adoption-contract-envelope', ['--mode', 'workflow'], value => replace(aggregate(), ['workflow', 'workflow'], value)],
+  ];
+  for (const [command, flags, wrap] of carriers) {
+    // The workflow itself is read from stdin; its prepared child inputs are files.
+    invoke(command, wrap(base), flags, 'passed');
+    const envelope = invoke(command, wrap(base), [...flags, '--agent-envelope'], 'passed');
+    const bind = envelope.actionPlan.find(row => row.stepId === 'proofkit.adoption-workflow.action.bind');
+    const witness = envelope.commands.find(row => row.commandId === 'proofkit.adoption-workflow.command.witness-plan');
+    assert.deepEqual(bind.evidenceRefs.map(id => envelope.contextRefs.find(ref => ref.refId === id)?.ref), [base.inputRefs[3].path]);
+    assert.equal(witness.argv.at(-1), base.inputRefs[3].path);
+    for (const path of ['inputs/task-requirements.json', 'd/'.repeat(256) + 'x']) {
+      const operand = replace(base, ['inputRefs', 3, 'path'], path);
+      const routed = invoke(command, wrap(operand), [...flags, '--agent-envelope'], 'passed');
+      const bindAction = routed.actionPlan.find(row => row.stepId === 'proofkit.adoption-workflow.action.bind');
+      const witnessCommand = routed.commands.find(row => row.commandId === 'proofkit.adoption-workflow.command.witness-plan');
+      assert.deepEqual(bindAction.evidenceRefs.map(id => routed.contextRefs.find(ref => ref.refId === id)?.ref), [path]);
+      assert.equal(witnessCommand.argv.at(-1), path);
+      assert.equal(routed.omitted.length, 0);
+    }
+    const missingAll = workflowInput('release_channel', []);
+    const repair = invoke(command, wrap(missingAll), [...flags, '--agent-envelope'], 'failed');
+    assert.equal(repair.commands.length, 0);
+    assert.equal(repair.actionPlan.length, 1);
+    assert.deepEqual(repair.actionPlan[0].evidenceRefs, []);
+    assert(repair.blockedPreconditions.length > 0);
+    const bad = replace(base, ['inputRefs', 3, 'path'], '-');
+    invoke(command, wrap(bad), flags, 'refused');
+    invoke(command, wrap(bad), [...flags, '--agent-envelope'], 'repair');
+    for (const value of [remove(base, ['presetId']), {...base, presetId: null}]) {
+      const blocked = invoke(command, wrap(value), [...flags, '--agent-envelope'], 'failed');
+      assert.equal(blocked.clarificationQuestions.length, 1);
+      const question = blocked.clarificationQuestions[0];
+      assert.equal(question.expectedAnswerKind, 'preset_choice');
+      assert.match(question.question, /presetId/);
+      for (const preset of presets) assert(question.question.includes(preset));
+    }
+  }
+  const unselected = replace(aggregate(), ['workflow', 'workflow', 'inputRefs', 0, 'path'], '-');
+  invoke('adoption-contract-envelope', unselected, ['--mode', 'adoption'], 'passed');
+});
+
 test('workflow plan and envelope carriers reject independent drift', () => {
   const command = 'adoption-workflow-plan';
   const ready = invoke(command, workflowInput(), [], 'passed');
@@ -488,7 +536,7 @@ test('workflow plan and envelope carriers reject independent drift', () => {
   reject('02-workflow-plan', replace(ready, ['phases', 6, 'commands', 0, 'argv'], []), 'empty argv');
   reject('02-workflow-plan', replace(ready, ['phases', 6, 'commands', 0, 'owner'], 'proofkit'), 'owner');
   reject('02-workflow-plan', replace(blocked, ['blockers', 0, 'blockerId'], 'proofkit.adoption-workflow.blocker.invented'), 'blocker vocabulary');
-  reject('02-workflow-plan', replace(blocked, ['blockers', 0, 'requiredInputKinds'], ['unknown_kind']), 'blocker kinds');
+  reject('02-workflow-plan', replace(blocked, ['blockers', 0, 'inputAlternatives'], [['unknown_kind']]), 'blocker kinds');
   reject('02-workflow-plan', replace(ready, ['nonClaims'], ready.nonClaims.slice(1)), 'builtin claim removed');
   reject('02-workflow-plan', replace(ready, ['inputRefs', 0, 'inputKind'], 'unknown'), 'ref kind');
   const envelope = invoke(command, workflowInput(), ['--agent-envelope'], 'passed');

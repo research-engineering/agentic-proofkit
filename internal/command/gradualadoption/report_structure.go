@@ -114,6 +114,14 @@ func shapeFields(fields map[string]jsonshape.Shape) jsonshape.Shape {
 
 func stringsShape() jsonshape.Shape { return jsonshape.Array(jsonshape.String(), 0) }
 
+func preparedCommandSourceShape() jsonshape.Shape {
+	properties := make([]jsonshape.Property, 0, len(preparedOperations))
+	for _, operation := range preparedOperations {
+		properties = append(properties, jsonshape.Optional(operation, jsonshape.String()))
+	}
+	return jsonshape.Object(properties...)
+}
+
 func statesShape(values ...string) jsonshape.Shape {
 	set := make(map[string]struct{}, len(values))
 	for _, value := range values {

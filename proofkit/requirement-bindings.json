@@ -1751,6 +1751,25 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.generated-command-field-inventory",
+      "witnessId": "proofkit.guidance.invocation-portability",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/guidance_invocation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceInvocationPortableSourceCLIReadmission",
+          "command": "go test ./internal/app -run '^TestGuidanceInvocationPortableSourceCLIReadmission$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
       "scenarioId": "proofkit.package-boundary.generated-command-caller-preservation",
       "witnessId": "proofkit.generated-command.caller-preservation",
       "witnessKind": "contract",
@@ -1759,6 +1778,25 @@
         {
           "selector": "TestBootstrapPreservesCallerDisplayCommandInGuidancePayload",
           "command": "go test ./internal/command/gradualadoption -run '^TestBootstrapPreservesCallerDisplayCommandInGuidancePayload$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.generated-command-caller-preservation",
+      "witnessId": "proofkit.guidance.command-origin-preservation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/gradualadoption/guidance_provenance_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceSharedDisplayRetainsIndependentCallerOrigin",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceSharedDisplayRetainsIndependentCallerOrigin$'"
         }
       ],
       "commandIds": [
@@ -7113,6 +7151,25 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "scenarioId": "proofkit.spec-proof-core.agent-route-report-contract-closure",
+      "witnessId": "proofkit.agent-route.observed-report-contexts",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentroute/observed_report_envelope_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBlockedRouteEvidenceResolvesExactObservedPaths",
+          "command": "go test ./internal/command/agentroute -run '^TestBlockedRouteEvidenceResolvesExactObservedPaths$'"
+        },
+        {
+          "selector": "TestObservedReportContextsRespectNativeBoundAndReferenceClosure",
+          "command": "go test ./internal/command/agentroute -run '^TestObservedReportContextsRespectNativeBoundAndReferenceClosure$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
       "scenarioId": "proofkit.spec-proof-core.agent-route-brief-version-edge",
       "witnessId": "proofkit.agent-route-brief.version-edge-falsifier",
       "witnessKind": "contract",
@@ -11045,6 +11102,647 @@
         {
           "selector": "TestPublicAPIStructuresRejectRehashedDrift",
           "command": "go test ./internal/tools/commandcontractgen -run '^TestPublicAPIStructuresRejectRehashedDrift$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "scenarioId": "proofkit.spec-proof-core.agent-envelope-reference-closure",
+      "witnessId": "proofkit.guidance.source-role-projection",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/gradualadoption/guidance_role_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceActionAndQuestionEvidenceKeepSourceProvenance",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceActionAndQuestionEvidenceKeepSourceProvenance$'"
+        },
+        {
+          "selector": "TestGuidanceOwnerRouteEvidenceUsesSourceRoleNotCoincidentText",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceOwnerRouteEvidenceUsesSourceRoleNotCoincidentText$'"
+        },
+        {
+          "selector": "TestGuidanceOwnershipQuestionKeepsOwnerAndSourceIdentityScopesDistinct",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceOwnershipQuestionKeepsOwnerAndSourceIdentityScopesDistinct$'"
+        },
+        {
+          "selector": "TestGuidancePreconditionTextCannotAcquirePathAdmission",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidancePreconditionTextCannotAcquirePathAdmission$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "scenarioId": "proofkit.spec-proof-core.agent-envelope-reference-closure",
+      "witnessId": "proofkit.agent-envelope.caller-fallback-siblings",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/agentenvelope/command_fallback_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCallerFallbackRetainsCurrentAdmittedSiblingFields",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestCallerFallbackRetainsCurrentAdmittedSiblingFields$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "scenarioId": "proofkit.spec-proof-core.agent-envelope-local-identity-admission",
+      "witnessId": "proofkit.adoption-doctor.command-source-namespace",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/adoptiondoctor/command_identity_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestDoctorCommandCatalogReservesSourceIdentityBeforeBounds",
+          "command": "go test ./internal/command/adoptiondoctor -run '^TestDoctorCommandCatalogReservesSourceIdentityBeforeBounds$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.generated-command-field-inventory",
+      "witnessId": "proofkit.project-structure.prepared-display-and-child-availability",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstructure/prepared_display_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestScaffoldOwnPreparedDisplaysMatchTheEnvelopeBoundary",
+          "command": "go test ./internal/command/projectstructure -run '^TestScaffoldOwnPreparedDisplaysMatchTheEnvelopeBoundary$'"
+        },
+        {
+          "selector": "TestScaffoldWorkflowCannotRecreateRefusedChildOperations",
+          "command": "go test ./internal/command/projectstructure -run '^TestScaffoldWorkflowCannotRecreateRefusedChildOperations$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.generated-command-field-inventory",
+      "witnessId": "proofkit.project-structure.partial-command-carriers",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstructure/partial_output_structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestScaffoldNextCommandsRejectOutsideReachableBounds",
+          "command": "go test ./internal/command/projectstructure -run '^TestScaffoldNextCommandsRejectOutsideReachableBounds$'"
+        },
+        {
+          "selector": "TestScaffoldPartialPreparedCommandsMatchOutputStructure",
+          "command": "go test ./internal/command/projectstructure -run '^TestScaffoldPartialPreparedCommandsMatchOutputStructure$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.generated-command-field-inventory",
+      "witnessId": "proofkit.cliexec.composed-display-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/cliexec/display_admission_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSafeDisplayArgvChecksTheComposedPresentation",
+          "command": "go test ./internal/kernel/cliexec -run '^TestSafeDisplayArgvChecksTheComposedPresentation$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.generated-command-caller-preservation",
+      "witnessId": "proofkit.guidance.native-planning-action-separation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/gradualadoption/guidance_invocation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceActionsKeepPreparedAndCallerCommandsSeparate",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceActionsKeepPreparedAndCallerCommandsSeparate$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
+      "witnessId": "proofkit.receipt-path.producer-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/receiptproduceradmission/path_admission_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "witnessSelectors": [
+        {
+          "selector": "TestProducerPathAdmissionKeepsTypeOrderAndNullPolicy",
+          "command": "go test ./internal/command/receiptproduceradmission -run '^TestProducerPathAdmissionKeepsTypeOrderAndNullPolicy$'"
+        },
+        {
+          "selector": "TestProducerPathAdmissionRetainsProtectedRefusalsAndProse",
+          "command": "go test ./internal/command/receiptproduceradmission -run '^TestProducerPathAdmissionRetainsProtectedRefusalsAndProse$'"
+        },
+        {
+          "selector": "TestProducerPathRolesPreserveExactReferences",
+          "command": "go test ./internal/command/receiptproduceradmission -run '^TestProducerPathRolesPreserveExactReferences$'"
+        }
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
+      "witnessId": "proofkit.receipt-path.selective-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/selectivegateevidence/path_admission_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "witnessSelectors": [
+        {
+          "selector": "TestSelectivePathAdmissionKeepsNormalizedListPolicy",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestSelectivePathAdmissionKeepsNormalizedListPolicy$'"
+        },
+        {
+          "selector": "TestSelectivePathAdmissionRetainsProtectedRefusalsAndProse",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestSelectivePathAdmissionRetainsProtectedRefusalsAndProse$'"
+        },
+        {
+          "selector": "TestSelectivePathRolesPreserveExactReferences",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestSelectivePathRolesPreserveExactReferences$'"
+        }
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
+      "witnessId": "proofkit.receipt-path.decision-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/obligationdecision/path_admission_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "witnessSelectors": [
+        {
+          "selector": "TestObligationPathAdmissionKeepsNormalizedListPolicy",
+          "command": "go test ./internal/command/obligationdecision -run '^TestObligationPathAdmissionKeepsNormalizedListPolicy$'"
+        },
+        {
+          "selector": "TestObligationPathAdmissionRetainsProtectedRefusalsAndProse",
+          "command": "go test ./internal/command/obligationdecision -run '^TestObligationPathAdmissionRetainsProtectedRefusalsAndProse$'"
+        },
+        {
+          "selector": "TestObligationPathRolePreservesExactReferences",
+          "command": "go test ./internal/command/obligationdecision -run '^TestObligationPathRolePreservesExactReferences$'"
+        }
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
+      "witnessId": "proofkit.receipt-path.whole-cli-chain",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/receipt_path_chain_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "witnessSelectors": [
+        {
+          "selector": "TestReceiptArtifactProjectionRejectsOneSidedPathSubstitution",
+          "command": "go test ./internal/app -run '^TestReceiptArtifactProjectionRejectsOneSidedPathSubstitution$'"
+        },
+        {
+          "selector": "TestReceiptPathRolesSurviveWholeCLIProjectionAndDecision",
+          "command": "go test ./internal/app -run '^TestReceiptPathRolesSurviveWholeCLIProjectionAndDecision$'"
+        },
+        {
+          "selector": "TestReceiptProjectionRejectsAsymmetricLiteralLocators",
+          "command": "go test ./internal/app -run '^TestReceiptProjectionRejectsAsymmetricLiteralLocators$'"
+        }
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
+      "witnessId": "proofkit.selective-evidence.relational-envelope",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/selectivegateevidence/envelope_relations_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestEnvelopeArtifactLocatorUsesExactLocalPathContext",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeArtifactLocatorUsesExactLocalPathContext$'"
+        },
+        {
+          "selector": "TestEnvelopeArtifactPathSpellingCannotCaptureLocalTarget",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeArtifactPathSpellingCannotCaptureLocalTarget$'"
+        },
+        {
+          "selector": "TestEnvelopeArtifactPathsReachReceiptCapWithoutLosingContexts",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeArtifactPathsReachReceiptCapWithoutLosingContexts$'"
+        },
+        {
+          "selector": "TestEnvelopeArtifactProjectionKeepsProtectedPathRefusals",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeArtifactProjectionKeepsProtectedPathRefusals$'"
+        },
+        {
+          "selector": "TestEnvelopeCandidateConservationBeforeCommandFiltering",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeCandidateConservationBeforeCommandFiltering$'"
+        },
+        {
+          "selector": "TestEnvelopeExactTuplePathsSurviveSiblingAndCallerMutation",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeExactTuplePathsSurviveSiblingAndCallerMutation$'"
+        },
+        {
+          "selector": "TestEnvelopeFullTupleIdentityAndJoin",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeFullTupleIdentityAndJoin$'"
+        },
+        {
+          "selector": "TestEnvelopeLocalTargetsNeverAliasExternalReportID",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeLocalTargetsNeverAliasExternalReportID$'"
+        },
+        {
+          "selector": "TestEnvelopeMatchedStatusRetainsItsRole",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeMatchedStatusRetainsItsRole$'"
+        },
+        {
+          "selector": "TestEnvelopePlannedMembershipDetachedFromCallerMutation",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopePlannedMembershipDetachedFromCallerMutation$'"
+        },
+        {
+          "selector": "TestEnvelopeTupleProjectionIndependentOfInputOrder",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeTupleProjectionIndependentOfInputOrder$'"
+        },
+        {
+          "selector": "TestEnvelopeUnexpectedStatusCannotPromoteBlockedSiblingToRetry",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeUnexpectedStatusCannotPromoteBlockedSiblingToRetry$'"
+        },
+        {
+          "selector": "TestEnvelopeUnexpectedStatusIsDiagnosticOnly",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeUnexpectedStatusIsDiagnosticOnly$'"
+        },
+        {
+          "selector": "TestEnvelopeUnsafeArtifactDoesNotConsumeRetainedReceiptBudget",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeUnsafeArtifactDoesNotConsumeRetainedReceiptBudget$'"
+        },
+        {
+          "selector": "TestEnvelopeWithholdsWireUnsafeArtifactRecordAndCountsLoss",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestEnvelopeWithholdsWireUnsafeArtifactRecordAndCountsLoss$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "scenarioId": "proofkit.spec-proof-core.agent-envelope-reference-closure",
+      "witnessId": "proofkit.agent-envelope.sealed-operand-relations",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/agentenvelope/relational_operands_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRelationalAdmittedLauncherKeepsItsExactEnvelopeArgv",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalAdmittedLauncherKeepsItsExactEnvelopeArgv$'"
+        },
+        {
+          "selector": "TestRelationalContextPriorityIncludesAdmittedOperandDependencies",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalContextPriorityIncludesAdmittedOperandDependencies$'"
+        },
+        {
+          "selector": "TestRelationalDiscardedCommandReferencesCannotSelectContexts",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalDiscardedCommandReferencesCannotSelectContexts$'"
+        },
+        {
+          "selector": "TestRelationalEveryAdmittedContextRemainsRequired",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalEveryAdmittedContextRemainsRequired$'"
+        },
+        {
+          "selector": "TestRelationalLateValidationUsesPreparedBindingFacts",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalLateValidationUsesPreparedBindingFacts$'"
+        },
+        {
+          "selector": "TestRelationalOnlySelectedAdmittedCommandsPrioritizeContexts",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalOnlySelectedAdmittedCommandsPrioritizeContexts$'"
+        },
+        {
+          "selector": "TestRelationalOrphanMetadataCoalescesOnlyWithAmbiguousOwner",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalOrphanMetadataCoalescesOnlyWithAmbiguousOwner$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "scenarioId": "proofkit.spec-proof-core.agent-envelope-local-identity-admission",
+      "witnessId": "proofkit.agent-envelope.external-reference-conservation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/agentenvelope/relational_references_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRelationalExternalReferenceIdentitySurvivesFinalSerialization",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalExternalReferenceIdentitySurvivesFinalSerialization$'"
+        },
+        {
+          "selector": "TestRelationalExternalReferencesKeepAllPrivacyClasses",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalExternalReferencesKeepAllPrivacyClasses$'"
+        },
+        {
+          "selector": "TestRelationalExternalReferencesRetainPrivacyAndItemBounds",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalExternalReferencesRetainPrivacyAndItemBounds$'"
+        },
+        {
+          "selector": "TestRelationalInvalidCommandEdgeCoalescesOnlyWithRejectedCommand",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalInvalidCommandEdgeCoalescesOnlyWithRejectedCommand$'"
+        },
+        {
+          "selector": "TestRelationalOmissionsCountRecordRolesNotIDSpelling",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalOmissionsCountRecordRolesNotIDSpelling$'"
+        },
+        {
+          "selector": "TestRelationalOmissionsKeepIdentityAndMetadataCoalescing",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalOmissionsKeepIdentityAndMetadataCoalescing$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.launcher-profile-admission",
+      "witnessId": "proofkit.launcher.unicode-carrier-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/cliexec/launcher_scalar_policy_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestLauncherAdmissionPreservesOrdinaryUnicodeAndLongPaths",
+          "command": "go test ./internal/kernel/cliexec -run '^TestLauncherAdmissionPreservesOrdinaryUnicodeAndLongPaths$'"
+        },
+        {
+          "selector": "TestLauncherAdmissionRejectsUnrepresentableScalars",
+          "command": "go test ./internal/kernel/cliexec -run '^TestLauncherAdmissionRejectsUnrepresentableScalars$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-007",
+      "scenarioId": "proofkit.consumer-infra-retirement.candidate-boundary-guidance",
+      "witnessId": "proofkit.guidance.canonical-source-attribution",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/gradualadoption/guidance_canonical_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceEmptyFailedReportRetainsReportPolicy",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceEmptyFailedReportRetainsReportPolicy$'"
+        },
+        {
+          "selector": "TestGuidanceOptionsAndJSONShareRuleIDAdmission",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceOptionsAndJSONShareRuleIDAdmission$'"
+        },
+        {
+          "selector": "TestGuidanceSourcePartitionsSurviveActionConstruction",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceSourcePartitionsSurviveActionConstruction$'"
+        },
+        {
+          "selector": "TestGuidanceUnattributedFailureIsNotARule",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceUnattributedFailureIsNotARule$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.cli-deterministic-report-boundary",
+      "witnessId": "proofkit.bootstrap.canonical-materialization",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/gradualadoption/bootstrap_canonical_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBootstrapManifestIgnoresPublishedMutation",
+          "command": "go test ./internal/command/gradualadoption -run '^TestBootstrapManifestIgnoresPublishedMutation$'"
+        },
+        {
+          "selector": "TestBootstrapManifestProjectionDoesNotOwnFutureManifest",
+          "command": "go test ./internal/command/gradualadoption -run '^TestBootstrapManifestProjectionDoesNotOwnFutureManifest$'"
+        },
+        {
+          "selector": "TestBootstrapMaterializationInputIsDefensive",
+          "command": "go test ./internal/command/gradualadoption -run '^TestBootstrapMaterializationInputIsDefensive$'"
+        },
+        {
+          "selector": "TestBootstrapUnadmittedResultRefusesMaterialization",
+          "command": "go test ./internal/command/gradualadoption -run '^TestBootstrapUnadmittedResultRefusesMaterialization$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.cli-deterministic-report-boundary",
+      "witnessId": "proofkit.scaffold.canonical-child-composition",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstructure/canonical_children_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestScaffoldChildAdmissionOwnsConsistencyAndPersistenceInputs",
+          "command": "go test ./internal/command/projectstructure -run '^TestScaffoldChildAdmissionOwnsConsistencyAndPersistenceInputs$'"
+        },
+        {
+          "selector": "TestScaffoldPersistedGuidanceRetainsLiteralSpecPaths",
+          "command": "go test ./internal/command/projectstructure -run '^TestScaffoldPersistedGuidanceRetainsLiteralSpecPaths$'"
+        },
+        {
+          "selector": "TestScaffoldSnapshotPreservesNativeRefusals",
+          "command": "go test ./internal/command/projectstructure -run '^TestScaffoldSnapshotPreservesNativeRefusals$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.cli-machine-contract-closure",
+      "witnessId": "proofkit.native-consumer.contract-identity",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/native_consumer_identity_regression_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNativeConsumerIdentityAllOwners",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestNativeConsumerIdentityAllOwners$'"
+        },
+        {
+          "selector": "TestNativeConsumerIdentityProtectedVersionOwners",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestNativeConsumerIdentityProtectedVersionOwners$'"
+        },
+        {
+          "selector": "TestNativeConsumerIdentityReceiptRenderBoundary",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestNativeConsumerIdentityReceiptRenderBoundary$'"
+        },
+        {
+          "selector": "TestNativeConsumerIdentityRequiresOwnerContent",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestNativeConsumerIdentityRequiresOwnerContent$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.cli-machine-contract-closure",
+      "witnessId": "proofkit.native-consumer.refresh-name-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/structure_refresh_name_regression_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestStructureRefreshCommandNameAdmission",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestStructureRefreshCommandNameAdmission$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "scenarioId": "proofkit.spec-proof-core.agent-route-report-contract-closure",
+      "witnessId": "proofkit.agent-route.external-source-namespace",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentroute/source_identity_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRouteAuthorityContextsReserveExternalReportIdentity",
+          "command": "go test ./internal/command/agentroute -run '^TestRouteAuthorityContextsReserveExternalReportIdentity$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
+      "witnessId": "proofkit.selective-evidence.output-semantic-identity",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/selective_evidence_identity_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSelectiveEvidenceIdentitySeparatesArtifactMeaningFromWireVersion",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestSelectiveEvidenceIdentitySeparatesArtifactMeaningFromWireVersion$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "scenarioId": "proofkit.supply-chain-quality.binding-selector-executability",
+      "witnessId": "proofkit.coverage-metrics.required-anchor-supplements",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/coveragemetrics/binding_anchor_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBindingPathIdentityAgreesWithPublicOwner",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestBindingPathIdentityAgreesWithPublicOwner$'"
+        },
+        {
+          "selector": "TestRequiredBindingAnchorWithSupplement",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestRequiredBindingAnchorWithSupplement$'"
         }
       ],
       "commandIds": [

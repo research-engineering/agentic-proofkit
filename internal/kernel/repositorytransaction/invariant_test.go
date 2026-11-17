@@ -70,7 +70,7 @@ func TestNonEmptyLateDirectoryIsNeverClaimedOrRemoved(t *testing.T) {
 			if err := os.Mkdir(filepath.Join(root, "new"), 0o700); err != nil {
 				return err
 			}
-			return os.WriteFile(filepath.Join(root, "new", "foreign.txt"), []byte("foreign\n"), 0o644)
+			mustWriteTestFile(t, root, "new/foreign.txt", "foreign\n", 0o644)
 		}
 		return nil
 	}}

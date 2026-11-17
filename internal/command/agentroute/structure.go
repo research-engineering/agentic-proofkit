@@ -328,7 +328,7 @@ func FullEnvelopeShape() jsonshape.Shape {
 	vocabulary := structuralRouteVocabulary()
 	text := routeTextShape()
 	authority := guidanceSliceReport("", routeSpec{})["authorityRefs"].([]any)
-	roles := setOf(guidanceSliceRole, callerOwnedInputRole)
+	roles := setOf(guidanceSliceRole, callerOwnedInputRole, observedReportRole)
 	for _, raw := range authority {
 		roles[raw.(map[string]any)["role"].(string)] = struct{}{}
 	}
@@ -371,7 +371,7 @@ func FullEnvelopeShape() jsonshape.Shape {
 			jsonshape.Required("description", text), jsonshape.Required("path", text),
 			jsonshape.Required("refId", jsonshape.BoundedStringGrammar(admit.RuleIDPatternBody, admit.MaxRuleIDBytes)),
 			jsonshape.Required("role", jsonshape.Enum(roles)), jsonshape.Required("selector", text),
-		), 0, 1+len(authority)+vocabulary.maxNextCommands),
+		), 0, agentenvelope.MaxContextRefs),
 		Omitted: jsonshape.BoundedArray(jsonshape.OneOf(omission(vocabulary.omittedReasons, jsonshape.Enum(vocabulary.commands)),
 			omission(unknownReasons, jsonshape.StringLiteral("")), agentenvelope.OmissionStructure()), 0, vocabulary.maxNextCommands),
 		ReceiptRefs:    jsonshape.Tuple(),
@@ -394,7 +394,7 @@ func FullEnvelopeStructure() map[string]any {
 	id := FullEnvelopeIDShape().JSONSchema()
 	delete(id, "$schema")
 	schema["properties"].(map[string]any)["envelopeId"] = id
-	schema["description"] = "Explicit --agent-envelope-mode full projection of the admitted route report through the generic envelope kernel. Required-input actions precede selected-command actions; non-passed observed reports and missing inputs become blockers; omitted commands become omission records (for goal unknown, one record with an empty subject names the unrouted goal); three fixed route questions cite the report. The kernel sanitizes every string (unsafe or secret-shaped text becomes a redaction marker and long text is truncated), drops local targets whose identity is not a lossless RuleID, and may add typed truncation or identity omissions. The source report carries passed only for routed state. Native routing and the kernel own counts, ordering, reference closure, fanout and stop reasons. Refused input uses the invalid-input repair envelope."
+	schema["description"] = "Explicit --agent-envelope-mode full projection of the admitted route report through the generic envelope kernel. Required-input actions precede selected-command actions; non-passed observed reports and missing inputs become blockers; omitted commands become omission records (for goal unknown, one record with an empty subject names the unrouted goal); three fixed route questions cite the report. Observed-report blockers cite local contexts with role observed_report. Admitted structural path and selector fields and bound argv operands retain their exact values; unsafe structural targets are omitted rather than replaced with executable display text. Diagnostic prose remains redacted and length-bounded. The kernel drops local targets whose identity is not a lossless RuleID and may add typed truncation or identity omissions. The source report carries passed only for routed state. Native routing and the kernel own counts, ordering, reference closure, fanout and stop reasons. Refused input uses the invalid-input repair envelope."
 	return schema
 }
 

@@ -44,7 +44,7 @@ func runAgentEnvelopeCommand(command string, args []string, stdin io.Reader, std
 	return writeJSON(output, exitCode, err, stdout, stderr)
 }
 
-func runGradualAdoptionGuidance(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+func runGradualAdoptionGuidance(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
 	options, err := parseEnvelopeCommandArgs("gradual-adoption-guidance", args, agentEnvelopeBuilders{
 		supportsContractEnvelope: true,
 	})
@@ -65,6 +65,7 @@ func runGradualAdoptionGuidance(args []string, stdin io.Reader, stdout io.Writer
 		}
 	}
 	guidanceOptions := gradualadoption.GuidanceOptions{
+		Renderer:       renderer,
 		CheckedScope:   options.checkedScope,
 		GuidanceMode:   options.guidanceMode,
 		TouchedRuleIDs: options.touchedRuleIDs,

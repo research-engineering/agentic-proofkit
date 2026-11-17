@@ -216,8 +216,16 @@ func TestGuidanceEnvelopeRoutesCandidateBoundaryContextAndQuestions(t *testing.T
 	assertEnvelopeContextRole(t, output, "candidate_boundary")
 	assertEnvelopeQuestion(t, output, "Should auth own the webhook request admission boundary?")
 	assertEnvelopeActionPhase(t, output, "modernize-boundary")
-	assertEnvelopeActionEvidenceRef(t, output, "modernize-boundary", "test/auth-webhook.test.ts")
-	assertEnvelopeActionEvidenceRef(t, output, "modernize-boundary", "docs/contracts/auth-webhook.json")
+	contexts := guidanceRoleCatalog(t, output)
+	for id, path := range map[string]string{
+		"proofkit.agent.context.candidate-boundary.001.nativeWitnessRefs.001":   "test/auth-webhook.test.ts",
+		"proofkit.agent.context.candidate-boundary.001.contractWitnessRefs.001": "docs/contracts/auth-webhook.json",
+	} {
+		assertEnvelopeActionEvidenceRef(t, output, "modernize-boundary", id)
+		if contexts[id] != (guidanceRoleTarget{"path", "evidence", path}) {
+			t.Fatal("candidate witness link lost its exact source role or path")
+		}
+	}
 	assertEnvelopeActionRationale(t, output, "modernize-boundary", "Candidate boundaries remain advisory")
 }
 

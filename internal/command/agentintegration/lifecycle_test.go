@@ -20,6 +20,31 @@ func lifecycleWrite(t *testing.T, root, path string, content []byte) {
 	if err := os.WriteFile(full, content, 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.Chmod(full, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLifecycleFixtureRestoresCanonicalMode(t *testing.T) {
+	t.Parallel()
+	for _, existing := range []bool{false, true} {
+		root := t.TempDir()
+		path := filepath.Join(root, "owned")
+		if existing {
+			if err := os.WriteFile(path, []byte("before"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		lifecycleWrite(t, root, "owned", []byte("after"))
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		content, err := os.ReadFile(path)
+		if err != nil || string(content) != "after" || info.Mode().Perm() != 0o644 {
+			t.Fatalf("existing=%t: fixture content=%q mode=%o err=%v, want after and 644", existing, content, info.Mode().Perm(), err)
+		}
+	}
 }
 
 func lifecyclePair(t *testing.T, root string, document Document) {

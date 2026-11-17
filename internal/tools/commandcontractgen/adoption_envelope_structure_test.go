@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"path/filepath"
 	"reflect"
@@ -12,11 +13,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/pilotadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 )
 
 type adoptionEnvelopeOwner struct {
 	id, command, wire, contractID, rootType string
-	predecessor                             string
+	predecessors                            []string
 	variants                                map[string]func() map[string]any
 	conditions                              map[string][]string
 }
@@ -38,8 +40,8 @@ func adoptionEnvelopeOwners() []adoptionEnvelopeOwner {
 		return func() map[string]any { return pilotadmission.ContractInputStructure(fields...) }
 	}
 	return []adoptionEnvelopeOwner{{
-		id: "proofkit.adoption-contract-envelope.input.v3.json-schema", command: "adoption-contract-envelope", wire: "2",
-		contractID: "proofkit.adoption-contract-envelope.input.v3", rootType: "object", predecessor: "proofkit.adoption-contract-envelope.input.v2.root-shape",
+		id: "proofkit.adoption-contract-envelope.input.v4.json-schema", command: "adoption-contract-envelope", wire: "2",
+		contractID: "proofkit.adoption-contract-envelope.input.v4", rootType: "object", predecessors: []string{"proofkit.adoption-contract-envelope.input.v2.root-shape", "proofkit.adoption-contract-envelope.input.v3.root-shape", "proofkit.adoption-contract-envelope.input.v3.json-schema"},
 		variants: map[string]func() map[string]any{
 			"01-adoption": adoptioncontract.AdoptionInputStructure, "02-bootstrap": adoptioncontract.BootstrapInputStructure,
 			"03-guidance-000": guidance(false, false, false), "04-guidance-001": guidance(true, false, false),
@@ -53,8 +55,8 @@ func adoptionEnvelopeOwners() []adoptionEnvelopeOwner {
 			"12-pilot-first": {"--mode pilot --pilot first", "--mode pilot without --pilot (defaults first)"},
 		},
 	}, {
-		id: "proofkit.adoption-contract-envelope.output.v1.json-schema", command: "adoption-contract-envelope", wire: "1",
-		contractID: "proofkit.adoption-contract-envelope.output.v1", rootType: "union", predecessor: "proofkit.adoption-contract-envelope.output.v1.root-shape",
+		id: "proofkit.adoption-contract-envelope.output.v2.json-schema", command: "adoption-contract-envelope", wire: "1",
+		contractID: "proofkit.adoption-contract-envelope.output.v2", rootType: "union", predecessors: []string{"proofkit.adoption-contract-envelope.output.v1.root-shape", "proofkit.adoption-contract-envelope.output.v1.json-schema"},
 		variants: map[string]func() map[string]any{
 			"01-adoption-report": gradualadoption.OutputStructure, "02-bootstrap": gradualadoption.BootstrapOutputStructure,
 			"03-bootstrap-agent": agent("bootstrap"), "04-bootstrap-materialization": gradualadoption.BootstrapMaterializationStructure,
@@ -70,15 +72,15 @@ func adoptionEnvelopeOwners() []adoptionEnvelopeOwner {
 		},
 	}, {
 		id: "proofkit.adoption-workflow-plan.input.v1.json-schema", command: "adoption-workflow-plan", wire: "1",
-		contractID: "proofkit.adoption-workflow-plan.input.v1", rootType: "object", predecessor: "proofkit.adoption-workflow-plan.input.v1.root-shape",
+		contractID: "proofkit.adoption-workflow-plan.input.v1", rootType: "object", predecessors: []string{"proofkit.adoption-workflow-plan.input.v1.root-shape"},
 		variants: map[string]func() map[string]any{"01-contract-envelope": adoptionworkflow.ContractInputStructure, "02-direct": adoptionworkflow.InputStructure},
 	}, {
-		id: "proofkit.adoption-workflow-plan.output.v1.json-schema", command: "adoption-workflow-plan", wire: "1",
-		contractID: "proofkit.adoption-workflow-plan.output.v1", rootType: "object", predecessor: "proofkit.adoption-workflow-plan.output.v1.root-shape",
+		id: "proofkit.adoption-workflow-plan.output.v2.json-schema", command: "adoption-workflow-plan", wire: "1",
+		contractID: "proofkit.adoption-workflow-plan.output.v2", rootType: "object", predecessors: []string{"proofkit.adoption-workflow-plan.output.v1.root-shape", "proofkit.adoption-workflow-plan.output.v1.json-schema"},
 		variants: map[string]func() map[string]any{"01-agent-envelope": adoptionworkflow.EnvelopeOutputStructure, "02-workflow-plan": adoptionworkflow.OutputStructure},
 	}, {
 		id: "proofkit.pilot-admission.input.v2.json-schema", command: "pilot-admission", wire: "2",
-		contractID: "proofkit.pilot-admission.input.v2", rootType: "object", predecessor: "proofkit.pilot-admission.input.v2.root-shape",
+		contractID: "proofkit.pilot-admission.input.v2", rootType: "object", predecessors: []string{"proofkit.pilot-admission.input.v2.root-shape"},
 		variants: map[string]func() map[string]any{
 			"01-contract-all": contract("input", "stackDiverseInput"), "02-contract-first": contract("input"),
 			"03-contract-stack-diverse": contract("stackDiverseInput"), "04-direct": pilotadmission.InputStructure,
@@ -91,7 +93,7 @@ func adoptionEnvelopeOwners() []adoptionEnvelopeOwner {
 		},
 	}, {
 		id: "proofkit.pilot-admission.output.v1.json-schema", command: "pilot-admission", wire: "1",
-		contractID: "proofkit.pilot-admission.output.v1", rootType: "union", predecessor: "proofkit.pilot-admission.output.v1.root-shape",
+		contractID: "proofkit.pilot-admission.output.v1", rootType: "union", predecessors: []string{"proofkit.pilot-admission.output.v1.root-shape"},
 		variants: map[string]func() map[string]any{"01-all": pilotadmission.AllOutputStructure, "02-report": report},
 	}}
 }
@@ -119,8 +121,16 @@ func TestAdoptionEnvelopeOwnersConserveIdentityAndBindExactVariants(t *testing.T
 		if err := admitNativeStructureDefinition(expected.id, definition); err != nil {
 			t.Fatal(err)
 		}
-		if _, stale := published[expected.predecessor]; stale {
-			t.Fatalf("predecessor %s is still published", expected.predecessor)
+		actualPredecessors, expectedPredecessors := slices.Clone(owner.predecessors), slices.Clone(expected.predecessors)
+		slices.Sort(actualPredecessors)
+		slices.Sort(expectedPredecessors)
+		if !slices.Equal(actualPredecessors, expectedPredecessors) {
+			t.Fatalf("%s does not retire its exact predecessor set", expected.id)
+		}
+		for _, predecessor := range expected.predecessors {
+			if _, stale := published[predecessor]; stale {
+				t.Fatalf("predecessor %s is still published", predecessor)
+			}
 		}
 		binding := commandAt(contract, expected.command)[owner.direction+"Contract"].(map[string]any)
 		if binding["rootDefinitionRef"] != expected.id || binding["contractId"] != expected.contractID ||
@@ -148,6 +158,41 @@ func TestAdoptionEnvelopeOwnersConserveIdentityAndBindExactVariants(t *testing.T
 	}
 }
 
+func TestAggregateInputRetainsHistoricalRootShapeRetirement(t *testing.T) {
+	const retired = "proofkit.adoption-contract-envelope.input.v2.root-shape"
+	contract := readFixtureContract(t, filepath.Join("..", "..", ".."))
+	positive, err := admitDefinitions(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := admitNativeStructureConsumers(contract, positive); err != nil {
+		t.Fatalf("current-contract positive control: %v", err)
+	}
+	definitions := append([]any{}, contract["contractDefinitions"].([]any)...)
+	definitions = append(definitions, structuralFixtureDefinition(retired))
+	slices.SortFunc(definitions, func(a, b any) int {
+		return strings.Compare(a.(map[string]any)["definitionId"].(string), b.(map[string]any)["definitionId"].(string))
+	})
+	contract["contractDefinitions"] = definitions
+	refreshDefinitionDigests(contract)
+	content, err := canonicalJSON(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutant := value.(map[string]any)
+	admitted, err := admitDefinitions(mutant)
+	if err != nil {
+		t.Fatalf("legacy root must pass generic definition admission before the retirement owner: %v", err)
+	}
+	if err := admitNativeStructureConsumers(mutant, admitted); err == nil || !strings.Contains(err.Error(), "obsolete native structure "+retired+" remains") {
+		t.Fatalf("reintroduced historical root did not reach its exact retirement guard: %v", err)
+	}
+}
+
 func TestAdoptionEnvelopeConditionModelMovesToTheStructuralOwner(t *testing.T) {
 	owner, _ := nativeStructureOwner(cliFlagConditionModelDefinitionID)
 	definition, err := owner.definition()
@@ -166,7 +211,7 @@ func TestAdoptionEnvelopeConditionModelMovesToTheStructuralOwner(t *testing.T) {
 		t.Fatalf("aggregate output condition cases=%d want 12", conditions)
 	}
 	for name, mutate := range map[string]func(*nativeStructure){
-		"wrong-owner": func(o *nativeStructure) { o.id = "proofkit.adoption-contract-envelope.output.v2.json-schema" },
+		"wrong-owner": func(o *nativeStructure) { o.id = "proofkit.adoption-contract-envelope.output.v1.json-schema" },
 		"unknown":     func(o *nativeStructure) { o.conditionModel = "free_text" },
 		"overlap": func(o *nativeStructure) {
 			o.variants = slices.Clone(o.variants)
@@ -191,7 +236,7 @@ func TestAdoptionEnvelopeConditionModelMovesToTheStructuralOwner(t *testing.T) {
 
 func TestArrayAndSumRootsRemainOwnerBounded(t *testing.T) {
 	pilot, _ := nativeStructureOwner("proofkit.pilot-admission.output.v1.json-schema")
-	workflow, _ := nativeStructureOwner("proofkit.adoption-workflow-plan.output.v1.json-schema")
+	workflow, _ := nativeStructureOwner("proofkit.adoption-workflow-plan.output.v2.json-schema")
 	input, _ := nativeStructureOwner("proofkit.pilot-admission.input.v2.json-schema")
 	for name, mutant := range map[string]nativeStructure{
 		"array-input": func() nativeStructure {

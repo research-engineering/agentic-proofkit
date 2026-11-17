@@ -16,10 +16,10 @@ const commands = ['adoption-doctor', 'scaffold-project-structure', 'scaffold-pro
 const invalidWhen = '--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr';
 const identities = {
   'adoption-doctor/input': ['proofkit.adoption-doctor.input.v1.json-schema', 'proofkit.adoption-doctor.input.v1', [['01-root', 'default JSON mode']]],
-  'adoption-doctor/output': ['proofkit.adoption-doctor.output.v1.json-schema', 'proofkit.adoption-doctor.output.v1',
+  'adoption-doctor/output': ['proofkit.adoption-doctor.output.v2.json-schema', 'proofkit.adoption-doctor.output.v2',
     [['01-agent-envelope', '--agent-envelope with admitted input'], ['02-report', 'without --agent-envelope'], ['03-invalid-input-envelope', invalidWhen]]],
-  'scaffold-project-structure/input': ['proofkit.scaffold-project-structure.input.v2.json-schema', 'proofkit.scaffold-project-structure.input.v2', [['01-root', 'default JSON mode']]],
-  'scaffold-project-structure/output': ['proofkit.scaffold-project-structure.output.v1.json-schema', 'proofkit.scaffold-project-structure.output.v1',
+  'scaffold-project-structure/input': ['proofkit.scaffold-project-structure.input.v3.json-schema', 'proofkit.scaffold-project-structure.input.v3', [['01-root', 'default JSON mode']]],
+  'scaffold-project-structure/output': ['proofkit.scaffold-project-structure.output.v2.json-schema', 'proofkit.scaffold-project-structure.output.v2',
     [['01-agent-envelope', '--agent-envelope with admitted input'], ['02-scaffold', 'without --agent-envelope'], ['03-invalid-input-envelope', invalidWhen]]],
   'scaffold-profile-plan/input': ['proofkit.scaffold-profile-plan.input.v1.json-schema', 'proofkit.scaffold-profile-plan.input.v1', [['01-root', 'default JSON mode']]],
   'scaffold-profile-plan/output': ['proofkit.scaffold-profile-plan.output.v1.json-schema', 'proofkit.scaffold-profile-plan.output.v1', [['01-plan', 'default JSON mode']]],
@@ -242,6 +242,41 @@ test('scaffold routes only admitted materialized payloads', () => {
   }
   assert(routed.includes('witness-plan'));
   assert(!routed.some(name => ['witness-scheduler-plan', 'requirement-bindings', 'proof-slice'].includes(name)));
+});
+
+test('scaffold partial child commands preserve failed reports and admit actual output', () => {
+  const fields = ['adoptionProfilePath', 'adoptionGuidancePath', 'witnessPlanInputPath'];
+  const operations = ['gradual-adoption', 'gradual-adoption-guidance', 'witness-plan'];
+  for (let mask = 0; mask < 8; mask++) {
+    const input = scaffold();
+    const child = [];
+    fields.forEach((field, index) => {
+      if (mask & 1 << index) child.push(`agentic-proofkit ${operations[index]} --input ${input.bootstrap.paths[field]}`);
+      else input.bootstrap.paths[field] = `proofkit/child-${index}\u202e.json`;
+    });
+    const state = mask === 7 ? 'passed' : 'failed';
+    const value = invoke('scaffold-project-structure', input, state);
+    const expected = [
+      `agentic-proofkit scaffold-profile-plan --input ${input.paths.repoProfileScaffoldInputPath}`,
+      `agentic-proofkit gradual-adoption-bootstrap --input ${input.paths.bootstrapInputPath}`,
+      `agentic-proofkit adoption-workflow-plan --input ${input.paths.workflowInputPath}`,
+      ...child,
+    ];
+    assert.deepEqual(value.materializationManifest.nextCommands, expected, `mask ${mask}: exact commands without placeholders`);
+    assert.deepEqual(value.bootstrapReport.nextCommands, child);
+    assert.equal(value.bootstrapReport.report.state, state);
+    assert.equal(value.bootstrapReport.exitCode, mask === 7 ? 0 : 1);
+    assert.equal(value.materializationManifest.sourceReports.find(row => row.reportKind === 'proofkit.gradual-adoption-bootstrap').state, state);
+    const refs = [mask & 4 ? 'bootstrap_witness_plan' : null, 'gradual_adoption_bootstrap',
+      mask & 2 ? 'gradual_adoption_guidance' : null, 'repo_profile_scaffold'].filter(Boolean);
+    assert.deepEqual(value.adoptionWorkflowInput.inputRefs.map(row => row.inputKind), refs);
+    assert.deepEqual(value.adoptionWorkflowPlan.inputRefs.map(row => row.inputKind), refs);
+    if ((mask & 6) !== 6) assert.equal(value.adoptionWorkflowPlan.planState, 'blocked');
+    for (const count of [2, 7]) {
+      const commands = Array.from({length: count}, (_, index) => expected[index % expected.length]);
+      schema('scaffold-project-structure', 'output', 1, replace(value, ['materializationManifest', 'nextCommands'], commands), false, `count-${count}`);
+    }
+  }
 });
 
 test('public identities conserve contract and wire versions and retire root-shape predecessors', () => {
@@ -504,6 +539,7 @@ function outputArrayRange(command, index, name, value) {
       ?? (/^repoProfileDraft\.commandMatchers\.\d+\.allowed/.test(name) ? [1, null] : undefined);
   }
   if (index !== 1) {
+    if (command === 'scaffold-project-structure' && /^commands\.\d+\.argv$/.test(name)) return [4, null];
     if (/^actionPlan\.\d+\.evidenceRefs$/.test(name)) return [0, 96];
     if (/^actionPlan\.\d+\.nonClaims$/.test(name)) return [1, null];
     const limits = index === 2
@@ -520,8 +556,8 @@ function outputArrayRange(command, index, name, value) {
     if (/^ruleResults\.\d+\.diagnostics$/.test(name)) return value.length ? [3, 3] : [0, 0];
     return undefined;
   }
-  return {'materializationManifest.files': [9, 9], 'materializationManifest.nextCommands': [6, 6], 'materializationManifest.nonClaims': [4, 4],
-    'materializationManifest.sourceReports': [3, 3], 'adoptionWorkflowInput.inputRefs': [4, 4], 'adoptionWorkflowPlan.inputRefs': [4, 4],
+  return {'materializationManifest.files': [9, 9], 'materializationManifest.nextCommands': [3, 6], 'materializationManifest.nonClaims': [4, 4],
+    'materializationManifest.sourceReports': [3, 3], 'adoptionWorkflowInput.inputRefs': [2, 4], 'adoptionWorkflowPlan.inputRefs': [2, 4],
     'adoptionWorkflowPlan.phases': [7, 7], 'report.diagnostics': [1, 1], 'report.diagnostics.0.value.files': [9, 9], 'report.ruleResults': [1, null]}[name];
 }
 
@@ -532,7 +568,7 @@ function outputPredicates(command, index, output, label, skip = () => false) {
   const reject = (path, replacement, why) => schema(command, 'output', index, replace(output, path, replacement), false, `${label}/${why}/${path.join('.')}`);
   const kinds = [['null', null], ['boolean', false], ['number', 42], ['string', 'wrong-type'], ['array', []], ['object', {}]];
   const optional = name => /^bounds\.(truncated|referenceClosurePreserved|prunedLocalReferenceCount|boundsViolationCount|boundsViolations)$/.test(name)
-    || /^actionPlan\.\d+\.selectors\.(affectedPaths|candidateBoundaryId|contractWitnessRefs|nativeWitnessRefs|ownerRouteId|proofBindingPaths|proofBindingRefs|specPaths)$/.test(name)
+    || /^actionPlan\.\d+\.selectors\.(candidateBoundaryId|ownerRouteId)$/.test(name)
     || name === 'diagnostics.5.value.retire-stale-authority' || name === 'adoptionWorkflowInput.presetId';
   const nullable = name => command === 'scaffold-profile-plan' && name === 'presetId';
   const emptyText = name => /(^|\.)reportId$/.test(name) && !name.startsWith('sourceReport') && !name.startsWith('materializationManifest')
@@ -784,6 +820,14 @@ test('whole chains reuse the producing commands and their published structures',
 
 test('described finite enums retain the independently authored owner vocabulary', () => {
   const states = {doctor: ['blocked', 'failed', 'passed'], child: ['blocked', 'failed', 'passed', 'skipped', 'warning']};
+  const workflowPhaseCommands = [
+    ['stack-preset', 'scaffold-profile-plan', 'branch-authority'],
+    ['gradual-adoption-bootstrap', 'gradual-adoption-guidance'],
+    ['requirement-bindings', 'proof-slice', 'witness-scheduler-plan', 'witness-plan'],
+    ['migration-plan'], ['selective-gate-plan'],
+    ['receipt-producer-admission', 'selective-gate-evidence', 'adoption-checklist'],
+    ['release-authority', 'external-consumer', 'registry-consumer'],
+  ].map(names => names.map(name => 'proofkit.adoption-workflow.command.' + name));
   const domains = {
     mode: ['enforce-all', 'enforce-touched', 'observe', 'warn'], checkedScope: ['all', 'none', 'touched'], admissionState: ['advisory', 'owner_admitted'],
     authorityState: ['current', 'retired'], credentialClass: ['live-cloud', 'live-github', 'local-secret', 'none'], networkPolicy: ['external', 'loopback', 'none'],
@@ -812,6 +856,15 @@ test('described finite enums retain the independently authored owner vocabulary'
         if (node.enum) {
           const key = path[path.lastIndexOf('properties') + 1];
           let expected = domains[key];
+          if (key === 'commandId' && command === 'scaffold-project-structure' && joined.includes('/adoptionWorkflowPlan/')) {
+            const position = path.indexOf('prefixItems');
+            assert(position >= 0, 'workflow command enum must belong to a fixed phase');
+            expected = workflowPhaseCommands[Number(path[position + 1])];
+          }
+          if (command === 'adoption-doctor' && joined.includes('/contextRefs/')) {
+            if (key === 'kind') expected = ['blocked_precondition', 'candidate_boundary', 'child_report', 'owner_route', 'stale_authority_surface'];
+            if (key === 'role') expected = ['affected_path', 'authority_path', 'contract_witness', 'evidence', 'native_witness', 'proof_binding', 'spec_path'];
+          }
           if (key === 'state') expected = direction === 'input' ? states.child : command === 'adoption-doctor' ? states.doctor : ['failed', 'passed'];
           if (key === 'ruleId') expected = ruleIds;
           // The only enumerated rule diagnostic value is the gap phase.

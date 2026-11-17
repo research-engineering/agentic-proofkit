@@ -56,6 +56,8 @@ type Result struct {
 	ProducerAdmissionFailures []string
 	ExitCode                  int
 	producerReceipts          []receiptproduceradmission.ReceiptProjection
+	// Detached canonical strings are sealed at Build and never mutated afterwards.
+	plannedCommandKeys map[string]struct{}
 }
 
 func Build(raw any) (Result, error) {
@@ -141,9 +143,11 @@ func admitPlan(raw any) (plan, error) {
 func buildEvidence(input evidenceInput) (Result, error) {
 	planHash := stableHash(input.Plan.Raw)
 	expected := map[string]commandKey{}
+	plannedCommandKeys := map[string]struct{}{}
 	for _, command := range input.Plan.RequiredCommands {
 		key := commandKeyFromCommand(command)
 		expected[keyString(key)] = key
+		plannedCommandKeys[keyString(key)] = struct{}{}
 	}
 	receiptGroups := groupReceipts(input.Receipts)
 	missing := []commandKey{}
@@ -275,7 +279,7 @@ func buildEvidence(input evidenceInput) (Result, error) {
 	if state == "passed" {
 		exitCode = 0
 	}
-	return Result{Report: record, PlanHash: planHash, MissingReceipts: missing, FailedReceipts: failed, BlockedReceipts: blocked, NotRunReceipts: notRun, UnexpectedReceipts: unexpected, DuplicateReceipts: duplicates, ProducerAdmissionFailures: producerFailures, ExitCode: exitCode, producerReceipts: producerReceipts}, nil
+	return Result{Report: record, PlanHash: planHash, MissingReceipts: missing, FailedReceipts: failed, BlockedReceipts: blocked, NotRunReceipts: notRun, UnexpectedReceipts: unexpected, DuplicateReceipts: duplicates, ProducerAdmissionFailures: producerFailures, ExitCode: exitCode, producerReceipts: producerReceipts, plannedCommandKeys: plannedCommandKeys}, nil
 }
 
 func mergeEvidenceSummary(evidenceClass string, producerState string, producerProvided bool, producerFailuresAbsent bool) map[string]any {
@@ -580,19 +584,7 @@ func sortedUniqueText(values []string) []string {
 }
 
 func sortedPathsFromAny(raw any, context string, allowEmpty bool) ([]string, error) {
-	values, err := admit.TextArray(raw, context, allowEmpty)
-	if err != nil {
-		return nil, err
-	}
-	result := []string{}
-	for _, value := range values {
-		path, err := admit.SafeRepoRelativePath(value, context)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, path)
-	}
-	return admit.NormalizeSortedPaths(result, context, allowEmpty)
+	return admit.NormalizeSortedPathArray(raw, context, allowEmpty)
 }
 
 func uniqueSortedPaths(values []string, context string) ([]string, error) {

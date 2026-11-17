@@ -15,9 +15,10 @@ const (
 
 func BuildEnvelopeFromResult(scaffold Result) (map[string]any, int, error) {
 	manifest := scaffold.Manifest
-	allContextRefs := contextRefs(anyArray(manifest["files"]))
+	files := anyArray(manifest["files"])
+	allContextRefs := contextRefs(files, scaffold.fileRoles)
 	contextRefs := takeMaps(allContextRefs, envelopeContextLimit)
-	allCommands := commandRefs(anyArray(manifest["nextCommands"]))
+	allCommands, bindings := commandRefs(scaffold.commands, files)
 	commands := takeMaps(allCommands, envelopeCommandLimit)
 	allBlocked := blockedPreconditions(anyArray(manifest["files"]))
 	blocked := takeMaps(allBlocked, envelopeBlockedLimit)
@@ -78,7 +79,10 @@ func BuildEnvelopeFromResult(scaffold Result) (map[string]any, int, error) {
 		verifyAction(commandIDs, contextIDs),
 	}
 	envelope := agentenvelope.Build(agentenvelope.Input{
-		EnvelopeID: fmt.Sprintf("%s.agent-envelope", scaffold.Record.ReportID),
+		CommandDisplayField: "command",
+		Renderer:            scaffold.renderer,
+		OperandBindings:     bindings,
+		EnvelopeID:          fmt.Sprintf("%s.agent-envelope", scaffold.Record.ReportID),
 		SourceReport: map[string]any{
 			"artifactRef": nil,
 			"nonClaim":    "Project-structure source report identity does not prove file creation, payload review, witness execution, freshness, or caller approval.",
@@ -137,7 +141,7 @@ func BuildEnvelopeFromResult(scaffold Result) (map[string]any, int, error) {
 	return envelope, scaffold.ExitCode, nil
 }
 
-func contextRefs(files []any) []map[string]any {
+func contextRefs(files []any, roles map[string]string) []map[string]any {
 	refs := make([]map[string]any, 0, len(files))
 	for index, rawFile := range files {
 		file := mapValue(rawFile)
@@ -147,25 +151,15 @@ func contextRefs(files []any) []map[string]any {
 			"owner":    "consumer_repository",
 			"purpose":  projectStructureFilePurpose(file),
 			"ref":      file["path"],
-			"refId":    fmt.Sprintf("proofkit.project-structure.context.file.%03d", index+1),
-			"role":     projectStructureFileRole(file),
+			"refId":    fileContextID(index),
+			"role":     roles[stringValue(file["path"])],
 		})
 	}
 	return refs
 }
 
-func commandRefs(commands []any) []map[string]any {
-	refs := make([]map[string]any, 0, len(commands))
-	for index, command := range commands {
-		refs = append(refs, map[string]any{
-			"command":   command,
-			"commandId": fmt.Sprintf("proofkit.project-structure.command.%03d", index+1),
-			"nonClaim":  "Project-structure command refs preserve command display text only; they do not invent argv, execute commands, or prove pass evidence.",
-			"owner":     "consumer_repository",
-			"purpose":   "Caller-owned follow-up command emitted by project-structure scaffold planning.",
-		})
-	}
-	return refs
+func fileContextID(index int) string {
+	return fmt.Sprintf("proofkit.project-structure.context.file.%03d", index+1)
 }
 
 func blockedPreconditions(files []any) []map[string]any {

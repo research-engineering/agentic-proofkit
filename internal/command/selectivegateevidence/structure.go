@@ -20,7 +20,7 @@ func InputStructure() map[string]any {
 		jsonshape.Required("receipts", jsonshape.Array(receiptStructure(false), 0)),
 	).JSONSchema()
 	schema["properties"].(map[string]any)["producerAdmission"] = map[string]any{"oneOf": []any{map[string]any{"type": "null"}, receiptproduceradmission.InputStructure()}}
-	schema["description"] = "Missing or null producerAdmission means not provided; other values pass the producer owner. Merge-satisfying evidence without producer admission yields an admitted failed report, not an input error. Input receipt sourcePath and producerReceiptId are optional but nonnull. Passed receipts require zero exitCode, failed receipts require a positive int64, and blocked/not_run admit absent or null exitCode. Native admission owns canonical integer spelling/range, paths, display-only command text, privacy and normalized uniqueness; plan relations and producer receipt linkage remain native."
+	schema["description"] = "Missing or null producerAdmission means not provided; other values pass the producer owner. Merge-satisfying evidence without producer admission yields an admitted failed report, not an input error. Input receipt sourcePath and producerReceiptId are optional but nonnull. Passed receipts require zero exitCode, failed receipts require a positive int64, and blocked/not_run admit absent or null exitCode. Native admission owns canonical integer spelling/range, paths, display-only command text, privacy and normalized uniqueness; plan relations and producer receipt linkage remain native. Structural path references retain exact bytes, including significant whitespace, through path-specific privacy rather than prose normalization."
 	return schema
 }
 

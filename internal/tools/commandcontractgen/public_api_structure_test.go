@@ -52,7 +52,7 @@ func TestOutOfBandConsumerIdentityRejectsMetadataDrift(t *testing.T) {
 				}
 				return
 			}
-			if err == nil || !strings.Contains(err.Error(), "out-of-band contract identity") || app != nil || presets != nil {
+			if err == nil || err.Error() != "typescript-public-api-surfaces output contract violates native semantic contract identity" || app != nil || presets != nil {
 				t.Fatalf("metadata drift emitted output: app=%d presets=%d error=%v", len(app), len(presets), err)
 			}
 		})

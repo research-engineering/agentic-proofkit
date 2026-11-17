@@ -19,8 +19,10 @@ denial, and package artifact behavior only.
   caller-owned JSON, declared no-input command parameters, or declared explicit
   scanner scope classes. One immutable explicit launcher profile renders the
   closed display-command and structured-argv inventory across help, preset,
-  bootstrap, project, route, workflow, and coverage surfaces without rewriting
-  caller commands or autodetecting a runner. Python executable admission
+  bootstrap, guidance, project, route, workflow, and coverage surfaces without
+  rewriting caller commands or autodetecting a runner. Saved generated guidance
+  stores a closed operation-to-input-path map, not a launcher; public re-admission
+  renders that map with the actual invocation profile. Python executable admission
   rejects secret-like, Unicode control, and Unicode format content without
   disclosing it; the authored
   CLI contract closes required input and JSON output root-shape variants,

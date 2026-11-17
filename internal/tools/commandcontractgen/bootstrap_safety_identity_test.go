@@ -13,8 +13,8 @@ import (
 func TestBootstrapSafetyRejectsPredecessorSemanticIdentities(t *testing.T) {
 	for _, row := range []struct{ command, previous, current string }{
 		{"gradual-adoption-bootstrap", "proofkit.gradual-adoption-bootstrap.input.v1", "proofkit.gradual-adoption-bootstrap.input.v2"},
-		{"adoption-contract-envelope", "proofkit.adoption-contract-envelope.input.v2", "proofkit.adoption-contract-envelope.input.v3"},
-		{"scaffold-project-structure", "proofkit.scaffold-project-structure.input.v1", "proofkit.scaffold-project-structure.input.v2"},
+		{"adoption-contract-envelope", "proofkit.adoption-contract-envelope.input.v3", "proofkit.adoption-contract-envelope.input.v4"},
+		{"scaffold-project-structure", "proofkit.scaffold-project-structure.input.v2", "proofkit.scaffold-project-structure.input.v3"},
 	} {
 		if err := admitBootstrapSafetyIdentity(row.command, "input", map[string]any{"contractId": row.current}); err != nil {
 			t.Fatal(err)

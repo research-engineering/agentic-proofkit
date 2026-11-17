@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 const (
@@ -30,18 +31,23 @@ var baseNonClaims = []string{
 }
 
 type Input struct {
-	ActionPlan            []map[string]any
-	BlockedPreconditions  []map[string]any
-	Bounds                map[string]any
-	ClarificationQuestion []map[string]any
-	Commands              []map[string]any
-	ContextRefs           []map[string]any
-	EnvelopeID            string
-	NonClaims             []string
-	Omitted               []map[string]any
-	ReceiptRefs           []map[string]any
-	RouteQuestions        []map[string]any
-	SourceReport          map[string]any
+	ActionPlan                      []map[string]any
+	BlockedPreconditions            []map[string]any
+	Bounds                          map[string]any
+	ClarificationQuestion           []map[string]any
+	Commands                        []map[string]any
+	CommandDisplayField             string   // Empty, command or display; derived only from admitted argv.
+	CallerDisplayFallbackCommandIDs []string // Independently admitted caller origins, not wire flags.
+	ContextRefs                     []map[string]any
+	ContextReferenceFields          []ContextReferenceField
+	EnvelopeID                      string
+	NonClaims                       []string
+	Omitted                         []map[string]any
+	OperandBindings                 []OperandBinding
+	ReceiptRefs                     []map[string]any
+	Renderer                        cliexec.Renderer
+	RouteQuestions                  []map[string]any
+	SourceReport                    map[string]any
 }
 
 func Build(input Input) map[string]any {
@@ -83,8 +89,21 @@ func Build(input Input) map[string]any {
 	routeQuestions, omitted, truncated = limitList(routeQuestions, "routeQuestion", "questionId", "maxRouteQuestions", hardMaxRouteQuestions, omitted, bounds, truncated)
 	priorities := collectLocalReferencePriorities(originalTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
 	commands, omitted, truncated = limitListPrioritized(commands, "commandRef", "commandId", "maxCommandRefs", hardMaxCommandRefs, priorities.commands, omitted, bounds, truncated)
+	// Discarded commands cannot contribute demand to later target selection.
+	priorities = collectLocalReferencePriorities(originalTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
+	for _, command := range commands {
+		for _, ref := range prepared.operandContexts[stringValue(command["commandId"])] {
+			priorities.contexts[ref] = struct{}{}
+		}
+	}
 	contextRefs, omitted, truncated = limitListPrioritized(contextRefs, "contextRef", "refId", "maxContextRefs", hardMaxContextRefs, priorities.contexts, omitted, bounds, truncated)
 	receiptRefs, omitted, truncated = limitListPrioritized(receiptRefs, "receiptRef", "receiptRefId", "maxReceiptRefs", hardMaxReceiptRefs, priorities.receipts, omitted, bounds, truncated)
+	var missingOperandContexts int
+	commands, missingOperandContexts = commandsWithRetainedOperandContexts(commands, contextRefs, prepared.operandContexts, prepared.callerDisplayFallbacks)
+	if missingOperandContexts > 0 {
+		omitted = append(omitted, omissionRecord("unavailableOperandContext", "commands", missingOperandContexts))
+		truncated = true
+	}
 	omitted, truncated = limitOmitted(omitted, bounds, truncated)
 	retainedTargets := collectLocalReferenceTargets(commands, contextRefs, receiptRefs)
 	removedReferenceCount := prepared.removedReferenceCount
@@ -625,6 +644,10 @@ func sanitizeArgvValue(value any) any {
 	case []any:
 		result := make([]any, 0, len(typed))
 		for _, item := range typed {
+			if path, ok := item.(admittedStructuralOperand); ok {
+				result = append(result, string(path))
+				continue
+			}
 			text, ok := item.(string)
 			if !ok {
 				result = append(result, "<unsupported-report-visible-value>")
@@ -646,6 +669,8 @@ func sanitizeArgvValue(value any) any {
 
 func sanitizeValue(value any) any {
 	switch typed := value.(type) {
+	case admittedStructuralOperand:
+		return string(typed)
 	case nil:
 		return nil
 	case bool:
@@ -775,7 +800,7 @@ func sortedUnique(values []string) []any {
 func mapsToAny(values []map[string]any) []any {
 	result := make([]any, 0, len(values))
 	for _, value := range values {
-		result = append(result, sanitizeMap(value))
+		result = append(result, value)
 	}
 	return result
 }

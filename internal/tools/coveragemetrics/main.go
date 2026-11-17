@@ -27,6 +27,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/gotestsource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
@@ -261,6 +262,21 @@ func commandExecutionSummaryFromEvidence(evidence commandoracle.Evidence) comman
 }
 
 func validateBindingWitnessSelectorsAtRoot(root string, bindings bindingFile) error {
+	for _, binding := range bindings.Bindings {
+		if binding.WitnessPath == "" && len(binding.WitnessSelectors) == 0 {
+			continue
+		}
+		canonical, err := admit.NonEmptyText(binding.WitnessPath, "binding witness path")
+		if err != nil {
+			return err
+		}
+		if canonical != binding.WitnessPath {
+			return fmt.Errorf("binding witness path must use canonical witness framing")
+		}
+		if _, err := admit.SafeRepoRelativePath(canonical, "binding witness path"); err != nil {
+			return err
+		}
+	}
 	if err := validateRequiredBindingWitnessSelectors(bindings); err != nil {
 		return err
 	}
@@ -276,14 +292,13 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		if strings.HasPrefix(binding.RequirementID, "REQ-PROOFKIT-WORKFLOW-") && !isRequired {
 			return fmt.Errorf("workflow binding is absent from the exact independent-falsifier inventory: %s/%s", binding.RequirementID, binding.ScenarioID)
 		}
-		if !isRequired {
+		// Only the inventoried path can discharge this obligation. Other paths
+		// for the same scenario still undergo the ordinary selector checks.
+		if !isRequired || binding.WitnessPath != want.witnessPath {
 			continue
 		}
 		if _, duplicate := seenRequired[key]; duplicate {
 			return fmt.Errorf("required independent-falsifier binding is duplicated: %s/%s", binding.RequirementID, binding.ScenarioID)
-		}
-		if binding.WitnessPath != want.witnessPath {
-			return fmt.Errorf("binding %s witness path=%q, want exact %q", binding.ScenarioID, binding.WitnessPath, want.witnessPath)
 		}
 		if want.commandIDs != nil && !equalStrings(binding.CommandIDs, want.commandIDs) {
 			return fmt.Errorf("binding %s commandIds=%v, want exact %v", binding.ScenarioID, binding.CommandIDs, want.commandIDs)
@@ -301,9 +316,9 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			return fmt.Errorf("binding %s witness selectors=%v, want %v", binding.ScenarioID, got, want.selectors)
 		}
 	}
-	for key := range required {
+	for key, want := range required {
 		if _, ok := seenRequired[key]; !ok {
-			return fmt.Errorf("required independent-falsifier binding is missing: %s/%s", key.requirementID, key.scenarioID)
+			return fmt.Errorf("required independent-falsifier binding is missing: %s/%s (want exact witness path %q)", key.requirementID, key.scenarioID, want.witnessPath)
 		}
 	}
 	return nil

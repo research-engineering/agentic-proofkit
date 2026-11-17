@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
@@ -1336,7 +1337,7 @@ func TestBuildEnvelopeCreatesUniqueRefsForRepeatedRenderCommands(t *testing.T) {
 }
 
 func TestEnvelopeProducerOwnsUniqueDisjointLocalIdentities(t *testing.T) {
-	report, exitCode, err := Build(map[string]any{
+	result, exitCode, err := buildRouteWithRenderer(map[string]any{
 		"schemaVersion": jsonNumber("1"),
 		"routeId":       "consumer.route.render_all",
 		"goal":          "render_human_view",
@@ -1346,13 +1347,14 @@ func TestEnvelopeProducerOwnsUniqueDisjointLocalIdentities(t *testing.T) {
 			map[string]any{"kind": "proof_binding", "ref": "docs/contracts/requirement-proof-bindings/module.json"},
 			map[string]any{"kind": "requirement_source", "ref": "docs/specs/module/requirements.v1.json"},
 		},
-	})
+	}, cliexec.PathRenderer())
 	if err != nil || exitCode != 0 {
 		t.Fatalf("Build() exit=%d error=%v", exitCode, err)
 	}
+	report := result.report
 	reportID := report["reportId"].(string)
 	commands := mapsFromAny(report["nextCommands"])
-	contexts := append(guidanceContextRefs(mapFromAny(report["guidanceSlice"]), reportID), inputContextRefs(commands, reportID)...)
+	contexts := append(guidanceContextRefs(mapFromAny(report["guidanceSlice"]), reportID), inputContextRefs(result.commands, reportID)...)
 	assertProducerIdentityDomain(t, commandContextRefs(commands, reportID), "commandId", map[string]string{})
 	commandDomain := producerIdentityDomain(t, commandContextRefs(commands, reportID), "commandId")
 	assertProducerIdentityDomain(t, contexts, "refId", commandDomain)

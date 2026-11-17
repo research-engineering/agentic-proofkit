@@ -13,7 +13,7 @@ import (
 )
 
 // The envelope wire stays v2; bootstrap payload admission is now secret-free.
-const InputContractID = "proofkit.adoption-contract-envelope.input.v3"
+const InputContractID = "proofkit.adoption-contract-envelope.input.v4"
 
 const (
 	aggregateEnvelopeSchema = "proofkit.adoption-contract-envelope.v2"
@@ -82,6 +82,7 @@ func BuildWithRenderer(raw any, options Options, renderer cliexec.Renderer) (any
 		}
 		return gradualadoption.BuildBootstrapFromContractEnvelopeWithRenderer(bootstrapEnvelope(envelope), renderer)
 	case "guidance":
+		options.Guidance.Renderer = renderer
 		if options.AgentEnvelope {
 			return gradualadoption.BuildGuidanceEnvelopeFromContractEnvelope(guidanceEnvelope(envelope), options.Guidance)
 		}

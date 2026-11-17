@@ -5,6 +5,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/contractenv"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
@@ -38,6 +39,12 @@ func BuildBootstrapMaterializationManifestFromContractEnvelopeWithRenderer(raw a
 }
 
 func BootstrapMaterializationManifest(result BootstrapResult) (map[string]any, error) {
+	return contractenv.ObjectField(result.materialization, "manifest", "bootstrap result")
+}
+
+// Called only before the result is published; future materialization reads
+// the private canonical manifest, never exported writable fields.
+func bootstrapMaterializationManifest(result BootstrapResult) (map[string]any, error) {
 	files := make([]any, 0, len(result.PlannedFiles))
 	payloadFileCount := 0
 	for _, rawFile := range result.PlannedFiles {

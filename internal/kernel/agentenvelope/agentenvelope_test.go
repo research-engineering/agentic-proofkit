@@ -361,6 +361,30 @@ func TestBuildPreservesStructuralArgvWithoutDiagnosticTruncation(t *testing.T) {
 	}
 }
 
+func TestBuildPreservesStructuralContextRefsAndOmitsUnsafeOperands(t *testing.T) {
+	secret := "ghp_" + strings.Repeat("A", 36)
+	for _, value := range []string{
+		strings.Repeat("x", 511), strings.Repeat("x", 512), strings.Repeat("x", 513), strings.Repeat("x", 640),
+		secret, "path/unsafe\u202evalue", string([]byte{0xff}),
+	} {
+		envelope := Build(Input{
+			EnvelopeID: "proofkit.test.envelope",
+			ContextRefs: []map[string]any{{
+				"kind": "path", "refId": "proofkit.context.input", "ref": value,
+			}},
+		})
+		refs := envelope["contextRefs"].([]any)
+		if value == secret || strings.Contains(value, "\u202e") || value == string([]byte{0xff}) {
+			if len(refs) != 0 {
+				t.Fatal("unsafe structural ref was retained")
+			}
+			assertOmission(t, envelope, "proofkit.agent-envelope.omitted.unsafeStructuralOperand", 1)
+		} else if len(refs) != 1 || refs[0].(map[string]any)["ref"] != value {
+			t.Fatalf("%d-byte safe structural ref was changed", len(value))
+		}
+	}
+}
+
 func TestBuildRedactsTypedContainersAndUnsupportedValues(t *testing.T) {
 	secret := "ghp_TYPEDSECRET1234567890"
 	typedMap := map[string]string{"note": secret}

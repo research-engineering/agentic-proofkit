@@ -53,10 +53,6 @@ const (
 	// The other missing-witness values are the gap kinds they report.
 	missingWitnessCandidateNotAdmitted = "candidate_witness_not_admitted"
 
-	contextKindCandidateBoundary     = "candidate_boundary"
-	contextKindOwnerRoute            = "owner_route"
-	contextKindStaleAuthoritySurface = "stale_authority_surface"
-
 	consumerRepositoryOwner    = "consumer_repository"
 	consumerRepositoryFullGate = "consumer_repository_full_gate"
 	ownerDecisionAnswerKind    = "owner_decision"
@@ -143,19 +139,29 @@ type precondition struct {
 	TouchedRuleIDs []string
 }
 
+const (
+	recordKindDoctor                = "doctor"
+	recordKindCandidateBoundary     = "candidate_boundary"
+	recordKindOwnerRoute            = "owner_route"
+	recordKindStaleAuthoritySurface = "stale_authority_surface"
+	recordKindChildReport           = "child_report"
+	recordKindBlockedPrecondition   = "blocked_precondition"
+)
+
+// An origin names one exact input record, including its collection. GapID is
+// a display identity, not a source selector; report JSON does not expose origin.
+type inputRecordOrigin struct{ kind, id string }
+
 type gap struct {
-	// CandidateBoundaryID and RouteID name the source record exactly; GapID
-	// is a display identity and prefix-related stable IDs make it ambiguous.
-	CandidateBoundaryID string
-	EvidenceRefs        []string
-	GapID               string
-	Kind                string
-	Message             string
-	Owner               string
-	Phase               string
-	RouteID             string
-	RuleRefs            []string
-	Touched             bool
+	origin       inputRecordOrigin
+	EvidenceRefs []string
+	GapID        string
+	Kind         string
+	Message      string
+	Owner        string
+	Phase        string
+	RuleRefs     []string
+	Touched      bool
 }
 
 type Result struct {
@@ -324,28 +330,28 @@ func adoptionGaps(input Input) []gap {
 		candidateTouched := hasTouched(candidate.RequirementRefs, touched) || input.CheckedScope == adoptionmode.ScopeAll
 		if candidate.AdmissionState != "owner_admitted" {
 			gaps = append(gaps, gap{
-				CandidateBoundaryID: candidate.BoundaryID,
-				EvidenceRefs:        sortedUnique(append(append([]string{}, candidate.AffectedPaths...), candidate.ProofBindingRefs...)),
-				GapID:               candidate.BoundaryID + ".candidate-boundary-not-admitted",
-				Kind:                gapKindCandidateBoundaryNotAdmitted,
-				Message:             "Candidate boundary is advisory until the consuming repository owner admits stable requirements and proof bindings.",
-				Owner:               candidate.CandidateOwner,
-				Phase:               phaseModernizeBoundary,
-				RuleRefs:            candidate.RequirementRefs,
-				Touched:             candidateTouched,
+				origin:       inputRecordOrigin{recordKindCandidateBoundary, candidate.BoundaryID},
+				EvidenceRefs: sortedUnique(append(append([]string{}, candidate.AffectedPaths...), candidate.ProofBindingRefs...)),
+				GapID:        candidate.BoundaryID + ".candidate-boundary-not-admitted",
+				Kind:         gapKindCandidateBoundaryNotAdmitted,
+				Message:      "Candidate boundary is advisory until the consuming repository owner admits stable requirements and proof bindings.",
+				Owner:        candidate.CandidateOwner,
+				Phase:        phaseModernizeBoundary,
+				RuleRefs:     candidate.RequirementRefs,
+				Touched:      candidateTouched,
 			})
 		}
 		for _, precondition := range candidate.BlockedPreconditions {
 			gaps = append(gaps, gap{
-				CandidateBoundaryID: candidate.BoundaryID,
-				EvidenceRefs:        candidate.AffectedPaths,
-				GapID:               candidate.BoundaryID + ".blocked-precondition",
-				Kind:                gapKindBlockedPrecondition,
-				Message:             precondition,
-				Owner:               candidate.CandidateOwner,
-				Phase:               phaseVerify,
-				RuleRefs:            candidate.RequirementRefs,
-				Touched:             candidateTouched,
+				origin:       inputRecordOrigin{recordKindCandidateBoundary, candidate.BoundaryID},
+				EvidenceRefs: candidate.AffectedPaths,
+				GapID:        candidate.BoundaryID + ".blocked-precondition",
+				Kind:         gapKindBlockedPrecondition,
+				Message:      precondition,
+				Owner:        candidate.CandidateOwner,
+				Phase:        phaseVerify,
+				RuleRefs:     candidate.RequirementRefs,
+				Touched:      candidateTouched,
 			})
 		}
 	}
@@ -353,6 +359,7 @@ func adoptionGaps(input Input) []gap {
 		childTouched := hasTouched(child.TouchedRuleIDs, touched) || input.CheckedScope == adoptionmode.ScopeAll
 		if child.State != statePassed {
 			gaps = append(gaps, gap{
+				origin:       inputRecordOrigin{recordKindChildReport, child.ReportID},
 				EvidenceRefs: child.EvidenceRefs,
 				GapID:        child.ReportID + "." + child.State,
 				Kind:         childReportGapKindPrefix + child.State,
@@ -367,6 +374,7 @@ func adoptionGaps(input Input) []gap {
 	gaps = append(gaps, staleAuthorityGaps(input.StaleAuthority, touched, input.CheckedScope)...)
 	for _, blocked := range input.BlockedPreconditions {
 		gaps = append(gaps, gap{
+			origin:       inputRecordOrigin{recordKindBlockedPrecondition, blocked.PreconditionID},
 			EvidenceRefs: blocked.EvidenceRefs,
 			GapID:        blocked.PreconditionID,
 			Kind:         gapKindBlockedPrecondition,
@@ -386,6 +394,7 @@ func adoptionGaps(input Input) []gap {
 func missingOwnerRouteGaps(input Input, touched map[string]struct{}) []gap {
 	if len(input.OwnerRoutes) == 0 {
 		return []gap{{
+			origin:       inputRecordOrigin{recordKindDoctor, input.DoctorID},
 			EvidenceRefs: []string{input.DoctorID},
 			GapID:        input.DoctorID + ".missing-owner-route",
 			Kind:         gapKindMissingOwnerRoute,
@@ -418,6 +427,7 @@ func missingOwnerRouteGaps(input Input, touched map[string]struct{}) []gap {
 		return []gap{}
 	}
 	return []gap{{
+		origin:       inputRecordOrigin{recordKindDoctor, input.DoctorID},
 		EvidenceRefs: []string{input.DoctorID},
 		GapID:        input.DoctorID + ".missing-touched-owner-route",
 		Kind:         gapKindMissingOwnerRoute,
@@ -842,9 +852,9 @@ func optional(record map[string]any, key string, defaultValue any) any {
 
 func gapForRoute(route ownerRoute, kind string, phase string, message string, touched bool) gap {
 	return gap{
+		origin:       inputRecordOrigin{recordKindOwnerRoute, route.RouteID},
 		EvidenceRefs: route.SpecPaths,
 		GapID:        route.RouteID + "." + kind,
-		RouteID:      route.RouteID,
 		Kind:         kind,
 		Message:      message,
 		Owner:        route.Owner,

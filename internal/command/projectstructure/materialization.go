@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
@@ -22,11 +21,13 @@ type materializationInput struct {
 	adoptionWorkflowInput map[string]any
 	bootstrapInput        map[string]any
 	bootstrapManifest     map[string]any
+	bootstrapProfilePath  string
 	paths                 projectPathSet
 	repoProfileInput      map[string]any
 	repoProfilePlan       map[string]any
 	scaffoldID            string
 	sourceReports         []report.Record
+	commands              []preparedCommand
 }
 
 func projectPaths(raw any) (projectPathSet, error) {
@@ -34,15 +35,15 @@ func projectPaths(raw any) (projectPathSet, error) {
 	if err != nil {
 		return projectPathSet{}, err
 	}
-	repoProfileScaffoldInputPath, err := safePath(record["repoProfileScaffoldInputPath"], "project structure scaffold repoProfileScaffoldInputPath")
+	repoProfileScaffoldInputPath, err := materializedInputPath(record["repoProfileScaffoldInputPath"], "project structure scaffold repoProfileScaffoldInputPath")
 	if err != nil {
 		return projectPathSet{}, err
 	}
-	bootstrapInputPath, err := safePath(record["bootstrapInputPath"], "project structure scaffold bootstrapInputPath")
+	bootstrapInputPath, err := materializedInputPath(record["bootstrapInputPath"], "project structure scaffold bootstrapInputPath")
 	if err != nil {
 		return projectPathSet{}, err
 	}
-	workflowInputPath, err := safePath(record["workflowInputPath"], "project structure scaffold workflowInputPath")
+	workflowInputPath, err := materializedInputPath(record["workflowInputPath"], "project structure scaffold workflowInputPath")
 	if err != nil {
 		return projectPathSet{}, err
 	}
@@ -53,7 +54,22 @@ func projectPaths(raw any) (projectPathSet, error) {
 	}, nil
 }
 
-func buildMaterializationManifest(input materializationInput, renderer cliexec.Renderer) (map[string]any, error) {
+func bootstrapPayloadPath(manifest map[string]any, payloadKey string) (string, error) {
+	for _, raw := range anyArray(manifest["files"]) {
+		file := mapValue(raw)
+		if file["payloadKey"] == payloadKey {
+			// Child-owned paths must retain the exact materialization identity.
+			path := stringValue(file["path"])
+			if strings.TrimSpace(path) == "" {
+				return "", fmt.Errorf("project structure scaffold bootstrap %s path must be a repository-relative POSIX path", payloadKey)
+			}
+			return admit.SafeRepoRelativePath(path, "project structure scaffold bootstrap "+payloadKey+" path")
+		}
+	}
+	return "", fmt.Errorf("project structure scaffold bootstrap payload path missing: %s", payloadKey)
+}
+
+func buildMaterializationManifest(input materializationInput) (map[string]any, error) {
 	files := []map[string]any{}
 	repoProfileFile, err := payloadFile(input.paths.repoProfileScaffoldInputPath, "caller-owned repo-profile scaffold input", "project_scaffold", input.repoProfileInput, nil)
 	if err != nil {
@@ -71,7 +87,7 @@ func buildMaterializationManifest(input materializationInput, renderer cliexec.R
 	profilePath := stringValue(input.repoProfilePlan["profilePath"])
 	for _, rawFile := range anyArray(input.bootstrapManifest["files"]) {
 		file := mapValue(rawFile)
-		if stringValue(file["path"]) == profilePath {
+		if stringValue(file["path"]) == profilePath && profilePath == input.bootstrapProfilePath {
 			profilePayload, err := payloadFile(
 				stringValue(file["path"]),
 				"caller-reviewed repository profile draft",
@@ -133,19 +149,13 @@ func buildMaterializationManifest(input materializationInput, renderer cliexec.R
 			callerContentRequiredCount++
 		}
 	}
-	nextCommands := []any{
-		renderer.DisplayCommand("scaffold-profile-plan", "--input", input.paths.repoProfileScaffoldInputPath),
-		renderer.DisplayCommand("gradual-adoption-bootstrap", "--input", input.paths.bootstrapInputPath),
-		renderer.DisplayCommand("adoption-workflow-plan", "--input", input.paths.workflowInputPath),
-	}
-	nextCommands = append(nextCommands, anyArray(input.bootstrapManifest["nextCommands"])...)
 	return map[string]any{
 		"callerContentRequiredCount": callerContentRequiredCount,
 		"fileCount":                  len(files),
 		"files":                      mapsToAny(files),
 		"manifestId":                 input.scaffoldID + ".materialization-manifest",
 		"manifestKind":               "proofkit.project-structure-scaffold-materialization-manifest",
-		"nextCommands":               nextCommands,
+		"nextCommands":               commandDisplays(input.commands),
 		"nonClaims": []any{
 			"Project-structure materialization manifests do not write files.",
 			"Project-structure materialization manifests do not prove files exist in the consuming repository.",
@@ -231,6 +241,11 @@ func assertUniquePaths(files []map[string]any) error {
 		if _, ok := seen[path]; ok {
 			return fmt.Errorf("project structure scaffold file paths must be sorted and unique")
 		}
+		for previous := range seen {
+			if admit.RepoFilePathsOverlap(previous, path) {
+				return fmt.Errorf("project structure scaffold file paths must not conflict as files and directories")
+			}
+		}
 		seen[path] = struct{}{}
 	}
 	return nil
@@ -242,23 +257,4 @@ func projectStructureFilePurpose(file map[string]any) string {
 		hashSuffix = " Content hash: " + hash + "."
 	}
 	return fmt.Sprintf("%s; materialization status %s.%s", file["purpose"], file["materializationStatus"], hashSuffix)
-}
-
-func projectStructureFileRole(file map[string]any) string {
-	filePath := stringValue(file["path"])
-	purpose := stringValue(file["purpose"])
-	switch {
-	case strings.Contains(filePath, "requirement-proof") || strings.Contains(purpose, "proof binding"):
-		return "proof_binding"
-	case strings.Contains(filePath, "witness") || strings.Contains(filePath, "workflow") || strings.Contains(purpose, "workflow"):
-		return "command_registry"
-	case strings.Contains(filePath, "spec") || strings.Contains(purpose, "spec"):
-		return "spec_source"
-	case strings.Contains(filePath, "profile") || strings.Contains(purpose, "repository profile"):
-		return "owner_surface"
-	case strings.Contains(filePath, "adoption-guidance"):
-		return "router"
-	default:
-		return "supporting"
-	}
 }

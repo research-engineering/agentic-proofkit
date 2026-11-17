@@ -14,6 +14,7 @@ import (
 const (
 	guidanceSliceRole        = "guidance_slice"
 	callerOwnedInputRole     = "caller_owned_input"
+	observedReportRole       = "observed_report"
 	commandRefNonClaim       = "Agent-route command refs do not execute commands or admit command results."
 	omittedCommandEscalation = "Provide the omitted command's caller-owned input or choose a narrower route."
 	routeActionPhase         = "route"
@@ -34,33 +35,34 @@ func BuildEnvelope(raw any) (map[string]any, int, error) {
 }
 
 func BuildEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
-	report, exitCode, err := BuildWithRenderer(raw, renderer)
+	result, exitCode, err := buildRouteWithRenderer(raw, renderer)
 	if err != nil {
 		return nil, 1, err
 	}
-	return FullAgentEnvelope(report), exitCode, nil
+	return fullAgentEnvelope(result), exitCode, nil
 }
 
 func BuildEnvelopeModeWithRenderer(raw any, renderer cliexec.Renderer, mode EnvelopeMode) (map[string]any, int, error) {
-	report, exitCode, err := BuildWithRenderer(raw, renderer)
+	result, exitCode, err := buildRouteWithRenderer(raw, renderer)
 	if err != nil {
 		return nil, 1, err
 	}
 	switch mode {
 	case EnvelopeModeBrief:
-		packet, err := AgentBrief(report)
+		packet, err := AgentBrief(result.report)
 		if err != nil {
 			return nil, 1, err
 		}
 		return packet, exitCode, nil
 	case EnvelopeModeFull:
-		return FullAgentEnvelope(report), exitCode, nil
+		return fullAgentEnvelope(result), exitCode, nil
 	default:
 		return nil, 1, fmt.Errorf("unsupported agent-route envelope mode: %s", mode)
 	}
 }
 
-func FullAgentEnvelope(report map[string]any) map[string]any {
+func fullAgentEnvelope(result builtRouteResult) map[string]any {
+	report := result.report
 	routeState := stringFromMap(report, "state")
 	sourceState := "failed"
 	if routeState == stateRouted {
@@ -76,10 +78,28 @@ func FullAgentEnvelope(report map[string]any) map[string]any {
 	omitted := mapsFromAny(report["omitted"])
 	guidanceSlice := mapFromAny(report["guidanceSlice"])
 	contextRefs := guidanceContextRefs(guidanceSlice, reportID)
-	contextRefs = append(contextRefs, inputContextRefs(nextCommands, reportID)...)
+	contextRefs = append(contextRefs, inputContextRefs(result.commands, reportID)...)
+	contextRefs = append(contextRefs, observedReportContextRefs(observedReports, reportID)...)
 	commandRefs := commandContextRefs(nextCommands, reportID)
+	fields := []agentenvelope.ContextReferenceField{}
+	for _, ref := range contextRefs {
+		if ref["role"] == callerOwnedInputRole || ref["role"] == observedReportRole {
+			id := ref["refId"].(string)
+			fields = append(fields, agentenvelope.ContextReferenceField{ContextRefID: id, Field: "path"}, agentenvelope.ContextReferenceField{ContextRefID: id, Field: "selector"})
+		}
+	}
+	bindings := []agentenvelope.OperandBinding{}
+	for _, command := range result.commands {
+		for _, operand := range command.pathOperands {
+			bindings = append(bindings, agentenvelope.OperandBinding{CommandID: commandID(reportID, command.report), ArgvIndex: operand.index, ContextRefID: inputRefID(reportID, operand.ref), ContextField: "path"})
+		}
+	}
 	return agentenvelope.Build(agentenvelope.Input{
-		EnvelopeID: reportID + ".agent-envelope",
+		CommandDisplayField:    "display",
+		EnvelopeID:             reportID + ".agent-envelope",
+		Renderer:               result.renderer,
+		ContextReferenceFields: fields,
+		OperandBindings:        bindings,
 		SourceReport: map[string]any{
 			"artifactRef": nil,
 			"nonClaim":    "Agent route source state proves route selection only, not downstream command execution or proof freshness.",
@@ -124,10 +144,15 @@ func guidanceContextRefs(slice map[string]any, reportID string) []map[string]any
 		},
 	}
 	for _, item := range mapsFromAny(slice["authorityRefs"]) {
+		refID := stringFromMap(item, "refId")
+		if refID == reportID {
+			// Fixed authority IDs do not end in .local; keep the report namespace distinct.
+			refID += ".local"
+		}
 		contextRefs = append(contextRefs, map[string]any{
 			"description": stringFromMap(item, "reason"),
 			"path":        stringFromMap(item, "path"),
-			"refId":       stringFromMap(item, "refId"),
+			"refId":       refID,
 			"role":        stringFromMap(item, "role"),
 			"selector":    stringFromMap(item, "selector"),
 		})
@@ -135,27 +160,44 @@ func guidanceContextRefs(slice map[string]any, reportID string) []map[string]any
 	return contextRefs
 }
 
-func inputContextRefs(commands []map[string]any, reportID string) []map[string]any {
+func inputContextRefs(commands []compiledRouteCommand, reportID string) []map[string]any {
 	refs := []map[string]any{}
 	seen := map[string]struct{}{}
 	for _, command := range commands {
-		inputRef := commandInputRef(command)
-		if inputRef == "" {
+		for _, operand := range command.pathOperands {
+			inputRef := operand.ref
+			if _, ok := seen[inputRef]; ok {
+				continue
+			}
+			seen[inputRef] = struct{}{}
+			refs = append(refs, map[string]any{
+				"description": "Caller-owned input selected by agent-route.",
+				"path":        inputRef, "refId": inputRefID(reportID, inputRef),
+				"role": callerOwnedInputRole, "selector": inputRef,
+			})
+		}
+	}
+	return refs
+}
+
+func observedReportContextRefs(reports []map[string]any, reportID string) []map[string]any {
+	refs := []map[string]any{}
+	for index, item := range reports {
+		if stringFromMap(item, "state") == "passed" {
 			continue
 		}
-		if _, ok := seen[inputRef]; ok {
-			continue
-		}
-		seen[inputRef] = struct{}{}
+		path := stringFromMap(item, "ref")
 		refs = append(refs, map[string]any{
-			"description": "Caller-owned input selected by agent-route.",
-			"path":        inputRef,
-			"refId":       inputRefID(reportID, inputRef),
-			"role":        callerOwnedInputRole,
-			"selector":    inputRef,
+			"description": "Caller-owned observed report selected by a route blocker.",
+			"path":        path, "selector": path, "role": observedReportRole,
+			"refId": observedReportRefID(reportID, index),
 		})
 	}
 	return refs
+}
+
+func observedReportRefID(reportID string, index int) string {
+	return fmt.Sprintf("%s.observed-report.%02d", reportID, index+1)
 }
 
 func commandContextRefs(commands []map[string]any, reportID string) []map[string]any {
@@ -264,7 +306,7 @@ func blockedPreconditions(requiredInputs []map[string]any, observedReports []map
 		}
 		blocked = append(blocked, map[string]any{
 			"description":    "Observed " + stringFromMap(item, "kind") + " report is " + stringFromMap(item, "state") + ".",
-			"evidenceRefs":   []any{stringFromMap(item, "ref")},
+			"evidenceRefs":   []any{observedReportRefID(reportID, index)},
 			"nonClaim":       "Observed report state blocks route guidance but does not let Proofkit repair caller-owned evidence.",
 			"owner":          consumerOwner,
 			"preconditionId": fmt.Sprintf("%s.blocked.observed-report.%02d", reportID, index+1),
@@ -296,16 +338,6 @@ func envelopeNonClaims(report map[string]any, guidanceSlice map[string]any) []st
 		"agent-route envelopes cite compact guidance slices instead of embedding full owner documents.",
 	)
 	return sortedUniqueStrings(values)
-}
-
-func commandInputRef(command map[string]any) string {
-	argv := stringsFromAny(command["argv"])
-	for index := 0; index < len(argv)-1; index++ {
-		if argv[index] == "--input" {
-			return argv[index+1]
-		}
-	}
-	return ""
 }
 
 func commandID(reportID string, command map[string]any) string {
