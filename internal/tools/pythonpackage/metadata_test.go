@@ -38,7 +38,7 @@ func TestPythonPackageReadersRejectAmbiguousJSON(t *testing.T) {
 					return err
 				})
 			},
-			want: "duplicate object key",
+			want: "package metadata JSON admission failed",
 		},
 		{
 			name:    "package set trailing value",

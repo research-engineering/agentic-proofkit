@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	MaxExpandedBytes = 512 << 20
-	MaxEntries       = 4096
-	MaxEntryBytes    = 128 << 20
-	MaxBinaryBytes   = 64 << 20
+	MaxCompressedBytes = 128 << 20
+	MaxExpandedBytes   = 512 << 20
+	MaxEntries         = 4096
+	MaxEntryBytes      = 128 << 20
+	MaxBinaryBytes     = 64 << 20
 )
 
 type Entry struct {

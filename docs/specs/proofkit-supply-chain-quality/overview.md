@@ -117,7 +117,13 @@ vulnerability absence, or consumer rollout safety by itself.
   overflow-safe exact producer relations plus the complete command inventory,
   and binds coverage v2 to the current command-oracle diagnostic through the
   ledger owner's one-read canonical admission, current-owner revalidation, and
-  record, candidate-set, corpus, revision, and source-snapshot digests.
+  record, candidate-set, corpus, revision, and source-snapshot digests. Package
+  builders admit selected public metadata before resetting their one owned
+  output directory, reject static active symlink routes, and preserve outside
+  referents. npm packing disables lifecycle hooks and publishes only captured,
+  digest-matched archives with admitted final metadata after private cleanup;
+  the pack report is committed last. This is not a multi-output transaction or
+  protection against a hostile concurrent workspace writer.
 - `REQ-PROOFKIT-QUALITY-016`: release platform targets use one private owner
   that projects platform suffixes, Go build targets, npm OS/CPU metadata,
   package tar entries, Python wheel tags, PyPI candidate completeness,

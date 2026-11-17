@@ -34,6 +34,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packagearchive"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packagemetadata"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
@@ -445,6 +446,9 @@ func readManifestFromTar(artifact rootPackageArtifact) (packageManifest, error) 
 		return packageManifest{}, fmt.Errorf("package manifest must be an object")
 	}
 	if err := verifyManifestTopLevelKeys(record); err != nil {
+		return packageManifest{}, err
+	}
+	if _, err := packagemetadata.Admit(content); err != nil {
 		return packageManifest{}, err
 	}
 	return admission.DecodeTypedJSON[packageManifest](bytes.NewReader(content), int64(len(content)))

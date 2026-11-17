@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	maxCompressedArchiveBytes = 128 << 20
+	maxCompressedArchiveBytes = packagearchive.MaxCompressedBytes
 	maxExpandedArchiveBytes   = packagearchive.MaxExpandedBytes
 	maxArchiveEntries         = packagearchive.MaxEntries
 )
