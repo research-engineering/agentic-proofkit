@@ -14,7 +14,7 @@ type ContextReferenceField struct {
 
 type contextOperandKey struct{ refID, field string }
 
-func admitContextOperands(contexts []map[string]any, fields []ContextReferenceField, rejected map[string]struct{}, ambiguous map[string]struct{}) ([]map[string]any, map[contextOperandKey]admittedStructuralOperand, int) {
+func admitContextOperands(contexts []map[string]any, fields []ContextReferenceField, rejected map[string]struct{}) ([]map[string]any, map[contextOperandKey]admittedStructuralOperand, int) {
 	declared := map[string]map[string]int{}
 	for _, field := range fields {
 		if declared[field.ContextRefID] == nil {
@@ -78,7 +78,7 @@ func admitContextOperands(contexts []map[string]any, fields []ContextReferenceFi
 		result = append(result, context)
 	}
 	for id := range declared {
-		if !isRejectedIdentity(id, rejected, ambiguous) {
+		if _, covered := rejected[id]; !covered {
 			omitted++
 		}
 	}

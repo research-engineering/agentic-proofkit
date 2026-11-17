@@ -1,14 +1,56 @@
 package projectstructure
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/scaffoldprofileplan"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
+
+func TestScaffoldPersistedGuidanceRetainsLiteralSpecPaths(t *testing.T) {
+	for _, paths := range [][]any{{"docs/specs/p1.json "}, {"docs/specs/p1.json", "docs/specs/p1.json "}} {
+		input := validProjectStructureInput()
+		bootstrap := input["bootstrap"].(map[string]any)
+		bootstrap["module"].(map[string]any)["specPath"] = "docs/specs/p1.json "
+		bootstrap["ownerRoute"].(map[string]any)["specPaths"] = paths
+		result, err := BuildResult(input)
+		if err != nil || result.ExitCode != 0 {
+			t.Fatalf("literal spec paths did not produce a valid scaffold: %v", err)
+		}
+		guidancePath := bootstrap["paths"].(map[string]any)["adoptionGuidancePath"]
+		guidanceCount, specCount := 0, 0
+		for _, raw := range result.Manifest["files"].([]any) {
+			file := raw.(map[string]any)
+			if file["path"] == "docs/specs/p1.json " {
+				specCount++
+			}
+			if file["path"] != guidancePath {
+				continue
+			}
+			guidanceCount++
+			content := []byte(file["content"].(string))
+			decoded, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			guidance := decoded.(map[string]any)
+			if !reflect.DeepEqual(guidance["ownerRoute"].(map[string]any)["specPaths"], paths) {
+				t.Fatal("persisted guidance routes to a different literal spec filename")
+			}
+			if _, exit, err := gradualadoption.BuildGuidance(guidance, gradualadoption.GuidanceOptions{}); err != nil || exit != 0 {
+				t.Fatalf("saved guidance did not remain child-valid: exit=%d error=%v", exit, err)
+			}
+		}
+		if guidanceCount != 1 || specCount != 1 {
+			t.Fatal("the oracle did not identify exactly one saved guidance and literal spec target")
+		}
+	}
+}
 
 func TestScaffoldSnapshotPreservesNativeRefusals(t *testing.T) {
 	type namedObject map[string]any

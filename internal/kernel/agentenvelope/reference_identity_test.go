@@ -96,8 +96,10 @@ func TestBuildOmitsUnsafeTargetsAndReferencesBeforeDisplaySanitization(t *testin
 	action := envelope["actionPlan"].([]any)[0].(map[string]any)
 	assertAnyStrings(t, action["evidenceRefs"], []string{"proofkit.external.safe"})
 	assertAnyStrings(t, action["commandIds"], nil)
-	assertIdentityDegraded(t, envelope, 3, 7)
+	// Three rejected targets and two invalid command edges in other roles.
+	assertIdentityDegraded(t, envelope, 5, 7)
 	assertOmission(t, envelope, "proofkit.agent-envelope.omitted.unsafeLocalIdentity", 3)
+	assertOmission(t, envelope, "proofkit.agent-envelope.omitted.unsafeLocalReference", 2)
 }
 
 func TestBuildCountsStandaloneUnsafeReferenceOmissions(t *testing.T) {

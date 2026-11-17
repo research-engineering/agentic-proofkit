@@ -11365,6 +11365,10 @@
         {
           "selector": "TestReceiptPathRolesSurviveWholeCLIProjectionAndDecision",
           "command": "go test ./internal/app -run '^TestReceiptPathRolesSurviveWholeCLIProjectionAndDecision$'"
+        },
+        {
+          "selector": "TestReceiptProjectionRejectsAsymmetricLiteralLocators",
+          "command": "go test ./internal/app -run '^TestReceiptProjectionRejectsAsymmetricLiteralLocators$'"
         }
       ]
     },
@@ -11469,6 +11473,10 @@
         {
           "selector": "TestRelationalOnlySelectedAdmittedCommandsPrioritizeContexts",
           "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalOnlySelectedAdmittedCommandsPrioritizeContexts$'"
+        },
+        {
+          "selector": "TestRelationalOrphanMetadataCoalescesOnlyWithAmbiguousOwner",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalOrphanMetadataCoalescesOnlyWithAmbiguousOwner$'"
         }
       ],
       "commandIds": [
@@ -11496,6 +11504,10 @@
         {
           "selector": "TestRelationalExternalReferencesRetainPrivacyAndItemBounds",
           "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalExternalReferencesRetainPrivacyAndItemBounds$'"
+        },
+        {
+          "selector": "TestRelationalInvalidCommandEdgeCoalescesOnlyWithRejectedCommand",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalInvalidCommandEdgeCoalescesOnlyWithRejectedCommand$'"
         },
         {
           "selector": "TestRelationalOmissionsCountRecordRolesNotIDSpelling",
@@ -11610,6 +11622,10 @@
           "command": "go test ./internal/command/projectstructure -run '^TestScaffoldChildAdmissionOwnsConsistencyAndPersistenceInputs$'"
         },
         {
+          "selector": "TestScaffoldPersistedGuidanceRetainsLiteralSpecPaths",
+          "command": "go test ./internal/command/projectstructure -run '^TestScaffoldPersistedGuidanceRetainsLiteralSpecPaths$'"
+        },
+        {
           "selector": "TestScaffoldSnapshotPreservesNativeRefusals",
           "command": "go test ./internal/command/projectstructure -run '^TestScaffoldSnapshotPreservesNativeRefusals$'"
         }
@@ -11700,6 +11716,25 @@
         {
           "selector": "TestSelectiveEvidenceIdentitySeparatesArtifactMeaningFromWireVersion",
           "command": "go test ./internal/tools/commandcontractgen -run '^TestSelectiveEvidenceIdentitySeparatesArtifactMeaningFromWireVersion$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "scenarioId": "proofkit.supply-chain-quality.binding-selector-executability",
+      "witnessId": "proofkit.coverage-metrics.required-anchor-supplements",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/coveragemetrics/binding_anchor_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRequiredBindingAnchorWithSupplement",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestRequiredBindingAnchorWithSupplement$'"
         }
       ],
       "commandIds": [

@@ -631,6 +631,20 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 	if err := validateBindingWitnessSelectorsAtRoot(root, bindings); err != nil {
 		t.Fatalf("current binding selectors are invalid: %v", err)
 	}
+	inventory := requiredBindingWitnessInventory()
+	primaryIndex := func(scenarioID string) int {
+		t.Helper()
+		for i, row := range bindings.Bindings {
+			if row.ScenarioID == scenarioID {
+				want, ok := inventory[inventoryKey{row.RequirementID, scenarioID}]
+				if ok && row.WitnessPath == want.witnessPath {
+					return i
+				}
+			}
+		}
+		t.Fatalf("critical binding %s is missing", scenarioID)
+		return -1
+	}
 
 	for _, scenarioID := range []string{
 		"proofkit.spec-proof-core.repository-canonical-contract-identity",
@@ -731,16 +745,7 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.spec-proof-core.project-navigation-version-edge",
 		"proofkit.spec-proof-core.test-inventory-and-coverage-view",
 	} {
-		index := -1
-		for candidate := range bindings.Bindings {
-			if bindings.Bindings[candidate].ScenarioID == scenarioID {
-				index = candidate
-				break
-			}
-		}
-		if index < 0 {
-			t.Fatalf("critical binding %s is missing", scenarioID)
-		}
+		index := primaryIndex(scenarioID)
 		original := append([]witnessSelector(nil), bindings.Bindings[index].WitnessSelectors...)
 		if len(original) < 1 {
 			t.Fatalf("critical binding %s has no removable selector", scenarioID)
@@ -895,23 +900,15 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.spec-proof-core.requirement-browser-one-shot-cleanup",
 		"proofkit.spec-proof-core.test-inventory-and-coverage-view",
 	} {
-		index := -1
-		for candidate := range bindings.Bindings {
-			if bindings.Bindings[candidate].ScenarioID == scenarioID {
-				index = candidate
-				break
-			}
-		}
-		if index < 0 {
-			t.Fatalf("split binding %s is missing", scenarioID)
-		}
+		index := primaryIndex(scenarioID)
 		t.Run(scenarioID+"/relocated-witness-path", func(t *testing.T) {
 			mutated := cloneBindingFile(bindings)
 			mutated.Bindings[index].WitnessPath = "scripts/workflow_package_gate_oracle_test.go"
 			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
-			if err == nil || !strings.Contains(err.Error(), "witness path=") ||
-				!strings.Contains(err.Error(), ", want exact ") {
-				t.Fatalf("relocated witness path error=%v", err)
+			row := bindings.Bindings[index]
+			want := fmt.Sprintf("required independent-falsifier binding is missing: %s/%s (want exact witness path %q)", row.RequirementID, scenarioID, row.WitnessPath)
+			if err == nil || err.Error() != want {
+				t.Fatalf("relocated witness path error=%v, want %q", err, want)
 			}
 		})
 	}

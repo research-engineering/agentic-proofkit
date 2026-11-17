@@ -199,8 +199,12 @@ artifact record rather than publishing a diagnostic replacement as a path.
 Receipt producer, selective evidence, projection and obligation-decision
 adapters preserve canonical path references through path-specific admission,
 including significant whitespace. Prose privacy remains separate. These
-corrections refresh contract digests without inventing a new wire shape;
-canonical references are not evidence of file existence or native execution.
+corrections refresh contract digests without inventing a new wire shape.
+Previously trimmed producer/selective/trust locators can now fail exact linkage;
+align corresponding fields to the intended literal filename, not just a new
+digest, and do not blindly trim significant spaces. Canonical references are
+not evidence of file existence or native execution. Guidance owner-route path
+lists likewise preserve the exact planned filenames in persisted payloads.
 
 Agent-route output semantic v4 separates exact structural references from
 redacted or truncated diagnostic text. Observed-report blockers reference local

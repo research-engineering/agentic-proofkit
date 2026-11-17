@@ -790,7 +790,7 @@ func sortedPaths(raw any, context string) ([]string, error) {
 		}
 		paths = append(paths, path)
 	}
-	return admit.SortedText(paths, context, true)
+	return admit.NormalizeSortedPaths(paths, context, true)
 }
 
 func preserveText(raw any, context string, allowEmpty bool) ([]string, error) {

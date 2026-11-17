@@ -57,13 +57,10 @@ func prepareLocalReferences(input Input) preparedLocalReferences {
 		receipts: localIdentityCounts(prepared.receiptRefs, "receiptRefId"),
 	}
 	ambiguous := ambiguousLocalIdentities(multiplicity)
-	for identity := range ambiguous {
-		rejectedTargets.all[identity] = struct{}{}
-	}
-	prepared.commands = removeAmbiguousTargets(prepared.commands, "commandId", ambiguous)
-	prepared.contextRefs = removeAmbiguousTargets(prepared.contextRefs, "refId", ambiguous)
-	prepared.receiptRefs = removeAmbiguousTargets(prepared.receiptRefs, "receiptRefId", ambiguous)
-	admitStructuralOperands(&prepared, rejectedTargets, ambiguous, input.OperandBindings, input.ContextReferenceFields, input.Renderer, input.CommandDisplayField, input.CallerDisplayFallbackCommandIDs)
+	prepared.commands = removeAmbiguousTargets(prepared.commands, "commandId", ambiguous, rejectedTargets.commands)
+	prepared.contextRefs = removeAmbiguousTargets(prepared.contextRefs, "refId", ambiguous, rejectedTargets.contexts)
+	prepared.receiptRefs = removeAmbiguousTargets(prepared.receiptRefs, "receiptRefId", ambiguous, rejectedTargets.receipts)
+	admitStructuralOperands(&prepared, rejectedTargets, input.OperandBindings, input.ContextReferenceFields, input.Renderer, input.CommandDisplayField, input.CallerDisplayFallbackCommandIDs)
 	for _, domain := range []map[string]struct{}{rejectedTargets.commands, rejectedTargets.contexts, rejectedTargets.receipts} {
 		for identity := range domain {
 			rejectedTargets.all[identity] = struct{}{}
@@ -79,7 +76,7 @@ func prepareLocalReferences(input Input) preparedLocalReferences {
 		prepared.identityDegraded = true
 	}
 
-	uniqueTargets := collectLocalReferenceTargets(prepared.commands, prepared.contextRefs, prepared.receiptRefs)
+	commandTargets := idSet(prepared.commands, "commandId")
 	standaloneReferenceOmissions := 0
 	for _, records := range []*[]map[string]any{
 		&prepared.actionPlan,
@@ -91,7 +88,7 @@ func prepareLocalReferences(input Input) preparedLocalReferences {
 		&prepared.contextRefs,
 		&prepared.receiptRefs,
 	} {
-		admission := admitRecordLocalReferences(*records, uniqueTargets, rejectedTargets.all, ambiguous)
+		admission := admitRecordLocalReferences(*records, commandTargets, rejectedTargets)
 		*records = admission.values
 		prepared.removedReferenceCount += admission.removedCount
 		standaloneReferenceOmissions += admission.standaloneOmissions
@@ -165,11 +162,13 @@ func ambiguousLocalIdentities(multiplicity localIdentityMultiplicity) map[string
 	return result
 }
 
-func removeAmbiguousTargets(values []map[string]any, key string, ambiguous map[string]struct{}) []map[string]any {
+func removeAmbiguousTargets(values []map[string]any, key string, ambiguous, rejectedInRole map[string]struct{}) []map[string]any {
 	result := make([]map[string]any, 0, len(values))
 	for _, value := range values {
 		identity, _ := losslessLocalIdentity(value[key])
 		if _, found := ambiguous[identity]; found {
+			// Ambiguity is global, but covers typed losses only in roles actually removed.
+			rejectedInRole[identity] = struct{}{}
 			continue
 		}
 		result = append(result, value)
@@ -177,7 +176,7 @@ func removeAmbiguousTargets(values []map[string]any, key string, ambiguous map[s
 	return result
 }
 
-func admitRecordLocalReferences(values []map[string]any, targets localReferenceTargets, rejected map[string]struct{}, ambiguous map[string]struct{}) localReferenceAdmission {
+func admitRecordLocalReferences(values []map[string]any, commandTargets map[string]struct{}, rejected localReferenceTargets) localReferenceAdmission {
 	admission := localReferenceAdmission{}
 	result := make([]map[string]any, len(values))
 	for index, value := range values {
@@ -189,17 +188,12 @@ func admitRecordLocalReferences(values []map[string]any, targets localReferenceT
 				if !ok {
 					admission.removedCount++
 					admission.identityDegraded = true
-					if identity, isText := item.(string); !isText || !isRejectedIdentity(identity, rejected, ambiguous) {
+					if !isRejectedIdentity(item, rejected.all) {
 						admission.standaloneOmissions++
 					}
 					continue
 				}
-				if _, found := rejected[identity]; found {
-					admission.removedCount++
-					admission.identityDegraded = true
-					continue
-				}
-				if _, found := ambiguous[identity]; found {
+				if _, found := rejected.all[identity]; found {
 					admission.removedCount++
 					admission.identityDegraded = true
 					continue
@@ -215,17 +209,12 @@ func admitRecordLocalReferences(values []map[string]any, targets localReferenceT
 				if !ok {
 					admission.removedCount++
 					admission.identityDegraded = true
-					if identity, isText := item.(string); !isText || !isRejectedIdentity(identity, rejected, ambiguous) {
+					if !isRejectedIdentity(item, rejected.commands) {
 						admission.standaloneOmissions++
 					}
 					continue
 				}
-				if _, found := ambiguous[identity]; found {
-					admission.removedCount++
-					admission.identityDegraded = true
-					continue
-				}
-				if _, found := targets.commands[identity]; !found {
+				if _, found := commandTargets[identity]; !found {
 					admission.removedCount++
 					continue
 				}
@@ -239,12 +228,10 @@ func admitRecordLocalReferences(values []map[string]any, targets localReferenceT
 	return admission
 }
 
-func isRejectedIdentity(identity string, rejected map[string]struct{}, ambiguous map[string]struct{}) bool {
-	if _, found := rejected[identity]; found {
-		return true
-	}
-	_, found := ambiguous[identity]
-	return found
+func isRejectedIdentity(raw any, rejected map[string]struct{}) bool {
+	identity, isText := raw.(string)
+	_, found := rejected[identity]
+	return isText && found
 }
 
 func referenceItems(raw any) []any {

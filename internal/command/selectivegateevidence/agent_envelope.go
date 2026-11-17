@@ -83,7 +83,7 @@ func AgentEnvelope(result Result) map[string]any {
 			"maxActionItems":  2,
 			"maxCommandRefs":  len(commands),
 			"maxContextRefs":  len(contextRefs),
-			"maxOmittedItems": len(omitted),
+			"maxOmittedItems": agentenvelope.MaxOmittedItems,
 			"maxReceiptRefs":  len(receiptRefs),
 			"maxTokenBudget":  nil,
 			"nonClaim":        "Bounds describe emitted item counts only and do not prove tokenizer-specific budget or proof completeness.",

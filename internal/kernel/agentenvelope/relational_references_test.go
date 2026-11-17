@@ -104,6 +104,61 @@ func TestRelationalOmissionsCountRecordRolesNotIDSpelling(t *testing.T) {
 	}
 }
 
+// Keep an unrelated valid command and an external reference in each packet.
+func roleAccountingInput(t *testing.T, role string, targetIDs ...string) Input {
+	t.Helper()
+	input := referenceIdentityInput([]map[string]any{{"commandId": "retained"}}, nil, nil, []any{"external"})
+	input.ActionPlan[0]["commandIds"] = []any{"retained"}
+	for _, id := range targetIDs {
+		switch role {
+		case "command":
+			input.Commands = append(input.Commands, map[string]any{"commandId": id})
+		case "context":
+			input.ContextRefs = append(input.ContextRefs, map[string]any{"refId": id})
+		case "receipt":
+			input.ReceiptRefs = append(input.ReceiptRefs, map[string]any{"receiptRefId": id})
+		default:
+			t.Fatalf("unknown target role %q", role)
+		}
+	}
+	return input
+}
+
+func TestRelationalInvalidCommandEdgeCoalescesOnlyWithRejectedCommand(t *testing.T) {
+	target := strings.Repeat("x", 257)
+	for _, role := range []string{"command", "context", "receipt"} {
+		for _, same := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/same=%t", role, same), func(t *testing.T) {
+				input := roleAccountingInput(t, role, target)
+				edge := strings.Repeat("y", 257)
+				if same {
+					edge = target
+				}
+				input.ActionPlan[0]["commandIds"] = []any{edge, "retained"}
+				packet := Build(input)
+				action := packet["actionPlan"].([]any)[0].(map[string]any)
+				assertAnyStrings(t, action["commandIds"], []string{"retained"})
+				assertAnyStrings(t, action["evidenceRefs"], []string{"external"})
+				assertOmission(t, packet, "proofkit.agent-envelope.omitted.unsafeLocalIdentity", 1)
+				want := 2
+				if same && role == "command" {
+					want = 1
+				}
+				assertIdentityDegraded(t, packet, want, 1)
+				if want == 2 {
+					assertOmission(t, packet, "proofkit.agent-envelope.omitted.unsafeLocalReference", 1)
+				}
+				if packet["sourceReport"].(map[string]any)["state"] != "passed" {
+					t.Error("omission changed the source report state")
+				}
+				if packet["costContract"].(map[string]any)["stopReason"] != "wide_or_full_gate_required" {
+					t.Error("degraded references did not require escalation")
+				}
+			})
+		}
+	}
+}
+
 func TestRelationalOmissionsKeepIdentityAndMetadataCoalescing(t *testing.T) {
 	id := strings.Repeat("a", 257)
 	if _, admitted := losslessLocalIdentity(id); admitted {

@@ -19,6 +19,35 @@ func relationalOperandInput() Input {
 	return input
 }
 
+func TestRelationalOrphanMetadataCoalescesOnlyWithAmbiguousOwner(t *testing.T) {
+	for _, target := range []string{"command", "context", "receipt"} {
+		for _, owner := range []string{"command", "context"} {
+			for _, id := range []string{"shared", "renamed"} {
+				t.Run(target+"/"+owner+"/"+id, func(t *testing.T) {
+					input := roleAccountingInput(t, target, "shared", "shared")
+					if owner == "command" {
+						input.OperandBindings = []OperandBinding{{CommandID: id}, {CommandID: id}}
+						input.CallerDisplayFallbackCommandIDs = []string{id, id}
+					} else {
+						input.ContextReferenceFields = []ContextReferenceField{{ContextRefID: id, Field: "path"}, {ContextRefID: id, Field: "path"}}
+					}
+					packet := Build(input)
+					assertLocalIdentityAbsent(t, packet, "shared")
+					assertOmission(t, packet, "proofkit.agent-envelope.omitted.ambiguousLocalIdentity", 1)
+					want := 2
+					if owner == target && id == "shared" {
+						want = 1
+					}
+					assertIdentityDegraded(t, packet, want, 0)
+					if want == 2 {
+						assertOmission(t, packet, "proofkit.agent-envelope.omitted.unsafeStructuralOperand", 1)
+					}
+				})
+			}
+		}
+	}
+}
+
 func TestRelationalLateValidationUsesPreparedBindingFacts(t *testing.T) {
 	for _, mutation := range []string{"command", "context", "index", "field"} {
 		t.Run(mutation, func(t *testing.T) {

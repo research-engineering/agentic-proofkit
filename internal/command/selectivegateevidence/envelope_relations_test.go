@@ -171,8 +171,8 @@ func TestEnvelopeFullTupleIdentityAndJoin(t *testing.T) {
 }
 
 func TestEnvelopeCandidateConservationBeforeCommandFiltering(t *testing.T) {
-	for _, count := range []int{24, 25} {
-		for _, mode := range []string{"missing", "mixed", "duplicate_artifacts"} {
+	for _, count := range []int{12, 13, 24, 25} {
+		for _, mode := range []string{"missing", "mixed", "blocked", "duplicate_artifacts"} {
 			t.Run(fmt.Sprintf("%d/%s", count, mode), func(t *testing.T) {
 				input := relationalInput()
 				commands, receipts := []any{plannedCommand()}, []any{}
@@ -188,6 +188,8 @@ func TestEnvelopeCandidateConservationBeforeCommandFiltering(t *testing.T) {
 					status := "missing"
 					if mode == "mixed" {
 						status = []string{"missing", "failed", "not_run", "blocked"}[index%4]
+					} else if mode == "blocked" {
+						status = "blocked"
 					} else if mode == "duplicate_artifacts" && index == count-1 {
 						status = "failed"
 					}
@@ -207,6 +209,15 @@ func TestEnvelopeCandidateConservationBeforeCommandFiltering(t *testing.T) {
 				receiptOmissions := relationalOmitted(envelope, "proofkit.agent.omission.selective-evidence-receipts")
 				if count != len(retainedCommands)+commandOmissions || candidateReceipts != len(retainedReceipts)+receiptOmissions {
 					t.Fatalf("class conservation failed: commands %d != %d+%d; receipts %d != %d+%d", count, len(retainedCommands), commandOmissions, candidateReceipts, len(retainedReceipts), receiptOmissions)
+				}
+				if mode == "blocked" {
+					blocked := len(relationalRecords(envelope, "blockedPreconditions"))
+					if count != blocked+relationalOmitted(envelope, "proofkit.agent-envelope.omitted.blockedPrecondition") {
+						t.Fatal("blocker loss was merged with a different omission class")
+					}
+					if envelope["costContract"].(map[string]any)["boundsViolationCount"] != 0 {
+						t.Fatal("the producer declared insufficient capacity for downstream omission classes")
+					}
 				}
 				ids := map[any]bool{}
 				for _, command := range retainedCommands {

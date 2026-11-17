@@ -19,10 +19,10 @@ type OperandBinding struct {
 // once; arbitrary caller text still follows scalar redaction.
 type admittedStructuralOperand string
 
-func admitStructuralOperands(prepared *preparedLocalReferences, rejected localReferenceTargets, ambiguous map[string]struct{}, bindings []OperandBinding, fields []ContextReferenceField, renderer cliexec.Renderer, displayField string, callerCommandIDs []string) {
+func admitStructuralOperands(prepared *preparedLocalReferences, rejected localReferenceTargets, bindings []OperandBinding, fields []ContextReferenceField, renderer cliexec.Renderer, displayField string, callerCommandIDs []string) {
 	fallbacks, orphanCommands := prepareCallerDisplayFallbacks(prepared.commands, callerCommandIDs, displayField)
 	prepared.callerDisplayFallbacks = fallbacks
-	contexts, paths, omitted := admitContextOperands(prepared.contextRefs, fields, rejected.contexts, ambiguous)
+	contexts, paths, omitted := admitContextOperands(prepared.contextRefs, fields, rejected.contexts)
 	prepared.contextRefs = contexts
 	prepared.operandContexts = map[string][]string{}
 	byCommand := map[string][]OperandBinding{}
@@ -61,7 +61,7 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected localRe
 		orphanCommands[id] = struct{}{}
 	}
 	for id := range orphanCommands {
-		if !isRejectedIdentity(id, rejected.commands, ambiguous) {
+		if _, covered := rejected.commands[id]; !covered {
 			omitted++
 		}
 	}

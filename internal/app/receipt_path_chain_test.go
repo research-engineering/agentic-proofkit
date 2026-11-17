@@ -115,6 +115,29 @@ func TestReceiptArtifactProjectionRejectsOneSidedPathSubstitution(t *testing.T) 
 	}
 }
 
+func TestReceiptProjectionRejectsAsymmetricLiteralLocators(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join(repoRoot(t), "internal", "app", "testdata", "receipt-path-chain.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ field, refusal string }{
+		{"evidenceRef", "producer receipt evidenceRef does not match planned receipt"},
+		{"provenanceRef", "receipt trust-class provenanceRef mismatch"},
+	} {
+		t.Run(tc.field, func(t *testing.T) {
+			input := invocationProfileObject(t, invocationProfileJSON(t, string(source)))
+			receipt := input["evidence"].(map[string]any)["producerAdmission"].(map[string]any)["receipts"].([]any)[0].(map[string]any)
+			receipt[tc.field] = receipt[tc.field].(string) + " "
+			var stdout, stderr bytes.Buffer
+			status := RunWithRenderer(t.Context(), []string{"selective-gate-obligation-decision-input", "--input", "-"},
+				strings.NewReader(invocationProfileEncode(t, input)), &stdout, &stderr, cliexec.PathRenderer())
+			if status != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), tc.refusal) {
+				t.Fatalf("asymmetric literal %s did not refuse its exact join", tc.field)
+			}
+		})
+	}
+}
+
 func receiptPathCLISuccess(t *testing.T, command string, input []byte) []byte {
 	t.Helper()
 	var stdout, stderr bytes.Buffer
