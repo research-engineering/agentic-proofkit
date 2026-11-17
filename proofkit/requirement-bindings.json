@@ -4066,8 +4066,8 @@
           "command": "go test ./scripts -run '^TestPackageScriptConsumersRejectShadowedSource$'"
         },
         {
-          "selector": "TestPackageScriptsSelectExactNPMObject",
-          "command": "go test ./scripts -run '^TestPackageScriptsSelectExactNPMObject$'"
+          "selector": "TestNamedTestVerdictRequiresTheExactParent",
+          "command": "go test ./scripts -run '^TestNamedTestVerdictRequiresTheExactParent$'"
         }
       ],
       "commandIds": [
@@ -4076,6 +4076,21 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-013",
+      "scenarioId": "proofkit.supply-chain-quality.workflow-package-gate-oracle",
+      "witnessId": "proofkit.workflow.package-script-selection",
+      "witnessKind": "contract",
+      "witnessPath": "internal/testsupport/npmmanifest/scripts_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestScriptsSelectExactNPMObject",
+          "command": "go test ./internal/testsupport/npmmanifest -run '^TestScriptsSelectExactNPMObject$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-013",
@@ -6198,6 +6213,21 @@
         {
           "selector": "TestMatrixRecordAdmitsOnlyAPassedRecordOfItsFamily",
           "command": "go test ./internal/tools/browserproofverify -run '^TestMatrixRecordAdmitsOnlyAPassedRecordOfItsFamily$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-028",
+      "scenarioId": "proofkit.supply-chain-quality.accessibility-matrix-record",
+      "witnessId": "proofkit.browser.script-owner-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/browserproofverify/script_owners_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBrowserScriptReadersRejectShadowedSource",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestBrowserScriptReadersRejectShadowedSource$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

@@ -221,7 +221,7 @@ func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.ci.exact-script-owner", Summary: "Use one test-owned reader for the exact lowercase scripts object across five workflow-oracle consumers, preserving whole-object last-value selection rather than case folding or map merging. Independent literal fixtures and bounded executions of the actual root/static collector test entrypoints reject case-shadowed no-op scripts; isolated legacy reader restorations fail the new assertions. Existing command-body and native Python lifecycle guards remain separate and unchanged. Production Go, workflow execution and public command/JSON semantics are unchanged; --version reports the new package version."},
+	{ChangeID: "proofkit.ci.exact-script-owner", Summary: "Use one internal test-support reader for the exact lowercase scripts object across workflow and browser-evidence oracles, preserving final whole-object and command-value selection rather than case folding or map merging. Independent literal fixtures and bounded executions of the actual root, static collector, visual and accessibility-matrix test entrypoints reject case-shadowed no-op scripts. Exact parent verdicts exclude skipped or descendant tests. Existing command-body and lifecycle guards remain separate and unchanged. Production Go, workflow execution and public command/JSON semantics are unchanged; --version reports the new package version."},
 }
 
 var currentMigrationSteps = []string{}

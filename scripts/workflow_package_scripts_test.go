@@ -9,32 +9,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
+	"strings"
 	"testing"
 	"time"
-)
 
-// Select the same case-sensitive, whole-object property as npm's JSON reader.
-// Command bodies and lifecycle policy belong to the individual gate owners.
-func packageScriptsFromJSON(raw []byte) (map[string]string, error) {
-	var manifest map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return nil, fmt.Errorf("package manifest must be a JSON object")
-	}
-	var values map[string]any
-	if err := json.Unmarshal(manifest["scripts"], &values); err != nil || values == nil {
-		return nil, fmt.Errorf("package manifest must contain the exact scripts object")
-	}
-	scripts := make(map[string]string, len(values))
-	for name, value := range values {
-		command, ok := value.(string)
-		if !ok {
-			return nil, fmt.Errorf("package scripts must contain only string commands")
-		}
-		scripts[name] = command
-	}
-	return scripts, nil
-}
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/npmmanifest"
+)
 
 func readPackageScriptsForTest(t *testing.T) map[string]string {
 	t.Helper()
@@ -42,43 +22,36 @@ func readPackageScriptsForTest(t *testing.T) map[string]string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	scripts, err := packageScriptsFromJSON(raw)
+	scripts, err := npmmanifest.Scripts(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return scripts
 }
 
-func TestPackageScriptsSelectExactNPMObject(t *testing.T) {
-	cases := []struct {
-		name string
-		raw  string
-		want map[string]string
-	}{
-		{"canonical", `{"scripts":{"check":"owned check"}}`, map[string]string{"check": "owned check"}},
-		{"later case variant", `{"scripts":{"check":"true"},"Scripts":{"check":"owned check"}}`, map[string]string{"check": "true"}},
-		{"earlier case variant", `{"Scripts":{"check":"owned check"},"scripts":{"check":"true"}}`, map[string]string{"check": "true"}},
-		{"whole last object", `{"scripts":{"check":"old check","old":"old only"},"scripts":{"check":"new check","new":"new only"}}`, map[string]string{"check": "new check", "new": "new only"}},
-		{"empty last object", `{"scripts":{"check":"old check"},"scripts":{}}`, map[string]string{}},
-		{"explicit empty command", `{"scripts":{"postpython:verify":""}}`, map[string]string{"postpython:verify": ""}},
+func namedTestVerdict(output []byte, verdict, name string) bool {
+	for line := range strings.SplitSeq(string(output), "\n") {
+		if strings.HasPrefix(line, "--- "+verdict+": "+name+" (") && strings.HasSuffix(line, "s)") {
+			return true
+		}
 	}
-	for _, item := range cases {
-		t.Run(item.name, func(t *testing.T) {
-			got, err := packageScriptsFromJSON([]byte(item.raw))
-			if err != nil || !reflect.DeepEqual(got, item.want) {
-				t.Fatalf("selected scripts=%v error=%v, want %v", got, err, item.want)
+	return false
+}
+
+func TestNamedTestVerdictRequiresTheExactParent(t *testing.T) {
+	for _, verdict := range []string{"PASS", "FAIL"} {
+		if !namedTestVerdict([]byte("--- "+verdict+": TestOwner (0.00s)\n"), verdict, "TestOwner") {
+			t.Fatal("exact parent verdict was not observed")
+		}
+		for _, output := range []string{
+			"--- SKIP: TestOwner (0.00s)\n    --- " + verdict + ": TestOwner/control (0.00s)\n",
+			"--- " + verdict + ": TestOwnerSuffix (0.00s)\n",
+			"    --- " + verdict + ": TestOwner (0.00s)\n",
+			"testing: warning: no tests to run\nPASS\n",
+		} {
+			if namedTestVerdict([]byte(output), verdict, "TestOwner") {
+				t.Fatal("another or skipped test supplied the named parent verdict")
 			}
-		})
-	}
-	for _, raw := range []string{
-		`{`, `null`, `[]`, `{}`, `{"Scripts":{"check":"owned check"}}`,
-		`{"scripts":null}`, `{"scripts":[]}`, `{"scripts":"check"}`,
-		`{"scripts":{"check":null}}`, `{"scripts":{"check":false}}`,
-		`{"scripts":{"check":0}}`, `{"scripts":{"check":{}}}`,
-		`{"scripts":{"check":[]}}`,
-	} {
-		if got, err := packageScriptsFromJSON([]byte(raw)); err == nil || got != nil {
-			t.Fatal("malformed or non-string script owner was admitted")
 		}
 	}
 }
@@ -138,14 +111,14 @@ func TestPackageScriptConsumersRejectShadowedSource(t *testing.T) {
 					t.Fatal("script-owner child exceeded its execution bound")
 				}
 				if !counterfeit {
-					if runErr != nil || !bytes.Contains(output, []byte("--- PASS: "+target.name)) {
+					if runErr != nil || !namedTestVerdict(output, "PASS", target.name) {
 						t.Fatal("canonical script owner did not execute its named oracle successfully")
 					}
 					return
 				}
 				var exit *exec.ExitError
 				if !errors.As(runErr, &exit) || exit.ExitCode() != 1 ||
-					!bytes.Contains(output, []byte("--- FAIL: "+target.name)) || !bytes.Contains(output, []byte(target.failure)) {
+					!namedTestVerdict(output, "FAIL", target.name) || !bytes.Contains(output, []byte(target.failure)) {
 					t.Fatal("case-shadowed script owner did not fail its actual command assertion")
 				}
 			})

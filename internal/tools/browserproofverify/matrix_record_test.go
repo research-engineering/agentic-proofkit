@@ -13,6 +13,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/npmmanifest"
 )
 
 func matrixKind(t *testing.T, family string) proofKind {
@@ -418,10 +419,8 @@ func TestBrowserMatrixScriptsAreSeparateFromThePackageGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var manifest struct {
-		Scripts map[string]string `json:"scripts"`
-	}
-	if err := json.Unmarshal(raw, &manifest); err != nil {
+	scripts, err := npmmanifest.Scripts(raw)
+	if err != nil {
 		t.Fatal(err)
 	}
 	want := map[string]string{
@@ -430,11 +429,11 @@ func TestBrowserMatrixScriptsAreSeparateFromThePackageGate(t *testing.T) {
 		"browser:matrix:workspace": "go run ./internal/tools/browserproofverify --manifest scripts/browser-matrix-workspace-proof-inputs.v1.json --run",
 	}
 	for name, script := range want {
-		if manifest.Scripts[name] != script {
-			t.Fatalf("%s = %q, want %q", name, manifest.Scripts[name], script)
+		if scripts[name] != script {
+			t.Fatalf("%s = %q, want %q", name, scripts[name], script)
 		}
 	}
-	for name, script := range manifest.Scripts {
+	for name, script := range scripts {
 		if _, owned := want[name]; owned {
 			continue
 		}
@@ -444,7 +443,7 @@ func TestBrowserMatrixScriptsAreSeparateFromThePackageGate(t *testing.T) {
 	}
 	for name := range want {
 		for _, hook := range []string{"pre" + name, "post" + name} {
-			if _, exists := manifest.Scripts[hook]; exists {
+			if _, exists := scripts[hook]; exists {
 				t.Fatalf("%s must not have lifecycle hook %q", name, hook)
 			}
 		}

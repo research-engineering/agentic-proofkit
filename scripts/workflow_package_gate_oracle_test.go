@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/npmmanifest"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -1867,7 +1868,7 @@ func readPackageManifestForTest(t *testing.T) []byte {
 }
 
 func validatePlatformSmokeOwnerScript(raw []byte) error {
-	scripts, err := packageScriptsFromJSON(raw)
+	scripts, err := npmmanifest.Scripts(raw)
 	if err != nil {
 		return err
 	}
