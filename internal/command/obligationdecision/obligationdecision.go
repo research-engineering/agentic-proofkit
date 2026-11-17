@@ -363,15 +363,7 @@ func stateRank(state string) int {
 }
 
 func sortedPaths(values []string, context string) ([]string, error) {
-	paths := make([]string, 0, len(values))
-	for _, value := range values {
-		pathValue, err := admit.SafeRepoRelativePath(value, context)
-		if err != nil {
-			return nil, err
-		}
-		paths = append(paths, pathValue)
-	}
-	return sortedText(paths, context, false)
+	return admit.NormalizeSortedPaths(values, context, false)
 }
 
 func textArray(raw any, context string, allowEmpty bool) ([]string, error) {

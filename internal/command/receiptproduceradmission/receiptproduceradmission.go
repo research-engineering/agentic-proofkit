@@ -582,9 +582,9 @@ func vocabularyValue(raw any, vocabulary []string, context string) (string, erro
 }
 
 func pathField(raw any, context string) (string, error) {
-	value, err := admit.NonEmptyText(raw, context)
-	if err != nil {
-		return "", err
+	value, ok := raw.(string)
+	if !ok {
+		return "", fmt.Errorf("%s must be a repository-relative POSIX path", context)
 	}
 	return admit.SafeRepoRelativePath(value, context)
 }

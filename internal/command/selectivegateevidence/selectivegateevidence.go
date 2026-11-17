@@ -580,19 +580,7 @@ func sortedUniqueText(values []string) []string {
 }
 
 func sortedPathsFromAny(raw any, context string, allowEmpty bool) ([]string, error) {
-	values, err := admit.TextArray(raw, context, allowEmpty)
-	if err != nil {
-		return nil, err
-	}
-	result := []string{}
-	for _, value := range values {
-		path, err := admit.SafeRepoRelativePath(value, context)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, path)
-	}
-	return admit.NormalizeSortedPaths(result, context, allowEmpty)
+	return admit.NormalizeSortedPathArray(raw, context, allowEmpty)
 }
 
 func uniqueSortedPaths(values []string, context string) ([]string, error) {
