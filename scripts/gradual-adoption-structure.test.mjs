@@ -459,10 +459,10 @@ function outputArrayRange(command, index, path) {
     if (name === 'diagnostics.0.value.agentActionPlan') return [4, 5];
   }
   if (command === 'gradual-adoption-bootstrap') {
-    if (index === 1) return {files: [6, 6], nextCommands: [3, 3]}[name];
-    const exact = {agentActionPlan: [3, 3], nextCommands: [3, 3], plannedFiles: [6, 6],
+    if (index === 1) return {files: [6, 6], nextCommands: [0, 3]}[name];
+    const exact = {agentActionPlan: [3, 3], nextCommands: [0, 3], plannedFiles: [6, 6],
       'report.diagnostics': [4, 4], 'report.diagnostics.0.value': [3, 3],
-      'report.diagnostics.1.value': [3, 3], 'report.diagnostics.2.value': [6, 6],
+      'report.diagnostics.1.value': [0, 3], 'report.diagnostics.2.value': [6, 6],
       'payloads.adoptionGuidance.sourceReport.diagnostics': [6, 6]};
     if (exact[name]) return exact[name];
     if (/^(report|payloads\.adoptionGuidance\.sourceReport)\.ruleResults\.\d+\.diagnostics$/.test(name)) return [0, 0];
@@ -869,6 +869,96 @@ test('caller/generated intersections preserve the prefix without duplicate instr
       invoke('gradual-adoption-bootstrap', {...bootstrap(), commands: ['agentic-proofkit witness-scheduler-plan --input proofkit/witness.json']}, 'passed', flags, 0, launcher.env);
       invoke('gradual-adoption-bootstrap', {...bootstrap(), commands: ['go test ./...', 'go test ./...']}, 'failed', flags, 0, launcher.env);
     }
+  }
+});
+
+test('collected prepared-path failures emit zero to three real commands in every bootstrap carrier', () => {
+  const fields = ['adoptionProfilePath', 'adoptionGuidancePath', 'witnessPlanInputPath'];
+  const operations = ['gradual-adoption', 'gradual-adoption-guidance', 'witness-plan'];
+  for (let mask = 0; mask < 8; mask++) {
+    const input = bootstrap();
+    const expected = [];
+    for (const [index, field] of fields.entries()) {
+      if (mask & 1 << index) expected.push(`agentic-proofkit ${operations[index]} --input ${input.paths[field]}`);
+      else delete input.paths[field];
+    }
+    const phase = mask === 7 ? 'passed' : 'failed';
+    for (const wrapped of [false, true]) {
+      const value = wrapped ? envelope() : input;
+      if (wrapped) value.bootstrap.paths = input.paths;
+      const flags = wrapped ? ['--contract-envelope'] : [];
+      const report = invoke('gradual-adoption-bootstrap', value, phase, flags, wrapped ? 1 : 0);
+      assert.deepEqual(report.nextCommands, expected);
+      assert.deepEqual(report.report.diagnostics.find(row => row.key === 'nextCommands').value, expected);
+      const manifest = invoke('gradual-adoption-bootstrap', value, phase, [...flags, '--materialization-manifest'], wrapped ? 1 : 0);
+      assert.deepEqual(manifest.nextCommands, expected);
+      const fourth = ['first', 'second', 'third', 'fourth'];
+      schema('gradual-adoption-bootstrap', 'output', 0, {...report, nextCommands: fourth}, false, 'four-root-commands');
+      schema('gradual-adoption-bootstrap', 'output', 0,
+        replace(report, ['report', 'diagnostics', 1, 'value'], fourth), false, 'four-diagnostic-commands');
+      schema('gradual-adoption-bootstrap', 'output', 1, {...manifest, nextCommands: fourth}, false, 'four-manifest-commands');
+    }
+  }
+});
+
+test('prepared command construction collects unsafe Unicode before display or argv projection', () => {
+  const slots = [
+    ['gradual-adoption', 'adoptionProfilePath'],
+    ['gradual-adoption-guidance', 'adoptionGuidancePath'],
+    ['witness-plan', 'witnessPlanInputPath'],
+  ];
+  for (const scalar of ['\u202e', '\u2066', '\u200b', '\u0085', '\u2028', '\u2029', '\n']) {
+    const path = `inputs/unsafe${scalar}path.json`;
+    for (const [operation, field] of slots) {
+      const direct = guidance(); direct.agentGuidance.proofkitCommands = {[operation]: path};
+      const report = invoke('gradual-adoption-guidance', direct, 'failed');
+      assert.deepEqual(report.diagnostics.find(row => row.key === 'guidance').value.commands, []);
+      const agent = invoke('gradual-adoption-guidance', direct, 'failed', ['--agent-envelope']);
+      assert.equal(agent.commands.some(row => 'argv' in row), false);
+      const input = bootstrap(); input.paths[field] = path;
+      const ordinary = invoke('gradual-adoption-bootstrap', input, 'failed');
+      assert.equal(ordinary.nextCommands.length, 2);
+      assert.equal(operation in ordinary.payloads.adoptionGuidance.agentGuidance.proofkitCommands, false);
+      assert.equal(ordinary.nextCommands.some(command => command.includes(scalar)), false);
+      const manifest = invoke('gradual-adoption-bootstrap', input, 'failed', ['--materialization-manifest']);
+      assert.deepEqual(manifest.nextCommands, ordinary.nextCommands);
+    }
+  }
+  for (const path of ['inputs/file.json ', "inputs/quoted'file.json", 'inputs/task-validation.json', 'inputs/caf\u00e9.json', ' - ']) {
+    const input = guidance(); input.agentGuidance.proofkitCommands = {'witness-plan': path};
+    const agent = invoke('gradual-adoption-guidance', input, 'passed', ['--agent-envelope']);
+    assert.deepEqual(agent.commands.filter(row => row.argv).map(row => row.argv), [['agentic-proofkit', 'witness-plan', '--input', path]]);
+    const child = bootstrap(); child.paths.witnessPlanInputPath = path;
+    if (path === 'inputs/task-validation.json') invoke('gradual-adoption-bootstrap', child, 'refused');
+    else {
+      const result = invoke('gradual-adoption-bootstrap', child);
+      assert.equal(result.payloads.adoptionGuidance.agentGuidance.proofkitCommands['witness-plan'], path);
+    }
+  }
+  const strict = guidance();
+  strict.agentGuidance.commands = ['go test --input inputs/task-validation.json'];
+  strict.agentGuidance.proofkitCommands = {'witness-plan': 'inputs/task-validation.json'};
+  invoke('gradual-adoption-guidance', strict, 'failed');
+});
+
+test('safe path leaves cannot acquire protected final display signatures through quoting', () => {
+  const slots = [
+    ['gradual-adoption', 'adoptionProfilePath'],
+    ['gradual-adoption-guidance', 'adoptionGuidancePath'],
+    ['witness-plan', 'witnessPlanInputPath'],
+  ];
+  const control = guidance(); control.agentGuidance.proofkitCommands = {'witness-plan': 'inputs/authorization:'};
+  invoke('gradual-adoption-guidance', control);
+  for (const [operation, field] of slots) {
+    const path = 'inputs/a b/authorization:';
+    const input = guidance(); input.agentGuidance.proofkitCommands = {[operation]: path};
+    const report = invoke('gradual-adoption-guidance', input, 'failed');
+    assert.deepEqual(report.diagnostics.find(row => row.key === 'guidance').value.commands, []);
+    const agent = invoke('gradual-adoption-guidance', input, 'failed', ['--agent-envelope']);
+    assert.deepEqual(agent.commands, []);
+    const child = bootstrap(); child.paths[field] = path;
+    // The existing whole-source privacy boundary rejects this bootstrap sooner.
+    invoke('gradual-adoption-bootstrap', child, 'refused');
   }
 });
 

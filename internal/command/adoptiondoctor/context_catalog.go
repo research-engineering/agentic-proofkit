@@ -13,12 +13,13 @@ const (
 )
 
 type contextCatalog struct {
+	doctorID string
 	refs     []map[string]any
 	byOrigin map[inputRecordOrigin][]string
 }
 
 func newContextCatalog(input Input) contextCatalog {
-	catalog := contextCatalog{refs: []map[string]any{}, byOrigin: map[inputRecordOrigin][]string{}}
+	catalog := contextCatalog{doctorID: input.DoctorID, refs: []map[string]any{}, byOrigin: map[inputRecordOrigin][]string{}}
 	for _, route := range input.OwnerRoutes {
 		origin := inputRecordOrigin{recordKindOwnerRoute, route.RouteID}
 		catalog.add(origin, route.Owner, contextRoleSpecPath, route.SpecPaths)
@@ -49,6 +50,10 @@ func newContextCatalog(input Input) contextCatalog {
 func (catalog *contextCatalog) add(origin inputRecordOrigin, owner, role string, paths []string) {
 	for _, path := range paths {
 		id := fmt.Sprintf("%s.%s.context.%03d", origin.kind, origin.id, len(catalog.byOrigin[origin])+1)
+		if id == catalog.doctorID {
+			// Ordinary IDs end in a numeric ordinal, so this cannot alias one.
+			id += ".local"
+		}
 		catalog.refs = append(catalog.refs, map[string]any{
 			"kind": origin.kind, "role": role, "sourceId": origin.id,
 			"nonClaim": "Context refs are caller-owned selectors only; they do not prove freshness, semantic correctness, or execution authority.",

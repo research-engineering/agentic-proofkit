@@ -771,8 +771,8 @@ func nativeStructures() []nativeStructure {
 			{id: "03-invalid-input-envelope", when: "--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.scaffold-project-structure.input.v2.json-schema", direction: "input", semanticVersion: 2,
-		predecessors: []string{"proofkit.scaffold-project-structure.input.v1.root-shape"}, commands: []string{"scaffold-project-structure"},
+		id: "proofkit.scaffold-project-structure.input.v3.json-schema", direction: "input", semanticVersion: 3,
+		predecessors: []string{"proofkit.scaffold-project-structure.input.v1.root-shape", "proofkit.scaffold-project-structure.input.v2.root-shape", "proofkit.scaffold-project-structure.input.v2.json-schema"}, commands: []string{"scaffold-project-structure"},
 		schema: func() (map[string]any, error) { return projectstructure.InputStructure(), nil },
 	}, {
 		id: "proofkit.scaffold-project-structure.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2,
@@ -954,7 +954,7 @@ func nativeStructures() []nativeStructure {
 		},
 	}, {
 		id: "proofkit.adoption-contract-envelope.input.v4.json-schema", direction: "input", aggregateVersion: "2", semanticVersion: 4,
-		predecessors: []string{"proofkit.adoption-contract-envelope.input.v3.root-shape", "proofkit.adoption-contract-envelope.input.v3.json-schema"}, commands: []string{"adoption-contract-envelope"},
+		predecessors: []string{"proofkit.adoption-contract-envelope.input.v2.root-shape", "proofkit.adoption-contract-envelope.input.v3.root-shape", "proofkit.adoption-contract-envelope.input.v3.json-schema"}, commands: []string{"adoption-contract-envelope"},
 		variants: adoptionContractInputVariants(),
 	}, {
 		id: "proofkit.adoption-contract-envelope.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2, conditionModel: "cli_flag_conjunction_v1",

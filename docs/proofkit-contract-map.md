@@ -154,6 +154,12 @@ not a satisfied input bundle. Supplying one entire bundle resolves that blocker;
 it does not resolve unrelated blockers or approve the supplied content.
 Prepared scaffold and bootstrap input paths also refuse `-`; ordinary output
 filenames are not subject to that input-role restriction.
+Bootstrap input uses semantic v2 and scaffold input semantic v3, both with wire
+schemaVersion 1. Scaffold-owned input paths are normalized; child-owned bootstrap
+references preserve their exact admitted paths. Materialization rejects both
+equal file paths and file/descendant conflicts. Child roles come from their
+owner, not filenames, and executable input bindings require the expected
+materialization source, JSON content and available-payload status.
 
 Generated gradual-adoption guidance is portable source data. Its optional
 `agentGuidance.proofkitCommands` maps the closed operations `gradual-adoption`,
@@ -164,6 +170,10 @@ launcher or Python interpreter. The guidance input/output and bootstrap output
 contracts use semantic v2; the delegating aggregate input uses semantic v4.
 Their wire headers are unchanged. Invalid optional guidance values retain the
 existing collected-failure behavior rather than creating executable routes.
+If bounds remove a generated command's required context, its argv is omitted.
+An independently admitted caller command with the same display may remain under
+the same local ID as scalar diagnostic text, without argv; text equality alone
+does not confer caller provenance or a structural role.
 
 Agent-route output semantic v4 separates exact structural references from
 redacted or truncated diagnostic text. Observed-report blockers reference local

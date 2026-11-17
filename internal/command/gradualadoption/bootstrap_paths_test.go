@@ -66,6 +66,22 @@ func TestBootstrapMaterializedPathsAreUniqueAcrossOutputModes(t *testing.T) {
 		"paths.adoptionGuidancePath", "paths.adoptionProfilePath", "paths.witnessPlanInputPath",
 		"proofBindingPath", "module.specPath", "repository.profilePath",
 	}
+	pairs := []struct {
+		name, left, right string
+		collision         bool
+	}{
+		{"distinct", "inputs/shared.json", "inputs/distinct.json", false},
+		{"equal", "inputs/shared.json", "inputs/shared.json", true},
+		{"ancestor", "inputs/guide", "inputs/guide/witness.json", true},
+		{"descendant", "inputs/guide/witness.json", "inputs/guide", true},
+		{"component boundary", "inputs/guide", "inputs/guidebook/witness.json", false},
+		{"case sensitive", "inputs/Guide", "inputs/guide/witness.json", false},
+		{"exact space ancestor", "inputs/guide ", "inputs/guide /witness.json", true},
+		{"distinct space component", "inputs/guide", "inputs/guide /witness.json", false},
+		{"untrimmed parent", "inputs/guide ", "inputs/guide/witness.json", false},
+		{"literal glob", "inputs/*", "inputs/guide/witness.json", false},
+		{"long ancestor", strings.Repeat("segment/", 150) + "guide", strings.Repeat("segment/", 150) + "guide/witness.json", true},
+	}
 	builders := []struct {
 		name  string
 		build func(any) (map[string]any, int, error)
@@ -83,24 +99,20 @@ func TestBootstrapMaterializedPathsAreUniqueAcrossOutputModes(t *testing.T) {
 			for left := range fields {
 				for right := left + 1; right < len(fields); right++ {
 					t.Run(fields[left]+"/"+fields[right], func(t *testing.T) {
-						for _, collision := range []bool{false, true} {
+						for _, pair := range pairs {
 							input := validBootstrapInput()
-							setBootstrapFilePath(input, fields[left], "inputs/shared.json")
-							other := "inputs/distinct.json"
-							if collision {
-								other = "inputs/shared.json"
-							}
-							setBootstrapFilePath(input, fields[right], other)
+							setBootstrapFilePath(input, fields[left], pair.left)
+							setBootstrapFilePath(input, fields[right], pair.right)
 							if builder.wrap {
 								input = bootstrapContractInput(input)
 							}
 							output, code, err := builder.build(input)
 							if err != nil {
-								t.Fatalf("collision=%t changed collected-failure phase: %v", collision, err)
+								t.Fatalf("%s changed collected-failure phase: %v", pair.name, err)
 							}
 							state := "passed"
 							wantCode := 0
-							if collision {
+							if pair.collision {
 								state, wantCode = "failed", 1
 							}
 							record, ok := output["report"].(map[string]any)
@@ -108,7 +120,7 @@ func TestBootstrapMaterializedPathsAreUniqueAcrossOutputModes(t *testing.T) {
 								record = output["sourceReport"].(map[string]any)
 							}
 							if code != wantCode || record["state"] != state {
-								t.Fatalf("collision=%t: exit=%d state=%v, want %d %s", collision, code, record["state"], wantCode, state)
+								t.Fatalf("%s: exit=%d state=%v, want %d %s", pair.name, code, record["state"], wantCode, state)
 							}
 						}
 					})
@@ -119,21 +131,37 @@ func TestBootstrapMaterializedPathsAreUniqueAcrossOutputModes(t *testing.T) {
 }
 
 func TestBootstrapPathCollisionCollectsOtherFailures(t *testing.T) {
+	for _, descendant := range []bool{false, true} {
+		input := validBootstrapInput()
+		paths := input["paths"].(map[string]any)
+		paths["adoptionGuidancePath"] = paths["witnessPlanInputPath"]
+		if descendant {
+			paths["witnessPlanInputPath"] = paths["adoptionGuidancePath"].(string) + "/witness.json"
+		}
+		input["guidanceMode"] = "warn"
+		result, err := BuildBootstrapResult(input)
+		if err != nil || result.ExitCode != 1 || result.Record.State != "failed" {
+			t.Fatalf("collision must retain collected failure report: exit=%d err=%v", result.ExitCode, err)
+		}
+		for _, message := range []string{"bootstrap planned file paths must be unique", "bootstrap guidanceMode must be observe"} {
+			found := false
+			for _, rule := range result.Record.RuleResults {
+				found = found || strings.Contains(rule.Message, message)
+			}
+			if !found {
+				t.Fatalf("missing collected failure %q: %#v", message, result.Record.RuleResults)
+			}
+		}
+	}
 	input := validBootstrapInput()
-	paths := input["paths"].(map[string]any)
-	paths["adoptionGuidancePath"] = paths["witnessPlanInputPath"]
-	input["guidanceMode"] = "warn"
+	input["paths"] = map[string]any{}
 	result, err := BuildBootstrapResult(input)
 	if err != nil || result.ExitCode != 1 || result.Record.State != "failed" {
-		t.Fatalf("collision must retain collected failure report: exit=%d err=%v", result.ExitCode, err)
+		t.Fatal("empty paths changed their existing collected failure phase")
 	}
-	for _, message := range []string{"bootstrap planned file paths must be unique", "bootstrap guidanceMode must be observe"} {
-		found := false
-		for _, rule := range result.Record.RuleResults {
-			found = found || strings.Contains(rule.Message, message)
-		}
-		if !found {
-			t.Fatalf("missing collected failure %q: %#v", message, result.Record.RuleResults)
+	for _, rule := range result.Record.RuleResults {
+		if strings.Contains(rule.Message, "non-overlapping") {
+			t.Fatal("empty prior-invalid paths acquired an overlap obligation")
 		}
 	}
 }

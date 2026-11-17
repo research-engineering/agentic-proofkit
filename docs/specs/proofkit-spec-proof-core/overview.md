@@ -179,11 +179,13 @@ execution receipts, and merge policy.
   selected owner boundary without migrating current sources, exposing a new
   public CLI, proving open-world absence of undeclared equivalent parsers, or
   claiming that no future owner-approved grammar can be added.
-- `REQ-PROOFKIT-SPEC-026`: agent-route v3 emits a deterministic 3072-byte
+- `REQ-PROOFKIT-SPEC-026`: agent-route output contract v4 retains report v3
+  and brief v1, emitting a deterministic 3072-byte
   brief packet by default with one canonical action or typed blockers, exact
   omission accounting, stable source-report identity, one top-level detail
-  access record, and explicit full-envelope retrieval without repeating policy
-  prose or promoting route guidance to authority.
+  access record. Full envelopes preserve exact admitted command operands and
+  observed-report references through local IDs, with explicit omission when
+  their context is unavailable, without promoting route guidance to authority.
 - `REQ-PROOFKIT-SPEC-027`: the read-only `adopt plan` front door validates its
   explicit trust intent, optional stack hint, repository root, and platform
   before access, then composes only owner-admitted inventory and plan records.

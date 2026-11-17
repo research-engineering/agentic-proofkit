@@ -202,6 +202,184 @@ func TestDoctorContextCatalogDoesNotMutateCallerSliceCapacity(t *testing.T) {
 	}
 }
 
+func TestDoctorContextCatalogReservesSourceReportIdentity(t *testing.T) {
+	for _, item := range []struct {
+		name, doctorID string
+		gaps           bool
+	}{
+		{"source_and_route_gaps", "owner_route.r.context.001", true},
+		{"no_gaps", "owner_route.r.context.001", false},
+		{"second_local_identity", "owner_route.r.context.002", true},
+		{"ordinary_gaps", "consumer.adoption-doctor", true},
+		{"ordinary_no_gaps", "consumer.adoption-doctor", false},
+		{"source_ends_in_local", "owner_route.r.context.001.local", true},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			input := doctorSourceCollisionInput("r", item.doctorID, item.gaps)
+			envelope, code := wireDoctorEnvelope(t, input)
+			if code != 0 || len(envelope["omitted"].([]any)) != 0 || envelope["bounds"].(map[string]any)["fanout"] != "bounded" {
+				t.Fatalf("source/local collision was refused or silently degraded: code=%d bounds=%v omitted=%v", code, envelope["bounds"], envelope["omitted"])
+			}
+			assertDoctorReferenceClosure(t, envelope, item.doctorID)
+			if envelope["sourceReport"].(map[string]any)["reportId"] != item.doctorID {
+				t.Fatal("source report identity was renamed instead of reserving it")
+			}
+			wantPaths := []string{"docs/a", "proofkit/requirement-bindings.json"}
+			wantRoles := []string{contextRoleSpecPath, contextRoleProofBinding}
+			if !item.gaps {
+				wantPaths = append(wantPaths, "internal/command/adoptiondoctor/adoptiondoctor_test.go")
+				wantRoles = append(wantRoles, contextRoleNativeWitness)
+			}
+			wantIDs := []any{}
+			for index := range wantPaths {
+				id := fmt.Sprintf("owner_route.r.context.%03d", index+1)
+				if id == item.doctorID {
+					id += ".local"
+				}
+				wantIDs = append(wantIDs, id)
+			}
+			contexts := envelope["contextRefs"].([]any)
+			if len(contexts) != len(wantPaths) {
+				t.Fatalf("context count=%d want %d", len(contexts), len(wantPaths))
+			}
+			for index, raw := range contexts {
+				ref := raw.(map[string]any)
+				if ref["refId"] != wantIDs[index] || ref["kind"] != recordKindOwnerRoute || ref["sourceId"] != "r" || ref["role"] != wantRoles[index] || ref["path"] != wantPaths[index] || ref["owner"] != "consumer.repository" {
+					t.Fatalf("local context identity, origin, role or path changed: %#v", ref)
+				}
+			}
+			if item.gaps {
+				if len(envelope["actionPlan"].([]any)) != 2 {
+					t.Fatal("fixture must exercise exactly the source and native-witness gaps")
+				}
+				sourceAction := findAction(t, envelope["actionPlan"].([]any), "proofkit.adoption-doctor."+item.doctorID+".missing-touched-owner-route")
+				routeAction := findAction(t, envelope["actionPlan"].([]any), "proofkit.adoption-doctor.r.missing_native_witness")
+				if !reflect.DeepEqual(sourceAction["evidenceRefs"], []any{item.doctorID}) || !reflect.DeepEqual(routeAction["evidenceRefs"], wantIDs) {
+					t.Fatalf("source and local gap meanings were aliased: source=%v route=%v", sourceAction["evidenceRefs"], routeAction["evidenceRefs"])
+				}
+			} else {
+				if len(envelope["actionPlan"].([]any)) != 1 {
+					t.Fatal("no-gap fixture must retain its single source-report action")
+				}
+				action := findAction(t, envelope["actionPlan"].([]any), noGapsRuleID)
+				if !reflect.DeepEqual(action["evidenceRefs"], []any{item.doctorID}) {
+					t.Fatal("no-gap action lost its original source-report reference")
+				}
+			}
+			for _, raw := range envelope["routeQuestions"].([]any) {
+				if !reflect.DeepEqual(raw.(map[string]any)["evidenceRefs"], []any{item.doctorID}) {
+					t.Fatal("source-report question was rebound to a local context")
+				}
+			}
+		})
+	}
+}
+
+func TestDoctorSourceReportCollisionDegradesBeyondLocalIdentityLimit(t *testing.T) {
+	for _, item := range []struct {
+		name      string
+		length    int
+		collision bool
+		degraded  bool
+	}{
+		{"suffix_at_limit", admit.MaxRuleIDBytes - len(".local"), true, false},
+		{"suffix_exceeds_by_one", admit.MaxRuleIDBytes - len(".local") + 1, true, true},
+		{"normal_id_at_limit", admit.MaxRuleIDBytes, true, true},
+		{"ordinary_id_at_limit", admit.MaxRuleIDBytes, false, false},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			routeID := strings.Repeat("r", item.length-len("owner_route..context.001"))
+			ordinaryID := "owner_route." + routeID + ".context.001"
+			doctorID := "consumer.adoption-doctor"
+			if item.collision {
+				doctorID = ordinaryID
+			}
+			envelope, code := wireDoctorEnvelope(t, doctorSourceCollisionInput(routeID, doctorID, true))
+			if code != 0 || envelope["sourceReport"].(map[string]any)["reportId"] != doctorID {
+				t.Fatal("length-bound projection changed the source report or advisory outcome")
+			}
+			assertDoctorReferenceClosure(t, envelope, doctorID)
+			sourceAction := findAction(t, envelope["actionPlan"].([]any), "proofkit.adoption-doctor."+doctorID+".missing-touched-owner-route")
+			routeAction := findAction(t, envelope["actionPlan"].([]any), "proofkit.adoption-doctor."+routeID+".missing_native_witness")
+			if !reflect.DeepEqual(sourceAction["evidenceRefs"], []any{doctorID}) {
+				t.Fatal("source-report reference was pruned with the overlong local identity")
+			}
+			wantIDs := []any{"owner_route." + routeID + ".context.002"}
+			if !item.degraded {
+				id := ordinaryID
+				if item.collision {
+					id += ".local"
+				}
+				wantIDs = append([]any{id}, wantIDs...)
+			}
+			if !reflect.DeepEqual(routeAction["evidenceRefs"], wantIDs) {
+				t.Fatalf("route evidence aliased the source, used a fallback, or retained an invalid identity: got=%v want=%v", routeAction["evidenceRefs"], wantIDs)
+			}
+			contexts := envelope["contextRefs"].([]any)
+			if len(contexts) != len(wantIDs) {
+				t.Fatalf("retained contexts=%d want %d", len(contexts), len(wantIDs))
+			}
+			for index, raw := range contexts {
+				if raw.(map[string]any)["refId"] != wantIDs[index] {
+					t.Fatalf("unexpected retained context: %#v", raw)
+				}
+			}
+			bounds := envelope["bounds"].(map[string]any)
+			cost := envelope["costContract"].(map[string]any)
+			omitted := envelope["omitted"].([]any)
+			if item.degraded {
+				pruned, ok := cost["prunedLocalReferenceCount"].(json.Number)
+				count, err := pruned.Int64()
+				if !ok || err != nil || count <= 0 || len(omitted) == 0 || bounds["fanout"] != "wide_or_full_gate_required" || cost["referenceClosurePreserved"] != false {
+					t.Fatalf("overlong collision did not explicitly degrade and prune: bounds=%v cost=%v omitted=%v", bounds, cost, omitted)
+				}
+				found := false
+				for _, raw := range omitted {
+					found = found || raw.(map[string]any)["omittedKind"] == "unsafeLocalIdentity"
+				}
+				if !found {
+					t.Fatal("identity-bound failure has no explicit unsafe-local-identity omission")
+				}
+			} else if len(omitted) != 0 || bounds["fanout"] != "bounded" || cost["referenceClosurePreserved"] != true {
+				t.Fatalf("legal local identity was degraded: bounds=%v cost=%v omitted=%v", bounds, cost, omitted)
+			}
+		})
+	}
+}
+
+func TestDoctorContextCatalogPreservesInputAndNativeReport(t *testing.T) {
+	result, err := BuildResult(decodeInput(t, doctorSourceCollisionInput("r", "owner_route.r.context.001", true)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	nativeJSON := func() string {
+		encoded, err := json.Marshal(map[string]any{"input": result.Input, "report": result.Record.JSONValue()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(encoded)
+	}
+	before, gaps := nativeJSON(), slices.Clone(result.Gaps)
+	AgentEnvelope(result)
+	if after := nativeJSON(); after != before || !reflect.DeepEqual(result.Gaps, gaps) {
+		t.Fatal("local identity reservation mutated input, gap origins, or native report JSON")
+	}
+	if strings.Contains(before, "owner_route.r.context.001.local") {
+		t.Fatal("local envelope identity leaked into native report or input")
+	}
+}
+
+func doctorSourceCollisionInput(routeID, doctorID string, gaps bool) map[string]any {
+	input := completeInput()
+	input["doctorId"], input["childReports"] = doctorID, []any{}
+	route := input["ownerRoutes"].([]any)[0].(map[string]any)
+	route["routeId"], route["specPaths"] = routeID, []any{"docs/a"}
+	if gaps {
+		route["touchedRuleIds"], route["nativeWitnessRefs"] = []any{}, []any{}
+	}
+	return input
+}
+
 func TestDoctorGapReferenceClosureAfterBoundsAndIdentityOmission(t *testing.T) {
 	for _, name := range []string{"context_bounds", "evidence_bounds", "action_bounds", "unsafe_context_identity"} {
 		t.Run(name, func(t *testing.T) {
@@ -282,6 +460,9 @@ func assertDoctorReferenceClosure(t *testing.T, envelope map[string]any, doctorI
 	contexts := map[string]bool{}
 	for _, raw := range envelope["contextRefs"].([]any) {
 		id := raw.(map[string]any)["refId"].(string)
+		if id == doctorID {
+			t.Fatalf("local context aliases the source report identity: %s", id)
+		}
 		if contexts[id] {
 			t.Fatalf("duplicate retained context identity: %s", id)
 		}

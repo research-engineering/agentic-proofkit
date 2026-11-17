@@ -1751,6 +1751,25 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.generated-command-field-inventory",
+      "witnessId": "proofkit.guidance.invocation-portability",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/guidance_invocation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceInvocationPortableSourceCLIReadmission",
+          "command": "go test ./internal/app -run '^TestGuidanceInvocationPortableSourceCLIReadmission$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
       "scenarioId": "proofkit.package-boundary.generated-command-caller-preservation",
       "witnessId": "proofkit.generated-command.caller-preservation",
       "witnessKind": "contract",
@@ -1759,6 +1778,25 @@
         {
           "selector": "TestBootstrapPreservesCallerDisplayCommandInGuidancePayload",
           "command": "go test ./internal/command/gradualadoption -run '^TestBootstrapPreservesCallerDisplayCommandInGuidancePayload$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.generated-command-caller-preservation",
+      "witnessId": "proofkit.guidance.command-origin-preservation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/gradualadoption/guidance_provenance_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceSharedDisplayRetainsIndependentCallerOrigin",
+          "command": "go test ./internal/command/gradualadoption -run '^TestGuidanceSharedDisplayRetainsIndependentCallerOrigin$'"
         }
       ],
       "commandIds": [

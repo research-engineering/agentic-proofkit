@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"path/filepath"
 	"reflect"
@@ -12,6 +13,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/pilotadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 )
 
 type adoptionEnvelopeOwner struct {
@@ -39,7 +41,7 @@ func adoptionEnvelopeOwners() []adoptionEnvelopeOwner {
 	}
 	return []adoptionEnvelopeOwner{{
 		id: "proofkit.adoption-contract-envelope.input.v4.json-schema", command: "adoption-contract-envelope", wire: "2",
-		contractID: "proofkit.adoption-contract-envelope.input.v4", rootType: "object", predecessors: []string{"proofkit.adoption-contract-envelope.input.v3.root-shape", "proofkit.adoption-contract-envelope.input.v3.json-schema"},
+		contractID: "proofkit.adoption-contract-envelope.input.v4", rootType: "object", predecessors: []string{"proofkit.adoption-contract-envelope.input.v2.root-shape", "proofkit.adoption-contract-envelope.input.v3.root-shape", "proofkit.adoption-contract-envelope.input.v3.json-schema"},
 		variants: map[string]func() map[string]any{
 			"01-adoption": adoptioncontract.AdoptionInputStructure, "02-bootstrap": adoptioncontract.BootstrapInputStructure,
 			"03-guidance-000": guidance(false, false, false), "04-guidance-001": guidance(true, false, false),
@@ -153,6 +155,41 @@ func TestAdoptionEnvelopeOwnersConserveIdentityAndBindExactVariants(t *testing.T
 				t.Fatalf("%s variant %s has root kind %v", expected.id, id, variant["rootKind"])
 			}
 		}
+	}
+}
+
+func TestAggregateInputRetainsHistoricalRootShapeRetirement(t *testing.T) {
+	const retired = "proofkit.adoption-contract-envelope.input.v2.root-shape"
+	contract := readFixtureContract(t, filepath.Join("..", "..", ".."))
+	positive, err := admitDefinitions(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := admitNativeStructureConsumers(contract, positive); err != nil {
+		t.Fatalf("current-contract positive control: %v", err)
+	}
+	definitions := append([]any{}, contract["contractDefinitions"].([]any)...)
+	definitions = append(definitions, structuralFixtureDefinition(retired))
+	slices.SortFunc(definitions, func(a, b any) int {
+		return strings.Compare(a.(map[string]any)["definitionId"].(string), b.(map[string]any)["definitionId"].(string))
+	})
+	contract["contractDefinitions"] = definitions
+	refreshDefinitionDigests(contract)
+	content, err := canonicalJSON(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutant := value.(map[string]any)
+	admitted, err := admitDefinitions(mutant)
+	if err != nil {
+		t.Fatalf("legacy root must pass generic definition admission before the retirement owner: %v", err)
+	}
+	if err := admitNativeStructureConsumers(mutant, admitted); err == nil || !strings.Contains(err.Error(), "obsolete native structure "+retired+" remains") {
+		t.Fatalf("reintroduced historical root did not reach its exact retirement guard: %v", err)
 	}
 }
 

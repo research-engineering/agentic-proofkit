@@ -35,7 +35,7 @@ func BootstrapOutputStructure() map[string]any {
 	guidance := bootstrapGuidanceStructure()
 	fields := map[string]any{
 		"agentActionPlan": jsonshape.Tuple(actionPlanShape(), actionPlanShape(), actionPlanShape()).JSONSchema(),
-		"exitCode":        jsonshape.IntegerRange(0, 1).JSONSchema(), "nextCommands": jsonshape.Tuple(jsonshape.String(), jsonshape.String(), jsonshape.String()).JSONSchema(),
+		"exitCode":        jsonshape.IntegerRange(0, 1).JSONSchema(), "nextCommands": bootstrapNextCommandsShape().JSONSchema(),
 		"payloads": structureObject([]string{"adoptionGuidance", "adoptionProfile", "proofBinding", "witnessPlanInput"}, map[string]any{
 			"adoptionGuidance": guidance, "adoptionProfile": profile,
 			"proofBinding": shapeFields(map[string]jsonshape.Shape{
@@ -109,7 +109,7 @@ func BootstrapMaterializationStructure() map[string]any {
 	return outputDescription(shapeFields(map[string]jsonshape.Shape{
 		"fileCount": jsonshape.IntegerLiteral(6), "files": jsonshape.BoundedArray(jsonshape.DiscriminatedUnion("contentKind", file(true), file(false)), 6, 6),
 		"manifestId": t, "manifestKind": jsonshape.StringLiteral("proofkit.gradual-adoption-bootstrap-materialization-manifest"),
-		"nextCommands": jsonshape.Tuple(t, t, t), "nonClaims": a, "payloadFileCount": jsonshape.IntegerLiteral(4),
+		"nextCommands": bootstrapNextCommandsShape(), "nonClaims": a, "payloadFileCount": jsonshape.IntegerLiteral(4),
 		"schemaVersion": jsonshape.IntegerLiteral(1),
 		"sourceReport": shapeFields(map[string]jsonshape.Shape{
 			"nonClaim": t, "reportId": t, "reportKind": jsonshape.StringLiteral("proofkit.gradual-adoption-bootstrap"),
@@ -130,7 +130,7 @@ func bootstrapReportShape() jsonshape.Shape {
 	})
 	diagnostics := jsonshape.Tuple(
 		report.DiagnosticStructure("agentActionPlan", jsonshape.Tuple(actionPlanShape(), actionPlanShape(), actionPlanShape())),
-		report.DiagnosticStructure("nextCommands", jsonshape.Tuple(t, t, t)),
+		report.DiagnosticStructure("nextCommands", bootstrapNextCommandsShape()),
 		report.DiagnosticStructure("plannedFiles", jsonshape.BoundedArray(file, 6, 6)),
 		report.DiagnosticStructure("sourceReports", shapeFields(map[string]jsonshape.Shape{
 			"adoptionGuidanceState": statesShape("passed", "failed", "blocked"), "adoptionProfileState": statesShape("passed", "failed"),
@@ -138,4 +138,8 @@ func bootstrapReportShape() jsonshape.Shape {
 	)
 	return report.Structure(1, "proofkit.gradual-adoption-bootstrap", statesShape("passed", "failed"), summary, diagnostics,
 		jsonshape.Array(report.RuleStructure(t, statesShape("passed", "failed"), t, jsonshape.Tuple()), 1))
+}
+
+func bootstrapNextCommandsShape() jsonshape.Shape {
+	return jsonshape.BoundedArray(jsonshape.String(), 0, 3)
 }

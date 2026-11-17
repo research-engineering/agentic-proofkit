@@ -31,22 +31,23 @@ var baseNonClaims = []string{
 }
 
 type Input struct {
-	ActionPlan             []map[string]any
-	BlockedPreconditions   []map[string]any
-	Bounds                 map[string]any
-	ClarificationQuestion  []map[string]any
-	Commands               []map[string]any
-	CommandDisplayField    string // Empty, command or display; derived only from admitted argv.
-	ContextRefs            []map[string]any
-	ContextReferenceFields []ContextReferenceField
-	EnvelopeID             string
-	NonClaims              []string
-	Omitted                []map[string]any
-	OperandBindings        []OperandBinding
-	ReceiptRefs            []map[string]any
-	Renderer               cliexec.Renderer
-	RouteQuestions         []map[string]any
-	SourceReport           map[string]any
+	ActionPlan                      []map[string]any
+	BlockedPreconditions            []map[string]any
+	Bounds                          map[string]any
+	ClarificationQuestion           []map[string]any
+	Commands                        []map[string]any
+	CommandDisplayField             string   // Empty, command or display; derived only from admitted argv.
+	CallerDisplayFallbackCommandIDs []string // Independently admitted caller origins, not wire flags.
+	ContextRefs                     []map[string]any
+	ContextReferenceFields          []ContextReferenceField
+	EnvelopeID                      string
+	NonClaims                       []string
+	Omitted                         []map[string]any
+	OperandBindings                 []OperandBinding
+	ReceiptRefs                     []map[string]any
+	Renderer                        cliexec.Renderer
+	RouteQuestions                  []map[string]any
+	SourceReport                    map[string]any
 }
 
 func Build(input Input) map[string]any {
@@ -91,7 +92,7 @@ func Build(input Input) map[string]any {
 	contextRefs, omitted, truncated = limitListPrioritized(contextRefs, "contextRef", "refId", "maxContextRefs", hardMaxContextRefs, priorities.contexts, omitted, bounds, truncated)
 	receiptRefs, omitted, truncated = limitListPrioritized(receiptRefs, "receiptRef", "receiptRefId", "maxReceiptRefs", hardMaxReceiptRefs, priorities.receipts, omitted, bounds, truncated)
 	var missingOperandContexts int
-	commands, missingOperandContexts = commandsWithRetainedOperandContexts(commands, contextRefs, input.OperandBindings)
+	commands, missingOperandContexts = commandsWithRetainedOperandContexts(commands, contextRefs, input.OperandBindings, prepared.callerDisplayFallbacks)
 	if missingOperandContexts > 0 {
 		omitted = append(omitted, omissionRecord("unavailableOperandContext", "commands", missingOperandContexts))
 		truncated = true

@@ -21,6 +21,7 @@ type materializationInput struct {
 	adoptionWorkflowInput map[string]any
 	bootstrapInput        map[string]any
 	bootstrapManifest     map[string]any
+	bootstrapProfilePath  string
 	paths                 projectPathSet
 	repoProfileInput      map[string]any
 	repoProfilePlan       map[string]any
@@ -86,7 +87,7 @@ func buildMaterializationManifest(input materializationInput) (map[string]any, e
 	profilePath := stringValue(input.repoProfilePlan["profilePath"])
 	for _, rawFile := range anyArray(input.bootstrapManifest["files"]) {
 		file := mapValue(rawFile)
-		if stringValue(file["path"]) == profilePath {
+		if stringValue(file["path"]) == profilePath && profilePath == input.bootstrapProfilePath {
 			profilePayload, err := payloadFile(
 				stringValue(file["path"]),
 				"caller-reviewed repository profile draft",
@@ -240,6 +241,11 @@ func assertUniquePaths(files []map[string]any) error {
 		if _, ok := seen[path]; ok {
 			return fmt.Errorf("project structure scaffold file paths must be sorted and unique")
 		}
+		for previous := range seen {
+			if admit.RepoFilePathsOverlap(previous, path) {
+				return fmt.Errorf("project structure scaffold file paths must not conflict as files and directories")
+			}
+		}
 		seen[path] = struct{}{}
 	}
 	return nil
@@ -251,23 +257,4 @@ func projectStructureFilePurpose(file map[string]any) string {
 		hashSuffix = " Content hash: " + hash + "."
 	}
 	return fmt.Sprintf("%s; materialization status %s.%s", file["purpose"], file["materializationStatus"], hashSuffix)
-}
-
-func projectStructureFileRole(file map[string]any) string {
-	filePath := stringValue(file["path"])
-	purpose := stringValue(file["purpose"])
-	switch {
-	case strings.Contains(filePath, "requirement-proof") || strings.Contains(purpose, "proof binding"):
-		return "proof_binding"
-	case strings.Contains(filePath, "witness") || strings.Contains(filePath, "workflow") || strings.Contains(purpose, "workflow"):
-		return "command_registry"
-	case strings.Contains(filePath, "spec") || strings.Contains(purpose, "spec"):
-		return "spec_source"
-	case strings.Contains(filePath, "profile") || strings.Contains(purpose, "repository profile"):
-		return "owner_surface"
-	case strings.Contains(filePath, "adoption-guidance"):
-		return "router"
-	default:
-		return "supporting"
-	}
 }

@@ -13,7 +13,7 @@ import (
 )
 
 // The wire version stays 1; the delegated bootstrap safety boundary changes.
-const InputContractID = "proofkit.scaffold-project-structure.input.v2"
+const InputContractID = "proofkit.scaffold-project-structure.input.v3"
 
 const reportKind = "proofkit.project-structure-scaffold"
 
@@ -44,6 +44,7 @@ type Result struct {
 	RepoProfile           scaffoldprofileplan.Result
 	commands              []preparedCommand
 	renderer              cliexec.Renderer
+	fileRoles             map[string]string
 }
 
 func Build(raw any) (map[string]any, int, error) {
@@ -144,6 +145,7 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 		adoptionWorkflowInput: workflowInput,
 		bootstrapInput:        bootstrapInput,
 		bootstrapManifest:     bootstrapManifest,
+		bootstrapProfilePath:  bootstrap.RepositoryProfilePath(),
 		paths:                 paths,
 		repoProfileInput:      repoProfileInput,
 		repoProfilePlan:       repoProfile.Plan,
@@ -181,6 +183,10 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 		RuleResults: ruleResults(failures),
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
+	roles := bootstrap.MaterializationFileRoles()
+	roles[paths.repoProfileScaffoldInputPath] = "owner_surface"
+	roles[paths.bootstrapInputPath] = "router"
+	roles[paths.workflowInputPath] = "command_registry"
 	return Result{
 		AdoptionWorkflowInput: workflowInput,
 		AdoptionWorkflowPlan:  adoptionWorkflow.Plan,
@@ -191,6 +197,7 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 		RepoProfile:           repoProfile,
 		commands:              commands,
 		renderer:              renderer,
+		fileRoles:             roles,
 	}, nil
 }
 

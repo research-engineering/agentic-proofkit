@@ -19,7 +19,9 @@ type OperandBinding struct {
 // once; arbitrary caller text still follows scalar redaction.
 type admittedStructuralOperand string
 
-func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[string]struct{}, bindings []OperandBinding, fields []ContextReferenceField, renderer cliexec.Renderer, displayField string) {
+func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[string]struct{}, bindings []OperandBinding, fields []ContextReferenceField, renderer cliexec.Renderer, displayField string, callerCommandIDs []string) {
+	fallbacks, orphanCommands := prepareCallerDisplayFallbacks(prepared.commands, callerCommandIDs, displayField)
+	prepared.callerDisplayFallbacks = fallbacks
 	contexts, paths, omitted := admitContextOperands(prepared.contextRefs, fields, rejected)
 	prepared.contextRefs = contexts
 	byCommand := map[string][]OperandBinding{}
@@ -37,7 +39,11 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[str
 		argv, ok := admitStructuralArgv(value, byCommand[id], paths, renderer)
 		delete(byCommand, id)
 		if !ok || !projectCommandDisplay(command, argv, displayField) {
-			rejected[id] = struct{}{}
+			if fallback, exists := fallbacks[id]; exists {
+				commands = append(commands, fallback)
+			} else {
+				rejected[id] = struct{}{}
+			}
 			omitted++
 			continue
 		}
@@ -46,6 +52,9 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[str
 	}
 	prepared.commands = commands
 	for id := range byCommand {
+		orphanCommands[id] = struct{}{}
+	}
+	for id := range orphanCommands {
 		if _, alreadyCounted := rejected[id]; !alreadyCounted {
 			omitted++
 		}
@@ -152,7 +161,7 @@ func admitStructuralArgv(raw any, bindings []OperandBinding, paths map[contextOp
 	return result, true
 }
 
-func commandsWithRetainedOperandContexts(commands []map[string]any, contexts []map[string]any, bindings []OperandBinding) ([]map[string]any, int) {
+func commandsWithRetainedOperandContexts(commands []map[string]any, contexts []map[string]any, bindings []OperandBinding, fallbacks map[string]map[string]any) ([]map[string]any, int) {
 	retained := idSet(contexts, "refId")
 	missing := map[string]struct{}{}
 	for _, binding := range bindings {
@@ -163,8 +172,15 @@ func commandsWithRetainedOperandContexts(commands []map[string]any, contexts []m
 	result := make([]map[string]any, 0, len(commands))
 	omitted := 0
 	for _, command := range commands {
+		if _, typed := command["argv"]; !typed {
+			result = append(result, command)
+			continue
+		}
 		if _, absent := missing[command["commandId"].(string)]; absent {
 			omitted++
+			if fallback, exists := fallbacks[command["commandId"].(string)]; exists {
+				result = append(result, fallback)
+			}
 			continue
 		}
 		result = append(result, command)

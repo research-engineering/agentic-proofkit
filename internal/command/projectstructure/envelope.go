@@ -15,9 +15,10 @@ const (
 
 func BuildEnvelopeFromResult(scaffold Result) (map[string]any, int, error) {
 	manifest := scaffold.Manifest
-	allContextRefs := contextRefs(anyArray(manifest["files"]))
+	files := anyArray(manifest["files"])
+	allContextRefs := contextRefs(files, scaffold.fileRoles)
 	contextRefs := takeMaps(allContextRefs, envelopeContextLimit)
-	allCommands, bindings := commandRefs(scaffold.commands, allContextRefs)
+	allCommands, bindings := commandRefs(scaffold.commands, files)
 	commands := takeMaps(allCommands, envelopeCommandLimit)
 	allBlocked := blockedPreconditions(anyArray(manifest["files"]))
 	blocked := takeMaps(allBlocked, envelopeBlockedLimit)
@@ -140,7 +141,7 @@ func BuildEnvelopeFromResult(scaffold Result) (map[string]any, int, error) {
 	return envelope, scaffold.ExitCode, nil
 }
 
-func contextRefs(files []any) []map[string]any {
+func contextRefs(files []any, roles map[string]string) []map[string]any {
 	refs := make([]map[string]any, 0, len(files))
 	for index, rawFile := range files {
 		file := mapValue(rawFile)
@@ -150,11 +151,15 @@ func contextRefs(files []any) []map[string]any {
 			"owner":    "consumer_repository",
 			"purpose":  projectStructureFilePurpose(file),
 			"ref":      file["path"],
-			"refId":    fmt.Sprintf("proofkit.project-structure.context.file.%03d", index+1),
-			"role":     projectStructureFileRole(file),
+			"refId":    fileContextID(index),
+			"role":     roles[stringValue(file["path"])],
 		})
 	}
 	return refs
+}
+
+func fileContextID(index int) string {
+	return fmt.Sprintf("proofkit.project-structure.context.file.%03d", index+1)
 }
 
 func blockedPreconditions(files []any) []map[string]any {

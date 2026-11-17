@@ -30,7 +30,7 @@ func scaffoldDoctorOwners() map[string]scaffoldDoctorOwner {
 		"proofkit.adoption-doctor.output.v2.json-schema": {"adoption-doctor", "output", "2", "1",
 			map[string]string{"01-agent-envelope": "--agent-envelope with admitted input", "02-report": "without --agent-envelope", "03-invalid-input-envelope": invalid},
 			[]func() map[string]any{adoptiondoctor.EnvelopeStructure, adoptiondoctor.OutputStructure, agentenvelope.InvalidInputStructure}},
-		"proofkit.scaffold-project-structure.input.v2.json-schema": {"scaffold-project-structure", "input", "2", "1",
+		"proofkit.scaffold-project-structure.input.v3.json-schema": {"scaffold-project-structure", "input", "3", "1",
 			map[string]string{"01-root": "default JSON mode"}, []func() map[string]any{projectstructure.InputStructure}},
 		"proofkit.scaffold-project-structure.output.v2.json-schema": {"scaffold-project-structure", "output", "2", "1",
 			map[string]string{"01-agent-envelope": "--agent-envelope with admitted input", "02-scaffold": "without --agent-envelope", "03-invalid-input-envelope": invalid},
@@ -127,7 +127,7 @@ func TestScaffoldDoctorOwnersConserveIdentityAndRetirePredecessors(t *testing.T)
 }
 
 func TestScaffoldDoctorSummariesKeepIndependentPolicyNotes(t *testing.T) {
-	owner, _ := nativeStructureOwner("proofkit.scaffold-project-structure.input.v2.json-schema")
+	owner, _ := nativeStructureOwner("proofkit.scaffold-project-structure.input.v3.json-schema")
 	note := "Bootstrap rejects secret-shaped keys and values in a detached strict JSON snapshot before decisions or payload emission; wire version is unchanged."
 	annotation := "root-shape-only definition proofkit.scaffold-project-structure.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
 	got, err := enrichedCompatibilitySummary(owner, "1", []any{"schemaVersion=1", annotation, note})
@@ -146,13 +146,16 @@ func TestScaffoldDoctorSummariesKeepIndependentPolicyNotes(t *testing.T) {
 }
 
 func TestScaffoldStructureConsumerIdentityRejectsRetiredSemanticVersion(t *testing.T) {
-	for _, mutation := range []string{"positive", "retired identity", "wrong wire version", "retired output identity", "output wire version", "future output identity", "retired output schema", "retired output root"} {
-		// Independent v2/wire1 bindings exercise admission without depending on
+	for _, mutation := range []string{"positive", "retired identity", "retired v2 identity", "wrong wire version", "retired output identity", "output wire version", "future output identity", "retired output schema", "retired output root"} {
+		// Independent input-v3/output-v2/wire1 bindings exercise admission without depending on
 		// the separate published-projection freshness test above.
 		command := map[string]any{"command": "scaffold-project-structure"}
 		definitions := map[string]definitionRecord{}
 		for _, direction := range []string{"input", "output"} {
 			contractID := "proofkit.scaffold-project-structure." + direction + ".v2"
+			if direction == "input" {
+				contractID = "proofkit.scaffold-project-structure.input.v3"
+			}
 			id := contractID + ".json-schema"
 			owner, ok := nativeStructureOwner(id)
 			if !ok {
@@ -170,6 +173,8 @@ func TestScaffoldStructureConsumerIdentityRejectsRetiredSemanticVersion(t *testi
 		switch mutation {
 		case "retired identity":
 			command["inputContract"].(map[string]any)["contractId"] = "proofkit.scaffold-project-structure.input.v1"
+		case "retired v2 identity":
+			command["inputContract"].(map[string]any)["contractId"] = "proofkit.scaffold-project-structure.input.v2"
 		case "wrong wire version":
 			command["inputContract"].(map[string]any)["schemaVersion"] = json.Number("2")
 		case "retired output identity":

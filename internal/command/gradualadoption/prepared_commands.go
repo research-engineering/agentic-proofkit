@@ -6,6 +6,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 var preparedOperations = []string{"gradual-adoption", "gradual-adoption-guidance", "witness-plan"}
@@ -61,13 +62,29 @@ func admitPreparedCommands(raw map[string]any, renderer cliexec.Renderer, failur
 			*failures = append(*failures, fmt.Sprintf("agentGuidance proofkitCommands %s must name a materialized input path", operation))
 			continue
 		}
-		path, err := admit.MaterializedInputPath(path, "agentGuidance proofkitCommands "+operation)
+		command, err := admitPreparedCommand(operation, path, renderer, "agentGuidance proofkitCommands "+operation)
 		addErr(failures, err)
 		if err == nil {
-			prepared = append(prepared, PreparedCommand{command: operation, inputRef: path, renderer: renderer})
+			prepared = append(prepared, command)
 		}
 	}
 	return prepared
+}
+
+func admitPreparedCommand(operation, path string, renderer cliexec.Renderer, context string) (PreparedCommand, error) {
+	path, err := admit.MaterializedInputPath(path, context)
+	if err != nil {
+		return PreparedCommand{}, err
+	}
+	if unicodepolicy.ContainsUnsafeScalar(path) {
+		return PreparedCommand{}, fmt.Errorf("%s must contain only safe Unicode scalars", context)
+	}
+	command := PreparedCommand{command: operation, inputRef: path, renderer: renderer}
+	display := command.DisplayCommand()
+	if unicodepolicy.ContainsUnsafeScalar(display) || admit.ContainsSecretLikePathValue(display) {
+		return PreparedCommand{}, fmt.Errorf("%s must render safe prepared command text", context)
+	}
+	return command, nil
 }
 
 func preparedCommandSource(commands []PreparedCommand) map[string]any {
@@ -89,12 +106,16 @@ func preparedCommandDisplays(caller []string, commands []PreparedCommand) []stri
 	return combined
 }
 
-func bootstrapPreparedCommands(paths map[string]any, renderer cliexec.Renderer) []PreparedCommand {
+func bootstrapPreparedCommands(paths map[string]any, renderer cliexec.Renderer, failures *[]string) []PreparedCommand {
 	commands := make([]PreparedCommand, 0, len(preparedOperations))
 	for index, key := range []string{"adoptionProfilePath", "adoptionGuidancePath", "witnessPlanInputPath"} {
 		// Path admission already collected errors and replaced invalid values.
 		if path := stringFromMap(paths, key); path != "" {
-			commands = append(commands, PreparedCommand{command: preparedOperations[index], inputRef: path, renderer: renderer})
+			command, err := admitPreparedCommand(preparedOperations[index], path, renderer, "bootstrap "+key)
+			addErr(failures, err)
+			if err == nil {
+				commands = append(commands, command)
+			}
 		}
 	}
 	return commands

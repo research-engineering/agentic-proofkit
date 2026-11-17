@@ -3,6 +3,7 @@ package gradualadoption
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 
@@ -22,15 +23,25 @@ var bootstrapNonClaims = []string{
 }
 
 type BootstrapResult struct {
-	AgentActionPlan  []any
-	ExitCode         int
-	NextCommands     []string
-	Payloads         map[string]any
-	PlannedFiles     []any
-	Record           report.Record
-	WitnessPlan      map[string]any
-	preparedCommands []PreparedCommand
-	renderer         cliexec.Renderer
+	AgentActionPlan          []any
+	ExitCode                 int
+	NextCommands             []string
+	Payloads                 map[string]any
+	PlannedFiles             []any
+	Record                   report.Record
+	WitnessPlan              map[string]any
+	preparedCommands         []PreparedCommand
+	renderer                 cliexec.Renderer
+	repositoryProfilePath    string
+	materializationFileRoles map[string]string
+}
+
+func (result BootstrapResult) RepositoryProfilePath() string {
+	return result.repositoryProfilePath
+}
+
+func (result BootstrapResult) MaterializationFileRoles() map[string]string {
+	return maps.Clone(result.materializationFileRoles)
 }
 
 func BuildBootstrap(raw any) (map[string]any, int, error) {
@@ -217,7 +228,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	addErr(&failures, err)
 	nonClaims, err := admit.SortedText(append(append([]string{}, bootstrapNonClaims...), callerNonClaims...), "bootstrap merged nonClaims", false)
 	addErr(&failures, err)
-	preparedCommands := bootstrapPreparedCommands(paths, renderer)
+	preparedCommands := bootstrapPreparedCommands(paths, renderer, &failures)
 	nextCommands := preparedCommandDisplays(nil, preparedCommands)
 	adoptionProfile := map[string]any{
 		"adoptionId":      bootstrapID,
@@ -294,14 +305,20 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		"proofBindingPath": proofBindingPath,
 	})
 	seenPaths := map[string]struct{}{}
+	fileRoles := map[string]string{}
 	for _, rawFile := range plannedFiles {
-		path := rawFile.(map[string]any)["path"].(string)
+		file := rawFile.(map[string]any)
+		path := file["path"].(string)
 		// Empty paths already have collected admission failures.
 		if path == "" {
 			continue
 		}
-		if _, exists := seenPaths[path]; exists {
-			failures = append(failures, "bootstrap planned file paths must be unique")
+		fileRoles[path] = bootstrapFileRole(file)
+		for prior := range seenPaths {
+			if admit.RepoFilePathsOverlap(path, prior) {
+				failures = append(failures, "bootstrap planned file paths must be unique and non-overlapping")
+				break
+			}
 		}
 		seenPaths[path] = struct{}{}
 	}
@@ -349,11 +366,13 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 			"proofBinding":     proofBindingPayload,
 			"witnessPlanInput": record["nativeWitnesses"],
 		},
-		PlannedFiles:     plannedFiles,
-		Record:           rec,
-		WitnessPlan:      witnessPlan,
-		preparedCommands: preparedCommands,
-		renderer:         renderer,
+		PlannedFiles:             plannedFiles,
+		Record:                   rec,
+		WitnessPlan:              witnessPlan,
+		preparedCommands:         preparedCommands,
+		renderer:                 renderer,
+		repositoryProfilePath:    source.ProfilePath,
+		materializationFileRoles: fileRoles,
 	}, nil
 }
 

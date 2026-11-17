@@ -59,32 +59,7 @@ func TestSemanticDiffRequirementStatesPublishedContractVersions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	content, err := os.ReadFile(filepath.Join(repoRoot(t), "docs/specs/proofkit-spec-proof-core/requirements.v2.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var source struct {
-		Groups []struct {
-			Members []struct {
-				RequirementID       string `json:"requirementId"`
-				StatementCompletion string `json:"statementCompletion"`
-			} `json:"members"`
-		} `json:"groups"`
-	}
-	if err := json.Unmarshal(content, &source); err != nil {
-		t.Fatal(err)
-	}
-	statement, found := "", 0
-	for _, group := range source.Groups {
-		for _, member := range group.Members {
-			if member.RequirementID == "REQ-PROOFKIT-SPEC-022" {
-				statement, found = member.StatementCompletion, found+1
-			}
-		}
-	}
-	if found != 1 {
-		t.Fatalf("found %d REQ-PROOFKIT-SPEC-022 requirements, want exactly one", found)
-	}
+	statement := specCoreRequirementStatement(t, "REQ-PROOFKIT-SPEC-022")
 	for _, phrase := range []string{
 		fmt.Sprintf("schema-v%s input compares", input),
 		fmt.Sprintf("producing a schema-v%s canonically ordered output", output),
@@ -106,4 +81,59 @@ func TestSemanticDiffRequirementStatesPublishedContractVersions(t *testing.T) {
 			t.Fatalf("REQ-PROOFKIT-SPEC-022 overview must state the published contract versions: missing %q", phrase)
 		}
 	}
+}
+
+func TestAgentRouteRequirementSeparatesOutputSemanticAndWireVersions(t *testing.T) {
+	commands, _, err := indexPublicABIRecords(readCLIContractRaw(t)["commands"], "command")
+	if err != nil {
+		t.Fatal(err)
+	}
+	output := commands["agent-route"]["outputContract"].(map[string]any)
+	semantic := strings.TrimPrefix(output["contractId"].(string), "proofkit.agent-route.output.v")
+	report := output["reportContract"].(map[string]any)
+	brief := output["briefPacketContract"].(map[string]any)
+	if report["contractId"] != "proofkit.agent-route.report.v3" || report["schemaVersion"] != json.Number("3") ||
+		brief["contractId"] != "proofkit.agent-route.brief.v1" || brief["schemaVersion"] != json.Number("1") {
+		t.Fatal("route semantic correction must not silently migrate report or brief wire identity")
+	}
+	statement := specCoreRequirementStatement(t, "REQ-PROOFKIT-SPEC-026")
+	for _, phrase := range []string{
+		"Agent-route output contract v" + semantic, "schemaVersion 3", "schema-v1 proofkit.agent-route.brief",
+		"preserves exact admitted structural paths", "observed-report blocker evidence", "explicit degradation",
+	} {
+		if !strings.Contains(statement, phrase) {
+			t.Fatalf("active route requirement lost current contract clause %q", phrase)
+		}
+	}
+}
+
+func specCoreRequirementStatement(t *testing.T, id string) string {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(repoRoot(t), "docs/specs/proofkit-spec-proof-core/requirements.v2.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source struct {
+		Groups []struct {
+			Members []struct {
+				RequirementID       string `json:"requirementId"`
+				StatementCompletion string `json:"statementCompletion"`
+			} `json:"members"`
+		} `json:"groups"`
+	}
+	if err := json.Unmarshal(content, &source); err != nil {
+		t.Fatal(err)
+	}
+	statement, found := "", 0
+	for _, group := range source.Groups {
+		for _, member := range group.Members {
+			if member.RequirementID == id {
+				statement, found = member.StatementCompletion, found+1
+			}
+		}
+	}
+	if found != 1 {
+		t.Fatalf("found %d %s requirements, want exactly one", found, id)
+	}
+	return statement
 }

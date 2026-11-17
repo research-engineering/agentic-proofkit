@@ -13,6 +13,7 @@ type preparedLocalReferences struct {
 	routeQuestions         []map[string]any
 	removedReferenceCount  int
 	identityDegraded       bool
+	callerDisplayFallbacks map[string]map[string]any
 }
 
 type localIdentityMultiplicity struct {
@@ -61,7 +62,7 @@ func prepareLocalReferences(input Input) preparedLocalReferences {
 	prepared.commands = removeAmbiguousTargets(prepared.commands, "commandId", ambiguous)
 	prepared.contextRefs = removeAmbiguousTargets(prepared.contextRefs, "refId", ambiguous)
 	prepared.receiptRefs = removeAmbiguousTargets(prepared.receiptRefs, "receiptRefId", ambiguous)
-	admitStructuralOperands(&prepared, rejectedTargets, input.OperandBindings, input.ContextReferenceFields, input.Renderer, input.CommandDisplayField)
+	admitStructuralOperands(&prepared, rejectedTargets, input.OperandBindings, input.ContextReferenceFields, input.Renderer, input.CommandDisplayField, input.CallerDisplayFallbackCommandIDs)
 
 	if unsafeTargets > 0 {
 		prepared.omitted = append(prepared.omitted, omissionRecord("unsafeLocalIdentity", "localTargetIds", unsafeTargets))

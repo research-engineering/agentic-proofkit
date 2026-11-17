@@ -12,6 +12,8 @@ func guidanceEnvelope(result guidanceResult) map[string]any {
 	commandRefs := []map[string]any{}
 	commandIDByText := map[string]string{}
 	preparedByText := map[string]PreparedCommand{}
+	callerByText := stringSet(result.callerCommands)
+	callerFallbackIDs := []string{}
 	for _, command := range result.preparedCommands {
 		preparedByText[command.DisplayCommand()] = command
 	}
@@ -28,6 +30,9 @@ func guidanceEnvelope(result guidanceResult) map[string]any {
 			"purpose":   "Caller-owned native witness command reported for agent routing.",
 		}
 		if prepared, ok := preparedByText[command]; ok {
+			if _, callerOwned := callerByText[command]; callerOwned {
+				callerFallbackIDs = append(callerFallbackIDs, commandID)
+			}
 			argv := prepared.Argv()
 			ref["argv"] = admit.StringSliceToAny(argv)
 			contextID := fmt.Sprintf("proofkit.agent.context.command-input.%03d", index+1)
@@ -84,10 +89,11 @@ func guidanceEnvelope(result guidanceResult) map[string]any {
 	contextRefIDs := envelopeMapValues(contextRefs, "refId")
 	commandIDs := envelopeMapValues(commandRefs, "commandId")
 	return agentenvelope.Build(agentenvelope.Input{
-		CommandDisplayField: "command",
-		EnvelopeID:          fmt.Sprintf("%s.agent-envelope", result.Record.ReportID),
-		Renderer:            result.renderer,
-		OperandBindings:     operandBindings,
+		CallerDisplayFallbackCommandIDs: callerFallbackIDs,
+		CommandDisplayField:             "command",
+		EnvelopeID:                      fmt.Sprintf("%s.agent-envelope", result.Record.ReportID),
+		Renderer:                        result.renderer,
+		OperandBindings:                 operandBindings,
 		SourceReport: map[string]any{
 			"artifactRef": nil,
 			"nonClaim":    "Source report identity does not prove native witness execution, freshness, or caller approval.",

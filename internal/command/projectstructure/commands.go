@@ -12,6 +12,7 @@ import (
 type preparedCommand struct {
 	argv     []string
 	inputRef string
+	source   string
 }
 
 func projectCommands(paths projectPathSet, bootstrap gradualadoption.BootstrapResult, renderer cliexec.Renderer) []preparedCommand {
@@ -21,10 +22,10 @@ func projectCommands(paths projectPathSet, bootstrap gradualadoption.BootstrapRe
 		{"gradual-adoption-bootstrap", paths.bootstrapInputPath},
 		{"adoption-workflow-plan", paths.workflowInputPath},
 	} {
-		commands = append(commands, preparedCommand{renderer.Argv(item.operation, "--input", item.path), item.path})
+		commands = append(commands, preparedCommand{renderer.Argv(item.operation, "--input", item.path), item.path, "project_scaffold"})
 	}
 	for _, child := range bootstrap.PreparedCommands() {
-		commands = append(commands, preparedCommand{child.Argv(), child.InputRef()})
+		commands = append(commands, preparedCommand{child.Argv(), child.InputRef(), "bootstrap_manifest"})
 	}
 	return commands
 }
@@ -37,7 +38,7 @@ func commandDisplays(commands []preparedCommand) []any {
 	return values
 }
 
-func commandRefs(commands []preparedCommand, contexts []map[string]any) ([]map[string]any, []agentenvelope.OperandBinding) {
+func commandRefs(commands []preparedCommand, files []any) ([]map[string]any, []agentenvelope.OperandBinding) {
 	refs := make([]map[string]any, 0, len(commands))
 	bindings := []agentenvelope.OperandBinding{}
 	for index, command := range commands {
@@ -49,9 +50,10 @@ func commandRefs(commands []preparedCommand, contexts []map[string]any) ([]map[s
 		})
 		// The manifest owner enforces unique exact materialized paths.
 		contextID := ""
-		for _, context := range contexts {
-			if context["ref"] == command.inputRef {
-				contextID = context["refId"].(string)
+		for fileIndex, raw := range files {
+			file := mapValue(raw)
+			if file["path"] == command.inputRef && file["source"] == command.source && file["contentKind"] == "json" && file["materializationStatus"] == "payload_available" {
+				contextID = fileContextID(fileIndex)
 				break
 			}
 		}

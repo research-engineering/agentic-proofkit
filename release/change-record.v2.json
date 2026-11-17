@@ -10,7 +10,7 @@
     },
     {
       "changeId": "proofkit.workflow.materialized-inputs",
-      "summary": "Workflow, scaffold and bootstrap prepared child-input paths refuse the CLI stdin sentinel -. Direct, contract-wrapped and selected aggregate inputs require materialized repository-relative file paths. Top-level --input - and ordinary output filenames remain supported. Bootstrap and scaffold input semantic IDs are v2; aggregate input is v4. Their wire headers stay unchanged. Bootstrap also rejects collisions between its six actual payload paths while preserving collected failure reporting."
+      "summary": "Workflow, scaffold and bootstrap prepared child-input paths refuse the CLI stdin sentinel -. Direct, contract-wrapped and selected aggregate inputs require materialized repository-relative file paths. Top-level --input - and ordinary output filenames remain supported. Bootstrap input semantic ID is v2, scaffold input is v3 and aggregate input is v4. Their wire headers stay unchanged. Bootstrap also rejects equal or file/descendant conflicts among its six planned file paths, including its four payload files, while preserving collected failure reporting. Scaffold retains exact child paths and owner-assigned file roles; prepared commands require the expected materialization source, JSON content and available payload."
     },
     {
       "changeId": "proofkit.workflow.typed-repair-linkage",
@@ -32,7 +32,7 @@
     },
     {
       "changeId": "proofkit.agent-envelope.structural-operands",
-      "summary": "Agent envelopes preserve safe structural context references without diagnostic truncation. Workflow and route owners bind prepared paths to exact argv positions; all argv-producing envelope owners preserve their admitted Python launcher. Equal text elsewhere gains no structural role. Unsafe references or argv cause explicit target omission and dependent-reference pruning, not an executable redaction marker. Missing bounded contexts remove their dependent commands. Secret signatures remain refused inside paths, and scalar text retains its existing protection."
+      "summary": "Agent envelopes preserve safe structural context references without diagnostic truncation. Workflow and route owners bind prepared paths to exact argv positions; all argv-producing envelope owners preserve their admitted Python launcher. Equal text elsewhere gains no structural role. Unsafe references or argv cause explicit target omission and dependent-reference pruning, not an executable redaction marker. Missing bounded contexts remove dependent argv. If an independently admitted caller command has the same display, its local ID and action references remain as scalar diagnostic text without argv; otherwise the command is omitted. Secret signatures remain refused inside paths, and scalar text retains its existing protection."
     }
   ],
   "migration": {
@@ -42,7 +42,7 @@
       "Materialize workflow, scaffold and bootstrap child inputs and replace any prepared input path equal to - with its repository-relative file path; top-level commands may still read JSON from stdin.",
       "Refresh pinned machine-contract digests and semantic v2 output validators for adoption-workflow-plan, adoption-contract-envelope and scaffold-project-structure without changing wire headers. Handle preset_choice with a supported presetId; handle missing_context_ref with one complete inputAlternatives bundle per input blocker.",
       "Resolve action and what-changed evidenceRefs against contextRefs by exact refId instead of treating them as raw plan inputRefIds. Planned commands remain non-executing caller-owned routes.",
-      "Regenerate bootstrap guidance payloads, or replace their generated commands suffix with proofkitCommands operation-to-path associations. Keep only caller-authored strings in commands. Do not persist a launcher: saved guidance is rendered under its actual later invocation profile. Refresh guidance input/output, bootstrap output, aggregate input, doctor output and route output validators to their new semantic identities while preserving wire versions."
+      "Regenerate bootstrap guidance payloads, or replace their generated commands suffix with proofkitCommands operation-to-path associations. Keep only caller-authored strings in commands. Do not persist a launcher: saved guidance is rendered under its actual later invocation profile. Refresh guidance input/output, bootstrap input/output, scaffold input, aggregate input, doctor output and route output validators to their new semantic identities while preserving wire versions."
     ]
   },
   "platformRequirements": [
