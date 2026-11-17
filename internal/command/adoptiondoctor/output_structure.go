@@ -100,7 +100,7 @@ func EnvelopeShape(envelopeID string) jsonshape.Shape {
 		jsonshape.Required("observedFact", text), jsonshape.Required("owner", jsonshape.StringLiteral(consumerRepositoryOwner)),
 		jsonshape.Required("phase", jsonshape.StringLiteral(phasePromote)), jsonshape.Required("proofCommand", jsonshape.StringLiteral(consumerRepositoryFullGate)),
 		jsonshape.Required("rationale", text), jsonshape.Required("selectors", jsonshape.Object(
-			jsonshape.Required("evidenceRefs", jsonshape.Tuple(text)), jsonshape.Required("ruleRefs", jsonshape.Tuple()),
+			jsonshape.Required("ruleRefs", jsonshape.Tuple()),
 		)),
 		jsonshape.Required("stepId", jsonshape.StringLiteral(noGapsRuleID)), jsonshape.Required("uncertainty", text),
 	)
@@ -115,11 +115,8 @@ func EnvelopeShape(envelopeID string) jsonshape.Shape {
 		jsonshape.Required("ownerQuestions", texts), jsonshape.Required("phase", jsonshape.Enum(gapPhases())),
 		jsonshape.Required("proofCommand", text), jsonshape.Required("rationale", text),
 		jsonshape.Required("selectors", jsonshape.Object(
-			jsonshape.Required("evidenceRefs", texts), jsonshape.Required("ruleRefs", texts),
-			jsonshape.Optional("affectedPaths", texts), jsonshape.Optional("candidateBoundaryId", text),
-			jsonshape.Optional("contractWitnessRefs", texts), jsonshape.Optional("nativeWitnessRefs", texts),
-			jsonshape.Optional("ownerRouteId", text), jsonshape.Optional("proofBindingPaths", texts),
-			jsonshape.Optional("proofBindingRefs", texts), jsonshape.Optional("specPaths", texts),
+			jsonshape.Required("ruleRefs", texts),
+			jsonshape.Optional("candidateBoundaryId", text), jsonshape.Optional("ownerRouteId", text),
 		)),
 		jsonshape.Required("stepId", text), jsonshape.Required("uncertainties", jsonshape.Array(text, 1)), jsonshape.Required("uncertainty", text),
 	)
@@ -131,8 +128,11 @@ func EnvelopeShape(envelopeID string) jsonshape.Shape {
 		Commands: jsonshape.BoundedArray(jsonshape.Object(jsonshape.Required("command", text), jsonshape.Required("commandId", text),
 			jsonshape.Required("nonClaim", text), jsonshape.Required("owner", text)), 0, agentenvelope.MaxCommandRefs),
 		ContextRefs: jsonshape.BoundedArray(jsonshape.Object(
-			jsonshape.Required("kind", valuesShape(contextKindCandidateBoundary, contextKindOwnerRoute, contextKindStaleAuthoritySurface)),
+			jsonshape.Required("kind", valuesShape(recordKindCandidateBoundary, recordKindOwnerRoute, recordKindStaleAuthoritySurface, recordKindChildReport, recordKindBlockedPrecondition)),
 			jsonshape.Required("nonClaim", text), jsonshape.Required("owner", text), jsonshape.Required("path", text), jsonshape.Required("refId", text),
+			jsonshape.Required("role", valuesShape(contextRoleSpecPath, contextRoleProofBinding, contextRoleNativeWitness, contextRoleAffectedPath,
+				contextRoleContractWitness, contextRoleAuthorityPath, contextRoleEvidence)),
+			jsonshape.Required("sourceId", text),
 		), 0, agentenvelope.MaxContextRefs),
 		// The producer declares zero omitted items, so Build caps any
 		// identity/reference/bound degradation at one summarized record.
@@ -148,7 +148,7 @@ func EnvelopeStructure() map[string]any {
 	schema["properties"].(map[string]any)["envelopeId"] = map[string]any{"anyOf": []any{
 		fragment(jsonshape.StringSuffix(".agent-envelope")), fragment(jsonshape.StringLiteral(admit.DiagnosticRedactionMarker)),
 	}}
-	schema["description"] = "Agent envelope for admitted doctor input. A gap-free report yields one promote action; otherwise each gap yields one owner-specific action with observed facts, uncertainties and route/candidate selectors. Commands and context refs project owner routes, candidate affected paths and stale-authority surfaces; at most one owner clarification question appears. The source report is projected without stableHash. Strings are sanitized by the envelope owner and may be redacted; unsafe or ambiguous local identities, references and bounds violations are summarized by at most one omission record and degradation bounds. Native Build owns ordering, limits, reference pruning, redaction and stop reasons. Refused input uses the separately declared invalid-input envelope."
+	schema["description"] = "Agent envelope for admitted doctor input. A gap-free report yields one promote action; otherwise each gap yields one owner-specific action with observed facts, uncertainties and route/candidate selectors. One local context catalog preserves admitted structural paths with sourceId, kind and role for route specifications, proof bindings and native witnesses, candidate affected paths and contract/native witnesses/proof bindings, stale-authority paths/evidence, child-report evidence and blocked-precondition evidence. Context IDs include the input-record kind so equal caller IDs in different collections remain distinct. Each gap has one private native input-record origin; report JSON does not serialize it. The action's evidenceRefs is the sole context linkage; selectors carry only stable route, boundary and rule IDs, never evidenceRefs or paths. Context references remain caller-owned non-authority and do not grant command execution authority. At most one owner clarification question appears. The source report is projected without stableHash. Descriptive strings remain scalar-sanitized; unsafe or ambiguous local identities, references and bounds violations are summarized by at most one omission record and degradation bounds. Native Build owns ordering, limits, reference pruning, redaction and stop reasons. Refused input uses the separately declared invalid-input envelope."
 	return schema
 }
 

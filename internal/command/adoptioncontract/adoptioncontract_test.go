@@ -521,7 +521,7 @@ func bootstrapContract() map[string]any {
 		"defaultMode": "observe",
 		"paths": map[string]any{
 			"adoptionGuidancePath":       "proofkit/guidance.json",
-			"adoptionProfilePath":        "proofkit/profile.json",
+			"adoptionProfilePath":        "proofkit/adoption-profile.json",
 			"adoptionReportArtifactPath": "artifacts/proofkit/adoption.json",
 			"guidanceReportArtifactPath": "artifacts/proofkit/guidance.json",
 			"witnessPlanInputPath":       "proofkit/witness-plan.json",

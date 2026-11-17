@@ -17,7 +17,7 @@ const contract = JSON.parse(readFileSync(process.env.PROOFKIT_AGENT_WORKFLOW_CON
 const compile = schema => new Ajv2020({strict: false, validateFormats: false}).compile(schema);
 const identities = {
   'agent-route/input': ['proofkit.agent-route.input.v2', 1, ['01-direct']],
-  'agent-route/output': ['proofkit.agent-route.output.v3', 3, ['01-agent-brief', '02-agent-envelope-full', '03-invalid-input-repair', '04-routed', '05-unknown-goal']],
+  'agent-route/output': ['proofkit.agent-route.output.v4', 3, ['01-agent-brief', '02-agent-envelope-full', '03-invalid-input-repair', '04-routed', '05-unknown-goal']],
   'change-workflow-plan/input': ['proofkit.change-workflow-plan.input.v1', 1, ['01-root']],
   'change-workflow-plan/output': ['proofkit.change-workflow-plan.output.v1', 1, ['01-agent-envelope', '02-next-action', '03-accept-stage', '04-workflow-complete']],
   'native-evidence-guidance/output': ['proofkit.native-evidence-guidance.output.v1', 1, ['01-root']],
@@ -457,9 +457,11 @@ test('agent-route brief compaction boundary and redaction-degraded envelopes sta
   valid(ROUTE_OUT, FULL, replaced(omittedRoute, ['omitted', commandOmission, 'omittedCount'], 2), false, 'route-omission/count');
   const unsafe = routeInput({availableInputs: [{kind: 'requirement_source', ref: 'docs/\u202ereport.json'}]});
   const display = routed(unsafe, ['--agent-envelope', '--agent-envelope-mode', 'full'], FULL, 0);
-  assert(display.commands[0].argv.includes('<redacted-diagnostic-value>'));
+  assert.equal(display.commands.length, 0, 'unsafe input must not become executable redaction text');
+  assert(display.omitted.some(item => item.omittedCount > 0), 'unsafe target must have explicit omission');
   const long = routed(sized(5000), ['--agent-envelope', '--agent-envelope-mode', 'full'], FULL, 0);
-  assert(long.contextRefs.some(ref => ref.path.endsWith('...<truncated-diagnostic>')));
+  assert(long.contextRefs.some(ref => ref.path === sized(5000).availableInputs[0].ref), 'structural ref must retain its exact identity');
+  assert.equal(long.commands[0].argv.at(-1), sized(5000).availableInputs[0].ref);
 });
 
 // ------------------------------------------------------- change-workflow-plan

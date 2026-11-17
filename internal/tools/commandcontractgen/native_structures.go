@@ -731,12 +731,12 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.gradual-adoption.output.v1.root-shape"}, commands: []string{"gradual-adoption"},
 		schema: func() (map[string]any, error) { return gradualadoption.OutputStructure(), nil },
 	}, {
-		id: "proofkit.gradual-adoption-guidance.input.v1.json-schema", direction: "input", aggregateVersion: "1",
-		predecessors: []string{"proofkit.gradual-adoption-guidance.input.v1.root-shape"}, commands: []string{"gradual-adoption-guidance"},
+		id: "proofkit.gradual-adoption-guidance.input.v2.json-schema", direction: "input", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.gradual-adoption-guidance.input.v1.root-shape", "proofkit.gradual-adoption-guidance.input.v1.json-schema"}, commands: []string{"gradual-adoption-guidance"},
 		variants: gradualGuidanceInputVariants(),
 	}, {
-		id: "proofkit.gradual-adoption-guidance.output.v1.json-schema", direction: "output",
-		predecessors: []string{"proofkit.gradual-adoption-guidance.output.v1.root-shape"}, commands: []string{"gradual-adoption-guidance"},
+		id: "proofkit.gradual-adoption-guidance.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.gradual-adoption-guidance.output.v1.root-shape", "proofkit.gradual-adoption-guidance.output.v1.json-schema"}, commands: []string{"gradual-adoption-guidance"},
 		variants: []nativeStructureVariant{
 			{id: "01-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return gradualadoption.GuidanceOutputStructure(), nil }},
 			{id: "02-envelope", when: "--agent-envelope and admitted input", schema: func() (map[string]any, error) { return gradualadoption.GuidanceEnvelopeStructure(), nil }},
@@ -750,8 +750,8 @@ func nativeStructures() []nativeStructure {
 			{id: "02-contract", when: "--contract-envelope", schema: func() (map[string]any, error) { return gradualadoption.BootstrapContractInputStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.gradual-adoption-bootstrap.output.v1.json-schema", direction: "output", aggregateVersion: "1",
-		predecessors: []string{"proofkit.gradual-adoption-bootstrap.output.v1.root-shape"}, commands: []string{"gradual-adoption-bootstrap"},
+		id: "proofkit.gradual-adoption-bootstrap.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2,
+		predecessors: []string{"proofkit.gradual-adoption-bootstrap.output.v1.root-shape", "proofkit.gradual-adoption-bootstrap.output.v1.json-schema"}, commands: []string{"gradual-adoption-bootstrap"},
 		variants: []nativeStructureVariant{
 			{id: "01-payloads", when: "without --agent-envelope or --materialization-manifest", schema: func() (map[string]any, error) { return gradualadoption.BootstrapOutputStructure(), nil }},
 			{id: "02-materialization-manifest", when: "--materialization-manifest", schema: func() (map[string]any, error) { return gradualadoption.BootstrapMaterializationStructure(), nil }},
@@ -763,8 +763,8 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.adoption-doctor.input.v1.root-shape"}, commands: []string{"adoption-doctor"},
 		schema: func() (map[string]any, error) { return adoptiondoctor.InputStructure(), nil },
 	}, {
-		id: "proofkit.adoption-doctor.output.v1.json-schema", direction: "output",
-		predecessors: []string{"proofkit.adoption-doctor.output.v1.root-shape"}, commands: []string{"adoption-doctor"},
+		id: "proofkit.adoption-doctor.output.v2.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.adoption-doctor.output.v1.root-shape", "proofkit.adoption-doctor.output.v1.json-schema"}, commands: []string{"adoption-doctor"},
 		variants: []nativeStructureVariant{
 			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return adoptiondoctor.EnvelopeStructure(), nil }},
 			{id: "02-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return adoptiondoctor.OutputStructure(), nil }},
@@ -883,8 +883,8 @@ func nativeStructures() []nativeStructure {
 			{id: "01-direct", when: "default JSON mode", schema: func() (map[string]any, error) { return agentroute.InputStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.agent-route.output.v3.json-schema", direction: "output", aggregateVersion: "3",
-		predecessors: []string{"proofkit.agent-route.output.v3.root-shape"}, commands: []string{"agent-route"},
+		id: "proofkit.agent-route.output.v4.json-schema", direction: "output", aggregateVersion: "3", semanticVersion: 4,
+		predecessors: []string{"proofkit.agent-route.output.v3.root-shape", "proofkit.agent-route.output.v3.json-schema"}, commands: []string{"agent-route"},
 		variants: []nativeStructureVariant{
 			{id: "01-agent-brief", when: "--agent-envelope=present --agent-envelope-mode=absent|brief; admitted route input", schema: func() (map[string]any, error) { return agentroute.BriefStructure(), nil }},
 			{id: "02-agent-envelope-full", when: "--agent-envelope=present --agent-envelope-mode=full; admitted route input", schema: func() (map[string]any, error) { return agentroute.FullEnvelopeStructure(), nil }},
@@ -953,8 +953,8 @@ func nativeStructures() []nativeStructure {
 			}, schema: func() (map[string]any, error) { return pilotadmission.ReportStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.adoption-contract-envelope.input.v3.json-schema", direction: "input", aggregateVersion: "2", semanticVersion: 3,
-		predecessors: []string{"proofkit.adoption-contract-envelope.input.v2.root-shape"}, commands: []string{"adoption-contract-envelope"},
+		id: "proofkit.adoption-contract-envelope.input.v4.json-schema", direction: "input", aggregateVersion: "2", semanticVersion: 4,
+		predecessors: []string{"proofkit.adoption-contract-envelope.input.v3.root-shape", "proofkit.adoption-contract-envelope.input.v3.json-schema"}, commands: []string{"adoption-contract-envelope"},
 		variants: adoptionContractInputVariants(),
 	}, {
 		id: "proofkit.adoption-contract-envelope.output.v2.json-schema", direction: "output", aggregateVersion: "1", semanticVersion: 2, conditionModel: "cli_flag_conjunction_v1",

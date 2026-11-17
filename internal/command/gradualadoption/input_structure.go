@@ -36,7 +36,7 @@ func InputStructure() map[string]any {
 
 func GuidanceInputStructure() map[string]any {
 	fields := map[string]any{
-		"agentGuidance": evaluatedJSON("Agent guidance is projected with collected failures; every decoded JSON kind is accepted at this phase."),
+		"agentGuidance": evaluatedJSON("Agent guidance is projected with collected failures. Optional proofkitCommands is a closed object mapping gradual-adoption, gradual-adoption-guidance and witness-plan to exact prepared input paths. Absent/empty means none; null, unknown keys and invalid paths collect failures. Caller commands retain strict text privacy; invocation context alone renders generated commands."),
 		"guidanceId":    ruleIDStructure(), "guidanceMode": jsonshape.Enum(adoptionmode.ValuesMap()).JSONSchema(),
 		"modernization": evaluatedJSON("Absence/null normalizes to empty candidates and required owner review; malformed values collect failures."),
 		"nonClaims":     textArrayStructure(1),
@@ -100,7 +100,7 @@ func GuidanceContractInputStructure(modeOverride, scopeOverride, touchedOverride
 		optional = append(optional, "touchedRuleIds")
 	}
 	guidanceFields := map[string]any{
-		"agentGuidance": evaluatedObject("Object-valued guidance fields are failure-collecting projections."),
+		"agentGuidance": evaluatedObject("Object-valued guidance fields are failure-collecting projections, including the optional closed operation-to-input-path proofkitCommands object."),
 		"defaultMode":   jsonshape.Enum(adoptionmode.ValuesMap()).JSONSchema(),
 		"guidanceId":    ruleIDStructure(), "modernization": evaluatedJSON("Optional failure-collecting modernization input."),
 		"nonClaims": textArrayStructure(1), "ownerRoute": evaluatedObject("Owner route policy is evaluated, not a hard object-child shape."),

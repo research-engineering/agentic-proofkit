@@ -559,12 +559,13 @@ func envelope(result result) map[string]any {
 		"omittedCount":    0,
 	}
 	return agentenvelope.Build(agentenvelope.Input{
-		EnvelopeID:      envelopeID,
-		Renderer:        result.Renderer,
-		SourceReport:    sourceReportIdentity(result.Record),
-		Bounds:          bounds,
-		ContextRefs:     contextRefs,
-		OperandBindings: operandBindings,
+		CommandDisplayField: "command",
+		EnvelopeID:          envelopeID,
+		Renderer:            result.Renderer,
+		SourceReport:        sourceReportIdentity(result.Record),
+		Bounds:              bounds,
+		ContextRefs:         contextRefs,
+		OperandBindings:     operandBindings,
 		RouteQuestions: []map[string]any{
 			{
 				"evidenceRefs": admit.StringSliceToAny(refIDs),

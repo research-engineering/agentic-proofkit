@@ -49,11 +49,19 @@ func TestScaffoldPreparedInputPathsDistinguishStdin(t *testing.T) {
 			})
 		}
 	}
-	for _, field := range []string{"paths.bootstrapInputPath", "paths.repoProfileScaffoldInputPath", "paths.workflowInputPath", "bootstrap.paths.adoptionGuidancePath", "bootstrap.paths.witnessPlanInputPath"} {
+	for _, field := range []string{"paths.bootstrapInputPath", "paths.repoProfileScaffoldInputPath", "paths.workflowInputPath"} {
 		input := validProjectStructureInput()
 		setPath(input, field, " - ")
 		if _, err := BuildResult(input); err == nil {
 			t.Fatalf("%s trimmed stdin sentinel was accepted", field)
+		}
+	}
+	for _, field := range []string{"bootstrap.paths.adoptionGuidancePath", "bootstrap.paths.witnessPlanInputPath"} {
+		input := validProjectStructureInput()
+		setPath(input, field, " - ")
+		result, err := BuildResult(input)
+		if err != nil || result.ExitCode != 0 {
+			t.Fatalf("%s exact non-sentinel path refused: exit=%d err=%v", field, result.ExitCode, err)
 		}
 	}
 }

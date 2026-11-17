@@ -36,6 +36,7 @@ type Input struct {
 	Bounds                 map[string]any
 	ClarificationQuestion  []map[string]any
 	Commands               []map[string]any
+	CommandDisplayField    string // Empty, command or display; derived only from admitted argv.
 	ContextRefs            []map[string]any
 	ContextReferenceFields []ContextReferenceField
 	EnvelopeID             string

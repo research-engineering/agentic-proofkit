@@ -20,6 +20,7 @@ func TestGeneratedCommandInvocationProfileFieldInventory(t *testing.T) {
 		t.Fatalf("derive bootstrap input: %v", err)
 	}
 	callerCommands := invocationProfileStrings(t, bootstrapInput["commands"], "bootstrap caller commands")
+	preparedSource := invocationProfilePreparedSource(t, bootstrapInput)
 	projectInput := invocationProfileProjectInput(bootstrapInput)
 
 	profiles := []struct {
@@ -28,6 +29,8 @@ func TestGeneratedCommandInvocationProfileFieldInventory(t *testing.T) {
 		pythonExecutable string
 	}{
 		{name: "npm offline", profile: cliexec.ProfileNPMOffline},
+		{name: "python ordinary", profile: cliexec.ProfilePythonModule, pythonExecutable: "/opt/venv/bin/python"},
+		{name: "python path privacy", profile: cliexec.ProfilePythonModule, pythonExecutable: "/opt/task-validation/bin/python"},
 		{name: "python module", profile: cliexec.ProfilePythonModule, pythonExecutable: "/tmp/proofkit venv/bin/python"},
 	}
 	for _, profile := range profiles {
@@ -47,8 +50,10 @@ func TestGeneratedCommandInvocationProfileFieldInventory(t *testing.T) {
 			directBootstrap := invocationProfileRun(t, renderer, []string{"gradual-adoption-bootstrap", "--input", "-", "--contract-envelope"}, invocationProfileEncode(t, gradual))
 			bootstrapInventory := invocationProfileBootstrapInventory("$")
 			invocationProfileAssertInventory(t, renderer, directBootstrap, bootstrapInventory, len(callerCommands))
+			invocationProfileAssertSourceInventory(t, directBootstrap, []string{"$.payloads.adoptionGuidance.agentGuidance"}, callerCommands, preparedSource)
 			invocationProfileAssertBootstrap(t, renderer, directBootstrap, callerCommands)
 			invocationProfileAssertInventoryMutants(t, renderer, directBootstrap, bootstrapInventory, callerCommands)
+			invocationProfileAssertSourceInventoryMutants(t, directBootstrap, callerCommands, preparedSource)
 
 			directEnvelope := invocationProfileRun(t, renderer, []string{"gradual-adoption-bootstrap", "--input", "-", "--contract-envelope", "--agent-envelope"}, invocationProfileEncode(t, gradual))
 			invocationProfileAssertInventory(t, renderer, directEnvelope, map[string]int{
@@ -58,9 +63,9 @@ func TestGeneratedCommandInvocationProfileFieldInventory(t *testing.T) {
 
 			directManifest := invocationProfileRun(t, renderer, []string{"gradual-adoption-bootstrap", "--input", "-", "--contract-envelope", "--materialization-manifest"}, invocationProfileEncode(t, gradual))
 			invocationProfileAssertInventory(t, renderer, directManifest, map[string]int{
-				"$.files[?payloadKey=adoptionGuidance].content::$.agentGuidance.commands[callerCommandCount:]": 3,
 				"$.nextCommands[*]": 3,
 			}, len(callerCommands))
+			invocationProfileAssertSourceInventory(t, directManifest, []string{"$.files[?payloadKey=adoptionGuidance].content::$.agentGuidance"}, callerCommands, preparedSource)
 			invocationProfileAssertManifest(t, renderer, directManifest, callerCommands)
 
 			aggregateBootstrap := invocationProfileRun(t, renderer, []string{"adoption-contract-envelope", "--input", "-", "--mode", "bootstrap"}, invocationProfileEncode(t, aggregate))
@@ -78,9 +83,12 @@ func TestGeneratedCommandInvocationProfileFieldInventory(t *testing.T) {
 
 			project := invocationProfileRun(t, renderer, []string{"scaffold-project-structure", "--input", "-"}, invocationProfileEncode(t, projectInput))
 			projectInventory := invocationProfileBootstrapInventory("$.bootstrapReport")
-			projectInventory["$.materializationManifest.files[?purpose=caller-owned gradual adoption guidance input].content::$.agentGuidance.commands[callerCommandCount:]"] = 3
 			projectInventory["$.materializationManifest.nextCommands[*]"] = 6
 			invocationProfileAssertInventory(t, renderer, project, projectInventory, len(callerCommands))
+			invocationProfileAssertSourceInventory(t, project, []string{
+				"$.bootstrapReport.payloads.adoptionGuidance.agentGuidance",
+				"$.materializationManifest.files[?purpose=caller-owned gradual adoption guidance input].content::$.agentGuidance",
+			}, callerCommands, preparedSource)
 			invocationProfileAssertBootstrap(t, renderer, invocationProfileObjectValue(t, project["bootstrapReport"], "project bootstrap report"), callerCommands)
 			invocationProfileAssertManifest(t, renderer, invocationProfileObjectValue(t, project["materializationManifest"], "project materialization manifest"), callerCommands)
 
@@ -455,9 +463,108 @@ func invocationProfileBootstrapInventory(root string) map[string]int {
 	return map[string]int{
 		root + ".agentActionPlan[?phase=verify].commands[*]":                                3,
 		root + ".nextCommands[*]":                                                           3,
-		root + ".payloads.adoptionGuidance.agentGuidance.commands[callerCommandCount:]":     3,
 		root + ".report.diagnostics[?key=agentActionPlan].value[?phase=verify].commands[*]": 3,
 		root + ".report.diagnostics[?key=nextCommands].value[*]":                            3,
+	}
+}
+
+func invocationProfilePreparedSource(t *testing.T, bootstrap map[string]any) map[string]any {
+	t.Helper()
+	paths := invocationProfileObjectValue(t, bootstrap["paths"], "bootstrap paths")
+	return map[string]any{
+		"gradual-adoption":          paths["adoptionProfilePath"],
+		"gradual-adoption-guidance": paths["adoptionGuidancePath"],
+		"witness-plan":              paths["witnessPlanInputPath"],
+	}
+}
+
+func invocationProfileAssertSourceInventory(t *testing.T, output any, paths []string, callerCommands []string, preparedSource map[string]any) {
+	t.Helper()
+	want := map[string][]any{}
+	for _, path := range paths {
+		want[path] = []any{map[string]any{"commands": invocationProfileJSON(t, callerCommands), "proofkitCommands": preparedSource}}
+	}
+	if got := invocationProfileSourceInventory(t, output); !reflect.DeepEqual(got, want) {
+		t.Fatalf("portable guidance source inventory=%#v, want exact %#v", got, want)
+	}
+}
+
+// Saved source is inventoried independently of derived display strings. Neither
+// a missing typed declaration nor a persisted rendered suffix can pass as source.
+func invocationProfileSourceInventory(t *testing.T, output any) map[string][]any {
+	t.Helper()
+	inventory := map[string][]any{}
+	var walk func(any, string)
+	walk = func(raw any, path string) {
+		switch value := raw.(type) {
+		case map[string]any:
+			_, declaresCommands := value["proofkitCommands"]
+			if declaresCommands || strings.HasSuffix(path, ".agentGuidance") {
+				inventory[path] = append(inventory[path], map[string]any{"commands": value["commands"], "proofkitCommands": value["proofkitCommands"]})
+			}
+			for key, item := range value {
+				if key == "content" && invocationProfileIsAdoptionGuidanceFile(value) {
+					content, ok := item.(string)
+					if !ok {
+						t.Fatalf("%s.content must be a JSON string", path)
+					}
+					walk(invocationProfileJSON(t, content), path+".content::$")
+					continue
+				}
+				walk(item, path+"."+key)
+			}
+		case []any:
+			for _, item := range value {
+				selector := "[*]"
+				if object, ok := item.(map[string]any); ok && strings.HasSuffix(path, ".files") {
+					if key, ok := object["payloadKey"].(string); ok {
+						selector = "[?payloadKey=" + key + "]"
+					} else if purpose, ok := object["purpose"].(string); ok {
+						selector = "[?purpose=" + purpose + "]"
+					}
+				}
+				walk(item, path+selector)
+			}
+		}
+	}
+	walk(output, "$")
+	return inventory
+}
+
+func invocationProfileAssertSourceInventoryMutants(t *testing.T, output map[string]any, callerCommands []string, preparedSource map[string]any) {
+	t.Helper()
+	want := invocationProfileSourceInventory(t, output)
+	mutants := []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{"missing source", func(agent map[string]any) { delete(agent, "proofkitCommands") }},
+		{"missing operation", func(agent map[string]any) { delete(agent["proofkitCommands"].(map[string]any), "witness-plan") }},
+		{"surplus operation", func(agent map[string]any) {
+			agent["proofkitCommands"].(map[string]any)["self-check"] = "inputs/other.json"
+		}},
+		{"wrong input", func(agent map[string]any) {
+			agent["proofkitCommands"].(map[string]any)["witness-plan"] = preparedSource["gradual-adoption"]
+		}},
+		{"rendered suffix", func(agent map[string]any) {
+			agent["commands"] = append(agent["commands"].([]any), cliexec.PathRenderer().DisplayCommand("witness-plan", "--input", preparedSource["witness-plan"].(string)))
+		}},
+		{"caller rewrite", func(agent map[string]any) { agent["commands"].([]any)[0] = callerCommands[0] + " changed" }},
+		{"relocated source", func(agent map[string]any) {
+			agent["relocatedSource"] = agent["proofkitCommands"]
+			delete(agent, "proofkitCommands")
+		}},
+	}
+	for _, item := range mutants {
+		t.Run("source inventory mutant/"+item.name, func(t *testing.T) {
+			mutant := invocationProfileObject(t, invocationProfileJSON(t, output))
+			payloads := invocationProfileObjectValue(t, mutant["payloads"], "mutant payloads")
+			guidance := invocationProfileObjectValue(t, payloads["adoptionGuidance"], "mutant guidance")
+			item.mutate(invocationProfileObjectValue(t, guidance["agentGuidance"], "mutant agent guidance"))
+			if reflect.DeepEqual(invocationProfileSourceInventory(t, mutant), want) {
+				t.Fatalf("%s mutant survived exact portable-source inventory", item.name)
+			}
+		})
 	}
 }
 
@@ -680,7 +787,9 @@ func invocationProfileAssertBootstrap(t *testing.T, renderer cliexec.Renderer, o
 	payloads := invocationProfileObjectValue(t, output["payloads"], "bootstrap payloads")
 	guidance := invocationProfileObjectValue(t, payloads["adoptionGuidance"], "bootstrap adoption guidance")
 	agentGuidance := invocationProfileObjectValue(t, guidance["agentGuidance"], "bootstrap agent guidance")
-	invocationProfileAssertCallerAndGenerated(t, renderer, invocationProfileStrings(t, agentGuidance["commands"], "bootstrap guidance commands"), callerCommands)
+	if commands := invocationProfileStrings(t, agentGuidance["commands"], "bootstrap guidance commands"); !reflect.DeepEqual(commands, callerCommands) {
+		t.Fatalf("saved bootstrap guidance commands=%#v, want caller-only %#v", commands, callerCommands)
+	}
 
 	report := invocationProfileObjectValue(t, output["report"], "bootstrap report")
 	invocationProfileAssertGenerated(t, renderer, invocationProfileStrings(t, invocationProfileDiagnostic(t, report, "nextCommands"), "report nextCommands"))
@@ -706,7 +815,9 @@ func invocationProfileAssertManifest(t *testing.T, renderer cliexec.Renderer, ma
 		}
 		guidance := invocationProfileObject(t, invocationProfileJSON(t, content))
 		agentGuidance := invocationProfileObjectValue(t, guidance["agentGuidance"], "materialized agent guidance")
-		invocationProfileAssertCallerAndGenerated(t, renderer, invocationProfileStrings(t, agentGuidance["commands"], "materialized guidance commands"), callerCommands)
+		if commands := invocationProfileStrings(t, agentGuidance["commands"], "materialized guidance commands"); !reflect.DeepEqual(commands, callerCommands) {
+			t.Fatalf("saved materialized guidance commands=%#v, want caller-only %#v", commands, callerCommands)
+		}
 		return
 	}
 	t.Fatal("manifest missing adoptionGuidance payload identity")

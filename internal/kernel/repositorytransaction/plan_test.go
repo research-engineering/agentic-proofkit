@@ -279,4 +279,31 @@ func mustWriteTestFile(t *testing.T, root, relative, content string, mode os.Fil
 	if err := os.WriteFile(path, []byte(content), mode); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.Chmod(path, mode); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestFileFixtureRestoresRequestedMode(t *testing.T) {
+	t.Parallel()
+	for _, mode := range []os.FileMode{0o600, 0o640, 0o644, 0o755} {
+		for _, existing := range []bool{false, true} {
+			root := t.TempDir()
+			path := filepath.Join(root, "owned")
+			if existing {
+				if err := os.WriteFile(path, []byte("before"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			mustWriteTestFile(t, root, "owned", "after", mode)
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			content, err := os.ReadFile(path)
+			if err != nil || string(content) != "after" || info.Mode().Perm() != mode {
+				t.Fatalf("existing=%t: fixture content=%q mode=%o err=%v, want after and %o", existing, content, info.Mode().Perm(), err, mode)
+			}
+		}
+	}
 }

@@ -1830,8 +1830,12 @@ func assertManifestGuidanceCommands(t *testing.T, manifest map[string]any) {
 		if !stringListContains(commands, "go test ./internal/command/gradualadoption") {
 			t.Fatalf("caller-provided bootstrap command was not preserved: %#v", commands)
 		}
-		if !stringListContains(commands, "agentic-proofkit gradual-adoption --input proofkit/profile.json") {
-			t.Fatalf("generated bootstrap command missing: %#v", commands)
+		if len(commands) != 1 {
+			t.Fatalf("portable guidance commands must contain only caller text: %#v", commands)
+		}
+		prepared := jsonObjectField(t, jsonObjectField(t, guidance, "agentGuidance"), "proofkitCommands")
+		if prepared["gradual-adoption"] != "proofkit/adoption-profile.json" || len(prepared) != 3 {
+			t.Fatal("portable bootstrap operation/input mapping missing")
 		}
 		return
 	}
@@ -2117,7 +2121,7 @@ func cliBootstrapContract() map[string]any {
 		"defaultMode": "observe",
 		"paths": map[string]any{
 			"adoptionGuidancePath":       "proofkit/guidance.json",
-			"adoptionProfilePath":        "proofkit/profile.json",
+			"adoptionProfilePath":        "proofkit/adoption-profile.json",
 			"adoptionReportArtifactPath": "artifacts/proofkit/adoption.json",
 			"guidanceReportArtifactPath": "artifacts/proofkit/guidance.json",
 			"witnessPlanInputPath":       "proofkit/witness-plan.json",

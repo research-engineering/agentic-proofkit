@@ -77,9 +77,9 @@ func admitContextOperands(contexts []map[string]any, fields []ContextReferenceFi
 		}
 		result = append(result, context)
 	}
-	for _, unmatched := range declared {
-		for _, count := range unmatched {
-			omitted += count
+	for id := range declared {
+		if _, alreadyCounted := rejected[id]; !alreadyCounted {
+			omitted++
 		}
 	}
 	return result, paths, omitted

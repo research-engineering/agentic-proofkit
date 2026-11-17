@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "da37b8338d6a4910bf539441e993fbe384713931f3552311deb69085f2c6e367"
+	cliContractPublicABISHA256               = "7b5e09598928c82f8448f873839eb53d025a68219cf4d0b0a13989edac3887ff"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -558,11 +558,11 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.spec-proof-bundle-admission.input.v2.json-schema":               {},
 			"proofkit.spec-proof-bundle-admission.output.v1.json-schema":              {},
 			"proofkit.agent-route.input.v2.json-schema":                               {},
-			"proofkit.agent-route.output.v3.json-schema":                              {},
+			"proofkit.agent-route.output.v4.json-schema":                              {},
 			"proofkit.change-workflow-plan.input.v1.json-schema":                      {},
 			"proofkit.change-workflow-plan.output.v1.json-schema":                     {},
 			"proofkit.native-evidence-guidance.output.v1.json-schema":                 {},
-			"proofkit.adoption-contract-envelope.input.v3.json-schema":                {},
+			"proofkit.adoption-contract-envelope.input.v4.json-schema":                {},
 			"proofkit.adoption-contract-envelope.output.v2.json-schema":               {},
 			"proofkit.adoption-workflow-plan.input.v1.json-schema":                    {},
 			"proofkit.adoption-workflow-plan.output.v2.json-schema":                   {},
@@ -572,12 +572,12 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.requirement-source-conversion.output.v1.json-schema":            {},
 			"proofkit.gradual-adoption.input.v1.json-schema":                          {},
 			"proofkit.gradual-adoption.output.v1.json-schema":                         {},
-			"proofkit.gradual-adoption-guidance.input.v1.json-schema":                 {},
-			"proofkit.gradual-adoption-guidance.output.v1.json-schema":                {},
+			"proofkit.gradual-adoption-guidance.input.v2.json-schema":                 {},
+			"proofkit.gradual-adoption-guidance.output.v2.json-schema":                {},
 			"proofkit.gradual-adoption-bootstrap.input.v2.json-schema":                {},
-			"proofkit.gradual-adoption-bootstrap.output.v1.json-schema":               {},
+			"proofkit.gradual-adoption-bootstrap.output.v2.json-schema":               {},
 			"proofkit.adoption-doctor.input.v1.json-schema":                           {},
-			"proofkit.adoption-doctor.output.v1.json-schema":                          {},
+			"proofkit.adoption-doctor.output.v2.json-schema":                          {},
 			"proofkit.scaffold-project-structure.input.v2.json-schema":                {},
 			"proofkit.scaffold-project-structure.output.v2.json-schema":               {},
 			"proofkit.scaffold-profile-plan.input.v1.json-schema":                     {},

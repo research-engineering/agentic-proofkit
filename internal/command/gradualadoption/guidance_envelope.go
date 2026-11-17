@@ -11,19 +11,37 @@ import (
 func guidanceEnvelope(result guidanceResult) map[string]any {
 	commandRefs := []map[string]any{}
 	commandIDByText := map[string]string{}
+	preparedByText := map[string]PreparedCommand{}
+	for _, command := range result.preparedCommands {
+		preparedByText[command.DisplayCommand()] = command
+	}
+	contextRefs := []map[string]any{}
+	operandBindings := []agentenvelope.OperandBinding{}
 	for index, command := range stringArrayFromMap(result.Guidance, "commands") {
 		commandID := fmt.Sprintf("proofkit.agent.command.%03d", index+1)
 		commandIDByText[command] = commandID
-		commandRefs = append(commandRefs, map[string]any{
+		ref := map[string]any{
 			"command":   command,
 			"commandId": commandID,
 			"nonClaim":  "Proofkit reports this command but does not execute it or prove it passed.",
 			"owner":     "consumer_repository",
 			"purpose":   "Caller-owned native witness command reported for agent routing.",
-		})
+		}
+		if prepared, ok := preparedByText[command]; ok {
+			argv := prepared.Argv()
+			ref["argv"] = admit.StringSliceToAny(argv)
+			contextID := fmt.Sprintf("proofkit.agent.context.command-input.%03d", index+1)
+			contextRefs = append(contextRefs, map[string]any{
+				"kind": "path", "ref": prepared.InputRef(), "refId": contextID,
+				"role": "command_registry", "owner": "consumer_repository",
+				"purpose":  "Prepared Proofkit command input.",
+				"nonClaim": "This input route does not prove materialization or command execution.",
+			})
+			operandBindings = append(operandBindings, agentenvelope.OperandBinding{CommandID: commandID, ArgvIndex: len(argv) - 1, ContextRefID: contextID})
+		}
+		commandRefs = append(commandRefs, ref)
 	}
 	ownerRoute := result.Guidance["ownerRoute"].(map[string]any)
-	contextRefs := []map[string]any{}
 	contextRefs = append(contextRefs, pathContextRefs(stringArrayFromMap(ownerRoute, "evidencePaths"), "evidence", "evidence", "Caller-owned evidence artifact route.")...)
 	contextRefs = append(contextRefs, pathContextRefs(stringArrayFromMap(ownerRoute, "proofBindingPaths"), "proof-binding", "proof_binding", "Caller-owned requirement-to-witness binding route.")...)
 	contextRefs = append(contextRefs, pathContextRefs(stringArrayFromMap(ownerRoute, "specPaths"), "spec", "spec_source", "Caller-owned specification route.")...)
@@ -66,7 +84,10 @@ func guidanceEnvelope(result guidanceResult) map[string]any {
 	contextRefIDs := envelopeMapValues(contextRefs, "refId")
 	commandIDs := envelopeMapValues(commandRefs, "commandId")
 	return agentenvelope.Build(agentenvelope.Input{
-		EnvelopeID: fmt.Sprintf("%s.agent-envelope", result.Record.ReportID),
+		CommandDisplayField: "command",
+		EnvelopeID:          fmt.Sprintf("%s.agent-envelope", result.Record.ReportID),
+		Renderer:            result.renderer,
+		OperandBindings:     operandBindings,
 		SourceReport: map[string]any{
 			"artifactRef": nil,
 			"nonClaim":    "Source report identity does not prove native witness execution, freshness, or caller approval.",

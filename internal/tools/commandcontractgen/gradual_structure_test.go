@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -17,7 +18,7 @@ func TestGradualStructureOwnersConserveSemanticAndWireIdentity(t *testing.T) {
 	for _, command := range []string{"gradual-adoption", "gradual-adoption-guidance", "gradual-adoption-bootstrap"} {
 		for _, direction := range []string{"input", "output"} {
 			version := "1"
-			if command == "gradual-adoption-bootstrap" && direction == "input" {
+			if command == "gradual-adoption-bootstrap" || command == "gradual-adoption-guidance" {
 				version = "2"
 			}
 			id := "proofkit." + command + "." + direction + ".v" + version + ".json-schema"
@@ -35,6 +36,15 @@ func TestGradualStructureOwnersConserveSemanticAndWireIdentity(t *testing.T) {
 			}
 			if err := admitNativeStructureDefinition(id, definition); err != nil {
 				t.Fatal(err)
+			}
+			if command == "gradual-adoption-guidance" || command == "gradual-adoption-bootstrap" && direction == "output" {
+				prefix := "proofkit." + command + "." + direction + ".v1"
+				want := []string{prefix + ".json-schema", prefix + ".root-shape"}
+				actual := slices.Clone(owner.predecessors)
+				slices.Sort(actual)
+				if !slices.Equal(actual, want) {
+					t.Fatalf("%s loses a retired semantic predecessor", id)
+				}
 			}
 		}
 	}

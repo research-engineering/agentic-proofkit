@@ -301,6 +301,7 @@ func staleAuthorityGaps(policy staleAuthority, touched map[string]struct{}, chec
 		evidenceRefs := sortedUnique(append([]string{surface.Path}, surface.EvidenceRefs...))
 		if surface.AuthorityState == "current" {
 			gaps = append(gaps, gap{
+				origin:       inputRecordOrigin{recordKindStaleAuthoritySurface, surface.SurfaceID},
 				EvidenceRefs: evidenceRefs,
 				GapID:        surface.SurfaceID + ".stale-authority-current-vocabulary",
 				Kind:         gapKindStaleCurrentVocabulary,
@@ -314,6 +315,7 @@ func staleAuthorityGaps(policy staleAuthority, touched map[string]struct{}, chec
 		}
 		if !retiredSurfaceAllowed(surface, scopes) {
 			gaps = append(gaps, gap{
+				origin:       inputRecordOrigin{recordKindStaleAuthoritySurface, surface.SurfaceID},
 				EvidenceRefs: evidenceRefs,
 				GapID:        surface.SurfaceID + ".stale-authority-retired-scope",
 				Kind:         gapKindStaleRetiredScope,

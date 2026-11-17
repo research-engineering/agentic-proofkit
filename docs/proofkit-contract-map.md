@@ -155,6 +155,22 @@ it does not resolve unrelated blockers or approve the supplied content.
 Prepared scaffold and bootstrap input paths also refuse `-`; ordinary output
 filenames are not subject to that input-role restriction.
 
+Generated gradual-adoption guidance is portable source data. Its optional
+`agentGuidance.proofkitCommands` maps the closed operations `gradual-adoption`,
+`gradual-adoption-guidance` and `witness-plan` to exact materialized input paths;
+`agentGuidance.commands` remains caller-authored text. The actual invocation
+profile renders generated commands on read, so saving guidance never pins a
+launcher or Python interpreter. The guidance input/output and bootstrap output
+contracts use semantic v2; the delegating aggregate input uses semantic v4.
+Their wire headers are unchanged. Invalid optional guidance values retain the
+existing collected-failure behavior rather than creating executable routes.
+
+Agent-route output semantic v4 separates exact structural references from
+redacted or truncated diagnostic text. Observed-report blockers reference local
+contexts by ID. Adoption-doctor output semantic v2 likewise uses source-role-aware
+contexts and top-level action `evidenceRefs`, rather than duplicated path-valued
+selectors. These representations route inspection, not evidence authentication.
+
 `contractId` and `schemaVersion` need not coincide. Adoption
 materialization plan/apply input v3 retains payload `schemaVersion: 2`, while the
 six adoption/integration lifecycle output contracts use semantic v2 with outer

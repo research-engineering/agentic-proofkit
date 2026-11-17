@@ -27,7 +27,7 @@ func scaffoldDoctorOwners() map[string]scaffoldDoctorOwner {
 	return map[string]scaffoldDoctorOwner{
 		"proofkit.adoption-doctor.input.v1.json-schema": {"adoption-doctor", "input", "1", "1",
 			map[string]string{"01-root": "default JSON mode"}, []func() map[string]any{adoptiondoctor.InputStructure}},
-		"proofkit.adoption-doctor.output.v1.json-schema": {"adoption-doctor", "output", "1", "1",
+		"proofkit.adoption-doctor.output.v2.json-schema": {"adoption-doctor", "output", "2", "1",
 			map[string]string{"01-agent-envelope": "--agent-envelope with admitted input", "02-report": "without --agent-envelope", "03-invalid-input-envelope": invalid},
 			[]func() map[string]any{adoptiondoctor.EnvelopeStructure, adoptiondoctor.OutputStructure, agentenvelope.InvalidInputStructure}},
 		"proofkit.scaffold-project-structure.input.v2.json-schema": {"scaffold-project-structure", "input", "2", "1",
@@ -55,6 +55,9 @@ func TestScaffoldDoctorOwnersConserveIdentityAndRetirePredecessors(t *testing.T)
 			predecessors := []string{"proofkit." + want.command + "." + want.direction + ".v" + want.wire + ".root-shape"}
 			if id == "proofkit.scaffold-project-structure.output.v2.json-schema" {
 				predecessors = append(predecessors, "proofkit.scaffold-project-structure.output.v1.json-schema")
+			}
+			if id == "proofkit.adoption-doctor.output.v2.json-schema" {
+				predecessors = append(predecessors, "proofkit.adoption-doctor.output.v1.json-schema")
 			}
 			if !ok || owner.direction != want.direction || !reflect.DeepEqual(owner.commands, []string{want.command}) || !reflect.DeepEqual(owner.predecessors, predecessors) {
 				t.Fatal("wrong native owner registration")

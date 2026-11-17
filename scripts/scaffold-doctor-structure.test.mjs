@@ -16,7 +16,7 @@ const commands = ['adoption-doctor', 'scaffold-project-structure', 'scaffold-pro
 const invalidWhen = '--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr';
 const identities = {
   'adoption-doctor/input': ['proofkit.adoption-doctor.input.v1.json-schema', 'proofkit.adoption-doctor.input.v1', [['01-root', 'default JSON mode']]],
-  'adoption-doctor/output': ['proofkit.adoption-doctor.output.v1.json-schema', 'proofkit.adoption-doctor.output.v1',
+  'adoption-doctor/output': ['proofkit.adoption-doctor.output.v2.json-schema', 'proofkit.adoption-doctor.output.v2',
     [['01-agent-envelope', '--agent-envelope with admitted input'], ['02-report', 'without --agent-envelope'], ['03-invalid-input-envelope', invalidWhen]]],
   'scaffold-project-structure/input': ['proofkit.scaffold-project-structure.input.v2.json-schema', 'proofkit.scaffold-project-structure.input.v2', [['01-root', 'default JSON mode']]],
   'scaffold-project-structure/output': ['proofkit.scaffold-project-structure.output.v2.json-schema', 'proofkit.scaffold-project-structure.output.v2',
@@ -504,6 +504,7 @@ function outputArrayRange(command, index, name, value) {
       ?? (/^repoProfileDraft\.commandMatchers\.\d+\.allowed/.test(name) ? [1, null] : undefined);
   }
   if (index !== 1) {
+    if (command === 'scaffold-project-structure' && /^commands\.\d+\.argv$/.test(name)) return [4, null];
     if (/^actionPlan\.\d+\.evidenceRefs$/.test(name)) return [0, 96];
     if (/^actionPlan\.\d+\.nonClaims$/.test(name)) return [1, null];
     const limits = index === 2
@@ -532,7 +533,7 @@ function outputPredicates(command, index, output, label, skip = () => false) {
   const reject = (path, replacement, why) => schema(command, 'output', index, replace(output, path, replacement), false, `${label}/${why}/${path.join('.')}`);
   const kinds = [['null', null], ['boolean', false], ['number', 42], ['string', 'wrong-type'], ['array', []], ['object', {}]];
   const optional = name => /^bounds\.(truncated|referenceClosurePreserved|prunedLocalReferenceCount|boundsViolationCount|boundsViolations)$/.test(name)
-    || /^actionPlan\.\d+\.selectors\.(affectedPaths|candidateBoundaryId|contractWitnessRefs|nativeWitnessRefs|ownerRouteId|proofBindingPaths|proofBindingRefs|specPaths)$/.test(name)
+    || /^actionPlan\.\d+\.selectors\.(candidateBoundaryId|ownerRouteId)$/.test(name)
     || name === 'diagnostics.5.value.retire-stale-authority' || name === 'adoptionWorkflowInput.presetId';
   const nullable = name => command === 'scaffold-profile-plan' && name === 'presetId';
   const emptyText = name => /(^|\.)reportId$/.test(name) && !name.startsWith('sourceReport') && !name.startsWith('materializationManifest')
@@ -812,6 +813,10 @@ test('described finite enums retain the independently authored owner vocabulary'
         if (node.enum) {
           const key = path[path.lastIndexOf('properties') + 1];
           let expected = domains[key];
+          if (command === 'adoption-doctor' && joined.includes('/contextRefs/')) {
+            if (key === 'kind') expected = ['blocked_precondition', 'candidate_boundary', 'child_report', 'owner_route', 'stale_authority_surface'];
+            if (key === 'role') expected = ['affected_path', 'authority_path', 'contract_witness', 'evidence', 'native_witness', 'proof_binding', 'spec_path'];
+          }
           if (key === 'state') expected = direction === 'input' ? states.child : command === 'adoption-doctor' ? states.doctor : ['failed', 'passed'];
           if (key === 'ruleId') expected = ruleIds;
           // The only enumerated rule diagnostic value is the gap phase.

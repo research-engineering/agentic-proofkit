@@ -18,8 +18,8 @@ const aggregateCondition = (agent, manifest, mode, pilot) =>
 const guidanceIds = [0, 1, 2, 3, 4, 5, 6, 7].map(mask => `${String(mask + 3).padStart(2, '0')}-guidance-${mask.toString(2).padStart(3, '0')}`);
 const expected = {
   'adoption-contract-envelope/input': {
-    id: 'proofkit.adoption-contract-envelope.input.v3.json-schema', contractId: 'proofkit.adoption-contract-envelope.input.v3', schemaVersion: 2, rootType: 'object',
-    predecessor: 'proofkit.adoption-contract-envelope.input.v2.root-shape',
+    id: 'proofkit.adoption-contract-envelope.input.v4.json-schema', contractId: 'proofkit.adoption-contract-envelope.input.v4', schemaVersion: 2, rootType: 'object',
+    predecessor: 'proofkit.adoption-contract-envelope.input.v3.json-schema',
     variants: [['01-adoption', ['--mode adoption']], ['02-bootstrap', ['--mode bootstrap']],
       ...guidanceIds.map((id, mask) => [id, [`--mode guidance; guidance-mode override=${Boolean(mask & 1)}, checked-scope override=${Boolean(mask & 2)}, touched-rule-id override=${Boolean(mask & 4)}`]]),
       ['11-pilot-all', ['--mode pilot --pilot all']], ['12-pilot-first', ['--mode pilot --pilot first', '--mode pilot without --pilot (defaults first)']],

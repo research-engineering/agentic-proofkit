@@ -22,13 +22,15 @@ var bootstrapNonClaims = []string{
 }
 
 type BootstrapResult struct {
-	AgentActionPlan []any
-	ExitCode        int
-	NextCommands    []string
-	Payloads        map[string]any
-	PlannedFiles    []any
-	Record          report.Record
-	WitnessPlan     map[string]any
+	AgentActionPlan  []any
+	ExitCode         int
+	NextCommands     []string
+	Payloads         map[string]any
+	PlannedFiles     []any
+	Record           report.Record
+	WitnessPlan      map[string]any
+	preparedCommands []PreparedCommand
+	renderer         cliexec.Renderer
 }
 
 func BuildBootstrap(raw any) (map[string]any, int, error) {
@@ -215,11 +217,8 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 	addErr(&failures, err)
 	nonClaims, err := admit.SortedText(append(append([]string{}, bootstrapNonClaims...), callerNonClaims...), "bootstrap merged nonClaims", false)
 	addErr(&failures, err)
-	nextCommands := []string{
-		renderer.DisplayCommand("gradual-adoption", "--input", stringFromMap(paths, "adoptionProfilePath")),
-		renderer.DisplayCommand("gradual-adoption-guidance", "--input", stringFromMap(paths, "adoptionGuidancePath")),
-		renderer.DisplayCommand("witness-plan", "--input", stringFromMap(paths, "witnessPlanInputPath")),
-	}
+	preparedCommands := bootstrapPreparedCommands(paths, renderer)
+	nextCommands := preparedCommandDisplays(nil, preparedCommands)
 	adoptionProfile := map[string]any{
 		"adoptionId":      bootstrapID,
 		"adoptionMode":    "non_blocking",
@@ -252,7 +251,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		failures = append(failures, "generated adoptionProfile must be accepted before bootstrap can pass")
 	}
 	adoptionGuidance := map[string]any{
-		"agentGuidance": bootstrapAgentGuidance(paths, commands, nextCommands),
+		"agentGuidance": bootstrapAgentGuidance(paths, commands, preparedCommands),
 		"guidanceId":    bootstrapID + ".guidance",
 		"guidanceMode":  guidanceMode,
 		"nonClaims": admit.StringSliceToAny([]string{
@@ -269,7 +268,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		},
 		"sourceReport": source.Record.JSONValue(),
 	}
-	guidance, err := buildGuidance(adoptionGuidance, GuidanceOptions{})
+	guidance, err := buildGuidance(adoptionGuidance, GuidanceOptions{Renderer: renderer})
 	if err != nil {
 		return BootstrapResult{}, err
 	}
@@ -294,6 +293,18 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		"profilePath":      source.ProfilePath,
 		"proofBindingPath": proofBindingPath,
 	})
+	seenPaths := map[string]struct{}{}
+	for _, rawFile := range plannedFiles {
+		path := rawFile.(map[string]any)["path"].(string)
+		// Empty paths already have collected admission failures.
+		if path == "" {
+			continue
+		}
+		if _, exists := seenPaths[path]; exists {
+			failures = append(failures, "bootstrap planned file paths must be unique")
+		}
+		seenPaths[path] = struct{}{}
+	}
 	agentActionPlan := bootstrapAgentActionPlan(nextCommands, plannedFiles)
 	state := "passed"
 	if len(failures) > 0 {
@@ -338,9 +349,11 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 			"proofBinding":     proofBindingPayload,
 			"witnessPlanInput": record["nativeWitnesses"],
 		},
-		PlannedFiles: plannedFiles,
-		Record:       rec,
-		WitnessPlan:  witnessPlan,
+		PlannedFiles:     plannedFiles,
+		Record:           rec,
+		WitnessPlan:      witnessPlan,
+		preparedCommands: preparedCommands,
+		renderer:         renderer,
 	}, nil
 }
 
@@ -434,18 +447,13 @@ func bootstrapAgentReport(paths map[string]any) map[string]any {
 	}
 }
 
-func bootstrapAgentGuidance(paths map[string]any, commands []string, nextCommands []string) map[string]any {
-	combined := append([]string{}, commands...)
-	for _, next := range nextCommands {
-		if !contains(combined, next) {
-			combined = append(combined, next)
-		}
-	}
+func bootstrapAgentGuidance(paths map[string]any, commands []string, preparedCommands []PreparedCommand) map[string]any {
 	return map[string]any{
 		"artifactPath":                     paths["guidanceReportArtifactPath"],
 		"blockedPreconditions":             []any{},
 		"callerSuggestedAutofixCandidates": []any{},
-		"commands":                         admit.StringSliceToAny(combined),
+		"commands":                         admit.StringSliceToAny(commands),
+		"proofkitCommands":                 preparedCommandSource(preparedCommands),
 		"minimalAdoptionPath": admit.StringSliceToAny([]string{
 			"Start with one bounded module and observe-mode guidance.",
 			"Bind every declared requirement to caller-owned native witnesses.",

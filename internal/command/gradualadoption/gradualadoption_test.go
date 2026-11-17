@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
@@ -80,10 +81,15 @@ func TestBootstrapCallerGeneratedIntersectionsPreservePrefixAndPass(t *testing.T
 			if err != nil || result.ExitCode != 0 || result.Record.State != "passed" {
 				t.Fatalf("%s/%d: %v %#v", profile.name, mask, err, result.Record)
 			}
-			commands := anyStrings(result.Payloads["adoptionGuidance"].(map[string]any)["agentGuidance"].(map[string]any)["commands"])
-			if !reflect.DeepEqual(commands[:len(caller)], caller) {
-				t.Fatal("caller prefix changed")
+			payload := result.Payloads["adoptionGuidance"].(map[string]any)
+			if !reflect.DeepEqual(anyStrings(payload["agentGuidance"].(map[string]any)["commands"]), caller) {
+				t.Fatal("portable caller commands changed")
 			}
+			report, code, err := BuildGuidance(invocationJSON(t, payload), GuidanceOptions{Renderer: renderer})
+			if err != nil || code != 0 {
+				t.Fatalf("saved guidance refused: exit=%d err=%v", code, err)
+			}
+			commands := anyStrings(invocationGuidance(t, report)["commands"])
 			expected := append([]string{}, caller...)
 			for i, command := range initial.NextCommands {
 				if mask&(1<<i) == 0 {
@@ -92,6 +98,20 @@ func TestBootstrapCallerGeneratedIntersectionsPreservePrefixAndPass(t *testing.T
 			}
 			if !reflect.DeepEqual(commands, expected) {
 				t.Fatalf("unexpected ordered union: %#v", commands)
+			}
+			assertInvocationCommands(t, report, expected)
+			envelope, code, err := BuildGuidanceEnvelope(invocationJSON(t, payload), GuidanceOptions{Renderer: renderer})
+			if err != nil || code != 0 || len(envelope["commands"].([]any)) != len(expected) {
+				t.Fatalf("combined envelope routes drifted: exit=%d err=%v", code, err)
+			}
+			typedCount := 0
+			for _, raw := range envelope["commands"].([]any) {
+				if _, typed := raw.(map[string]any)["argv"]; typed {
+					typedCount++
+				}
+			}
+			if typedCount != 3 {
+				t.Fatal("caller/generated intersection lost or duplicated a typed route")
 			}
 		}
 		input := validBootstrapInput()
@@ -162,7 +182,14 @@ func TestBootstrapPreservesCallerDisplayCommandInGuidancePayload(t *testing.T) {
 			}
 			guidance := result.Payloads["adoptionGuidance"].(map[string]any)
 			agentGuidance := guidance["agentGuidance"].(map[string]any)
-			commands := anyStrings(agentGuidance["commands"])
+			if !reflect.DeepEqual(anyStrings(agentGuidance["commands"]), callerCommands) {
+				t.Fatal("portable guidance must retain caller commands only")
+			}
+			report, code, err := BuildGuidance(invocationJSON(t, guidance), GuidanceOptions{Renderer: renderer})
+			if err != nil || code != 0 {
+				t.Fatalf("saved guidance refused: exit=%d err=%v", code, err)
+			}
+			commands := anyStrings(invocationGuidance(t, report)["commands"])
 			if len(commands) != len(callerCommands)+len(result.NextCommands) {
 				t.Fatalf("guidance commands=%#v, want exact caller prefix and generated suffix", commands)
 			}
@@ -191,23 +218,33 @@ func TestBootstrapPreservesCallerDisplayCommandInGuidancePayload(t *testing.T) {
 			if err != nil {
 				t.Fatalf("BootstrapMaterializationManifest() error=%v", err)
 			}
-			assertMaterializedCallerCommandPrefix(t, manifest, callerCommands, result.NextCommands)
+			assertMaterializedCallerCommandPrefix(t, manifest, callerCommands, result.NextCommands, renderer)
 		})
 	}
 }
 
-func assertMaterializedCallerCommandPrefix(t *testing.T, manifest map[string]any, callerCommands []string, generatedCommands []string) {
+func assertMaterializedCallerCommandPrefix(t *testing.T, manifest map[string]any, callerCommands []string, generatedCommands []string, renderer cliexec.Renderer) {
 	t.Helper()
 	for _, rawFile := range manifest["files"].([]any) {
 		file := rawFile.(map[string]any)
 		if file["payloadKey"] != "adoptionGuidance" {
 			continue
 		}
-		var guidance map[string]any
-		if err := json.Unmarshal([]byte(file["content"].(string)), &guidance); err != nil {
+		content := file["content"].(string)
+		decoded, err := admission.DecodeJSON(strings.NewReader(content), int64(len(content)))
+		if err != nil {
 			t.Fatalf("decode materialized adoption guidance: %v", err)
 		}
+		guidance := decoded.(map[string]any)
 		commands := anyStrings(guidance["agentGuidance"].(map[string]any)["commands"])
+		if !reflect.DeepEqual(commands, callerCommands) {
+			t.Fatal("materialized source must contain caller commands only")
+		}
+		report, code, err := BuildGuidance(invocationJSON(t, guidance), GuidanceOptions{Renderer: renderer})
+		if err != nil || code != 0 {
+			t.Fatalf("materialized guidance refused: exit=%d err=%v", code, err)
+		}
+		commands = anyStrings(invocationGuidance(t, report)["commands"])
 		if len(commands) != len(callerCommands)+len(generatedCommands) ||
 			!reflect.DeepEqual(commands[:len(callerCommands)], callerCommands) ||
 			!reflect.DeepEqual(commands[len(callerCommands):], generatedCommands) {
@@ -367,6 +404,7 @@ func validAdoptionInput() map[string]any {
 
 func validBootstrapInput() map[string]any {
 	adoption := validAdoptionInput()
+	adoption["repository"].(map[string]any)["profilePath"] = "proofkit/repo-profile.json"
 	return map[string]any{
 		"schemaVersion":     json.Number("1"),
 		"bootstrapId":       "proofkit.test.bootstrap",

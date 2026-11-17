@@ -169,7 +169,7 @@ func runWithProjectView(ctx context.Context, args []string, stdin io.Reader, std
 	case commandRunnerGradualAdoptionBootstrap:
 		return runGradualAdoptionBootstrap(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerGradualAdoptionGuidance:
-		return runGradualAdoptionGuidance(args[1:], stdin, stdout, stderr)
+		return runGradualAdoptionGuidance(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerJSONReportCLIAdapterSource:
 		language, format, err := parseJSONReportCLIAdapterSourceArgs(args[1:])
 		if err != nil {

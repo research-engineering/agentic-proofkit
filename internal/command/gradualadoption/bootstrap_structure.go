@@ -76,6 +76,7 @@ func bootstrapGuidanceStructure() map[string]any {
 	agent := shapeFields(map[string]jsonshape.Shape{
 		"artifactPath": t, "blockedPreconditions": a, "callerSuggestedAutofixCandidates": a,
 		"commands": a, "minimalAdoptionPath": a, "proofBindingsMissing": a,
+		"proofkitCommands":    preparedCommandSourceShape(),
 		"reportKind":          jsonshape.StringLiteral("proofkit.gradual-adoption-guidance"),
 		"requiredNextActions": a, "routeQuestions": a,
 		"schemaId": jsonshape.StringLiteral("proofkit.gradual-adoption-guidance.v1"),

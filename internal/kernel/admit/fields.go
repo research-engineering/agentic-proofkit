@@ -22,7 +22,8 @@ const (
 	secretContextPatternSource       = `authorization` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*:` + secretWhitespacePatternSource + `*[^\r\n]+|bearer` + secretWhitespacePatternSource + `+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*[=:]` + secretWhitespacePatternSource + `*` + secretNonWhitespacePatternSource + `+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
 	secretSharedTokenPatternSource   = `github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
 	secretScalarTokenPatternSource   = secretSharedTokenPatternSource + `|sk-(?:proj-)?[A-Za-z0-9_-]{10,}`
-	secretPathTokenPatternSource     = `sk-(?:proj-[A-Za-z0-9_-]{10,}|[A-Za-z0-9_-]{16,})`
+	secretProjectTokenPatternSource  = `sk-proj-[A-Za-z0-9_-]{10,}`
+	secretPathTokenPatternSource     = `sk-[A-Za-z0-9_-]{16,}`
 )
 
 const RuleIDPatternBody = `[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*`
@@ -37,7 +38,7 @@ var (
 	schemeLikePathPattern      = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
 	secretValuePattern         = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `|` + secretScalarTokenPatternSource + `)`)
 	secretPathContextPattern   = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
-	secretPathTokenPattern     = regexp.MustCompile(`(?i)(?:` + secretSharedTokenPatternSource + `|(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_]))`)
+	secretPathTokenPattern     = regexp.MustCompile(`(?i)(?:` + secretSharedTokenPatternSource + `|` + secretProjectTokenPatternSource + `|(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_]))`)
 	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/` + secretWhitespaceClassSource + `:@]+:[^/` + secretWhitespaceClassSource + `@]+@`)
 	shellControlTokenPattern   = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
 )

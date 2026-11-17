@@ -36,15 +36,32 @@ func BuildBootstrapEnvelopeFromContractEnvelopeWithRenderer(raw any, renderer cl
 func BootstrapEnvelope(result BootstrapResult) map[string]any {
 	commandRefs := []map[string]any{}
 	commandIDByText := map[string]string{}
-	for index, command := range result.NextCommands {
+	operandBindings := []agentenvelope.OperandBinding{}
+	payloadKeys := map[string]string{"gradual-adoption": "adoptionProfile", "gradual-adoption-guidance": "adoptionGuidance", "witness-plan": "witnessPlanInput"}
+	for index, prepared := range result.preparedCommands {
+		command := prepared.DisplayCommand()
+		argv := prepared.Argv()
 		commandID := fmt.Sprintf("proofkit.agent.command.bootstrap.%03d", index+1)
 		commandIDByText[command] = commandID
 		commandRefs = append(commandRefs, map[string]any{
+			"argv":      admit.StringSliceToAny(argv),
 			"command":   command,
 			"commandId": commandID,
 			"nonClaim":  "Proofkit reports this command but does not execute it or prove it passed.",
 			"owner":     "consumer_repository",
 			"purpose":   "Caller-owned observe-mode command emitted by bootstrap planning.",
+		})
+		contextID := ""
+		for fileIndex, raw := range result.PlannedFiles {
+			file := raw.(map[string]any)
+			if file["path"] == prepared.InputRef() && file["payloadKey"] == payloadKeys[prepared.Command()] {
+				contextID = fmt.Sprintf("proofkit.agent.context.bootstrap-file.%03d", fileIndex+1)
+				break
+			}
+		}
+		// An absent materialized role must prune the command, not remove its binding.
+		operandBindings = append(operandBindings, agentenvelope.OperandBinding{
+			CommandID: commandID, ArgvIndex: len(argv) - 1, ContextRefID: contextID,
 		})
 	}
 	contextRefs := make([]map[string]any, 0, len(result.PlannedFiles))
@@ -89,7 +106,10 @@ func BootstrapEnvelope(result BootstrapResult) map[string]any {
 	contextIDs := envelopeMapValues(contextRefs, "refId")
 	commandIDs := envelopeMapValues(commandRefs, "commandId")
 	return agentenvelope.Build(agentenvelope.Input{
-		EnvelopeID: result.Record.ReportID + ".agent-envelope",
+		CommandDisplayField: "command",
+		EnvelopeID:          result.Record.ReportID + ".agent-envelope",
+		Renderer:            result.renderer,
+		OperandBindings:     operandBindings,
 		SourceReport: map[string]any{
 			"artifactRef": nil,
 			"nonClaim":    "Bootstrap report identity does not prove file creation, witness execution, freshness, or caller approval.",

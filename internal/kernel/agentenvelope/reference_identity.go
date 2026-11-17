@@ -55,10 +55,13 @@ func prepareLocalReferences(input Input) preparedLocalReferences {
 		receipts: localIdentityCounts(prepared.receiptRefs, "receiptRefId"),
 	}
 	ambiguous := ambiguousLocalIdentities(multiplicity)
+	for identity := range ambiguous {
+		rejectedTargets[identity] = struct{}{}
+	}
 	prepared.commands = removeAmbiguousTargets(prepared.commands, "commandId", ambiguous)
 	prepared.contextRefs = removeAmbiguousTargets(prepared.contextRefs, "refId", ambiguous)
 	prepared.receiptRefs = removeAmbiguousTargets(prepared.receiptRefs, "receiptRefId", ambiguous)
-	admitStructuralOperands(&prepared, rejectedTargets, input.OperandBindings, input.ContextReferenceFields, input.Renderer)
+	admitStructuralOperands(&prepared, rejectedTargets, input.OperandBindings, input.ContextReferenceFields, input.Renderer, input.CommandDisplayField)
 
 	if unsafeTargets > 0 {
 		prepared.omitted = append(prepared.omitted, omissionRecord("unsafeLocalIdentity", "localTargetIds", unsafeTargets))

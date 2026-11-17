@@ -1,6 +1,7 @@
 {
-  "adoption-contract-envelope|input|union": "sha256:2e1c695844d68a3a161fca4ec8b07e4531cd7f4204012dc0ef3b18f326e95fa0",
-  "adoption-contract-envelope|output|union": "sha256:f785d71586de39ee22cefaf622be77224ebade60873a57d4bd59733e9b777b4a",
+  "adoption-contract-envelope|input|aggregate": "sha256:4be131742d63b5803ecdbd2156f209a68bf3507a196b2c5d315bb132c965e29c",
+  "adoption-contract-envelope|input|union": "sha256:e5c93b98f7a89559aed56791f0d8fc617a5208ed3156a521670833d17da1332f",
+  "adoption-contract-envelope|output|union": "sha256:89e3f1ba629e40dfd81cccbc9f703fc1747cdd1aca77cc56306d49d8911ced62",
   "conformance-profile|input|union": "sha256:492b247c5c6467a332bc93d0b9c1b0ee45f3ada7370232723a730e7de269f933",
   "conformance-profile|output|union": "sha256:c647a11802ad1f4133a2fa16664049ffe28c1d3772b3cb677e87cfd29d9d9998",
   "evidence-graph|input|union": "sha256:4680924b09d27a2751d7c097df079f1124f3086d3062a0440b2e03e387fc1b1d",
@@ -10,7 +11,7 @@
   "impact|output|direct": "sha256:ddbfad41159ba4c8c08670994b39241892880bf2a896cbe1eeb503af375b1e78",
   "impact|output|union": "sha256:199ac7b10e55e792d79fd8f8640827a6ae50cfbe88517f42e59cbdb6030da34f",
   "pilot-admission|input|union": "sha256:624b82695dac5d92a6baa05a0b7bc71d4a417a1456f18d4e298faf57025480f1",
-  "pilot-admission|output|union": "sha256:23c4828fedffaf018825c528baed3877461432e668238e08c23eb03e0f0faa65",
+  "pilot-admission|output|union": "sha256:6f52f7737c339f7fcadd34ed764c6519b63ddcdaa8d6deeb60fbf1149561e474",
   "proof-slice|input|union": "sha256:a232d45e02929be6d1468cacf9482ac1a34ac1ee6391c2ea6b9db88a69c6c032",
   "proof-slice|output|union": "sha256:d972c28fbe3df37ad870bd0ae069005f2f411c95cab413c96ac0055211f4d04c",
   "requirement-bindings|input|union": "sha256:25f8d5f1bf59a0d85dd3c889a959d20680d3b90b0f095218d8cfdfef1c71bb9e",

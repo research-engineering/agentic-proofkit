@@ -1,6 +1,7 @@
 package projectstructure
 
 import (
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/scaffoldprofileplan"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -33,7 +34,7 @@ func OutputStructure() map[string]any {
 	return map[string]any{
 		"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false,
 		"properties": properties, "required": required,
-		"description": "Complete scaffold result for admitted input, including failed reports with exitCode 1. The embedded bootstrap result and repo-profile plan use their own command output structures. The workflow input and plan always describe the new_repository scenario with five caller-owned refs; the plan is blocked when no preset is available. The manifest lists nine sorted unique files: three scaffold payloads plus six bootstrap files, one of which may be replaced by the repo-profile draft. Native owners determine path consistency, hashes, ordering, renderer-specific commands and state/exit consistency; structural validity does not prove files exist, witnesses ran or caller approval.",
+		"description": "Complete scaffold result for admitted input, including failed reports with exitCode 1. The embedded bootstrap result and repo-profile plan use their own command output structures. The workflow input and plan always describe the new_repository scenario with four caller-owned refs; the plan is blocked when no preset is available. The manifest lists nine sorted unique files: three scaffold payloads plus six bootstrap files, one of which may be replaced by the repo-profile draft. Native owners determine path consistency, hashes, ordering, renderer-specific commands and state/exit consistency; structural validity does not prove files exist, witnesses ran or caller approval.",
 	}
 }
 
@@ -63,11 +64,7 @@ func outputMemberShapes() map[string]jsonshape.Shape {
 		phases = append(phases, jsonshape.Object(jsonshape.Required("commands", jsonshape.Array(command, 0)), jsonshape.Required("phase", jsonshape.StringLiteral(phase))))
 	}
 	workflowPlan := jsonshape.Object(
-		jsonshape.Required("blockers", jsonshape.Array(jsonshape.Object(
-			jsonshape.Required("blockerId", text), jsonshape.Required("nonClaim", text), jsonshape.Required("reason", text),
-			// All scaffold input bundles are supplied; only preset choice can block.
-			jsonshape.Required("inputAlternatives", jsonshape.Tuple()), jsonshape.Required("scenario", scenario),
-		), 0)),
+		jsonshape.Required("blockers", jsonshape.BoundedArray(adoptionworkflow.PresetChoiceBlockerShape("new_repository"), 0, 1)),
 		jsonshape.Required("inputRefs", jsonshape.Tuple(refs...)), jsonshape.Required("nonClaims", jsonshape.Array(text, len(workflowInputNonClaims))),
 		jsonshape.Required("phases", jsonshape.Tuple(phases...)), jsonshape.Required("planKind", jsonshape.StringLiteral("proofkit.adoption-workflow-plan")),
 		jsonshape.Required("planState", valuesShape("blocked", "ready_for_caller_review")), jsonshape.Required("scenario", scenario),
@@ -146,6 +143,7 @@ func EnvelopeShape(envelopeID string) jsonshape.Shape {
 		Bounds:                 agentenvelope.CompatibilityBoundsStructure(),
 		ClarificationQuestions: jsonshape.BoundedArray(agentenvelope.ClarificationStructure(jsonshape.StringLiteral("owner_decision")), 0, envelopeBlockedLimit),
 		Commands: jsonshape.BoundedArray(jsonshape.Object(
+			jsonshape.Required("argv", jsonshape.Array(text, 4)),
 			jsonshape.Required("command", text), jsonshape.Required("commandId", text), jsonshape.Required("nonClaim", text),
 			jsonshape.Required("owner", jsonshape.StringLiteral("consumer_repository")), jsonshape.Required("purpose", text),
 		), 0, envelopeCommandLimit),
@@ -167,7 +165,7 @@ func EnvelopeStructure() map[string]any {
 	schema["properties"].(map[string]any)["envelopeId"] = map[string]any{"anyOf": []any{
 		fragment(jsonshape.StringSuffix(".agent-envelope")), fragment(jsonshape.StringLiteral(admit.DiagnosticRedactionMarker)),
 	}}
-	schema["description"] = "Agent envelope for an admitted scaffold, including failed scaffold reports. It has four fixed route, candidate-change, bind and verify actions, one path context ref per materialized file, the scaffold next commands and one blocked precondition plus owner-decision clarification per caller-content file or profile draft review. Payload bodies are omitted. Strings are sanitized by the envelope owner and may be redacted; unsafe local references are summarized by at most one omission record and degradation bounds. Native Build owns ordering, limits, roles, source hashing and stop reasons. Refused input uses the separately declared invalid-input envelope."
+	schema["description"] = "Agent envelope for an admitted scaffold, including failed scaffold reports. It has four fixed route, candidate-change, bind and verify actions, one path context ref per materialized file, the scaffold next commands with canonical argv and one blocked precondition plus owner-decision clarification per caller-content file or profile draft review. Commands share the manifest's canonical projection and actual invocation renderer; losing a materialized context prunes its dependent command. Payload bodies are omitted. Structural paths and argv retain exact admitted identity; descriptive strings are sanitized and may be redacted or truncated. Unsafe local references are summarized by at most one omission record and degradation bounds. Native Build owns ordering, limits, roles, source hashing and stop reasons. Refused input uses the separately declared invalid-input envelope."
 	return schema
 }
 

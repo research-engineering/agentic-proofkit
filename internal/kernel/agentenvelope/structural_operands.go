@@ -19,7 +19,7 @@ type OperandBinding struct {
 // once; arbitrary caller text still follows scalar redaction.
 type admittedStructuralOperand string
 
-func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[string]struct{}, bindings []OperandBinding, fields []ContextReferenceField, renderer cliexec.Renderer) {
+func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[string]struct{}, bindings []OperandBinding, fields []ContextReferenceField, renderer cliexec.Renderer, displayField string) {
 	contexts, paths, omitted := admitContextOperands(prepared.contextRefs, fields, rejected)
 	prepared.contextRefs = contexts
 	byCommand := map[string][]OperandBinding{}
@@ -36,7 +36,7 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[str
 		}
 		argv, ok := admitStructuralArgv(value, byCommand[id], paths, renderer)
 		delete(byCommand, id)
-		if !ok {
+		if !ok || !projectCommandDisplay(command, argv, displayField) {
 			rejected[id] = struct{}{}
 			omitted++
 			continue
@@ -45,12 +45,45 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[str
 		commands = append(commands, command)
 	}
 	prepared.commands = commands
-	for _, unmatched := range byCommand {
-		omitted += len(unmatched)
+	for id := range byCommand {
+		if _, alreadyCounted := rejected[id]; !alreadyCounted {
+			omitted++
+		}
 	}
 	if omitted > 0 {
 		prepared.omitted = append(prepared.omitted, omissionRecord("unsafeStructuralOperand", "commandOrContextOperands", omitted))
 	}
+}
+
+func projectCommandDisplay(command map[string]any, argv []any, field string) bool {
+	switch field {
+	case "":
+		return true
+	case "command", "display":
+	default:
+		return false
+	}
+	if _, present := command[field]; !present {
+		return true
+	}
+	values := make([]string, len(argv))
+	for index, value := range argv {
+		switch text := value.(type) {
+		case string:
+			values[index] = text
+		case admittedStructuralOperand:
+			values[index] = string(text)
+		default:
+			return false
+		}
+	}
+	display := cliexec.DisplayArgv(values)
+	// Joining safe words can create a contextual secret signature.
+	if admit.ContainsSecretLikePathValue(display) {
+		return false
+	}
+	command[field] = admittedStructuralOperand(display)
+	return true
 }
 
 func admitStructuralArgv(raw any, bindings []OperandBinding, paths map[contextOperandKey]admittedStructuralOperand, renderer cliexec.Renderer) ([]any, bool) {

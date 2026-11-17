@@ -534,7 +534,7 @@ func InputContract() map[string]any {
 
 func OutputContract() map[string]any {
 	return map[string]any{
-		"contractId":    "proofkit.agent-route.output.v3",
+		"contractId":    "proofkit.agent-route.output.v4",
 		"schemaVersion": 3,
 		"authority":     "deterministic route report, brief packet, full envelope, or invalid-input repair packet selected from the admitted invocation",
 		"reportContract": map[string]any{

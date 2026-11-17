@@ -147,16 +147,31 @@ func blockersShape() jsonshape.Shape {
 		blockers := workflowBlockers(scenario, nil, nil)
 		maximum = max(maximum, len(blockers))
 		for _, item := range blockers {
-			cases = append(cases, jsonshape.Object(
-				jsonshape.Required("blockerId", jsonshape.StringLiteral(item.BlockerID)),
-				jsonshape.Required("inputAlternatives", residualAlternativesShape(item.InputAlternatives)),
-				jsonshape.Required("nonClaim", jsonshape.StringLiteral(blockerNonClaim)),
-				jsonshape.Required("reason", jsonshape.StringLiteral(item.Reason)),
-				jsonshape.Required("scenario", jsonshape.StringLiteral(scenario)),
-			))
+			cases = append(cases, blockerShape(item))
 		}
 	}
 	return jsonshape.BoundedArray(jsonshape.OneOf(cases...), 0, maximum)
+}
+
+// PresetChoiceBlockerShape projects the owner's scalar blocker for a consumer
+// that already supplies every input bundle, such as project scaffolding.
+func PresetChoiceBlockerShape(scenario string) jsonshape.Shape {
+	for _, item := range workflowBlockers(scenario, nil, nil) {
+		if item.AnswerKind == presetChoiceAnswer {
+			return blockerShape(item)
+		}
+	}
+	panic("workflow scenario has no preset-choice blocker")
+}
+
+func blockerShape(item blocker) jsonshape.Shape {
+	return jsonshape.Object(
+		jsonshape.Required("blockerId", jsonshape.StringLiteral(item.BlockerID)),
+		jsonshape.Required("inputAlternatives", residualAlternativesShape(item.InputAlternatives)),
+		jsonshape.Required("nonClaim", jsonshape.StringLiteral(blockerNonClaim)),
+		jsonshape.Required("reason", jsonshape.StringLiteral(item.Reason)),
+		jsonshape.Required("scenario", jsonshape.StringLiteral(item.Scenario)),
+	)
 }
 
 func residualAlternativesShape(alternatives inputAlternatives) jsonshape.Shape {

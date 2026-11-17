@@ -8,6 +8,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/adoptionmode"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/contractenv"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
@@ -32,12 +33,15 @@ type GuidanceOptions struct {
 	CheckedScope   string
 	GuidanceMode   string
 	TouchedRuleIDs []string
+	Renderer       cliexec.Renderer
 }
 
 type guidanceResult struct {
-	ExitCode int
-	Guidance map[string]any
-	Record   report.Record
+	ExitCode         int
+	Guidance         map[string]any
+	Record           report.Record
+	preparedCommands []PreparedCommand
+	renderer         cliexec.Renderer
 }
 
 func BuildGuidance(raw any, options GuidanceOptions) (map[string]any, int, error) {
@@ -61,7 +65,7 @@ func BuildGuidanceFromContractEnvelope(raw any, options GuidanceOptions) (map[st
 	if err != nil {
 		return nil, 1, err
 	}
-	return BuildGuidance(input, GuidanceOptions{})
+	return BuildGuidance(input, GuidanceOptions{Renderer: options.Renderer})
 }
 
 func BuildGuidanceEnvelopeFromContractEnvelope(raw any, options GuidanceOptions) (map[string]any, int, error) {
@@ -69,7 +73,7 @@ func BuildGuidanceEnvelopeFromContractEnvelope(raw any, options GuidanceOptions)
 	if err != nil {
 		return agentenvelope.InvalidInput(err.Error()), 1, nil
 	}
-	return BuildGuidanceEnvelope(input, GuidanceOptions{})
+	return BuildGuidanceEnvelope(input, GuidanceOptions{Renderer: options.Renderer})
 }
 
 func GuidanceInputFromContractEnvelope(raw any, options GuidanceOptions) (map[string]any, error) {
@@ -181,7 +185,7 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 	}
 	scopeEvidence := admitScopeEvidence(object(record["scopeEvidence"]), options, &failures)
 	ownerRoute := admitOwnerRoute(object(record["ownerRoute"]), &failures, "ownerRoute")
-	agentGuidance := admitAgentGuidance(object(record["agentGuidance"]), &failures)
+	agentGuidance, preparedCommands := admitAgentGuidance(object(record["agentGuidance"]), options.Renderer, &failures)
 	modernization := admitModernization(record["modernization"], &failures)
 	nonClaims, err := admit.SortedTextArray(record["nonClaims"], "gradual adoption guidance nonClaims", false)
 	if err != nil {
@@ -258,7 +262,7 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 		RuleResults: guidanceRuleResults(guidanceMode, sourceReport["state"].(string), agentGuidance, modernization, failures, sourceFailedRuleIDs, sourceWarningRuleIDs, enforcementFailedRuleIDs),
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
-	return guidanceResult{ExitCode: exitCode(rec), Guidance: guidance, Record: rec}, nil
+	return guidanceResult{ExitCode: exitCode(rec), Guidance: guidance, Record: rec, preparedCommands: preparedCommands, renderer: options.Renderer}, nil
 }
 
 func admitSourceReport(raw any) (map[string]any, error) {
@@ -390,8 +394,8 @@ func admitOwnerRoute(raw map[string]any, failures *[]string, context string) map
 	}
 }
 
-func admitAgentGuidance(raw map[string]any, failures *[]string) map[string]any {
-	if err := admit.KnownKeys(raw, []string{"artifactPath", "blockedPreconditions", "callerSuggestedAutofixCandidates", "commands", "minimalAdoptionPath", "proofBindingsMissing", "reportKind", "requiredNextActions", "routeQuestions", "schemaId"}, "agentGuidance"); err != nil {
+func admitAgentGuidance(raw map[string]any, renderer cliexec.Renderer, failures *[]string) (map[string]any, []PreparedCommand) {
+	if err := admit.KnownKeys(raw, []string{"artifactPath", "blockedPreconditions", "callerSuggestedAutofixCandidates", "commands", "minimalAdoptionPath", "proofkitCommands", "proofBindingsMissing", "reportKind", "requiredNextActions", "routeQuestions", "schemaId"}, "agentGuidance"); err != nil {
 		addErr(failures, err)
 	}
 	if raw["reportKind"] != "proofkit.gradual-adoption-guidance" {
@@ -416,6 +420,8 @@ func admitAgentGuidance(raw map[string]any, failures *[]string) map[string]any {
 	addErr(failures, err)
 	commands, err := preserveDisplayCommands(raw["commands"], "agentGuidance commands", true)
 	addErr(failures, err)
+	preparedCommands := admitPreparedCommands(raw, renderer, failures)
+	commands = preparedCommandDisplays(commands, preparedCommands)
 	missing, err := sortedRuleIDArray(raw["proofBindingsMissing"], "agentGuidance proofBindingsMissing")
 	addErr(failures, err)
 	blocked, err := admit.SortedTextArray(raw["blockedPreconditions"], "agentGuidance blockedPreconditions", true)
@@ -431,7 +437,7 @@ func admitAgentGuidance(raw map[string]any, failures *[]string) map[string]any {
 		"requiredNextActions":              admit.StringSliceToAny(requiredNextActions),
 		"routeQuestions":                   admit.StringSliceToAny(questions),
 		"schemaId":                         schemaID,
-	}
+	}, preparedCommands
 }
 
 func admitModernization(raw any, failures *[]string) map[string]any {

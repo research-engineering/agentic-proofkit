@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -64,12 +65,16 @@ func TestWorkflowAcceptanceTruthTableAndAdvertisedRepairs(t *testing.T) {
 					if err := schemacheck.Validate(schema, blockers); err != nil {
 						t.Fatalf("mask=%b preset=%t: schema projection: %v", mask, preset, err)
 					}
-					if len(blockers) != 1 {
+					if len(blockers) == 0 {
 						continue
 					}
 					envelope, exit, err := BuildEnvelope(input)
-					if err != nil || exit != 1 || len(envelope["clarificationQuestions"].([]any)) != 1 {
-						t.Fatalf("sole blocker lost its question: exit=%d err=%v envelope=%v", exit, err, envelope)
+					if err != nil || exit != 1 {
+						t.Fatalf("blocked questions: exit=%d err=%v", exit, err)
+					}
+					assertQuestionsMatchEachBlocker(t, blockers, envelope["clarificationQuestions"].([]any))
+					if len(blockers) != 1 {
+						continue
 					}
 					question := envelope["clarificationQuestions"].([]any)[0].(map[string]any)
 					alternatives := blockers[0].(map[string]any)["inputAlternatives"].([]any)
@@ -119,6 +124,48 @@ func TestWorkflowAcceptanceTruthTableAndAdvertisedRepairs(t *testing.T) {
 		t.Fatalf("truth rows=%d successful bundles=%d incomplete AND=%d", rows, repairBundles, incompleteAND)
 	}
 	t.Logf("truth rows=%d successful bundles=%d incomplete AND=%d", rows, repairBundles, incompleteAND)
+}
+
+func assertQuestionsMatchEachBlocker(t *testing.T, blockers, questions []any) {
+	t.Helper()
+	if len(questions) != len(blockers) {
+		t.Fatalf("questions=%d, want one for each of %d blockers", len(questions), len(blockers))
+	}
+	byID := map[string]map[string]any{}
+	for _, raw := range questions {
+		question := raw.(map[string]any)
+		id := question["questionId"].(string)
+		if byID[id] != nil {
+			t.Fatal("duplicate clarification identity")
+		}
+		byID[id] = question
+	}
+	for _, raw := range blockers {
+		blocker := raw.(map[string]any)
+		question := byID["proofkit.adoption-workflow.clarification."+blocker["blockerId"].(string)]
+		if question == nil || question["askWhen"] != blocker["reason"] {
+			t.Fatal("clarification lost its own blocker identity or reason")
+		}
+		alternatives := blocker["inputAlternatives"].([]any)
+		if len(alternatives) == 0 {
+			if question["expectedAnswerKind"] != "preset_choice" || !strings.HasPrefix(question["question"].(string), "Select presetId from: ") {
+				t.Fatal("scalar preset blocker received an input-bundle repair")
+			}
+			continue
+		}
+		bundles := []string{}
+		kinds := []string{}
+		for _, raw := range alternatives {
+			bundle := anyToStrings(raw.([]any))
+			bundles = append(bundles, "("+strings.Join(bundle, " AND ")+")")
+			kinds = append(kinds, bundle...)
+		}
+		slices.Sort(kinds)
+		kinds = slices.Compact(kinds)
+		if question["expectedAnswerKind"] != "missing_context_ref" || question["question"] != "Provide caller-owned input refs for one complete bundle: "+strings.Join(bundles, " OR ")+"." || !slices.Equal(anyToStrings(question["evidenceRefs"].([]any)), kinds) {
+			t.Fatal("clarification offers a different blocker's repair")
+		}
+	}
 }
 
 func TestWorkflowResidualRepairAlternatives(t *testing.T) {

@@ -561,6 +561,12 @@ function carrierPredicates(command, index, output, label) {
       schema(command, 'output', index, replace(output, [...path, 'foreign'], true), false, label);
       for (const key of Object.keys(value)) {
         if (path.join('.') === 'bounds' && optionalBounds.has(key)) continue;
+        if (command === 'gradual-adoption-guidance' && /^commands\.\d+$/.test(path.join('.')) && key === 'argv') continue;
+        if (path.join('.') === 'payloads.adoptionGuidance.agentGuidance.proofkitCommands') {
+          const missing = structuredClone(output); delete at(missing, path)[key];
+          schema(command, 'output', index, missing, true, label + '/optional-operation/' + key);
+          continue;
+        }
         const missing = structuredClone(output); delete at(missing, path)[key];
         schema(command, 'output', index, missing, false, label + '/required/' + [...path, key]);
         if (key === 'schemaVersion') for (const version of [0, 2]) schema(command, 'output', index, replace(output, [...path, key], version), false, label + '/wire-version');
@@ -839,19 +845,24 @@ test('caller/generated intersections preserve the prefix without duplicate instr
       const expected = [...caller, ...generated.filter((_, index) => !(mask & 1 << index))];
       const input = {...bootstrap(), commands: caller};
       const ordinary = invoke('gradual-adoption-bootstrap', input, 'passed', [], 0, launcher.env);
-      assert.deepEqual(ordinary.payloads.adoptionGuidance.agentGuidance.commands, expected);
+      assert.deepEqual(ordinary.payloads.adoptionGuidance.agentGuidance.commands, caller);
+      assert.deepEqual(ordinary.payloads.adoptionGuidance.agentGuidance.proofkitCommands, {
+        'gradual-adoption': 'proofkit/adoption.json', 'gradual-adoption-guidance': 'proofkit/guidance.json', 'witness-plan': 'proofkit/witness.json',
+      });
       assert.deepEqual(ordinary.nextCommands, generated);
-      invoke('gradual-adoption-guidance', ordinary.payloads.adoptionGuidance, 'passed', [], 0, launcher.env);
+      const readmitted = invoke('gradual-adoption-guidance', ordinary.payloads.adoptionGuidance, 'passed', [], 0, launcher.env);
+      assert.deepEqual(readmitted.diagnostics.find(row => row.key === 'guidance').value.commands, expected);
+      assert.equal(readmitted.summary.commandCount, expected.length);
       const agent = invoke('gradual-adoption-bootstrap', input, 'passed', ['--agent-envelope'], 0, launcher.env);
       assert.deepEqual(agent.commands.map(row => row.command), generated);
       const manifest = invoke('gradual-adoption-bootstrap', input, 'passed', ['--materialization-manifest'], 0, launcher.env);
-      assert.deepEqual(JSON.parse(manifest.files.find(file => file.payloadKey === 'adoptionGuidance').content).agentGuidance.commands, expected);
+      assert.deepEqual(JSON.parse(manifest.files.find(file => file.payloadKey === 'adoptionGuidance').content).agentGuidance.commands, caller);
       const aggregate = envelope(); aggregate.bootstrap.commands = caller;
       for (const flags of [[], ['--agent-envelope'], ['--materialization-manifest']]) {
         const value = invoke('gradual-adoption-bootstrap', aggregate, 'passed', ['--contract-envelope', ...flags], 1, launcher.env);
         if (flags.includes('--agent-envelope')) assert.deepEqual(value.commands.map(row => row.command), generated);
-        else if (flags.includes('--materialization-manifest')) assert.deepEqual(JSON.parse(value.files.find(file => file.payloadKey === 'adoptionGuidance').content).agentGuidance.commands, expected);
-        else assert.deepEqual(value.payloads.adoptionGuidance.agentGuidance.commands, expected);
+        else if (flags.includes('--materialization-manifest')) assert.deepEqual(JSON.parse(value.files.find(file => file.payloadKey === 'adoptionGuidance').content).agentGuidance.commands, caller);
+        else assert.deepEqual(value.payloads.adoptionGuidance.agentGuidance.commands, caller);
       }
     }
     for (const flags of [[], ['--agent-envelope'], ['--materialization-manifest']]) {

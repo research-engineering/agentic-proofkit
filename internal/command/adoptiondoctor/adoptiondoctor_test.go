@@ -404,7 +404,10 @@ func TestBuildAgentEnvelopeRoutesBoundedActionPlan(t *testing.T) {
 	assertStringSliceContains(t, candidateAction["uncertainties"], "Proof ownership still needs owner review.")
 	assertStringSliceContains(t, candidateAction["ownerQuestions"], "Should this candidate become a stable requirement owner?")
 	selectors := candidateAction["selectors"].(map[string]any)
-	assertStringSliceContains(t, selectors["affectedPaths"], "packages/example/src/index.ts")
+	if selectors["candidateBoundaryId"] != "consumer.example-boundary" {
+		t.Fatalf("candidate selector lost source identity: %#v", selectors)
+	}
+	assertActionContext(t, envelope, candidateAction, "affected_path", "packages/example/src/index.ts")
 	if candidateAction["missingWitness"] != "candidate_witness_not_admitted" {
 		t.Fatalf("candidate action missing witness diagnostic: %#v", candidateAction["missingWitness"])
 	}
@@ -413,7 +416,10 @@ func TestBuildAgentEnvelopeRoutesBoundedActionPlan(t *testing.T) {
 	}
 	routeAction := findAction(t, actions, "consumer.example-route.missing_proof_binding")
 	routeSelectors := routeAction["selectors"].(map[string]any)
-	assertStringSliceContains(t, routeSelectors["specPaths"], "docs/specs/example/requirements.v1.json")
+	if routeSelectors["ownerRouteId"] != "consumer.example-route" {
+		t.Fatalf("route selector lost source identity: %#v", routeSelectors)
+	}
+	assertActionContext(t, envelope, routeAction, "spec_path", "docs/specs/example/requirements.v1.json")
 	if routeAction["proofCommand"] != "missing_command_route" || routeAction["missingWitness"] != "missing_proof_binding" {
 		t.Fatalf("route action lost proof/witness diagnostics: %#v", routeAction)
 	}
@@ -657,10 +663,8 @@ func TestBuildAgentEnvelopeProjectsPrefixRelatedRecordsByExactIdentity(t *testin
 		t.Fatalf("nested route action projected another route: %#v", routeAction)
 	}
 	assertStringSliceContains(t, routeAction["commandIds"], "consumer.route.child.command.001")
-	assertStringSliceContains(t, routeSelectors["specPaths"], "docs/specs/child.json")
-	if paths := routeSelectors["proofBindingPaths"].([]any); len(paths) != 0 {
-		t.Fatalf("missing-proof-binding action carries another route's bindings: %#v", paths)
-	}
+	assertActionContext(t, envelope, routeAction, "spec_path", "docs/specs/child.json")
+	assertActionContextCount(t, envelope, routeAction, "proof_binding", 0)
 
 	for _, want := range []struct{ step, owner, label string }{
 		{"consumer.example.child.candidate-boundary-not-admitted", "consumer.child", "child"},
@@ -674,7 +678,7 @@ func TestBuildAgentEnvelopeProjectsPrefixRelatedRecordsByExactIdentity(t *testin
 		}
 		assertStringSliceContains(t, action["observedFacts"], want.label+" fact.")
 		assertStringSliceContains(t, action["ownerQuestions"], want.label+" question?")
-		assertStringSliceContains(t, selectors["affectedPaths"], want.label+"/path.ts")
+		assertActionContext(t, envelope, action, "affected_path", want.label+"/path.ts")
 	}
 
 	blockedAction := findAction(t, actions, "proofkit.adoption-doctor.consumer.example.child.blocked-precondition")
@@ -684,7 +688,7 @@ func TestBuildAgentEnvelopeProjectsPrefixRelatedRecordsByExactIdentity(t *testin
 	}
 	assertStringSliceContains(t, blockedAction["ownerQuestions"], "child question?")
 	assertStringSliceContains(t, blockedAction["observedFacts"], "child fact.")
-	assertStringSliceContains(t, blockedSelectors["affectedPaths"], "child/path.ts")
+	assertActionContext(t, envelope, blockedAction, "affected_path", "child/path.ts")
 
 	extendingRouteAction := findAction(t, actions, "proofkit.adoption-doctor.consumer.example.route.missing_proof_binding")
 	extendingRouteSelectors := extendingRouteAction["selectors"].(map[string]any)

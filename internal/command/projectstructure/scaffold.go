@@ -42,6 +42,8 @@ type Result struct {
 	Manifest              map[string]any
 	Record                report.Record
 	RepoProfile           scaffoldprofileplan.Result
+	commands              []preparedCommand
+	renderer              cliexec.Renderer
 }
 
 func Build(raw any) (map[string]any, int, error) {
@@ -118,7 +120,7 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
-	workflowInput, err := adoptionWorkflowInput(bootstrapInput, repoProfile.Plan, paths, workflow)
+	workflowInput, err := adoptionWorkflowInput(bootstrapManifest, repoProfile.Plan, paths, workflow)
 	if err != nil {
 		return Result{}, err
 	}
@@ -137,6 +139,7 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
+	commands := projectCommands(paths, bootstrap, renderer)
 	manifest, err := buildMaterializationManifest(materializationInput{
 		adoptionWorkflowInput: workflowInput,
 		bootstrapInput:        bootstrapInput,
@@ -145,12 +148,13 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 		repoProfileInput:      repoProfileInput,
 		repoProfilePlan:       repoProfile.Plan,
 		scaffoldID:            scaffoldID,
+		commands:              commands,
 		sourceReports: []report.Record{
 			repoProfile.Record,
 			bootstrap.Record,
 			adoptionWorkflow.Record,
 		},
-	}, renderer)
+	})
 	if err != nil {
 		return Result{}, err
 	}
@@ -185,6 +189,8 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 		Manifest:              manifest,
 		Record:                record,
 		RepoProfile:           repoProfile,
+		commands:              commands,
+		renderer:              renderer,
 	}, nil
 }
 
@@ -200,23 +206,19 @@ func (result Result) JSONValue() map[string]any {
 	}
 }
 
-func adoptionWorkflowInput(bootstrapInput map[string]any, repoProfilePlan map[string]any, paths projectPathSet, workflow map[string]any) (map[string]any, error) {
+func adoptionWorkflowInput(bootstrapManifest map[string]any, repoProfilePlan map[string]any, paths projectPathSet, workflow map[string]any) (map[string]any, error) {
 	workflowID, err := admit.RuleID(workflow["workflowId"], "project structure scaffold workflowId")
 	if err != nil {
 		return nil, err
 	}
-	bootstrapPaths, err := object(bootstrapInput["paths"], "project structure scaffold bootstrap paths")
+	if _, err := bootstrapPayloadPath(bootstrapManifest, "proofBinding"); err != nil {
+		return nil, err
+	}
+	witnessPlanInputPath, err := bootstrapPayloadPath(bootstrapManifest, "witnessPlanInput")
 	if err != nil {
 		return nil, err
 	}
-	if _, err := safePath(bootstrapInput["proofBindingPath"], "project structure scaffold proofBindingPath"); err != nil {
-		return nil, err
-	}
-	witnessPlanInputPath, err := materializedInputPath(bootstrapPaths["witnessPlanInputPath"], "project structure scaffold witnessPlanInputPath")
-	if err != nil {
-		return nil, err
-	}
-	adoptionGuidancePath, err := materializedInputPath(bootstrapPaths["adoptionGuidancePath"], "project structure scaffold adoptionGuidancePath")
+	adoptionGuidancePath, err := bootstrapPayloadPath(bootstrapManifest, "adoptionGuidance")
 	if err != nil {
 		return nil, err
 	}

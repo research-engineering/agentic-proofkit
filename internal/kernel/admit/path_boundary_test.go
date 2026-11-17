@@ -6,7 +6,7 @@ func TestPathPrivacyRejectsEmbeddedUnambiguousSignatures(t *testing.T) {
 	selected := 0
 	for _, fixture := range ReportVisibleRedactionFixtures() {
 		switch fixture.Name {
-		case "github_pat", "github_ghp", "slack_token", "gitlab_token", "jwt_like":
+		case "github_pat", "github_ghp", "slack_token", "gitlab_token", "jwt_like", "openai_key":
 		default:
 			continue
 		}
@@ -22,8 +22,8 @@ func TestPathPrivacyRejectsEmbeddedUnambiguousSignatures(t *testing.T) {
 			t.Fatalf("embedded %s signature reached report-visible path text", fixture.Name)
 		}
 	}
-	if selected != 5 {
-		t.Fatalf("signature fixture count=%d, want 5", selected)
+	if selected != 6 {
+		t.Fatalf("signature fixture count=%d, want 6", selected)
 	}
 	for _, value := range []string{"inputs/task-requirements.json", "inputs/task-validation.json", "docs/risk-assessment.md"} {
 		if _, err := MaterializedInputPath(value, "prepared input"); err != nil {
