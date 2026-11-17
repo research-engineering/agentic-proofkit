@@ -8,6 +8,10 @@
     {
       "changeId": "proofkit.selective-evidence.diagnostic-route-oracle",
       "summary": "Add an owner-level regression oracle for receipt currentness/trust diagnostic identity at selective-gate-obligation-decision-input. It independently admits the child, then rejects foreign obligationId, requirementId, proofRouteRef or receiptId, and is linked to the existing selective-evidence requirement scenario. Isolated requirement/proof-route check-removal mutants now fail this oracle. Public command/JSON semantics and machine-contract bytes are unchanged; --version reports the new package version."
+    },
+    {
+      "changeId": "proofkit.release.required-migration-render-oracle",
+      "summary": "Keep required migration instructions covered independently of the current release's migration status. The generic release-note test requires two reviewed steps in order and detects omitted or reversed instructions. Release rendering behavior is unchanged."
     }
   ],
   "migration": {

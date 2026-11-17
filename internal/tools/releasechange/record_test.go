@@ -12,7 +12,9 @@ import (
 )
 
 func TestAdmitAndRenderVersionBoundChangeRecord(t *testing.T) {
-	record, err := Admit(validRecord())
+	input := validRecord()
+	input["migration"].(map[string]any)["steps"] = []any{"Delete the obsolete input field.", "Revalidate the consumer contract."}
+	record, err := Admit(input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,6 +25,7 @@ func TestAdmitAndRenderVersionBoundChangeRecord(t *testing.T) {
 	for _, expected := range []string{
 		"## Breaking Contract Changes", "## Additions", "## Migration", "Migration is required:",
 		"## Platform Requirements", "## Known Limitations", "## Install", "## Rollback",
+		"## Migration\n\nMigration is required:\n\n- Delete the obsolete input field.\n- Revalidate the consumer contract.\n\n## Platform Requirements",
 		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@2.0.0",
 		"uv tool install agentic-proofkit==2.0.0",
 		"previous admitted version 1.2.2",
@@ -219,6 +222,7 @@ var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
 	{ChangeID: "proofkit.selective-evidence.diagnostic-route-oracle", Summary: "Add an owner-level regression oracle for receipt currentness/trust diagnostic identity at selective-gate-obligation-decision-input. It independently admits the child, then rejects foreign obligationId, requirementId, proofRouteRef or receiptId, and is linked to the existing selective-evidence requirement scenario. Isolated requirement/proof-route check-removal mutants now fail this oracle. Public command/JSON semantics and machine-contract bytes are unchanged; --version reports the new package version."},
+	{ChangeID: "proofkit.release.required-migration-render-oracle", Summary: "Keep required migration instructions covered independently of the current release's migration status. The generic release-note test requires two reviewed steps in order and detects omitted or reversed instructions. Release rendering behavior is unchanged."},
 }
 
 var currentMigrationSteps = []string{}
