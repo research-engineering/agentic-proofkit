@@ -204,7 +204,7 @@ func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.PreviousVersion != "0.19.1" || record.Version != "0.19.2" || record.ChangeClass != "compatible" || record.Migration.Required || len(record.Migration.Steps) != 0 {
+	if record.PreviousVersion != "0.19.2" || record.Version != "0.19.3" || record.ChangeClass != "compatible" || record.Migration.Required || len(record.Migration.Steps) != 0 {
 		t.Fatal("patch release must preserve the declared no-migration boundary")
 	}
 	content, err := os.ReadFile(filepath.Join(root, "proofkit", "cli-contract.v2.json"))
@@ -221,7 +221,7 @@ func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.release.native-intel-candidate", Summary: "Require native Intel macOS candidate qualification before publish readiness. A read-only macos-15-intel job downloads the original candidate archives, compares their binaries to a source reference build without repacking, and executes the installed npm and Python consumers. A typed workflow regression oracle rejects a missing or neutralized qualification barrier. Public command/JSON semantics and machine-contract bytes are unchanged; --version reports the new package version."},
+	{ChangeID: "proofkit.ci.exact-script-owner", Summary: "Use one test-owned reader for the exact lowercase scripts object across five workflow-oracle consumers, preserving whole-object last-value selection rather than case folding or map merging. Independent literal fixtures and bounded executions of the actual root/static collector test entrypoints reject case-shadowed no-op scripts; isolated legacy reader restorations fail the new assertions. Existing command-body and native Python lifecycle guards remain separate and unchanged. Production Go, workflow execution and public command/JSON semantics are unchanged; --version reports the new package version."},
 }
 
 var currentMigrationSteps = []string{}
@@ -244,7 +244,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.19.2",
+		"# @research-engineering/agentic-proofkit 0.19.3",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -290,7 +290,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.2",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.3",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -302,7 +302,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.19.1 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.1`.",
+		"- Pin npm consumers to the previous admitted version 0.19.2 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.2`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

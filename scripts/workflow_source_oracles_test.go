@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -272,21 +271,12 @@ func TestWorkflowExternalActionsUseFullCommitSHAs(t *testing.T) {
 }
 
 func TestRootCheckRetainsRequiredProofGates(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("..", "package.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var manifest struct {
-		Scripts map[string]string `json:"scripts"`
-	}
-	if err := json.Unmarshal(raw, &manifest); err != nil {
-		t.Fatal(err)
-	}
-	if err := validateRootCheckScript(manifest.Scripts["check"]); err != nil {
+	scripts := readPackageScriptsForTest(t)
+	if err := validateRootCheckScript(scripts["check"]); err != nil {
 		t.Fatal(err)
 	}
 	for _, removed := range []string{"npm run compact-contract:check", "npm run receipt-contract:check", "npm run spec-tree-contract:check", "npm run graph-contract:check", "npm run boundary-contract:check", "npm run go:check", "npm run browser:check", "npm run package:artifact"} {
-		mutant := strings.Replace(manifest.Scripts["check"], " && "+removed, "", 1)
+		mutant := strings.Replace(scripts["check"], " && "+removed, "", 1)
 		if err := validateRootCheckScript(mutant); err == nil {
 			t.Fatalf("check oracle admitted removal of %q", removed)
 		}
@@ -503,21 +493,6 @@ func TestGoDependencyGateWiring(t *testing.T) {
 			}
 		})
 	}
-}
-
-func readPackageScriptsForTest(t *testing.T) map[string]string {
-	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("..", "package.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var manifest struct {
-		Scripts map[string]string `json:"scripts"`
-	}
-	if err := json.Unmarshal(raw, &manifest); err != nil {
-		t.Fatal(err)
-	}
-	return manifest.Scripts
 }
 
 func TestGoFormattingGatePropagatesFormatterFailures(t *testing.T) {

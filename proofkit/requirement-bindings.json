@@ -4057,6 +4057,29 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-013",
       "scenarioId": "proofkit.supply-chain-quality.workflow-package-gate-oracle",
+      "witnessId": "proofkit.workflow.package-script-owner",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_package_scripts_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPackageScriptConsumersRejectShadowedSource",
+          "command": "go test ./scripts -run '^TestPackageScriptConsumersRejectShadowedSource$'"
+        },
+        {
+          "selector": "TestPackageScriptsSelectExactNPMObject",
+          "command": "go test ./scripts -run '^TestPackageScriptsSelectExactNPMObject$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-013",
+      "scenarioId": "proofkit.supply-chain-quality.workflow-package-gate-oracle",
       "witnessId": "proofkit.workflow-native-intel.typed-oracle",
       "witnessKind": "contract",
       "witnessPath": "scripts/workflow_native_carrier_oracle_test.go",

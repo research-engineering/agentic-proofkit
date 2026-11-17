@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.19.1",
-  "version": "0.19.2",
+  "previousVersion": "0.19.2",
+  "version": "0.19.3",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.release.native-intel-candidate",
-      "summary": "Require native Intel macOS candidate qualification before publish readiness. A read-only macos-15-intel job downloads the original candidate archives, compares their binaries to a source reference build without repacking, and executes the installed npm and Python consumers. A typed workflow regression oracle rejects a missing or neutralized qualification barrier. Public command/JSON semantics and machine-contract bytes are unchanged; --version reports the new package version."
+      "changeId": "proofkit.ci.exact-script-owner",
+      "summary": "Use one test-owned reader for the exact lowercase scripts object across five workflow-oracle consumers, preserving whole-object last-value selection rather than case folding or map merging. Independent literal fixtures and bounded executions of the actual root/static collector test entrypoints reject case-shadowed no-op scripts; isolated legacy reader restorations fail the new assertions. Existing command-body and native Python lifecycle guards remain separate and unchanged. Production Go, workflow execution and public command/JSON semantics are unchanged; --version reports the new package version."
     }
   ],
   "migration": {

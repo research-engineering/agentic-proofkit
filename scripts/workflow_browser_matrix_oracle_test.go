@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -33,17 +31,8 @@ func TestBrowserStaticCollectorRetainsEveryOracleSuite(t *testing.T) {
 		}
 		return nil
 	}
-	raw, err := os.ReadFile(filepath.Join("..", "package.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var manifest struct {
-		Scripts map[string]string `json:"scripts"`
-	}
-	if err := json.Unmarshal(raw, &manifest); err != nil {
-		t.Fatal(err)
-	}
-	if err := validate(manifest.Scripts["browser:static-check"]); err != nil {
+	scripts := readPackageScriptsForTest(t)
+	if err := validate(scripts["browser:static-check"]); err != nil {
 		t.Fatal(err)
 	}
 	for _, file := range files {
