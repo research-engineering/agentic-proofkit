@@ -43,6 +43,10 @@
   ],
   "additions": [
     {
+      "changeId": "proofkit.build.go-security-toolchain",
+      "summary": "Builds use Go 1.27.4, including the net/http security correction for GO-2026-6859. Source toolchain selection and the checksum-bound Linux ARM64 contributor environment select the same patch release. This does not prove exploitability of an earlier product or change the declared platform support."
+    },
+    {
       "changeId": "proofkit.release.metadata-output-confinement",
       "summary": "Release manifest, SBOM and PyPI evidence tools use repository-owned atomic file publication for generated metadata. They refuse symlink or special-file destinations, preserve hard-linked peer contents and publish regular files with private mode. This is per-file single-writer protection, not a multi-file crash transaction or protection against hostile concurrent namespace mutation."
     },
