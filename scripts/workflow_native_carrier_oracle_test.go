@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -53,7 +54,7 @@ func expectedNativeIntelCandidateJob() githubJob {
 	}
 }
 
-func validateNativeIntelCandidateWorkflow(workflow githubWorkflow) error {
+func validateNativeIntelCandidateWorkflow(workflow githubWorkflow, manifestBytes []byte) error {
 	job, ok := workflow.Jobs["candidate-intel"]
 	if !ok || !reflect.DeepEqual(job, expectedNativeIntelCandidateJob()) {
 		return fmt.Errorf("native Intel candidate must retain its exact read-only architecture, artifact and installed-consumer steps")
@@ -61,12 +62,27 @@ func validateNativeIntelCandidateWorkflow(workflow githubWorkflow) error {
 	if !reflect.DeepEqual(needsList(workflow.Jobs["publish-readiness"].Needs), []string{"candidate", "candidate-intel"}) {
 		return fmt.Errorf("publish readiness must require both candidate and native Intel qualification")
 	}
+	var manifest struct {
+		Scripts map[string]string `json:"scripts"`
+	}
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return fmt.Errorf("parse native consumer package manifest: %w", err)
+	}
+	if manifest.Scripts["python:verify"] != "go run ./internal/tools/pythonpackage verify" {
+		return fmt.Errorf("native Python consumer must execute the exact wheel verifier")
+	}
+	for _, key := range []string{"prepython:verify", "postpython:verify"} {
+		if _, present := manifest.Scripts[key]; present {
+			return fmt.Errorf("native Python consumer must omit lifecycle hooks")
+		}
+	}
 	return nil
 }
 
 func TestReleaseNativeIntelCandidateAndBarrier(t *testing.T) {
 	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "release.yml"))
-	if err := validateNativeIntelCandidateWorkflow(workflow); err != nil {
+	manifestBytes := readPackageManifestForTest(t)
+	if err := validateNativeIntelCandidateWorkflow(workflow, manifestBytes); err != nil {
 		t.Fatal(err)
 	}
 	mutants := []struct {
@@ -120,8 +136,28 @@ func TestReleaseNativeIntelCandidateAndBarrier(t *testing.T) {
 		t.Run(mutant.name, func(t *testing.T) {
 			candidate := cloneWorkflow(t, workflow)
 			mutant.mutate(&candidate)
-			if err := validateNativeIntelCandidateWorkflow(candidate); err == nil {
+			if err := validateNativeIntelCandidateWorkflow(candidate, manifestBytes); err == nil {
 				t.Fatal("mutated native qualification was admitted")
+			}
+		})
+	}
+	for _, change := range []struct{ key, value string }{
+		{"python:verify", "true"},
+		{"prepython:verify", "npm run python:package"},
+		{"postpython:verify", ""},
+	} {
+		t.Run("manifest "+change.key, func(t *testing.T) {
+			var manifest map[string]any
+			if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+				t.Fatal(err)
+			}
+			manifest["scripts"].(map[string]any)[change.key] = change.value
+			mutant, err := json.Marshal(manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := validateNativeIntelCandidateWorkflow(workflow, mutant); err == nil {
+				t.Fatal("neutralized Python consumer was admitted")
 			}
 		})
 	}
