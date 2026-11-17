@@ -3,6 +3,7 @@ package gradualadoption
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -208,7 +209,7 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 			}
 		}
 	}
-	failures = append(failures, guidanceModeFailures(guidanceMode, scopeEvidence["checkedScope"].(string), sourceReport, agentGuidance, modernization, enforcementFailedRuleIDs)...)
+	failures = append(failures, guidanceModeFailures(guidanceMode, scopeEvidence["checkedScope"].(string), sourceReport, agentGuidance, modernization, sourceFailedRuleIDs, enforcementFailedRuleIDs)...)
 	if scopeEvidence["checkedScope"] == adoptionmode.ScopeNone && len(stringArrayFromMap(scopeEvidence, "touchedRuleIds")) > 0 {
 		failures = append(failures, "checkedScope none must not declare touchedRuleIds")
 	}
@@ -354,14 +355,12 @@ func admitScopeEvidence(raw map[string]any, options GuidanceOptions, failures *[
 		checkedScope, err = adoptionmode.ValidateScopeValue(checkedScope, "checkedScope")
 	}
 	addErr(failures, err)
-	touchedRuleIDs := options.TouchedRuleIDs
-	if len(touchedRuleIDs) == 0 {
-		touchedRuleIDs, err = sortedRuleIDArray(raw["touchedRuleIds"], "scopeEvidence touchedRuleIds")
-		addErr(failures, err)
-	} else {
-		touchedRuleIDs, err = admit.SortedText(touchedRuleIDs, "scopeEvidence touchedRuleIds", true)
-		addErr(failures, err)
+	touchedRuleIDsRaw := raw["touchedRuleIds"]
+	if len(options.TouchedRuleIDs) > 0 {
+		touchedRuleIDsRaw = admit.StringSliceToAny(options.TouchedRuleIDs)
 	}
+	touchedRuleIDs, err := sortedRuleIDArray(touchedRuleIDsRaw, "scopeEvidence touchedRuleIds")
+	addErr(failures, err)
 	return map[string]any{
 		"basis":          "caller_provided_touched_rule_ids",
 		"checkedScope":   checkedScope,
@@ -569,13 +568,10 @@ func sourceRuleIDs(sourceReport map[string]any, status string) []string {
 		}
 	}
 	sort.Strings(ids)
-	if status == "failed" && sourceReport["state"] == "failed" && len(ids) == 0 {
-		return []string{sourceReport["reportId"].(string)}
-	}
 	return ids
 }
 
-func guidanceModeFailures(mode string, checkedScope string, sourceReport map[string]any, agentGuidance map[string]any, modernization map[string]any, enforcementFailedRuleIDs []string) []string {
+func guidanceModeFailures(mode string, checkedScope string, sourceReport map[string]any, agentGuidance map[string]any, modernization map[string]any, sourceFailedRuleIDs []string, enforcementFailedRuleIDs []string) []string {
 	failures := []string{}
 	failures = append(failures, adoptionmode.ScopeFailures(mode, checkedScope)...)
 	if mode == adoptionmode.EnforceAll {
@@ -587,8 +583,13 @@ func guidanceModeFailures(mode string, checkedScope string, sourceReport map[str
 			failures = append(failures, "enforce-all fails closed for failed source rules")
 		}
 	}
-	if mode == adoptionmode.EnforceTouched && len(enforcementFailedRuleIDs) > 0 {
-		failures = append(failures, "enforce-touched fails closed for failed source rules inside checked scope")
+	if mode == adoptionmode.EnforceTouched {
+		// Without rule attribution the failure cannot be proven outside scope.
+		if sourceReport["state"] == "failed" && len(sourceFailedRuleIDs) == 0 {
+			failures = append(failures, "enforce-touched fails closed for a source report failure without rule attribution")
+		} else if len(enforcementFailedRuleIDs) > 0 {
+			failures = append(failures, "enforce-touched fails closed for failed source rules inside checked scope")
+		}
 	}
 	if adoptionmode.IsEnforcing(mode) && len(stringArrayFromMap(agentGuidance, "proofBindingsMissing")) > 0 {
 		failures = append(failures, "enforcement modes fail closed for missing proof bindings")
@@ -836,6 +837,7 @@ func stringSet(values []string) map[string]struct{} {
 }
 
 func uniqueStrings(values []string) []string {
+	values = slices.Clone(values)
 	sort.Strings(values)
 	result := []string{}
 	for _, value := range values {

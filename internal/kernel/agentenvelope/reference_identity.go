@@ -14,6 +14,7 @@ type preparedLocalReferences struct {
 	removedReferenceCount  int
 	identityDegraded       bool
 	callerDisplayFallbacks map[string]callerDisplayFallback
+	operandContexts        map[string][]string
 }
 
 type localIdentityMultiplicity struct {
@@ -41,13 +42,13 @@ func prepareLocalReferences(input Input) preparedLocalReferences {
 		routeQuestions:         cloneMapList(input.RouteQuestions),
 	}
 
-	rejectedTargets := map[string]struct{}{}
+	rejectedTargets := collectLocalReferenceTargets(nil, nil, nil)
 	var unsafeTargets int
-	prepared.commands, unsafeTargets = admitLocalTargetRecords(prepared.commands, "commandId", rejectedTargets)
+	prepared.commands, unsafeTargets = admitLocalTargetRecords(prepared.commands, "commandId", rejectedTargets.commands)
 	var count int
-	prepared.contextRefs, count = admitLocalTargetRecords(prepared.contextRefs, "refId", rejectedTargets)
+	prepared.contextRefs, count = admitLocalTargetRecords(prepared.contextRefs, "refId", rejectedTargets.contexts)
 	unsafeTargets += count
-	prepared.receiptRefs, count = admitLocalTargetRecords(prepared.receiptRefs, "receiptRefId", rejectedTargets)
+	prepared.receiptRefs, count = admitLocalTargetRecords(prepared.receiptRefs, "receiptRefId", rejectedTargets.receipts)
 	unsafeTargets += count
 
 	multiplicity := localIdentityMultiplicity{
@@ -57,12 +58,17 @@ func prepareLocalReferences(input Input) preparedLocalReferences {
 	}
 	ambiguous := ambiguousLocalIdentities(multiplicity)
 	for identity := range ambiguous {
-		rejectedTargets[identity] = struct{}{}
+		rejectedTargets.all[identity] = struct{}{}
 	}
 	prepared.commands = removeAmbiguousTargets(prepared.commands, "commandId", ambiguous)
 	prepared.contextRefs = removeAmbiguousTargets(prepared.contextRefs, "refId", ambiguous)
 	prepared.receiptRefs = removeAmbiguousTargets(prepared.receiptRefs, "receiptRefId", ambiguous)
-	admitStructuralOperands(&prepared, rejectedTargets, input.OperandBindings, input.ContextReferenceFields, input.Renderer, input.CommandDisplayField, input.CallerDisplayFallbackCommandIDs)
+	admitStructuralOperands(&prepared, rejectedTargets, ambiguous, input.OperandBindings, input.ContextReferenceFields, input.Renderer, input.CommandDisplayField, input.CallerDisplayFallbackCommandIDs)
+	for _, domain := range []map[string]struct{}{rejectedTargets.commands, rejectedTargets.contexts, rejectedTargets.receipts} {
+		for identity := range domain {
+			rejectedTargets.all[identity] = struct{}{}
+		}
+	}
 
 	if unsafeTargets > 0 {
 		prepared.omitted = append(prepared.omitted, omissionRecord("unsafeLocalIdentity", "localTargetIds", unsafeTargets))
@@ -85,7 +91,7 @@ func prepareLocalReferences(input Input) preparedLocalReferences {
 		&prepared.contextRefs,
 		&prepared.receiptRefs,
 	} {
-		admission := admitRecordLocalReferences(*records, uniqueTargets, rejectedTargets, ambiguous)
+		admission := admitRecordLocalReferences(*records, uniqueTargets, rejectedTargets.all, ambiguous)
 		*records = admission.values
 		prepared.removedReferenceCount += admission.removedCount
 		standaloneReferenceOmissions += admission.standaloneOmissions
@@ -198,7 +204,7 @@ func admitRecordLocalReferences(values []map[string]any, targets localReferenceT
 					admission.identityDegraded = true
 					continue
 				}
-				kept = append(kept, identity)
+				kept = append(kept, admittedStructuralOperand(identity))
 			}
 			cloned["evidenceRefs"] = kept
 		}

@@ -150,7 +150,7 @@ var nativeBoundaryDirectionDeltas = []string{
 	"selective-gate-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"selective-gate-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"selective-gate-evidence/input:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"selective-gate-evidence/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"selective-gate-evidence/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
 	"selective-gate-obligation-decision-input/input:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"selective-gate-obligation-decision-input/output:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"obligation-decision/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",

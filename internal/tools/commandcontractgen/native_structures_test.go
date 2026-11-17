@@ -70,14 +70,29 @@ func TestNativeStructureConsumersAreClosed(t *testing.T) {
 		t.Run(mutation, func(t *testing.T) {
 			commands := []any{}
 			for _, name := range owner.commands {
-				commands = append(commands, map[string]any{"command": name, "inputContract": map[string]any{"rootDefinitionRef": owner.id}})
+				commands = append(commands, map[string]any{"command": name, "inputContract": map[string]any{
+					"rootDefinitionRef": owner.id, "contractId": "proofkit." + name + ".input.v1", "schemaVersion": json.Number("1"),
+				}})
 			}
-			definitions := map[string]definitionRecord{owner.id: {ID: owner.id}}
+			definition, err := owner.definition()
+			if err != nil {
+				t.Fatal(err)
+			}
+			definitions := map[string]definitionRecord{owner.id: {ID: owner.id, Content: definition}}
 			for _, raw := range commands {
 				command := raw.(map[string]any)
-				id := "proofkit." + command["command"].(string) + ".output.v1.json-schema"
-				command["outputContract"] = map[string]any{"rootDefinitionRef": id}
-				definitions[id] = definitionRecord{ID: id}
+				contractID := "proofkit." + command["command"].(string) + ".output.v1"
+				id := contractID + ".json-schema"
+				outputOwner, ok := nativeStructureOwner(id)
+				if !ok {
+					t.Fatal("fixture output owner is missing")
+				}
+				definition, err := outputOwner.definition()
+				if err != nil {
+					t.Fatal(err)
+				}
+				command["outputContract"] = map[string]any{"rootDefinitionRef": id, "contractId": contractID, "schemaVersion": json.Number("1")}
+				definitions[id] = definitionRecord{ID: id, Content: definition}
 			}
 			switch mutation {
 			case "missing":
@@ -93,7 +108,7 @@ func TestNativeStructureConsumersAreClosed(t *testing.T) {
 			case "obsolete":
 				definitions[owner.predecessors[0]] = definitionRecord{ID: owner.predecessors[0]}
 			}
-			err := admitNativeStructureConsumers(map[string]any{"commands": commands}, definitions)
+			err = admitNativeStructureConsumers(map[string]any{"commands": commands}, definitions)
 			if (err == nil) != (mutation == "valid") {
 				t.Fatalf("consumer admission error: %v", err)
 			}

@@ -47,6 +47,59 @@ type Result struct {
 	fileRoles             map[string]string
 }
 
+type scaffoldChildren struct {
+	bootstrap        gradualadoption.BootstrapResult
+	bootstrapInput   map[string]any
+	repoProfile      scaffoldprofileplan.Result
+	repoProfileInput map[string]any
+}
+
+func buildScaffoldChildren(input map[string]any, renderer cliexec.Renderer) (scaffoldChildren, error) {
+	repoProfileInput, err := object(input["repoProfileScaffold"], "project structure scaffold repoProfileScaffold")
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	repoProfileInput = scaffoldProfileSnapshot(repoProfileInput).(map[string]any)
+	bootstrapInput, err := object(input["bootstrap"], "project structure scaffold bootstrap")
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	repoProfile, err := scaffoldprofileplan.BuildResult(repoProfileInput)
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	bootstrap, err := gradualadoption.BuildBootstrapResultWithRenderer(bootstrapInput, renderer)
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	bootstrapInput, err = bootstrap.MaterializationInput()
+	if err != nil {
+		return scaffoldChildren{}, err
+	}
+	return scaffoldChildren{bootstrap: bootstrap, bootstrapInput: bootstrapInput, repoProfile: repoProfile, repoProfileInput: repoProfileInput}, nil
+}
+
+// Unlike contract-envelope cloning, this boundary must not normalize native
+// containers that the child or strict persistence owner would otherwise refuse.
+func scaffoldProfileSnapshot(raw any) any {
+	switch value := raw.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(value))
+		for key, item := range value {
+			result[key] = scaffoldProfileSnapshot(item)
+		}
+		return result
+	case []any:
+		result := make([]any, len(value))
+		for index, item := range value {
+			result[index] = scaffoldProfileSnapshot(item)
+		}
+		return result
+	default:
+		return raw
+	}
+}
+
 func Build(raw any) (map[string]any, int, error) {
 	return BuildWithRenderer(raw, cliexec.PathRenderer())
 }
@@ -101,22 +154,12 @@ func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error)
 	if workflow["scenario"] != "new_repository" {
 		return Result{}, fmt.Errorf("project structure scaffold workflow.scenario must be new_repository")
 	}
-	repoProfileInput, err := object(input["repoProfileScaffold"], "project structure scaffold repoProfileScaffold")
+	children, err := buildScaffoldChildren(input, renderer)
 	if err != nil {
 		return Result{}, err
 	}
-	bootstrapInput, err := object(input["bootstrap"], "project structure scaffold bootstrap")
-	if err != nil {
-		return Result{}, err
-	}
-	repoProfile, err := scaffoldprofileplan.BuildResult(repoProfileInput)
-	if err != nil {
-		return Result{}, err
-	}
-	bootstrap, err := gradualadoption.BuildBootstrapResultWithRenderer(bootstrapInput, renderer)
-	if err != nil {
-		return Result{}, err
-	}
+	bootstrap, bootstrapInput := children.bootstrap, children.bootstrapInput
+	repoProfile, repoProfileInput := children.repoProfile, children.repoProfileInput
 	bootstrapManifest, err := gradualadoption.BootstrapMaterializationManifest(bootstrap)
 	if err != nil {
 		return Result{}, err

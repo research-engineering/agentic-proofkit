@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"unicode"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 const (
@@ -44,17 +44,13 @@ func AdmitLauncherProfile(profile string, pythonExecutable string) (Renderer, er
 		if pythonExecutable == "" || !filepath.IsAbs(pythonExecutable) {
 			return Renderer{}, fmt.Errorf("%s must be a non-empty absolute path when %s is %s", PythonExecutableEnvironment, LauncherProfileEnvironment, ProfilePythonModule)
 		}
-		if admit.ContainsSecretLikePathValue(pythonExecutable) || strings.IndexFunc(pythonExecutable, isControlOrFormat) >= 0 {
+		if admit.ContainsSecretLikePathValue(pythonExecutable) || unicodepolicy.ContainsUnsafeScalar(pythonExecutable) {
 			return Renderer{}, fmt.Errorf("%s must not contain secret-like or control values", PythonExecutableEnvironment)
 		}
 		return Renderer{profile: ProfilePythonModule, pythonExecutable: pythonExecutable}, nil
 	default:
 		return Renderer{}, fmt.Errorf("%s must be empty, %s, %s, or %s", LauncherProfileEnvironment, ProfilePath, ProfileNPMOffline, ProfilePythonModule)
 	}
-}
-
-func isControlOrFormat(character rune) bool {
-	return unicode.In(character, unicode.Cc, unicode.Cf)
 }
 
 func (renderer Renderer) Profile() string {

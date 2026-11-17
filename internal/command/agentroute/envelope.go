@@ -144,10 +144,15 @@ func guidanceContextRefs(slice map[string]any, reportID string) []map[string]any
 		},
 	}
 	for _, item := range mapsFromAny(slice["authorityRefs"]) {
+		refID := stringFromMap(item, "refId")
+		if refID == reportID {
+			// Fixed authority IDs do not end in .local; keep the report namespace distinct.
+			refID += ".local"
+		}
 		contextRefs = append(contextRefs, map[string]any{
 			"description": stringFromMap(item, "reason"),
 			"path":        stringFromMap(item, "path"),
-			"refId":       stringFromMap(item, "refId"),
+			"refId":       refID,
 			"role":        stringFromMap(item, "role"),
 			"selector":    stringFromMap(item, "selector"),
 		})

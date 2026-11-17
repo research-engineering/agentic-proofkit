@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
@@ -59,7 +60,23 @@ func TestReceiptPathRolesSurviveWholeCLIProjectionAndDecision(t *testing.T) {
 					receiptPathCLISuccess(t, child.command, []byte(invocationProfileEncode(t, input[child.key])))
 				}
 				evidence := input["evidence"].(map[string]any)
-				receiptPathCLISuccess(t, "receipt-producer-admission", []byte(invocationProfileEncode(t, evidence["producerAdmission"])))
+				producerInput := evidence["producerAdmission"].(map[string]any)
+				producerBytes := receiptPathCLISuccess(t, "receipt-producer-admission", []byte(invocationProfileEncode(t, producerInput)))
+				producer := invocationProfileObject(t, invocationProfileJSON(t, string(producerBytes)))
+				expected := producerInput["receipts"].([]any)[0].(map[string]any)
+				matched := 0
+				for _, raw := range invocationProfileDiagnostic(t, producer, "mergeSatisfyingReceipts").([]any) {
+					receipt := raw.(map[string]any)
+					if receipt["receiptId"] == expected["receiptId"] {
+						matched++
+						if receipt["provenanceRef"] != expected["provenanceRef"] {
+							t.Fatal("producer report changed exact provenance bytes")
+						}
+					}
+				}
+				if matched != 1 {
+					t.Fatal("producer report did not identify exactly the expected receipt")
+				}
 				projection := receiptPathCLISuccess(t, "selective-gate-obligation-decision-input", []byte(invocationProfileEncode(t, input)))
 				decisionBytes := receiptPathCLISuccess(t, "obligation-decision", projection)
 				decision := invocationProfileObject(t, invocationProfileJSON(t, string(decisionBytes)))
@@ -70,18 +87,31 @@ func TestReceiptPathRolesSurviveWholeCLIProjectionAndDecision(t *testing.T) {
 				if len(rows) != 1 || rows[0].(map[string]any)["decisionState"] != "satisfied" {
 					t.Fatal("path role changed the declared decision algebra")
 				}
-				// Artifact/provenance are retained in their own carriers, not evidenceRefs.
-				if item.name != "artifacts" && item.name != "provenance" {
-					found := false
-					for _, ref := range rows[0].(map[string]any)["evidenceRefs"].([]any) {
-						found = found || ref == path
-					}
-					if !found {
-						t.Fatal("projection or downstream admission changed exact reference bytes")
-					}
+				found := false
+				for _, ref := range rows[0].(map[string]any)["evidenceRefs"].([]any) {
+					found = found || ref == path
+				}
+				if !found {
+					t.Fatal("projection or downstream admission changed exact reference bytes")
 				}
 			})
 		}
+	}
+}
+
+func TestReceiptArtifactProjectionRejectsOneSidedPathSubstitution(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join(repoRoot(t), "internal", "app", "testdata", "receipt-path-chain.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := invocationProfileObject(t, invocationProfileJSON(t, string(source)))
+	evidence := input["evidence"].(map[string]any)
+	evidence["receipts"].([]any)[0].(map[string]any)["artifactRefs"] = []any{"artifacts/unrelated.json"}
+	var stdout, stderr bytes.Buffer
+	status := RunWithRenderer(t.Context(), []string{"selective-gate-obligation-decision-input", "--input", "-"},
+		strings.NewReader(invocationProfileEncode(t, input)), &stdout, &stderr, cliexec.PathRenderer())
+	if status != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "producer receipt artifactRefs do not match planned receipt") {
+		t.Fatal("one-sided artifact substitution did not fail at the producer-to-receipt binding")
 	}
 }
 

@@ -180,6 +180,22 @@ references resolve through source-role contexts, including the declared owner,
 rather than interpreting raw caller text as a local ID. Scalar fallback changes
 only display/argv and cannot restore previously pruned sibling references.
 
+Guidance keeps source failed-rule and warning-rule identities separate from
+report identity. A failed report without failing-rule attribution remains
+visible as a report-level failure; `enforce-touched` fails closed because its
+location cannot be proven outside the checked scope. Attributed failures
+outside touched scope remain nonblocking. A report ID is never a substitute
+for an absent rule ID.
+
+Selective-evidence output uses semantic v2 with unchanged report wire headers.
+Its envelope joins planned command tuples through generated local command IDs;
+unplanned receipts remain diagnostics rather than planned retry commands.
+`receipt_artifact.ref` resolves to a local path context whose `ref` preserves
+the exact admitted locator. Required receipt classes remain distinct from
+artifacts. Command and receipt losses are counted independently before
+filtering; a locator that cannot survive wire admission withholds the whole
+artifact record rather than publishing a diagnostic replacement as a path.
+
 Receipt producer, selective evidence, projection and obligation-decision
 adapters preserve canonical path references through path-specific admission,
 including significant whitespace. Prose privacy remains separate. These

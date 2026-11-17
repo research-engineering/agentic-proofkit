@@ -66,6 +66,18 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 	// Different owners may update the two directions of the same command.
 	// Keep prior updates in a private outer slice rather than rereading the input.
 	commands = slices.Clone(commands)
+	names := make([]string, len(commands))
+	for i, raw := range commands {
+		command, ok := raw.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("CLI command row %d must be an object", i)
+		}
+		name, ok := command["command"].(string)
+		if !ok || name == "" {
+			return nil, fmt.Errorf("CLI command row %d must have a nonempty string command name", i)
+		}
+		names[i] = name
+	}
 	definitions, ok := contract["contractDefinitions"].([]any)
 	if !ok || len(definitions) != len(wire.ContractDefinitions) {
 		return nil, fmt.Errorf("CLI contract definitions are invalid")
@@ -95,11 +107,8 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 		}
 		count := 0
 		for i, raw := range commands {
-			command, ok := raw.(map[string]any)
-			if !ok {
-				return nil, fmt.Errorf("CLI command must be an object")
-			}
-			name, _ := command["command"].(string)
+			command := raw.(map[string]any)
+			name := names[i]
 			if !slices.Contains(owner.commands, name) {
 				continue
 			}
@@ -168,7 +177,7 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 	}
 	for index, raw := range commands {
 		command := raw.(map[string]any)
-		name := command["command"].(string)
+		name := names[index]
 		changed := false
 		for _, direction := range []string{"input", "output"} {
 			bindings, err := childBindingValues(name, direction, definitionRecords)

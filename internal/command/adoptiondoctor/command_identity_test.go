@@ -49,6 +49,27 @@ func TestDoctorCommandCatalogReservesSourceIdentityBeforeBounds(t *testing.T) {
 					}
 				}
 			}
+			wantIDs := []any{}
+			for index := 1; index <= min(count, agentenvelope.MaxCommandRefs); index++ {
+				id := fmt.Sprintf("r.command.%03d", index)
+				if id == doctorID {
+					id += ".local"
+				}
+				wantIDs = append(wantIDs, id)
+			}
+			matchedActions := 0
+			for _, raw := range envelope["actionPlan"].([]any) {
+				action := raw.(map[string]any)
+				if action["selectors"].(map[string]any)["ownerRouteId"] == "r" {
+					matchedActions++
+					if !reflect.DeepEqual(action["commandIds"], wantIDs) {
+						t.Fatal("route action lost an independently expected command link")
+					}
+				}
+			}
+			if matchedActions == 0 || len(retained) != len(wantIDs) {
+				t.Fatal("fixture did not retain the expected route action and bounded commands")
+			}
 		}
 	}
 }

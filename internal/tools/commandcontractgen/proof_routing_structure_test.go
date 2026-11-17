@@ -35,7 +35,7 @@ func TestProofRoutingStructuresBindOwnersAndRejectRehashedDrift(t *testing.T) {
 		{"selective-gate-plan", "input", "1", []func() map[string]any{selectivegateplan.InputStructure}},
 		{"selective-gate-plan", "output", "1", []func() map[string]any{selectivegateplan.EnvelopeStructure, agentenvelope.InvalidInputStructure, selectivegateplan.OutputStructure}},
 		{"selective-gate-evidence", "input", "1", []func() map[string]any{selectivegateevidence.InputStructure}},
-		{"selective-gate-evidence", "output", "1", []func() map[string]any{selectivegateevidence.EnvelopeStructure, agentenvelope.InvalidInputStructure, selectivegateevidence.OutputStructure}},
+		{"selective-gate-evidence", "output", "2", []func() map[string]any{selectivegateevidence.EnvelopeStructure, agentenvelope.InvalidInputStructure, selectivegateevidence.OutputStructure}},
 		{"selective-gate-obligation-decision-input", "input", "1", []func() map[string]any{selectivegateevidence.ProjectionInputStructure}},
 		{"selective-gate-obligation-decision-input", "output", "1", []func() map[string]any{obligationdecision.InputStructure}},
 		{"obligation-decision", "input", "1", []func() map[string]any{obligationdecision.InputStructure}},
@@ -53,13 +53,18 @@ func TestProofRoutingStructuresBindOwnersAndRejectRehashedDrift(t *testing.T) {
 	}
 	for _, row := range rows {
 		prefix := "proofkit." + row.command + "." + row.direction + ".v" + row.version
-		predecessor := prefix + ".root-shape"
+		wireVersion := row.version
+		predecessors := []string{prefix + ".root-shape"}
 		if row.command == "witness-scheduler-plan" && row.direction == "output" {
-			predecessor = "proofkit.witness-scheduler-plan.output.v2.json-schema"
+			predecessors = []string{"proofkit.witness-scheduler-plan.output.v2.json-schema"}
+		}
+		if row.command == "selective-gate-evidence" && row.direction == "output" {
+			wireVersion = "1"
+			predecessors = []string{"proofkit.selective-gate-evidence.output.v1.root-shape", "proofkit.selective-gate-evidence.output.v1.json-schema"}
 		}
 		t.Run(prefix, func(t *testing.T) {
 			owner, ok := nativeStructureOwner(prefix + ".json-schema")
-			if !ok || owner.direction != row.direction || !slices.Equal(owner.commands, []string{row.command}) || !slices.Equal(owner.predecessors, []string{predecessor}) {
+			if !ok || owner.direction != row.direction || !slices.Equal(owner.commands, []string{row.command}) || !slices.Equal(owner.predecessors, predecessors) {
 				t.Fatal("missing or incorrect exact direction owner")
 			}
 			definition, err := owner.definition()
@@ -87,7 +92,7 @@ func TestProofRoutingStructuresBindOwnersAndRejectRehashedDrift(t *testing.T) {
 				restore()
 			}
 			version, err := owner.contractVersion(definition)
-			if err != nil || version != json.Number(row.version) {
+			if err != nil || version != json.Number(wireVersion) {
 				t.Fatalf("version=%s err=%v", version, err)
 			}
 			if _, err := admitDefinitions(map[string]any{"contractDefinitions": []any{definition}}); err != nil {

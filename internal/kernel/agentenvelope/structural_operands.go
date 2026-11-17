@@ -19,11 +19,12 @@ type OperandBinding struct {
 // once; arbitrary caller text still follows scalar redaction.
 type admittedStructuralOperand string
 
-func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[string]struct{}, bindings []OperandBinding, fields []ContextReferenceField, renderer cliexec.Renderer, displayField string, callerCommandIDs []string) {
+func admitStructuralOperands(prepared *preparedLocalReferences, rejected localReferenceTargets, ambiguous map[string]struct{}, bindings []OperandBinding, fields []ContextReferenceField, renderer cliexec.Renderer, displayField string, callerCommandIDs []string) {
 	fallbacks, orphanCommands := prepareCallerDisplayFallbacks(prepared.commands, callerCommandIDs, displayField)
 	prepared.callerDisplayFallbacks = fallbacks
-	contexts, paths, omitted := admitContextOperands(prepared.contextRefs, fields, rejected)
+	contexts, paths, omitted := admitContextOperands(prepared.contextRefs, fields, rejected.contexts, ambiguous)
 	prepared.contextRefs = contexts
+	prepared.operandContexts = map[string][]string{}
 	byCommand := map[string][]OperandBinding{}
 	for _, binding := range bindings {
 		byCommand[binding.CommandID] = append(byCommand[binding.CommandID], binding)
@@ -36,18 +37,23 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[str
 			commands = append(commands, command)
 			continue
 		}
-		argv, ok := admitStructuralArgv(value, byCommand[id], paths, renderer)
+		commandBindings := byCommand[id]
+		argv, ok := admitStructuralArgv(value, commandBindings, paths, renderer)
 		delete(byCommand, id)
 		if !ok || !projectCommandDisplay(command, argv, displayField) {
 			if fallback, exists := fallbacks[id]; exists {
 				commands = append(commands, fallback.apply(command))
 			} else {
-				rejected[id] = struct{}{}
+				rejected.commands[id] = struct{}{}
 			}
 			omitted++
 			continue
 		}
 		command["argv"] = argv
+		// Seal only successfully admitted dependencies, never caller-owned metadata.
+		for _, binding := range commandBindings {
+			prepared.operandContexts[id] = append(prepared.operandContexts[id], binding.ContextRefID)
+		}
 		commands = append(commands, command)
 	}
 	prepared.commands = commands
@@ -55,7 +61,7 @@ func admitStructuralOperands(prepared *preparedLocalReferences, rejected map[str
 		orphanCommands[id] = struct{}{}
 	}
 	for id := range orphanCommands {
-		if _, alreadyCounted := rejected[id]; !alreadyCounted {
+		if !isRejectedIdentity(id, rejected.commands, ambiguous) {
 			omitted++
 		}
 	}
@@ -160,12 +166,14 @@ func admitStructuralArgv(raw any, bindings []OperandBinding, paths map[contextOp
 	return result, true
 }
 
-func commandsWithRetainedOperandContexts(commands []map[string]any, contexts []map[string]any, bindings []OperandBinding, fallbacks map[string]callerDisplayFallback) ([]map[string]any, int) {
+func commandsWithRetainedOperandContexts(commands []map[string]any, contexts []map[string]any, dependencies map[string][]string, fallbacks map[string]callerDisplayFallback) ([]map[string]any, int) {
 	retained := idSet(contexts, "refId")
 	missing := map[string]struct{}{}
-	for _, binding := range bindings {
-		if _, exists := retained[binding.ContextRefID]; !exists {
-			missing[binding.CommandID] = struct{}{}
+	for commandID, refs := range dependencies {
+		for _, ref := range refs {
+			if _, exists := retained[ref]; !exists {
+				missing[commandID] = struct{}{}
+			}
 		}
 	}
 	result := make([]map[string]any, 0, len(commands))

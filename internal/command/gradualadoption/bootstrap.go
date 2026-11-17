@@ -34,6 +34,7 @@ type BootstrapResult struct {
 	renderer                 cliexec.Renderer
 	repositoryProfilePath    string
 	materializationFileRoles map[string]string
+	materialization          map[string]any
 }
 
 func (result BootstrapResult) RepositoryProfilePath() string {
@@ -42,6 +43,12 @@ func (result BootstrapResult) RepositoryProfilePath() string {
 
 func (result BootstrapResult) MaterializationFileRoles() map[string]string {
 	return maps.Clone(result.materializationFileRoles)
+}
+
+// MaterializationInput projects the child-owned source for parent consistency
+// and persistence; neither the caller input nor writable output owns it.
+func (result BootstrapResult) MaterializationInput() (map[string]any, error) {
+	return contractenv.ObjectField(result.materialization, "input", "bootstrap result")
 }
 
 func BuildBootstrap(raw any) (map[string]any, int, error) {
@@ -356,7 +363,7 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
 	exit := exitCode(rec)
-	return BootstrapResult{
+	result := BootstrapResult{
 		AgentActionPlan: agentActionPlan,
 		ExitCode:        exit,
 		NextCommands:    nextCommands,
@@ -373,7 +380,19 @@ func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error)
 		renderer:                 renderer,
 		repositoryProfilePath:    source.ProfilePath,
 		materializationFileRoles: fileRoles,
-	}, nil
+	}
+	// Seal materialization before publishing writable projections. Reuse the
+	// existing clone primitive; do not readmit or reserialize the source input.
+	inputSnapshot, err := contractenv.ObjectField(map[string]any{"input": record}, "input", "bootstrap result")
+	if err != nil {
+		return BootstrapResult{}, err
+	}
+	manifest, err := bootstrapMaterializationManifest(result)
+	if err != nil {
+		return BootstrapResult{}, err
+	}
+	result.materialization = map[string]any{"input": inputSnapshot, "manifest": manifest}
+	return result, nil
 }
 
 func admitBootstrapPaths(raw map[string]any, failures *[]string) (map[string]any, error) {

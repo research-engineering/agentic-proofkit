@@ -89,10 +89,15 @@ func Build(input Input) map[string]any {
 	routeQuestions, omitted, truncated = limitList(routeQuestions, "routeQuestion", "questionId", "maxRouteQuestions", hardMaxRouteQuestions, omitted, bounds, truncated)
 	priorities := collectLocalReferencePriorities(originalTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
 	commands, omitted, truncated = limitListPrioritized(commands, "commandRef", "commandId", "maxCommandRefs", hardMaxCommandRefs, priorities.commands, omitted, bounds, truncated)
+	for _, command := range commands {
+		for _, ref := range prepared.operandContexts[stringValue(command["commandId"])] {
+			priorities.contexts[ref] = struct{}{}
+		}
+	}
 	contextRefs, omitted, truncated = limitListPrioritized(contextRefs, "contextRef", "refId", "maxContextRefs", hardMaxContextRefs, priorities.contexts, omitted, bounds, truncated)
 	receiptRefs, omitted, truncated = limitListPrioritized(receiptRefs, "receiptRef", "receiptRefId", "maxReceiptRefs", hardMaxReceiptRefs, priorities.receipts, omitted, bounds, truncated)
 	var missingOperandContexts int
-	commands, missingOperandContexts = commandsWithRetainedOperandContexts(commands, contextRefs, input.OperandBindings, prepared.callerDisplayFallbacks)
+	commands, missingOperandContexts = commandsWithRetainedOperandContexts(commands, contextRefs, prepared.operandContexts, prepared.callerDisplayFallbacks)
 	if missingOperandContexts > 0 {
 		omitted = append(omitted, omissionRecord("unavailableOperandContext", "commands", missingOperandContexts))
 		truncated = true

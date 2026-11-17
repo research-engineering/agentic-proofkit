@@ -26,12 +26,12 @@ func EnvelopeStructure() map[string]any {
 		BlockedPreconditions: jsonshape.BoundedArray(agentenvelope.BlockedStructure(), 0, agentenvelope.MaxBlockedPreconditions), Bounds: agentenvelope.CompatibilityBoundsStructure(),
 		ClarificationQuestions: jsonshape.BoundedArray(agentenvelope.ClarificationStructure(jsonshape.StringLiteral("owner_decision")), 0, agentenvelope.MaxClarificationQuestions),
 		Commands:               jsonshape.BoundedArray(command, 0, itemLimit),
-		ContextRefs:            jsonshape.BoundedArray(agentenvelope.ContextRefStructure(jsonshape.StringLiteral("evidence"), jsonshape.Enum(map[string]struct{}{"evidence": {}, "generated_lookup": {}})), 0, 2),
+		ContextRefs:            jsonshape.BoundedArray(agentenvelope.ContextRefStructure(jsonshape.Enum(map[string]struct{}{"evidence": {}, "path": {}}), jsonshape.Enum(map[string]struct{}{"evidence": {}, "generated_lookup": {}})), 0, 2+itemLimit),
 		Omitted:                jsonshape.BoundedArray(jsonshape.OneOf(omission, agentenvelope.OmissionStructure()), 0, agentenvelope.MaxOmittedItems),
 		ReceiptRefs:            jsonshape.BoundedArray(jsonshape.DiscriminatedUnion("kind", receipts...), 0, itemLimit),
 		RouteQuestions:         jsonshape.BoundedArray(agentenvelope.RouteQuestionStructure(), 3, 3),
 		SourceReport:           agentenvelope.SourceReportStructure("proofkit.selective-gate-evidence", jsonshape.BoundedStringGrammar(admit.RuleIDPatternBody, admit.MaxRuleIDBytes), jsonshape.StringGrammar(`sha256:[0-9a-f]{64}`), jsonshape.Enum(map[string]struct{}{"passed": {}, "failed": {}, "blocked": {}})),
 	}).JSONSchema()
-	schema["description"] = "Two guidance actions classify receipt gaps. Receipt refs distinguish missing required classes from supplied artifacts. Native Build may prune local identities/references, truncate lists, add omissions and update cost/bounds facts. Record ordering, source hash, count equalities and source-report linkage remain native. No evidence is executed, authenticated or declared fresh by this view. Invalid caller input uses the separate invalid-input variant."
+	schema["description"] = "Two guidance actions classify planned receipt gaps. Command identities derive from full admitted tuples. Missing required classes are not artifacts; supplied artifact refs name local path contexts rather than external path scalars. Native Build may prune local identities/references, truncate lists, add omissions and update cost/bounds facts. Record ordering, source hash, count equalities and source-report linkage remain native. No evidence is executed, authenticated or declared fresh by this view. Invalid caller input uses the separate invalid-input variant."
 	return schema
 }

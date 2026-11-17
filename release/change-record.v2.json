@@ -23,6 +23,14 @@
     {
       "changeId": "proofkit.agent-envelope.reference-catalogs",
       "summary": "Agent-route output semantic v4 preserves structural paths and selectors for observed-report blockers as local contexts. Adoption-doctor output semantic v2 replaces duplicated path selectors with source-role-aware context IDs and top-level action evidenceRefs. Guidance action and ownership references resolve through source-role contexts. Doctor local command and context IDs reserve external source-report identities. Scalar diagnostic text still follows its existing redaction and length policy; bounded omissions never authorize argv with lost context."
+    },
+    {
+      "changeId": "proofkit.selective-evidence.reference-model",
+      "summary": "Selective-gate-evidence output uses semantic contract v2 with unchanged wire headers and report observations. Envelope command identities are local ranks of complete planned tuples, not caller command IDs. Artifact receipt refs name local path-context IDs containing exact locators; unplanned receipt observations cannot become planned retry commands. Commands and receipts account for their losses separately before filtering."
+    },
+    {
+      "changeId": "proofkit.guidance.unattributed-failure",
+      "summary": "Guidance preserves actual failed and warning rule partitions without inventing a failed rule from reportId. A failed source without rule attribution remains a report-level failure; enforce-touched now fails closed because that failure cannot be proven outside the checked scope. Attributed failures outside touched scope remain nonblocking."
     }
   ],
   "additions": [
@@ -47,7 +55,9 @@
       "Materialize workflow, scaffold and bootstrap child inputs and replace any prepared input path equal to - with its repository-relative file path; top-level commands may still read JSON from stdin.",
       "Refresh pinned machine-contract digests and semantic v2 output validators for adoption-workflow-plan, adoption-contract-envelope and scaffold-project-structure without changing wire headers. Handle preset_choice with a supported presetId; handle missing_context_ref with one complete inputAlternatives bundle per input blocker.",
       "Resolve action and what-changed evidenceRefs against contextRefs by exact refId instead of treating them as raw plan inputRefIds. Planned commands remain non-executing caller-owned routes.",
-      "Regenerate bootstrap guidance payloads, or replace their generated commands suffix with proofkitCommands operation-to-path associations. Keep only caller-authored strings in commands. Do not persist a launcher: saved guidance is rendered under its actual later invocation profile. Refresh guidance input/output, bootstrap output, scaffold input, aggregate input, doctor output and route output validators to their new semantic identities while preserving wire versions. Refresh the pinned bootstrap input digest; its semantic v2 identity and wire header are unchanged."
+      "Regenerate bootstrap guidance payloads, or replace their generated commands suffix with proofkitCommands operation-to-path associations. Keep only caller-authored strings in commands. Do not persist a launcher: saved guidance is rendered under its actual later invocation profile. Refresh guidance input/output, bootstrap output, scaffold input, aggregate input, doctor output and route output validators to their new semantic identities while preserving wire versions. Refresh the pinned bootstrap input digest; its semantic v2 identity and wire header are unchanged.",
+      "Refresh the selective-gate-evidence output validator to semantic v2 while keeping its wire header. Resolve receipt_artifact.ref through contextRefs by exact refId; that path context contains the artifact locator. Join command, receipt and action references by local commandId, not by the caller command ID alone. Required receipt classes retain their separate meaning.",
+      "Do not interpret reportId as a failed rule when a source report has no failed ruleResults. Supply truthful rule attribution or resolve the report-level failure before enforce-touched can proceed; adding a fabricated touched RuleID is not a repair."
     ]
   },
   "platformRequirements": [
