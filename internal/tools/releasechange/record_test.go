@@ -1,6 +1,7 @@
 package releasechange
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,7 +12,9 @@ import (
 )
 
 func TestAdmitAndRenderVersionBoundChangeRecord(t *testing.T) {
-	record, err := Admit(validRecord())
+	input := validRecord()
+	input["migration"].(map[string]any)["steps"] = []any{"Delete the obsolete input field.", "Revalidate the consumer contract."}
+	record, err := Admit(input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,6 +25,7 @@ func TestAdmitAndRenderVersionBoundChangeRecord(t *testing.T) {
 	for _, expected := range []string{
 		"## Breaking Contract Changes", "## Additions", "## Migration", "Migration is required:",
 		"## Platform Requirements", "## Known Limitations", "## Install", "## Rollback",
+		"## Migration\n\nMigration is required:\n\n- Delete the obsolete input field.\n- Revalidate the consumer contract.\n\n## Platform Requirements",
 		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@2.0.0",
 		"uv tool install agentic-proofkit==2.0.0",
 		"previous admitted version 1.2.2",
@@ -194,77 +198,34 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 	assertCurrentChangeRecordNotesRejected(t, "appended duplicate change section", record, notes+"## Breaking Contract Changes\n\n- `proofkit.surplus.section`: Surplus section.\n")
 }
 
-func TestCurrentMigrationSeparatesBootstrapDigestFromIdentityCutover(t *testing.T) {
+func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
 	record, err := Read(filepath.Join(root, RecordPath))
 	if err != nil {
 		t.Fatal(err)
 	}
+	if record.PreviousVersion != "0.19.0" || record.Version != "0.19.1" || record.ChangeClass != "compatible" || record.Migration.Required || len(record.Migration.Steps) != 0 {
+		t.Fatal("patch release must preserve the declared no-migration boundary")
+	}
 	content, err := os.ReadFile(filepath.Join(root, "proofkit", "cli-contract.v2.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var contract struct {
-		Commands []struct {
-			Command       string
-			InputContract struct {
-				ContractID           string
-				RootDefinitionDigest string
-			}
-			OutputContract struct{ ContractID string }
-		}
-	}
-	if err := json.Unmarshal(content, &contract); err != nil {
-		t.Fatal(err)
-	}
-	found := false
-	for _, command := range contract.Commands {
-		if command.Command != "gradual-adoption-bootstrap" {
-			continue
-		}
-		found = true
-		// Independent facts from the published previous release, not this generator.
-		if command.InputContract.ContractID != "proofkit.gradual-adoption-bootstrap.input.v2" || command.OutputContract.ContractID != "proofkit.gradual-adoption-bootstrap.output.v2" {
-			t.Fatal("current migration premise changed; re-adjudicate the identity transition")
-		}
-		if command.InputContract.RootDefinitionDigest == "sha256:74d153954dbd80780ded085db0bd25c13498291f7c2c8a000a43edae9d14ecac" {
-			t.Fatal("claimed bootstrap input digest change is not present")
-		}
-	}
-	if !found || !strings.Contains(strings.Join(record.Migration.Steps, " "), "Refresh the pinned bootstrap input digest; its semantic v2 identity and wire header are unchanged.") {
-		t.Fatal("migration does not distinguish changed digest from unchanged input identity")
+	// Independently read back from the published 0.19.0 npm contract resource.
+	const publishedContractSHA256 = "c015e44e48cd15871abeae0d43e24938fd0b74968b66f736821de5576efb8935"
+	if fmt.Sprintf("%x", sha256.Sum256(content)) != publishedContractSHA256 {
+		t.Fatal("patch changed the published machine contract; re-adjudicate compatibility")
 	}
 }
 
-var currentBreakingChanges = []Change{
-	{ChangeID: "proofkit.workflow.input-alternatives", Summary: "Workflow plan blockers replace requiredInputKinds with inputAlternatives: an OR of complete AND bundles of still-missing input kinds. Empty alternatives mean scalar preset choice. New repository repairs preserve bootstrap_witness_plan OR (requirement_bindings AND witness_plan); release repairs preserve external_consumer OR registry_consumer. The same semantics apply to embedded scaffold and aggregate workflow plans."},
-	{ChangeID: "proofkit.workflow.materialized-inputs", Summary: "Workflow, scaffold and bootstrap prepared child-input paths refuse the CLI stdin sentinel -. Direct, contract-wrapped and selected aggregate inputs require materialized repository-relative file paths. Top-level --input - and ordinary output filenames remain supported. Bootstrap input semantic ID is v2, scaffold input is v3 and aggregate input is v4. Their wire headers stay unchanged. Bootstrap also rejects equal or file/descendant conflicts among its six planned file paths, including its four payload files, while preserving collected failure reporting. Scaffold retains exact child paths and owner-assigned file roles; prepared commands require the expected materialization source, JSON content and available payload."},
-	{ChangeID: "proofkit.workflow.typed-repair-linkage", Summary: "adoption-workflow-plan and the workflow mode of adoption-contract-envelope request preset_choice when a required presetId is missing, instead of missing_context_ref. The question lists supported preset IDs. Those output contracts and scaffold-project-structure output advance to semantic v2 while wire schemaVersion remains 1. Action and what-changed evidence references name the same local context IDs as contextRefs, including caller IDs that resemble generated IDs."},
-	{ChangeID: "proofkit.guidance.portable-prepared-commands", Summary: "Generated agentGuidance now stores optional proofkitCommands, a closed map from gradual-adoption, gradual-adoption-guidance or witness-plan to its materialized input path. commands contains caller-authored text only. Public guidance renders generated displays and argv with the actual invocation launcher, including Python interpreters with benign task-like path components. Guidance input/output and bootstrap output use semantic v2; aggregate input uses v4. Wire headers do not change. Derived displays retain the command union, but native-witness actions contain only independently declared caller commands; prepared operations remain planning or inspection routes."},
-	{ChangeID: "proofkit.agent-envelope.reference-catalogs", Summary: "Agent-route output semantic v4 preserves structural paths and selectors for observed-report blockers as local contexts. Adoption-doctor output semantic v2 replaces duplicated path selectors with source-role-aware context IDs and top-level action evidenceRefs. Guidance action and ownership references resolve through source-role contexts. Doctor local command and context IDs reserve external source-report identities. Scalar diagnostic text still follows its existing redaction and length policy; bounded omissions never authorize argv with lost context."},
-	{ChangeID: "proofkit.selective-evidence.reference-model", Summary: "Selective-gate-evidence output uses semantic contract v2 with unchanged wire headers. The envelope-only reference-model correction preserves report observations; the separate receipt-path admission correction can change joined-input decisions. Envelope command identities are local ranks of complete planned tuples, not caller command IDs. Artifact receipt refs name local path-context IDs containing exact locators; unplanned receipt observations cannot become planned retry commands. Commands and receipts account for their losses separately before filtering and retain those separate counts after downstream bounds."},
-	{ChangeID: "proofkit.guidance.unattributed-failure", Summary: "Guidance preserves actual failed and warning rule partitions without inventing a failed rule from reportId. A failed source without rule attribution remains a report-level failure; enforce-touched now fails closed because that failure cannot be proven outside the checked scope. Attributed failures outside touched scope remain nonblocking."},
-	{ChangeID: "proofkit.receipt.structural-path-admission", Summary: "Receipt producer, selective evidence and obligation decision adapters preserve exact canonical path references under path-specific privacy, including benign task-like names and significant whitespace. Previously trimmed locator pairs may now fail producer/selective/trust linkage: a padded producer evidenceRef or provenanceRef no longer equals an unpadded peer. Corresponding fields must name the intended filename byte-for-byte. Prose privacy, list ordering and uniqueness, null handling and evidence-class policies remain separate. These reports classify caller facts; they do not prove file existence or native execution."},
-	{ChangeID: "proofkit.launcher.single-line-path-admission", Summary: "Python module launcher executable paths reject Unicode line and paragraph separators and malformed UTF-8 at launcher-profile admission, before command parsing. Even --help and --version refuse an invalid profile. Ordinary Unicode, literal path bytes and supported launcher profiles remain unchanged. This changes environment admission, not JSON wire versions."},
-}
+var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.build.go-security-toolchain", Summary: "Builds use Go 1.27.4, including the net/http security correction for GO-2026-6859. Source toolchain selection and the checksum-bound Linux ARM64 contributor environment select the same patch release. This does not prove exploitability of an earlier product or change the declared platform support."},
-	{ChangeID: "proofkit.release.metadata-output-confinement", Summary: "Release manifest, SBOM and PyPI evidence tools use repository-owned atomic file publication for generated metadata. They refuse symlink or special-file destinations, preserve hard-linked peer contents and publish regular files with private mode. This is per-file single-writer protection, not a multi-file crash transaction or protection against hostile concurrent namespace mutation."},
-	{ChangeID: "proofkit.agent-envelope.structural-operands", Summary: "Agent envelopes preserve safe structural context references without diagnostic truncation. Workflow and route owners bind prepared paths to exact argv positions; all argv-producing envelope owners preserve their admitted Python launcher. Equal text elsewhere gains no structural role. Unsafe references or argv cause explicit target omission and dependent-reference pruning, not an executable redaction marker. Missing bounded contexts remove dependent argv. If an independently admitted caller command has the same display, its local ID and action references remain as scalar diagnostic text without argv; otherwise the command is omitted. Scalar fallback changes only display and argv on the current admitted command, without restoring pruned sibling references. Secret signatures remain refused inside paths, and scalar text retains its existing protection."},
+	{ChangeID: "proofkit.selective-evidence.diagnostic-route-oracle", Summary: "Add an owner-level regression oracle for receipt currentness/trust diagnostic identity at selective-gate-obligation-decision-input. It independently admits the child, then rejects foreign obligationId, requirementId, proofRouteRef or receiptId, and is linked to the existing selective-evidence requirement scenario. Isolated requirement/proof-route check-removal mutants now fail this oracle. Public command/JSON semantics and machine-contract bytes are unchanged; --version reports the new package version."},
+	{ChangeID: "proofkit.release.required-migration-render-oracle", Summary: "Keep required migration instructions covered independently of the current release's migration status. The generic release-note test requires two reviewed steps in order and detects omitted or reversed instructions. Release rendering behavior is unchanged."},
 }
 
-var currentMigrationSteps = []string{
-	"Refresh receipt-admission contract digests and reconcile corresponding producer, selective and trust locators byte-for-byte. Leading or trailing whitespace names a literal filename: producer evidenceRef or provenanceRef with a trailing space no longer matches an unpadded peer. Preserve identical significant spaces when they name the intended file; do not blindly trim paths or treat a digest refresh alone as an input repair.",
-	"Read inputAlternatives as alternative complete bundles, not a flattened all-required list; an empty alternatives array requests a scalar preset choice. Existing workflow acceptance policy is unchanged.",
-	"Materialize workflow, scaffold and bootstrap child inputs and replace any prepared input path equal to - with its repository-relative file path; top-level commands may still read JSON from stdin.",
-	"Refresh pinned machine-contract digests and semantic v2 output validators for adoption-workflow-plan, adoption-contract-envelope and scaffold-project-structure without changing wire headers. Handle preset_choice with a supported presetId; handle missing_context_ref with one complete inputAlternatives bundle per input blocker.",
-	"Resolve action and what-changed evidenceRefs against contextRefs by exact refId instead of treating them as raw plan inputRefIds. Planned commands remain non-executing caller-owned routes.",
-	"Regenerate bootstrap guidance payloads from the authoritative original bootstrap input, preserving exact ownerRoute.specPaths, proofBindingPaths and evidencePaths. Do not migrate from lossy saved guidance alone or only replace its generated commands suffix: older payloads may have stripped significant path whitespace. If the original owner-reviewed paths are unavailable, obtain owner reconciliation before admitting guidance. Generated operations belong in proofkitCommands; keep only caller-authored strings in commands. Do not persist a launcher: saved guidance is rendered under its actual later invocation profile. Refresh guidance input/output, bootstrap output, scaffold input, aggregate input, doctor output and route output validators to their new semantic identities while preserving wire versions. Refresh the pinned bootstrap input digest; its semantic v2 identity and wire header are unchanged.",
-	"Refresh the selective-gate-evidence output validator to semantic v2 while keeping its wire header. Resolve receipt_artifact.ref through contextRefs by exact refId; that path context contains the artifact locator. Join command, receipt and action references by local commandId, not by the caller command ID alone. Required receipt classes retain their separate meaning.",
-	"Do not interpret reportId as a failed rule when a source report has no failed ruleResults. Supply truthful rule attribution or resolve the report-level failure before enforce-touched can proceed; adding a fabricated touched RuleID is not a repair.",
-	"For python_module launchers, configure AGENTIC_PROOFKIT_PYTHON_EXECUTABLE to the intended absolute single-line path with valid UTF-8, no control or format characters, and no Unicode line or paragraph separators. An invalid value refuses before help, version or command parsing. Do not silently rewrite a filesystem name; use a valid executable path or another supported launcher profile.",
-}
+var currentMigrationSteps = []string{}
 
 func validateCurrentChangeRecord(record Record, notes string) error {
 	if !slices.Equal(record.BreakingChanges, currentBreakingChanges) {
@@ -284,7 +245,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.19.0",
+		"# @research-engineering/agentic-proofkit 0.19.1",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -302,17 +263,7 @@ func currentExpectedReleaseNotes() string {
 	if len(currentAdditions) == 0 {
 		lines = append(lines, "- None.")
 	}
-	lines = append(lines,
-		"",
-		"## Migration",
-		"",
-		"Migration is required:",
-		"",
-	)
-	for _, step := range currentMigrationSteps {
-		lines = append(lines, "- "+step)
-	}
-	lines = append(lines, "")
+	lines = append(lines, "", "## Migration", "", "No consumer migration is required.", "")
 	lines = append(lines,
 		"## Platform Requirements",
 		"",
@@ -340,7 +291,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.1",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -352,7 +303,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.18.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.18.0`.",
+		"- Pin npm consumers to the previous admitted version 0.19.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

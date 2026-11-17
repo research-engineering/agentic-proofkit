@@ -11321,6 +11321,25 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-004",
       "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
+      "witnessId": "proofkit.selective-evidence.diagnostic-route-binding",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/selectivegateevidence/trust_binding_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectionBindsChildDiagnosticRouteIdentity",
+          "command": "go test ./internal/command/selectivegateevidence -run '^TestProjectionBindsChildDiagnosticRouteIdentity$'"
+        }
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
       "witnessId": "proofkit.receipt-path.decision-admission",
       "witnessKind": "contract",
       "witnessPath": "internal/command/obligationdecision/path_admission_test.go",

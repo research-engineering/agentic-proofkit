@@ -6,7 +6,52 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
+	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
+	"github.com/research-engineering/agentic-proofkit/internal/command/receipttrustclass"
 )
+
+func TestProjectionBindsChildDiagnosticRouteIdentity(t *testing.T) {
+	for _, child := range []struct {
+		key   string
+		label string
+	}{
+		{"receiptCurrentnessScopeAdmission", "receipt currentness-scope"},
+		{"receiptTrustClassAdmission", "receipt trust-class"},
+	} {
+		for _, coordinate := range []struct {
+			field string
+			value string
+			cause string
+		}{
+			{"obligationId", "proofkit.foreign-obligation", "diagnostic is unscoped"},
+			{"requirementId", "REQ-FOREIGN-001", "requirementId mismatch"},
+			{"proofRouteRef", "proofkit.foreign-route", "proofRouteRef mismatch"},
+			{"receiptId", "receipt.foreign", "receiptId mismatch"},
+		} {
+			t.Run(child.key+"/"+coordinate.field, func(t *testing.T) {
+				input := fullyBoundProjectionInput()
+				assertProjectedDecision(t, input, "passed")
+				admission := input[child.key].(map[string]any)
+				admission["obligationReceipts"].([]any)[0].(map[string]any)[coordinate.field] = coordinate.value
+				if child.key == "receiptCurrentnessScopeAdmission" {
+					record, exit, err := receiptcurrentnessscope.Build(admission)
+					if err != nil || exit != 0 || record.State != "passed" {
+						t.Fatalf("foreign coordinate must remain child-valid: exit=%d state=%q err=%v", exit, record.State, err)
+					}
+				} else {
+					record, exit, err := receipttrustclass.Build(admission)
+					if err != nil || exit != 0 || record.State != "passed" {
+						t.Fatalf("foreign coordinate must remain child-valid: exit=%d state=%q err=%v", exit, record.State, err)
+					}
+				}
+				projected, err := ProjectObligationDecision(input)
+				if err == nil || projected != nil || !strings.Contains(err.Error(), child.label+" "+coordinate.cause) {
+					t.Fatalf("foreign diagnostic coordinate was accepted or rejected for the wrong cause: projected=%#v err=%v", projected, err)
+				}
+			})
+		}
+	}
+}
 
 func TestTrustProjectionBindsEvaluatedReceiptFacts(t *testing.T) {
 	for _, field := range []string{"receiptKind", "environmentClass", "producerAdmissionClass", "artifactRefs", "provenanceRef"} {
