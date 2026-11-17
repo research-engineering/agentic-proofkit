@@ -35,6 +35,12 @@ func TestRequiredBindingAnchorWithSupplement(t *testing.T) {
 		mutate func(*bindingFile)
 		want   string
 	}{
+		{"lexical-primary-alias", func(b *bindingFile) {
+			alias := b.Bindings[primary]
+			alias.WitnessID = "proofkit.test.lexical-copy"
+			alias.WitnessPath = "./" + alias.WitnessPath
+			b.Bindings = append(b.Bindings, alias)
+		}, "binding witness path "},
 		{"remove-primary", func(b *bindingFile) {
 			b.Bindings = slices.Delete(b.Bindings, primary, primary+1)
 		}, "required independent-falsifier binding is missing: " + requirement + "/" + scenario + " (want exact witness path \"" + primaryPath + "\")"},

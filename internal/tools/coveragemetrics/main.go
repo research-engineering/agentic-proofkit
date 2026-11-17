@@ -27,6 +27,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/gotestsource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
@@ -261,6 +262,14 @@ func commandExecutionSummaryFromEvidence(evidence commandoracle.Evidence) comman
 }
 
 func validateBindingWitnessSelectorsAtRoot(root string, bindings bindingFile) error {
+	for _, binding := range bindings.Bindings {
+		if binding.WitnessPath == "" && len(binding.WitnessSelectors) == 0 {
+			continue
+		}
+		if _, err := admit.SafeRepoRelativePath(binding.WitnessPath, "binding witness path"); err != nil {
+			return err
+		}
+	}
 	if err := validateRequiredBindingWitnessSelectors(bindings); err != nil {
 		return err
 	}

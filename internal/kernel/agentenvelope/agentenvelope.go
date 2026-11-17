@@ -89,6 +89,8 @@ func Build(input Input) map[string]any {
 	routeQuestions, omitted, truncated = limitList(routeQuestions, "routeQuestion", "questionId", "maxRouteQuestions", hardMaxRouteQuestions, omitted, bounds, truncated)
 	priorities := collectLocalReferencePriorities(originalTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
 	commands, omitted, truncated = limitListPrioritized(commands, "commandRef", "commandId", "maxCommandRefs", hardMaxCommandRefs, priorities.commands, omitted, bounds, truncated)
+	// Discarded commands cannot contribute demand to later target selection.
+	priorities = collectLocalReferencePriorities(originalTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
 	for _, command := range commands {
 		for _, ref := range prepared.operandContexts[stringValue(command["commandId"])] {
 			priorities.contexts[ref] = struct{}{}

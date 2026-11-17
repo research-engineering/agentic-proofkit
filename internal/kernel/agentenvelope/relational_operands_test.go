@@ -19,6 +19,54 @@ func relationalOperandInput() Input {
 	return input
 }
 
+func TestRelationalDiscardedCommandReferencesCannotSelectContexts(t *testing.T) {
+	for _, limit := range []int{0, 1} {
+		for _, competing := range []bool{false, true} {
+			t.Run(fmt.Sprintf("contexts-%d/competing-%t", limit, competing), func(t *testing.T) {
+				var control map[string]any
+				for _, extra := range []bool{false, true} {
+					input := relationalOperandInput()
+					unused := map[string]any{"commandId": "command.unused", "argv": []string{"tool", "--input", "inputs/unrelated.json"}}
+					if extra {
+						unused["evidenceRefs"] = []any{"context.a"}
+					}
+					input.Commands = append(input.Commands, unused)
+					input.OperandBindings = append(input.OperandBindings, OperandBinding{CommandID: "command.unused", ArgvIndex: 2, ContextRefID: "context.a"})
+					if competing {
+						input.ActionPlan[0]["evidenceRefs"] = []any{"context.a"}
+					}
+					input.Bounds = map[string]any{"maxCommandRefs": 1, "maxContextRefs": limit, "maxOmittedItems": MaxOmittedItems, "fanout": "bounded"}
+					packet := Build(input)
+					if extra && !reflect.DeepEqual(control, packet) {
+						t.Fatal("a discarded command changed the final retained packet")
+					}
+					control = packet
+					wantCommands := 0
+					if limit == 1 && !competing {
+						wantCommands = 1
+					}
+					if len(packet["commands"].([]any)) != wantCommands || len(packet["actionPlan"].([]any)[0].(map[string]any)["commandIds"].([]any)) != wantCommands {
+						t.Fatal("command retention did not respect the live context demand")
+					}
+					contexts := packet["contextRefs"].([]any)
+					if len(contexts) != limit {
+						t.Fatal("context limit did not hold")
+					}
+					if limit == 1 {
+						want := "context.z"
+						if competing {
+							want = "context.a"
+						}
+						if contexts[0].(map[string]any)["refId"] != want {
+							t.Fatal("context selection ignored the retained demand")
+						}
+					}
+				}
+			})
+		}
+	}
+}
+
 func TestRelationalOrphanMetadataCoalescesOnlyWithAmbiguousOwner(t *testing.T) {
 	for _, target := range []string{"command", "context", "receipt"} {
 		for _, owner := range []string{"command", "context"} {

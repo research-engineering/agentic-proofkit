@@ -11463,6 +11463,10 @@
           "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalContextPriorityIncludesAdmittedOperandDependencies$'"
         },
         {
+          "selector": "TestRelationalDiscardedCommandReferencesCannotSelectContexts",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalDiscardedCommandReferencesCannotSelectContexts$'"
+        },
+        {
           "selector": "TestRelationalEveryAdmittedContextRemainsRequired",
           "command": "go test ./internal/kernel/agentenvelope -run '^TestRelationalEveryAdmittedContextRemainsRequired$'"
         },
