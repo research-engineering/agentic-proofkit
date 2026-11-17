@@ -94,9 +94,10 @@ func TestGuidanceInvocationPortableSourceCLIReadmission(t *testing.T) {
 						t.Fatal("saved guidance JSON depends on its CLI carrier or producer renderer")
 					}
 					envelope := invocationProfileRun(t, producer.renderer, append(append([]string{}, route.args...), "--agent-envelope"), invocationProfileEncode(t, route.input))
-					guidanceInvocationAssertEnvelope(t, producer.renderer, envelope, source, nil, map[string]string{
+					ids := guidanceInvocationAssertEnvelope(t, producer.renderer, envelope, source, nil, map[string]string{
 						"gradual-adoption": "owner_surface", "gradual-adoption-guidance": "supporting", "witness-plan": "command_registry",
 					})
+					guidanceInvocationAssertActionCommands(t, envelope["actionPlan"], "verify", "commandIds", ids)
 				})
 			}
 			prepared, err := gradualadoption.BuildBootstrapResultWithRenderer(invocationProfileJSON(t, bootstrap), producer.renderer)
@@ -209,9 +210,12 @@ func guidanceInvocationReadmitCLI(t *testing.T, renderer cliexec.Renderer, saved
 			if summary["guidanceMode"] != route.mode || summary["checkedScope"] != route.scope || summary["commandCount"] != json.Number(fmt.Sprint(len(want))) {
 				t.Fatalf("guidance override/count projection drifted: %#v", summary)
 			}
-			guidanceInvocationAssertVerify(t, guidance["agentActionPlan"], "commands", want)
+			guidanceInvocationAssertActionCommands(t, guidance["agentActionPlan"], "verify", "commands", caller)
+			guidanceInvocationAssertActionCommands(t, guidance["agentActionPlan"], "route", "commands", guidanceInvocationDisplays(renderer, source))
 			envelope := invocationProfileRun(t, renderer, append(append([]string{}, route.args...), "--agent-envelope"), route.stdin)
-			guidanceInvocationAssertEnvelope(t, renderer, envelope, source, caller, nil)
+			ids := guidanceInvocationAssertEnvelope(t, renderer, envelope, source, caller, nil)
+			guidanceInvocationAssertActionCommands(t, envelope["actionPlan"], "verify", "commandIds", ids[:len(caller)])
+			guidanceInvocationAssertActionCommands(t, envelope["actionPlan"], "route", "commandIds", ids[len(caller):])
 		})
 	}
 }
@@ -231,18 +235,18 @@ func guidanceInvocationAssertCommands(t *testing.T, raw any, want []string) {
 	}
 }
 
-func guidanceInvocationAssertVerify(t *testing.T, raw any, field string, want []string) {
+func guidanceInvocationAssertActionCommands(t *testing.T, raw any, phase, field string, want []string) {
 	t.Helper()
 	found := 0
 	for _, raw := range invocationProfileArray(t, raw, "action plan") {
 		action := invocationProfileObjectValue(t, raw, "action")
-		if action["phase"] == "verify" {
+		if action["phase"] == phase {
 			found++
 			guidanceInvocationAssertCommands(t, action[field], want)
 		}
 	}
 	if found != 1 {
-		t.Fatalf("verify actions=%d want 1", found)
+		t.Fatalf("%s actions=%d want 1", phase, found)
 	}
 }
 
@@ -250,13 +254,13 @@ func guidanceInvocationAssertBootstrapCommands(t *testing.T, renderer cliexec.Re
 	t.Helper()
 	want := guidanceInvocationDisplays(renderer, source)
 	guidanceInvocationAssertCommands(t, output["nextCommands"], want)
-	guidanceInvocationAssertVerify(t, output["agentActionPlan"], "commands", want)
+	guidanceInvocationAssertActionCommands(t, output["agentActionPlan"], "verify", "commands", want)
 	report := invocationProfileObjectValue(t, output["report"], "bootstrap report")
 	guidanceInvocationAssertCommands(t, invocationProfileDiagnostic(t, report, "nextCommands"), want)
-	guidanceInvocationAssertVerify(t, invocationProfileDiagnostic(t, report, "agentActionPlan"), "commands", want)
+	guidanceInvocationAssertActionCommands(t, invocationProfileDiagnostic(t, report, "agentActionPlan"), "verify", "commands", want)
 }
 
-func guidanceInvocationAssertEnvelope(t *testing.T, renderer cliexec.Renderer, envelope map[string]any, source map[string]any, caller []string, roles map[string]string) {
+func guidanceInvocationAssertEnvelope(t *testing.T, renderer cliexec.Renderer, envelope map[string]any, source map[string]any, caller []string, roles map[string]string) []string {
 	t.Helper()
 	want := append(append([]string{}, caller...), guidanceInvocationDisplays(renderer, source)...)
 	displays, ids := []string{}, []string{}
@@ -299,8 +303,8 @@ func guidanceInvocationAssertEnvelope(t *testing.T, renderer cliexec.Renderer, e
 	if !reflect.DeepEqual(displays, want) {
 		t.Fatalf("envelope commands=%#v want exact %#v", displays, want)
 	}
-	guidanceInvocationAssertVerify(t, envelope["actionPlan"], "commandIds", ids)
 	if omitted := invocationProfileArray(t, envelope["omitted"], "omitted items"); len(omitted) != 0 {
 		t.Fatalf("valid exact invocations were omitted: %#v", omitted)
 	}
+	return ids
 }

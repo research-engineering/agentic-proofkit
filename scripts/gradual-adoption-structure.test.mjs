@@ -971,7 +971,8 @@ test('reachable envelope degradation preserves bounded arrays, omissions and req
     carrierPredicates('gradual-adoption-guidance', 1, value, 'commands/' + count);
   }
   for (const count of [47, 48, 49, 97]) {
-    const input = guidance(); input.ownerRoute.evidencePaths = Array.from({length: count - 2}, (_, index) => `artifacts/evidence-${String(index).padStart(3, '0')}.json`);
+    // The fixed contexts are the spec path, proof binding and declared owner.
+    const input = guidance(); input.ownerRoute.evidencePaths = Array.from({length: count - 3}, (_, index) => `artifacts/evidence-${String(index).padStart(3, '0')}.json`);
     const value = invoke('gradual-adoption-guidance', input, 'passed', ['--agent-envelope']);
     assert.equal(value.contextRefs.length, Math.min(count, 48));
     carrierPredicates('gradual-adoption-guidance', 1, value, 'contexts/' + count);

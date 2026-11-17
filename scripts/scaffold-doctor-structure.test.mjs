@@ -820,6 +820,14 @@ test('whole chains reuse the producing commands and their published structures',
 
 test('described finite enums retain the independently authored owner vocabulary', () => {
   const states = {doctor: ['blocked', 'failed', 'passed'], child: ['blocked', 'failed', 'passed', 'skipped', 'warning']};
+  const workflowPhaseCommands = [
+    ['stack-preset', 'scaffold-profile-plan', 'branch-authority'],
+    ['gradual-adoption-bootstrap', 'gradual-adoption-guidance'],
+    ['requirement-bindings', 'proof-slice', 'witness-scheduler-plan', 'witness-plan'],
+    ['migration-plan'], ['selective-gate-plan'],
+    ['receipt-producer-admission', 'selective-gate-evidence', 'adoption-checklist'],
+    ['release-authority', 'external-consumer', 'registry-consumer'],
+  ].map(names => names.map(name => 'proofkit.adoption-workflow.command.' + name));
   const domains = {
     mode: ['enforce-all', 'enforce-touched', 'observe', 'warn'], checkedScope: ['all', 'none', 'touched'], admissionState: ['advisory', 'owner_admitted'],
     authorityState: ['current', 'retired'], credentialClass: ['live-cloud', 'live-github', 'local-secret', 'none'], networkPolicy: ['external', 'loopback', 'none'],
@@ -848,6 +856,11 @@ test('described finite enums retain the independently authored owner vocabulary'
         if (node.enum) {
           const key = path[path.lastIndexOf('properties') + 1];
           let expected = domains[key];
+          if (key === 'commandId' && command === 'scaffold-project-structure' && joined.includes('/adoptionWorkflowPlan/')) {
+            const position = path.indexOf('prefixItems');
+            assert(position >= 0, 'workflow command enum must belong to a fixed phase');
+            expected = workflowPhaseCommands[Number(path[position + 1])];
+          }
           if (command === 'adoption-doctor' && joined.includes('/contextRefs/')) {
             if (key === 'kind') expected = ['blocked_precondition', 'candidate_boundary', 'child_report', 'owner_route', 'stale_authority_surface'];
             if (key === 'role') expected = ['affected_path', 'authority_path', 'contract_witness', 'evidence', 'native_witness', 'proof_binding', 'spec_path'];
