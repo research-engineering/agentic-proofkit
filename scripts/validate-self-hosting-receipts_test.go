@@ -712,7 +712,8 @@ func releasePackageGateWorkflowExpectation() packageGateWorkflowExpectation {
 		requireReleaseExpressionInventory:  true,
 		stepInventorySHA256:                releaseCandidateStepInventorySHA256,
 		requiredNeeds: map[string][]string{
-			"publish-readiness":    []string{"candidate"},
+			"candidate-intel":      []string{"candidate"},
+			"publish-readiness":    []string{"candidate", "candidate-intel"},
 			"publish":              []string{"publish-readiness"},
 			"publish-pypi":         []string{"publish-readiness"},
 			"release-metadata":     []string{"candidate", "publish", "publish-pypi"},

@@ -204,14 +204,14 @@ func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.PreviousVersion != "0.19.0" || record.Version != "0.19.1" || record.ChangeClass != "compatible" || record.Migration.Required || len(record.Migration.Steps) != 0 {
+	if record.PreviousVersion != "0.19.1" || record.Version != "0.19.2" || record.ChangeClass != "compatible" || record.Migration.Required || len(record.Migration.Steps) != 0 {
 		t.Fatal("patch release must preserve the declared no-migration boundary")
 	}
 	content, err := os.ReadFile(filepath.Join(root, "proofkit", "cli-contract.v2.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Independently read back from the published 0.19.0 npm contract resource.
+	// Independently read back from the published 0.19.1 npm contract resource.
 	const publishedContractSHA256 = "c015e44e48cd15871abeae0d43e24938fd0b74968b66f736821de5576efb8935"
 	if fmt.Sprintf("%x", sha256.Sum256(content)) != publishedContractSHA256 {
 		t.Fatal("patch changed the published machine contract; re-adjudicate compatibility")
@@ -221,8 +221,7 @@ func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.selective-evidence.diagnostic-route-oracle", Summary: "Add an owner-level regression oracle for receipt currentness/trust diagnostic identity at selective-gate-obligation-decision-input. It independently admits the child, then rejects foreign obligationId, requirementId, proofRouteRef or receiptId, and is linked to the existing selective-evidence requirement scenario. Isolated requirement/proof-route check-removal mutants now fail this oracle. Public command/JSON semantics and machine-contract bytes are unchanged; --version reports the new package version."},
-	{ChangeID: "proofkit.release.required-migration-render-oracle", Summary: "Keep required migration instructions covered independently of the current release's migration status. The generic release-note test requires two reviewed steps in order and detects omitted or reversed instructions. Release rendering behavior is unchanged."},
+	{ChangeID: "proofkit.release.native-intel-candidate", Summary: "Require native Intel macOS candidate qualification before publish readiness. A read-only macos-15-intel job downloads the original candidate archives, compares their binaries to a source reference build without repacking, and executes the installed npm and Python consumers. A typed workflow regression oracle rejects a missing or neutralized qualification barrier. Public command/JSON semantics and machine-contract bytes are unchanged; --version reports the new package version."},
 }
 
 var currentMigrationSteps = []string{}
@@ -245,7 +244,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.19.1",
+		"# @research-engineering/agentic-proofkit 0.19.2",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -267,7 +266,7 @@ func currentExpectedReleaseNotes() string {
 	lines = append(lines,
 		"## Platform Requirements",
 		"",
-		"- Published Darwin arm64 binaries are verified on macOS 15 or later by the required macos-15 CI job. Darwin x86_64 binaries are cross-built and packaged without native Intel macOS CI qualification. Both targets declare a macOS 13.0 minimum in Mach-O build metadata; macOS 13 and 14 are not executed or verified.",
+		"- Published Darwin arm64 binaries are verified on macOS 15 or later by the required macos-15 CI job. Release publication additionally requires the original candidate npm and Python carriers to pass native Intel macOS 15 qualification. Both targets declare a macOS 13.0 minimum in Mach-O build metadata; macOS 13 and 14 are not executed or verified.",
 		"- Published Linux package binaries and wheels target manylinux 2.17 or later on arm64 and x86_64; Linux wheel installation requires pip 20.3 or later.",
 		"- Python wheels require Python 3.11 or later.",
 		"- Windows is unsupported.",
@@ -291,7 +290,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.1",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.2",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -303,7 +302,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.19.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.0`.",
+		"- Pin npm consumers to the previous admitted version 0.19.1 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.1`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

@@ -1,17 +1,13 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.19.0",
-  "version": "0.19.1",
+  "previousVersion": "0.19.1",
+  "version": "0.19.2",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.selective-evidence.diagnostic-route-oracle",
-      "summary": "Add an owner-level regression oracle for receipt currentness/trust diagnostic identity at selective-gate-obligation-decision-input. It independently admits the child, then rejects foreign obligationId, requirementId, proofRouteRef or receiptId, and is linked to the existing selective-evidence requirement scenario. Isolated requirement/proof-route check-removal mutants now fail this oracle. Public command/JSON semantics and machine-contract bytes are unchanged; --version reports the new package version."
-    },
-    {
-      "changeId": "proofkit.release.required-migration-render-oracle",
-      "summary": "Keep required migration instructions covered independently of the current release's migration status. The generic release-note test requires two reviewed steps in order and detects omitted or reversed instructions. Release rendering behavior is unchanged."
+      "changeId": "proofkit.release.native-intel-candidate",
+      "summary": "Require native Intel macOS candidate qualification before publish readiness. A read-only macos-15-intel job downloads the original candidate archives, compares their binaries to a source reference build without repacking, and executes the installed npm and Python consumers. A typed workflow regression oracle rejects a missing or neutralized qualification barrier. Public command/JSON semantics and machine-contract bytes are unchanged; --version reports the new package version."
     }
   ],
   "migration": {
@@ -19,7 +15,7 @@
     "steps": []
   },
   "platformRequirements": [
-    "Published Darwin arm64 binaries are verified on macOS 15 or later by the required macos-15 CI job. Darwin x86_64 binaries are cross-built and packaged without native Intel macOS CI qualification. Both targets declare a macOS 13.0 minimum in Mach-O build metadata; macOS 13 and 14 are not executed or verified.",
+    "Published Darwin arm64 binaries are verified on macOS 15 or later by the required macos-15 CI job. Release publication additionally requires the original candidate npm and Python carriers to pass native Intel macOS 15 qualification. Both targets declare a macOS 13.0 minimum in Mach-O build metadata; macOS 13 and 14 are not executed or verified.",
     "Published Linux package binaries and wheels target manylinux 2.17 or later on arm64 and x86_64; Linux wheel installation requires pip 20.3 or later.",
     "Python wheels require Python 3.11 or later.",
     "Windows is unsupported."

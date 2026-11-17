@@ -11,6 +11,7 @@ reviewed source
   -> version tag
   -> release workflow
   -> candidate package evidence
+  -> native Intel macOS qualification of the original candidate archives
   -> deterministic SBOM, release manifest, and checksums
   -> public npm publish or exact existing-byte match
   -> optional PyPI publish or exact existing-byte match
@@ -171,6 +172,16 @@ authentication, or provider admission.
 
 The dry-run package identity proves candidate tarball shape only. It does not
 prove the bytes served by the registry after publish.
+
+Before publish readiness, the release workflow's read-only `candidate-intel`
+job requires native Intel macOS execution and downloads the original candidate
+artifact. It builds source reference binaries without repacking either archive,
+then the existing npm and Python verifiers compare the candidate binaries to
+those references and execute each installed native consumer. Failure or absence
+of this job prevents publication through the workflow. Its provider run is
+separate from local advisory receipts and post-publish registry identity.
+Intel macOS 15 execution does not establish execution on macOS 13 or 14, nor
+does this gate retroactively qualify earlier releases.
 
 Candidate preflight also admits the npm registry `latest` identity. For an
 unpublished candidate, `latest` must equal the change record
