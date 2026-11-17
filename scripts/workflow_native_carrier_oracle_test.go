@@ -62,17 +62,19 @@ func validateNativeIntelCandidateWorkflow(workflow githubWorkflow, manifestBytes
 	if !reflect.DeepEqual(needsList(workflow.Jobs["publish-readiness"].Needs), []string{"candidate", "candidate-intel"}) {
 		return fmt.Errorf("publish readiness must require both candidate and native Intel qualification")
 	}
-	var manifest struct {
-		Scripts map[string]string `json:"scripts"`
-	}
+	var manifest map[string]json.RawMessage
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
 		return fmt.Errorf("parse native consumer package manifest: %w", err)
 	}
-	if manifest.Scripts["python:verify"] != "go run ./internal/tools/pythonpackage verify" {
+	var scripts map[string]string
+	if err := json.Unmarshal(manifest["scripts"], &scripts); err != nil {
+		return fmt.Errorf("parse exact native consumer scripts: %w", err)
+	}
+	if scripts["python:verify"] != "go run ./internal/tools/pythonpackage verify" {
 		return fmt.Errorf("native Python consumer must execute the exact wheel verifier")
 	}
 	for _, key := range []string{"prepython:verify", "postpython:verify"} {
-		if _, present := manifest.Scripts[key]; present {
+		if _, present := scripts[key]; present {
 			return fmt.Errorf("native Python consumer must omit lifecycle hooks")
 		}
 	}
@@ -158,6 +160,16 @@ func TestReleaseNativeIntelCandidateAndBarrier(t *testing.T) {
 			}
 			if err := validateNativeIntelCandidateWorkflow(workflow, mutant); err == nil {
 				t.Fatal("neutralized Python consumer was admitted")
+			}
+		})
+	}
+	for name, raw := range map[string]string{
+		"case-shadowed scripts": `{"scripts":{"python:verify":"true"},"Scripts":{"python:verify":"go run ./internal/tools/pythonpackage verify"}}`,
+		"missing exact scripts": `{"Scripts":{"python:verify":"go run ./internal/tools/pythonpackage verify"}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := validateNativeIntelCandidateWorkflow(workflow, []byte(raw)); err == nil {
+				t.Fatal("case-distinct manifest field replaced the exact npm scripts owner")
 			}
 		})
 	}

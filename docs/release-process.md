@@ -13,12 +13,12 @@ reviewed source
   -> candidate package evidence
   -> candidate SBOM, release manifest, and checksums
   -> native Intel macOS qualification of the original candidate archives
-  -> public npm publish or exact existing-byte match
-  -> optional PyPI publish or exact existing-byte match
-  -> post-publish npm registry identity with publication mode
-  -> optional post-publish PyPI registry identity with publication mode
-  -> final registry-bound SBOM, release manifest, release notes, and checksums
-  -> root-only npm registry install and JSON CLI ABI proof
+  -> publish readiness
+  -> npm leg: publication or exact-byte match, registry identity,
+     root-only registry install, signatures and JSON CLI ABI proof
+     + optional parallel PyPI leg: publication or exact-byte match and registry identity
+  -> final registry-bound release manifest, release notes, and checksums
+     (the candidate SBOM is retained, not regenerated)
   -> optional checksum-bound GitHub artifact attestations
   -> GitHub Release archive assets and release evidence
 ```
