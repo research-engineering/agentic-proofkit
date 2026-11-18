@@ -9,21 +9,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/semversion"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packagemetadata"
 )
-
-type packageJSON struct {
-	Repository repositoryJSON `json:"repository"`
-	Version    string         `json:"version"`
-}
-
-type repositoryJSON struct {
-	Type string `json:"type"`
-	URL  string `json:"url"`
-}
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
@@ -51,17 +42,11 @@ func run(args []string) error {
 	default:
 		return fmt.Errorf("usage: go run ./internal/tools/packagebuild [all|current]")
 	}
-	if err := os.RemoveAll("dist"); err != nil {
-		return err
-	}
-	if err := os.RemoveAll("artifacts/platform"); err != nil {
-		return err
-	}
-	if err := os.MkdirAll("dist", 0o755); err != nil {
-		return err
-	}
 	version, _, err := packageMetadata()
 	if err != nil {
+		return err
+	}
+	if err := artifactfile.ResetDirectory(".", "dist"); err != nil {
 		return err
 	}
 	for _, target := range selectedTargets {
@@ -120,12 +105,7 @@ func verifyBuildTarget(target releaseplatform.Target, baselineKey, baseline stri
 }
 
 func packageMetadata() (string, string, error) {
-	file, err := os.Open("package.json")
-	if err != nil {
-		return "", "", err
-	}
-	defer file.Close()
-	manifest, err := admission.DecodeTypedJSON[packageJSON](file, 16<<20)
+	manifest, err := packagemetadata.Read(".")
 	if err != nil {
 		return "", "", err
 	}

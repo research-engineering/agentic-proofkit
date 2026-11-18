@@ -55,10 +55,7 @@ func buildPythonPackagesForTargets(selectedTargets []target) error {
 		return err
 	}
 	outputDir := filepath.Join("artifacts", "pypi")
-	if err := os.RemoveAll(outputDir); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+	if err := artifactfile.ResetDirectory(".", filepath.ToSlash(outputDir)); err != nil {
 		return err
 	}
 	records := make([]wheelRecord, 0, len(selectedTargets))

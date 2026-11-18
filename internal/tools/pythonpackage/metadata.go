@@ -10,6 +10,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packagemetadata"
 )
 
 var pep440VersionPattern = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)+(?:a[0-9]+|b[0-9]+|rc[0-9]+|\.post[0-9]+|\.dev[0-9]+)?$`)
@@ -35,17 +36,8 @@ func releaseTargets() []target {
 	return releaseplatform.Targets()
 }
 
-type packageJSON struct {
-	Description string         `json:"description"`
-	License     string         `json:"license"`
-	Name        string         `json:"name"`
-	Repository  repositoryJSON `json:"repository"`
-	Version     string         `json:"version"`
-}
-
-type repositoryJSON struct {
-	URL string `json:"url"`
-}
+type packageJSON = packagemetadata.Record
+type repositoryJSON = packagemetadata.Repository
 
 type packageSet struct {
 	ArtifactKind   string        `json:"artifactKind"`
@@ -70,7 +62,7 @@ type wheelRecord struct {
 }
 
 func readPackageJSON() (packageJSON, error) {
-	manifest, err := readAdmittedJSON[packageJSON](".", "package.json")
+	manifest, err := packagemetadata.Read(".")
 	if err != nil {
 		return packageJSON{}, err
 	}

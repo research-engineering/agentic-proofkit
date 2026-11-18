@@ -11842,6 +11842,250 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "scenarioId": "proofkit.supply-chain-quality.builder-output-boundary",
+      "witnessId": "proofkit.package-build.artifact-reset",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/artifactfile/directory_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestResetDirectoryRemovesOnlyOwnedContents",
+          "command": "go test ./internal/tools/artifactfile -run '^TestResetDirectoryRemovesOnlyOwnedContents$'"
+        },
+        {
+          "selector": "TestResetDirectoryCreatesMissingRoutes",
+          "command": "go test ./internal/tools/artifactfile -run '^TestResetDirectoryCreatesMissingRoutes$'"
+        },
+        {
+          "selector": "TestResetDirectoryPreflightRefusesUnsafeRoutesWithoutMutation",
+          "command": "go test ./internal/tools/artifactfile -run '^TestResetDirectoryPreflightRefusesUnsafeRoutesWithoutMutation$'"
+        },
+        {
+          "selector": "TestResetDirectoryRejectsNonNormalizedOrNonLocalPaths",
+          "command": "go test ./internal/tools/artifactfile -run '^TestResetDirectoryRejectsNonNormalizedOrNonLocalPaths$'"
+        },
+        {
+          "selector": "TestResetDirectoryRootSelection",
+          "command": "go test ./internal/tools/artifactfile -run '^TestResetDirectoryRootSelection$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "scenarioId": "proofkit.supply-chain-quality.builder-output-boundary",
+      "witnessId": "proofkit.package-build.go-output",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packagebuild/output_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGoBuilderOutputBoundaryOrdinaryAndRetiredCleanup",
+          "command": "go test ./internal/tools/packagebuild -run '^TestGoBuilderOutputBoundaryOrdinaryAndRetiredCleanup$'"
+        },
+        {
+          "selector": "TestGoBuilderOutputBoundaryRefusesDistBeforeChild",
+          "command": "go test ./internal/tools/packagebuild -run '^TestGoBuilderOutputBoundaryRefusesDistBeforeChild$'"
+        },
+        {
+          "selector": "TestGoBuilderOutputBoundaryMetadataPrecedesReset",
+          "command": "go test ./internal/tools/packagebuild -run '^TestGoBuilderOutputBoundaryMetadataPrecedesReset$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "scenarioId": "proofkit.supply-chain-quality.builder-output-boundary",
+      "witnessId": "proofkit.package-build.python-output",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/output_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPythonBuilderOutputBoundaryOrdinaryControl",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestPythonBuilderOutputBoundaryOrdinaryControl$'"
+        },
+        {
+          "selector": "TestPythonBuilderOutputBoundaryRefusesAliasesBeforeReset",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestPythonBuilderOutputBoundaryRefusesAliasesBeforeReset$'"
+        },
+        {
+          "selector": "TestPythonBuilderOutputBoundaryMetadataPrecedesReset",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestPythonBuilderOutputBoundaryMetadataPrecedesReset$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "scenarioId": "proofkit.supply-chain-quality.builder-output-boundary",
+      "witnessId": "proofkit.package-build.npm-handoff",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packagepack/pack_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPackCapturedHandoffAndPhaseFailures",
+          "command": "go test ./internal/tools/packagepack -run '^TestPackCapturedHandoffAndPhaseFailures$'"
+        },
+        {
+          "selector": "TestPackPreflightPreservesPriorOutputs",
+          "command": "go test ./internal/tools/packagepack -run '^TestPackPreflightPreservesPriorOutputs$'"
+        },
+        {
+          "selector": "TestPackArchiveAdmissionUsesCompleteCapturedBytes",
+          "command": "go test ./internal/tools/packagepack -run '^TestPackArchiveAdmissionUsesCompleteCapturedBytes$'"
+        },
+        {
+          "selector": "TestPackRejectsUnsafeChildIdentity",
+          "command": "go test ./internal/tools/packagepack -run '^TestPackRejectsUnsafeChildIdentity$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "scenarioId": "proofkit.supply-chain-quality.builder-output-boundary",
+      "witnessId": "proofkit.package-build.npm-modes",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packagepack/native_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPackPreservesPreparedOutputModes",
+          "command": "go test ./internal/tools/packagepack -run '^TestPackPreservesPreparedOutputModes$'"
+        },
+        {
+          "selector": "TestPackCaptureInclusiveBound",
+          "command": "go test ./internal/tools/packagepack -run '^TestPackCaptureInclusiveBound$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "scenarioId": "proofkit.supply-chain-quality.builder-output-boundary",
+      "witnessId": "proofkit.package-build.npm-native-hooks",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packagepack/native_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNPMPackDisablesLifecycleScripts",
+          "command": "go test ./internal/tools/packagepack -run '^TestNPMPackDisablesLifecycleScripts$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.package-gate"
+      ],
+      "environmentClasses": [
+        "local-go-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "scenarioId": "proofkit.supply-chain-quality.public-package-metadata",
+      "witnessId": "proofkit.package-build.common-metadata",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packagemetadata/metadata_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAdmitPreservesSelectedStringsAndAllowsOtherSourceFields",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestAdmitPreservesSelectedStringsAndAllowsOtherSourceFields$'"
+        },
+        {
+          "selector": "TestAdmitAllowsAbsentAndEmptySelectedStrings",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestAdmitAllowsAbsentAndEmptySelectedStrings$'"
+        },
+        {
+          "selector": "TestAdmitRejectsEveryNonStringSelectedType",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestAdmitRejectsEveryNonStringSelectedType$'"
+        },
+        {
+          "selector": "TestAdmitRejectsNonObjectRepository",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestAdmitRejectsNonObjectRepository$'"
+        },
+        {
+          "selector": "TestAdmitRejectsCaseVariantsAndDuplicates",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestAdmitRejectsCaseVariantsAndDuplicates$'"
+        },
+        {
+          "selector": "TestAdmitRejectsSecretLikeOriginalsWithFixedFieldErrors",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestAdmitRejectsSecretLikeOriginalsWithFixedFieldErrors$'"
+        },
+        {
+          "selector": "TestAdmitRejectsMalformedOrNonObjectJSONWithoutDisclosure",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestAdmitRejectsMalformedOrNonObjectJSONWithoutDisclosure$'"
+        },
+        {
+          "selector": "TestMetadataByteLimit",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestMetadataByteLimit$'"
+        },
+        {
+          "selector": "TestReadCapturesAndAdmitsPackageJSON",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestReadCapturesAndAdmitsPackageJSON$'"
+        },
+        {
+          "selector": "TestReadRejectsMissingNonRegularAndSymlinkSources",
+          "command": "go test ./internal/tools/packagemetadata -run '^TestReadRejectsMissingNonRegularAndSymlinkSources$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "scenarioId": "proofkit.supply-chain-quality.public-package-metadata",
+      "witnessId": "proofkit.package-build.npm-archive-metadata",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/metadata_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNPMVerifierMetadataBoundaryOrdinarySourceControl",
+          "command": "go test ./internal/tools/packageverify -run '^TestNPMVerifierMetadataBoundaryOrdinarySourceControl$'"
+        },
+        {
+          "selector": "TestNPMVerifierMetadataBoundaryRejectsCapturedSecrets",
+          "command": "go test ./internal/tools/packageverify -run '^TestNPMVerifierMetadataBoundaryRejectsCapturedSecrets$'"
+        },
+        {
+          "selector": "TestNPMVerifierMetadataBoundaryPreservesTypeAndUnknownKeyPolicy",
+          "command": "go test ./internal/tools/packageverify -run '^TestNPMVerifierMetadataBoundaryPreservesTypeAndUnknownKeyPolicy$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
     }
   ],
   "witnessCommands": [

@@ -204,7 +204,7 @@ func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.PreviousVersion != "0.19.2" || record.Version != "0.19.3" || record.ChangeClass != "compatible" || record.Migration.Required || len(record.Migration.Steps) != 0 {
+	if record.PreviousVersion != "0.19.3" || record.Version != "0.19.4" || record.ChangeClass != "compatible" || record.Migration.Required || len(record.Migration.Steps) != 0 {
 		t.Fatal("patch release must preserve the declared no-migration boundary")
 	}
 	content, err := os.ReadFile(filepath.Join(root, "proofkit", "cli-contract.v2.json"))
@@ -221,7 +221,7 @@ func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.ci.exact-script-owner", Summary: "Use one internal test-support reader for the exact lowercase scripts object across workflow and browser-evidence oracles, preserving final whole-object and command-value selection rather than case folding or map merging. Independent literal fixtures and bounded executions of the actual root, static collector, visual and accessibility-matrix test entrypoints reject case-shadowed no-op scripts. Exact parent verdicts exclude skipped or descendant tests. Existing command-body and lifecycle guards remain separate and unchanged. Production Go, workflow execution and public command/JSON semantics are unchanged; --version reports the new package version."},
+	{ChangeID: "proofkit.build.confined-output-and-metadata", Summary: "Confine the three repository package builders to their current owned output directories after source metadata admission, retire obsolete Go cleanup, and use one exact optional-string/null/type/secret boundary for six public metadata fields in source and captured npm archives. Pack once with lifecycle scripts disabled into private staging; admit complete captured archive topology, manifest and record identities, finish required cleanup, publish captured bytes/modes, and commit the report last. Internal builder inputs with null, wrong types or secret-like selected metadata are now refused with fixed diagnostics. The public CLI/JSON contract, supported targets and dependency versions are unchanged; --version reports the new package version."},
 }
 
 var currentMigrationSteps = []string{}
@@ -244,7 +244,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.19.3",
+		"# @research-engineering/agentic-proofkit 0.19.4",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -290,7 +290,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.3",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.4",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -302,7 +302,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.19.2 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.2`.",
+		"- Pin npm consumers to the previous admitted version 0.19.3 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.3`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

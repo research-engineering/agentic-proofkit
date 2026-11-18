@@ -123,8 +123,15 @@ func TestPackageMetadataRejectsAmbiguousPackageJSON(t *testing.T) {
 	}()
 
 	_, _, err = packageMetadata()
-	if err == nil || !strings.Contains(err.Error(), "duplicate object key") {
-		t.Fatalf("packageMetadata() error = %v, want duplicate-key rejection", err)
+	if err == nil || err.Error() != "package metadata JSON admission failed" {
+		t.Fatalf("packageMetadata() error = %v, want fixed JSON admission refusal", err)
+	}
+	if err := os.WriteFile("package.json", []byte(`{"version":"1.2.3","repository":{"url":"https://example.test/repo"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	version, repository, err := packageMetadata()
+	if err != nil || version != "1.2.3" || repository != "https://example.test/repo" {
+		t.Fatalf("unambiguous source control = %q, %q, %v", version, repository, err)
 	}
 }
 
