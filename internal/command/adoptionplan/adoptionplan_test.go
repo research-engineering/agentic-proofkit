@@ -11,9 +11,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
 	"github.com/research-engineering/agentic-proofkit/internal/command/repositoryinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
@@ -88,6 +90,49 @@ func TestBuildStackHintCannotChangeIntentTrustOrTasks(t *testing.T) {
 				t.Fatalf("intent %s stack %s changed repository inventory", intent, presetID)
 			}
 		}
+	}
+}
+
+func TestPlanRejectsReleasedGuidanceEvenWithResealedIdentity(t *testing.T) {
+	inventory := adoptionInventory(t)
+	for _, intent := range IntentValues() {
+		t.Run(intent, func(t *testing.T) {
+			plan, err := Build(intent, inventory, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			value := plan.JSONValue()
+			delete(value, "planId")
+			wantID, err := digest.StableJSONSHA256Ref(value)
+			if err != nil || plan.PlanID != wantID {
+				t.Fatalf("plan identity does not bind complete current content: %v", err)
+			}
+			encoded, err := stablejson.Marshal(plan.JSONValue())
+			if err != nil {
+				t.Fatal(err)
+			}
+			decoded, err := admission.DecodeJSON(bytes.NewReader(encoded), int64(len(encoded)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := AdmitOutput(decoded); err != nil {
+				t.Fatalf("fresh wire plan refused: %v", err)
+			}
+			plan.Packet.GuidanceReference = nativeevidenceguidance.Reference{
+				CommandID: "native-evidence-guidance", GuidanceID: "proofkit.native-evidence-guidance.v1", SlotCount: 22,
+				ContentSHA256: "sha256:366f2f37482506b8c94042dbd974469fceda79e2141b4faec61071893190b3ea",
+			}
+			stale, err := finalize(plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stale.PlanID == wantID {
+				t.Fatal("plan identity ignores guidance content")
+			}
+			if _, err := AdmitOutput(stale.JSONValue()); err == nil || !strings.Contains(err.Error(), "semantic owners") {
+				t.Fatalf("resealed stale guidance bypassed parent admission: %v", err)
+			}
+		})
 	}
 }
 

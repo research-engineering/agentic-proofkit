@@ -24,7 +24,7 @@ var slotFingerprints = [...]string{
 	"e214e2c6203145b94a43f0f4992fd3b40232f439acbd7a17ec3de22da73c9dd8",
 	"b9f830de4358ce0976002226a55d3e21479a7a02b8e6a6d28e2cba58d7222095",
 	"4b34d7c224d13957e333ca1aa7eaac1d5ff19b5b54dfc8fb436f6e20fc735e25",
-	"f45e880bad5b6f8e14a1d4f321ddcfdbefa83a143732c0b961459edb202c15e8",
+	"740442da2a07939422648942807c8fb6bc245aaec40dfc27bf34cefcdefad80c",
 	"f70d28729dc5589400787d398f868225f010bb159c822e57494ddfcffb3227af",
 	"04a4843479b418e0f09d45077136bbd07c7b58b8e3f7143d045796051fc0e46f",
 	"496e80d2cdfc106b0c36d9032ea2d3671c83ab670c363959f7cb30e6ed4fe3cc",
@@ -42,6 +42,7 @@ var slotFingerprints = [...]string{
 
 func TestGuidanceSlotPredicates(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.011574335775061433824546899357885119356867940503348997935121282242720220286828")
+	t.Run("required_witness_criterion", TestGuidanceRequiredWitnessCriterion)
 	guidance, err := Build()
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
