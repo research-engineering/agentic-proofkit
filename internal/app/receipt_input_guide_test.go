@@ -379,7 +379,7 @@ func TestNativeGuidanceDeliversRequiredWitnessCriterion(t *testing.T) {
 			t.Fatalf("guidance delivery failed: %v, %d, %q", args, code, diagnostic)
 		}
 		for _, clause := range []string{
-			"derive a nonempty required witness set from admitted obligations, not just observed tests",
+			"derive the complete nonempty required witness set from admitted obligations independently of discovery and execution outcomes",
 			"Before the ordinary verification route reports success",
 			"require actual qualified execution outcomes for every required witness",
 			"missing, unmatched, skipped, failed, unresolved or ambiguous outcomes cannot pass",

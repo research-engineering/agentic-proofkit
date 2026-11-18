@@ -17,7 +17,7 @@ func TestGuidanceRequiredWitnessCriterion(t *testing.T) {
 	for _, clause := range []string{
 		"Select one stable rule ID and deterministic observation mapping.",
 		"For a required-native-test claim",
-		"derive a nonempty required witness set from admitted obligations, not just observed tests",
+		"derive the complete nonempty required witness set from admitted obligations independently of discovery and execution outcomes",
 	} {
 		t.Run(clause, func(t *testing.T) {
 			if !strings.Contains(oracle.RequiredConsumerDecision, clause) {

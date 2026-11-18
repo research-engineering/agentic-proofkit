@@ -110,7 +110,7 @@
       "inventoryRef": "sha256:063e490f9d731f154280bdfe0da2b2ff60092243b014b22ded0e31dd419a3e9b",
       "nativeEvidenceGuidance": {
         "commandId": "native-evidence-guidance",
-        "contentSha256": "sha256:fea99a3c026c792f717d2fd02eabfdb1cac17fdb6c8d9667d4a979ec37758909",
+        "contentSha256": "sha256:72f2f5dfcffc1007bef5e1be0cbecdb8b50949bea591a71365e1651393d8e1ab",
         "guidanceId": "proofkit.native-evidence-guidance.v1",
         "slotCount": 22
       },
@@ -201,7 +201,7 @@
       "taskCount": 3,
       "unrecognizedRootEntryCount": 0
     },
-    "planId": "sha256:6a62c26ca94973f0312049a140a312741d99c38afb256cb5d8174869b5ecc7ba"
+    "planId": "sha256:0525ec201d38140532c733a23f496144d47b74cb617e18138d7b537494ef9e76"
   },
   "testEvidenceInventory": {
     "path": "proofkit/test-evidence-inventory.json",
