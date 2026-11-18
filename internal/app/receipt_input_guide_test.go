@@ -370,19 +370,32 @@ func TestNativeTraceabilityGuideIsLazyAndCarrierBound(t *testing.T) {
 	}
 }
 
-func TestNativeGuidanceDefaultBytesMatchReleasedBaseline(t *testing.T) {
-	// Independent installed v0.14.13 outputs, from source cde95855deb6.
-	for _, item := range []struct {
-		args   []string
-		bytes  int
-		digest string
-	}{
-		{[]string{"native-evidence-guidance"}, 9877, "366f2f37482506b8c94042dbd974469fceda79e2141b4faec61071893190b3ea"},
-		{[]string{"native-evidence-guidance", "--format", "text"}, 5712, "e7e69bd94b4f70962621f0cce57b872c306d9a811ee355b5135d3aec1a3a28c2"},
+func TestNativeGuidanceDeliversRequiredWitnessCriterion(t *testing.T) {
+	for _, args := range [][]string{
+		{"native-evidence-guidance"}, {"native-evidence-guidance", "--format", "text"},
 	} {
-		code, output, diagnostic := executeAgentWorkflowCLI(t, item.args, panicReader{}, PresentationCapabilities{})
-		if code != 0 || diagnostic != "" || len(output) != item.bytes || fmt.Sprintf("%x", sha256.Sum256([]byte(output))) != item.digest {
-			t.Fatalf("default guidance differs from released bytes: %v", item.args)
+		code, output, diagnostic := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{})
+		if code != 0 || diagnostic != "" {
+			t.Fatalf("guidance delivery failed: %v, %d, %q", args, code, diagnostic)
+		}
+		for _, clause := range []string{
+			"derive the complete nonempty required witness set from admitted obligations independently of discovery and execution outcomes",
+			"Before the ordinary verification route reports success",
+			"require actual qualified execution outcomes for every required witness",
+			"missing, unmatched, skipped, failed, unresolved or ambiguous outcomes cannot pass",
+			"Owner-admitted not_applicable is a separate disposition, never a passed required witness",
+		} {
+			if !strings.Contains(output, clause) {
+				t.Fatalf("%v omits %q", args, clause)
+			}
+		}
+	}
+	for _, args := range [][]string{
+		{"native-evidence-guidance", "--help"}, {"native-evidence-guidance", "-h"}, {"help", "native-evidence-guidance"},
+	} {
+		code, output, diagnostic := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{})
+		if code != 0 || diagnostic != "" || !strings.Contains(output, "Apply oracle_rule before the ordinary verification route reports success,\n     not only in a post-hoc checker.") {
+			t.Fatalf("help omits normal-route placement: %v, %d, %q", args, code, diagnostic)
 		}
 	}
 }

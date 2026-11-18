@@ -198,14 +198,14 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 	assertCurrentChangeRecordNotesRejected(t, "appended duplicate change section", record, notes+"## Breaking Contract Changes\n\n- `proofkit.surplus.section`: Surplus section.\n")
 }
 
-func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
+func TestCurrentGuidanceReleaseDeclaresReferenceInvalidation(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
 	record, err := Read(filepath.Join(root, RecordPath))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.PreviousVersion != "0.19.3" || record.Version != "0.19.4" || record.ChangeClass != "compatible" || record.Migration.Required || len(record.Migration.Steps) != 0 {
-		t.Fatal("patch release must preserve the declared no-migration boundary")
+	if record.PreviousVersion != "0.19.4" || record.Version != "0.20.0" || record.ChangeClass != "breaking" || !record.Migration.Required || len(record.Migration.Steps) != 3 {
+		t.Fatal("guidance content invalidation requires a declared pre-1.0 minor migration")
 	}
 	content, err := os.ReadFile(filepath.Join(root, "proofkit", "cli-contract.v2.json"))
 	if err != nil {
@@ -213,18 +213,24 @@ func TestCurrentPatchPreservesPublishedMachineContract(t *testing.T) {
 	}
 	// Independently read back from the published 0.19.1 npm contract resource.
 	const publishedContractSHA256 = "c015e44e48cd15871abeae0d43e24938fd0b74968b66f736821de5576efb8935"
-	if fmt.Sprintf("%x", sha256.Sum256(content)) != publishedContractSHA256 {
-		t.Fatal("patch changed the published machine contract; re-adjudicate compatibility")
+	if fmt.Sprintf("%x", sha256.Sum256(content)) == publishedContractSHA256 {
+		t.Fatal("changed guidance literal schemas still use the prior contract bytes")
 	}
 }
 
-var currentBreakingChanges = []Change{}
-
-var currentAdditions = []Change{
-	{ChangeID: "proofkit.build.confined-output-and-metadata", Summary: "Confine the three repository package builders to their current owned output directories after source metadata admission, retire obsolete Go cleanup, and use one exact optional-string/null/type/secret boundary for six public metadata fields in source and captured npm archives. Pack once with lifecycle scripts disabled into private staging; admit complete captured archive topology, manifest and record identities, finish required cleanup, publish captured bytes/modes, and commit the report last. Internal builder inputs with null, wrong types or secret-like selected metadata are now refused with fixed diagnostics. The public CLI/JSON contract, supported targets and dependency versions are unchanged; --version reports the new package version."},
+var currentBreakingChanges = []Change{
+	{ChangeID: "proofkit.native-evidence.required-witness-currentness", Summary: "The oracle_rule guidance now explicitly requires a nonempty obligation-derived witness set and actual qualified outcomes before ordinary verification success for required-native-test claims. The protocol shape and GuidanceID remain v1; the mandatory complete-content digest and derived literal schemas change. Prior guidance references and adoption plans embedding them are stale and must be regenerated and reviewed, not merely rehashed. This does not execute tests or enforce a consumer oracle."},
 }
 
-var currentMigrationSteps = []string{}
+var currentAdditions = []Change{
+	{ChangeID: "proofkit.native-evidence.ordinary-route-guidance", Summary: "Expose required-witness accounting in canonical JSON and plain text without another documentation lookup. Lazy native traceability help points to the same oracle_rule before ordinary-route success; no new command, slot, runner, dependency or consumer policy is added. The other 21 guidance slots, applicability classes, public keys, supported platforms and dependency versions are unchanged."},
+}
+
+var currentMigrationSteps = []string{
+	"Read native-evidence-guidance with the new installed version and review the conditional oracle_rule obligation under consumer authority.",
+	"Regenerate adoption plans and their dependent materialization requests from current repository inputs. Do not replace a digest in an old plan to imply a new review or execution.",
+	"For a claim requiring native tests, confirm that the ordinary verification route checks obligation-derived required witnesses and actual qualified outcomes before success; process exit zero alone is insufficient.",
+}
 
 func validateCurrentChangeRecord(record Record, notes string) error {
 	if !slices.Equal(record.BreakingChanges, currentBreakingChanges) {
@@ -244,7 +250,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.19.4",
+		"# @research-engineering/agentic-proofkit 0.20.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -262,7 +268,11 @@ func currentExpectedReleaseNotes() string {
 	if len(currentAdditions) == 0 {
 		lines = append(lines, "- None.")
 	}
-	lines = append(lines, "", "## Migration", "", "No consumer migration is required.", "")
+	lines = append(lines, "", "## Migration", "", "Migration is required:", "")
+	for _, step := range currentMigrationSteps {
+		lines = append(lines, "- "+step)
+	}
+	lines = append(lines, "")
 	lines = append(lines,
 		"## Platform Requirements",
 		"",
@@ -290,7 +300,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.4",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.20.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -302,7 +312,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.19.3 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.3`.",
+		"- Pin npm consumers to the previous admitted version 0.19.4 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.19.4`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

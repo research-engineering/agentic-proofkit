@@ -110,7 +110,7 @@
       "inventoryRef": "sha256:063e490f9d731f154280bdfe0da2b2ff60092243b014b22ded0e31dd419a3e9b",
       "nativeEvidenceGuidance": {
         "commandId": "native-evidence-guidance",
-        "contentSha256": "sha256:366f2f37482506b8c94042dbd974469fceda79e2141b4faec61071893190b3ea",
+        "contentSha256": "sha256:72f2f5dfcffc1007bef5e1be0cbecdb8b50949bea591a71365e1651393d8e1ab",
         "guidanceId": "proofkit.native-evidence-guidance.v1",
         "slotCount": 22
       },
@@ -152,7 +152,6 @@
       "Selecting code-baseline records an explicit caller declaration; it does not independently prove that current code is correct or suitable as product truth.",
       "Stack hints are optional non-authoritative suggestions and cannot change the selected source-trust intent."
     ],
-    "planId": "sha256:f8b07178d629e6b91125b8fe4b2fabc938ea1d1999a9ad4719e0922b02bdb964",
     "planKind": "proofkit.adoption-plan",
     "repositoryInventory": {
       "entries": [
@@ -201,7 +200,8 @@
       "selectedStackPreset": null,
       "taskCount": 3,
       "unrecognizedRootEntryCount": 0
-    }
+    },
+    "planId": "sha256:0525ec201d38140532c733a23f496144d47b74cb617e18138d7b537494ef9e76"
   },
   "testEvidenceInventory": {
     "path": "proofkit/test-evidence-inventory.json",
