@@ -1209,6 +1209,10 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestVerifyWheelContentsRejectsOversizedEntryBeforeDecompression",
 			},
 		},
+		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.python-wheel-zip-version"}: {
+			witnessPath: "internal/tools/pythonpackage/wheel_zip_version_test.go",
+			selectors:   []string{"TestWheelDeflateReaderVersions"},
+		},
 		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.wrapper-platform-bijection"}: {
 			witnessPath: "internal/tools/packagebuild/main_test.go",
 			selectors:   []string{"TestWrapperScriptRoutesEveryReleasePlatformTarget"},

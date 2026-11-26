@@ -1,0 +1,80 @@
+package main
+
+import (
+	"archive/zip"
+	"encoding/binary"
+	"errors"
+)
+
+// PKWARE APPNOTE 4.4.3 requires ZIP 2.0 for a ZIP32 Deflate entry.
+const zipDeflateReaderVersion = 20
+
+// archive/zip exposes the central version but does not verify the local one.
+// Follow the central records' offsets in the wheel writer's ZIP32 layout.
+func verifyWheelZIPVersions(content []byte, files []*zip.File) error {
+	const (
+		endSize     = 22
+		centralSize = 46
+		localSize   = 30
+	)
+	invalidLayout := errors.New("invalid wheel ZIP32 header layout")
+	end := len(content) - endSize
+	if end < 0 {
+		return invalidLayout
+	}
+	footer := content[end:]
+	// Match archive/zip to this exact single-disk directory. In particular,
+	// the bounded record count cannot be the ZIP64 count sentinel.
+	if binary.LittleEndian.Uint32(footer) != 0x06054b50 ||
+		binary.LittleEndian.Uint32(footer[4:]) != 0 ||
+		int(binary.LittleEndian.Uint16(footer[8:])) != len(files) ||
+		int(binary.LittleEndian.Uint16(footer[10:])) != len(files) ||
+		binary.LittleEndian.Uint16(footer[20:]) != 0 {
+		return invalidLayout
+	}
+	start := int64(binary.LittleEndian.Uint32(footer[16:]))
+	size := int64(binary.LittleEndian.Uint32(footer[12:]))
+	if start+size != int64(end) {
+		return invalidLayout
+	}
+	directory := content[start:end]
+	for _, file := range files {
+		if len(directory) < centralSize || binary.LittleEndian.Uint32(directory) != 0x02014b50 {
+			return invalidLayout
+		}
+		if file.Method != zip.Deflate || file.ReaderVersion != zipDeflateReaderVersion {
+			return errors.New("invalid central ZIP extraction version or compression method")
+		}
+		local := int64(binary.LittleEndian.Uint32(directory[42:]))
+		if local+localSize > start || binary.LittleEndian.Uint32(content[local:]) != 0x04034b50 {
+			return invalidLayout
+		}
+		if binary.LittleEndian.Uint16(content[local+4:]) != zipDeflateReaderVersion ||
+			binary.LittleEndian.Uint16(content[local+8:]) != zip.Deflate {
+			return errors.New("invalid local ZIP extraction version or compression method")
+		}
+		// With no data descriptor, both headers carry the resolved sizes
+		// directly. The caller's bounds exclude the ZIP64 size sentinel.
+		if !wheelZIP32SizesMatch(directory[20:28], file) ||
+			!wheelZIP32SizesMatch(content[local+18:local+26], file) {
+			return errors.New("wheel ZIP32 entry sizes must match decoded sizes in both headers")
+		}
+		recordSize := centralSize +
+			int(binary.LittleEndian.Uint16(directory[28:])) +
+			int(binary.LittleEndian.Uint16(directory[30:])) +
+			int(binary.LittleEndian.Uint16(directory[32:]))
+		if recordSize > len(directory) {
+			return invalidLayout
+		}
+		directory = directory[recordSize:]
+	}
+	if len(directory) != 0 {
+		return invalidLayout
+	}
+	return nil
+}
+
+func wheelZIP32SizesMatch(fields []byte, file *zip.File) bool {
+	return uint64(binary.LittleEndian.Uint32(fields)) == file.CompressedSize64 &&
+		uint64(binary.LittleEndian.Uint32(fields[4:])) == file.UncompressedSize64
+}

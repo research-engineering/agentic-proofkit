@@ -289,6 +289,7 @@ func writeWheelTo(file io.WriteCloser, entries []wheelEntry) (err error) {
 		header := &zip.FileHeader{
 			Name:               entry.Path,
 			Method:             zip.Deflate,
+			ReaderVersion:      zipDeflateReaderVersion,
 			Modified:           time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC),
 			CRC32:              crc32.ChecksumIEEE(entry.Content),
 			CompressedSize64:   uint64(len(compressed)),
