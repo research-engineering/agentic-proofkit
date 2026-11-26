@@ -216,6 +216,9 @@ func verifyWheelArchive(path string, content []byte, manifest packageJSON, targe
 		}
 		entries[file.Name] = file
 	}
+	if err := verifyWheelZIPVersions(content, reader.File); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
 	distInfo := distInfoDir(manifest.Version)
 	licensePath := distInfo + "/licenses/" + licenseFilename
 	required := []string{

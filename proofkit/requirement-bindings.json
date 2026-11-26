@@ -5445,6 +5445,21 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.python-wheel-zip-version",
+      "witnessId": "proofkit.python-package.wheel-zip-version-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/wheel_zip_version_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWheelDeflateReaderVersions",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestWheelDeflateReaderVersions$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "scenarioId": "proofkit.supply-chain-quality.wrapper-platform-bijection",
       "witnessId": "proofkit.package-build.wrapper-platform-bijection-falsifier",
       "witnessKind": "contract",

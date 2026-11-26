@@ -1,27 +1,18 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.19.4",
-  "version": "0.20.0",
-  "changeClass": "breaking",
-  "breakingChanges": [
-    {
-      "changeId": "proofkit.native-evidence.required-witness-currentness",
-      "summary": "The oracle_rule guidance now explicitly requires a nonempty obligation-derived witness set and actual qualified outcomes before ordinary verification success for required-native-test claims. The protocol shape and GuidanceID remain v1; the mandatory complete-content digest and derived literal schemas change. Prior guidance references and adoption plans embedding them are stale and must be regenerated and reviewed, not merely rehashed. This does not execute tests or enforce a consumer oracle."
-    }
-  ],
+  "previousVersion": "0.20.0",
+  "version": "0.20.1",
+  "changeClass": "compatible",
+  "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.native-evidence.ordinary-route-guidance",
-      "summary": "Expose required-witness accounting in canonical JSON and plain text without another documentation lookup. Lazy native traceability help points to the same oracle_rule before ordinary-route success; no new command, slot, runner, dependency or consumer policy is added. The other 21 guidance slots, applicability classes, public keys, supported platforms and dependency versions are unchanged."
+      "changeId": "proofkit.python-wheel.deflate-reader-version",
+      "summary": "Correct the ZIP extraction version of every Deflate wheel entry to 2.0 in both headers and verify those fields before packaging is qualified. Users pinned to 0.20.0 should reinstall 0.20.1 for corrected wheels. The CLI contract, supported platforms and dependency versions are unchanged."
     }
   ],
   "migration": {
-    "required": true,
-    "steps": [
-      "Read native-evidence-guidance with the new installed version and review the conditional oracle_rule obligation under consumer authority.",
-      "Regenerate adoption plans and their dependent materialization requests from current repository inputs. Do not replace a digest in an old plan to imply a new review or execution.",
-      "For a claim requiring native tests, confirm that the ordinary verification route checks obligation-derived required witnesses and actual qualified outcomes before success; process exit zero alone is insufficient."
-    ]
+    "required": false,
+    "steps": []
   },
   "platformRequirements": [
     "Published Darwin arm64 binaries are verified on macOS 15 or later by the required macos-15 CI job. Release publication additionally requires the original candidate npm and Python carriers to pass native Intel macOS 15 qualification. Both targets declare a macOS 13.0 minimum in Mach-O build metadata; macOS 13 and 14 are not executed or verified.",
