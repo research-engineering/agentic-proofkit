@@ -53,6 +53,12 @@ func verifyWheelZIPVersions(content []byte, files []*zip.File) error {
 			binary.LittleEndian.Uint16(content[local+8:]) != zip.Deflate {
 			return errors.New("invalid local ZIP extraction version or compression method")
 		}
+		// With no data descriptor, both headers carry the resolved sizes
+		// directly. The caller's bounds exclude the ZIP64 size sentinel.
+		if !wheelZIP32SizesMatch(directory[20:28], file) ||
+			!wheelZIP32SizesMatch(content[local+18:local+26], file) {
+			return errors.New("wheel ZIP32 entry sizes must match decoded sizes in both headers")
+		}
 		recordSize := centralSize +
 			int(binary.LittleEndian.Uint16(directory[28:])) +
 			int(binary.LittleEndian.Uint16(directory[30:])) +
@@ -66,4 +72,9 @@ func verifyWheelZIPVersions(content []byte, files []*zip.File) error {
 		return invalidLayout
 	}
 	return nil
+}
+
+func wheelZIP32SizesMatch(fields []byte, file *zip.File) bool {
+	return uint64(binary.LittleEndian.Uint32(fields)) == file.CompressedSize64 &&
+		uint64(binary.LittleEndian.Uint32(fields[4:])) == file.UncompressedSize64
 }

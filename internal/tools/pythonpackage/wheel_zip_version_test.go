@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -68,6 +69,29 @@ func TestWheelDeflateReaderVersions(t *testing.T) {
 		binary.LittleEndian.PutUint16(mutant[end+8:], 0)
 		if err := verify(mutant); err == nil || !strings.Contains(err.Error(), "invalid wheel ZIP32 header layout") {
 			t.Fatalf("verify inconsistent per-disk record count: %v", err)
+		}
+	})
+	t.Run("local size does not use ZIP32", func(t *testing.T) {
+		mutant := bytes.Clone(wheel)
+		binary.LittleEndian.PutUint32(mutant[local+18:], ^uint32(0))
+		if err := verify(mutant); err == nil || !strings.Contains(err.Error(), "wheel ZIP32 entry sizes") {
+			t.Fatalf("verify local size encoding: %v", err)
+		}
+	})
+	t.Run("equal decoded size does not justify ZIP64", func(t *testing.T) {
+		mutant := bytes.Clone(wheel)
+		record := mutant[second:]
+		compressedSize := binary.LittleEndian.Uint32(record[20:])
+		nameLength := int(binary.LittleEndian.Uint16(record[28:]))
+		extraLength := binary.LittleEndian.Uint16(record[30:])
+		extra := binary.LittleEndian.AppendUint64([]byte{1, 0, 8, 0}, uint64(compressedSize))
+		binary.LittleEndian.PutUint32(record[20:], ^uint32(0))
+		binary.LittleEndian.PutUint16(record[30:], extraLength+uint16(len(extra)))
+		directorySize := binary.LittleEndian.Uint32(mutant[end+12:])
+		binary.LittleEndian.PutUint32(mutant[end+12:], directorySize+uint32(len(extra)))
+		mutant = slices.Insert(mutant, second+46+nameLength, extra...)
+		if err := verify(mutant); err == nil || !strings.Contains(err.Error(), "wheel ZIP32 entry sizes") {
+			t.Fatalf("verify central size encoding: %v", err)
 		}
 	})
 }
