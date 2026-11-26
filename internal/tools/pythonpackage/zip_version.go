@@ -19,11 +19,21 @@ func verifyWheelZIPVersions(content []byte, files []*zip.File) error {
 	)
 	invalidLayout := errors.New("invalid wheel ZIP32 header layout")
 	end := len(content) - endSize
-	if end < 0 || binary.LittleEndian.Uint32(content[end:]) != 0x06054b50 {
+	if end < 0 {
 		return invalidLayout
 	}
-	start := int64(binary.LittleEndian.Uint32(content[end+16:]))
-	size := int64(binary.LittleEndian.Uint32(content[end+12:]))
+	footer := content[end:]
+	// Match archive/zip to this exact single-disk directory. In particular,
+	// the bounded record count cannot be the ZIP64 count sentinel.
+	if binary.LittleEndian.Uint32(footer) != 0x06054b50 ||
+		binary.LittleEndian.Uint32(footer[4:]) != 0 ||
+		int(binary.LittleEndian.Uint16(footer[8:])) != len(files) ||
+		int(binary.LittleEndian.Uint16(footer[10:])) != len(files) ||
+		binary.LittleEndian.Uint16(footer[20:]) != 0 {
+		return invalidLayout
+	}
+	start := int64(binary.LittleEndian.Uint32(footer[16:]))
+	size := int64(binary.LittleEndian.Uint32(footer[12:]))
 	if start+size != int64(end) {
 		return invalidLayout
 	}

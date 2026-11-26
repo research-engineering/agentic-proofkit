@@ -22,7 +22,8 @@ func TestWheelDeflateReaderVersions(t *testing.T) {
 
 	// Resolve the second entry's local header from its central directory
 	// record, not by searching for signatures in compressed data.
-	zip32End := wheel[len(wheel)-22:]
+	end := len(wheel) - 22
+	zip32End := wheel[end:]
 	if binary.LittleEndian.Uint32(zip32End) != 0x06054b50 {
 		t.Fatal("fixture must end with an unadorned ZIP32 directory footer")
 	}
@@ -62,4 +63,11 @@ func TestWheelDeflateReaderVersions(t *testing.T) {
 			}
 		})
 	}
+	t.Run("inconsistent directory footer", func(t *testing.T) {
+		mutant := bytes.Clone(wheel)
+		binary.LittleEndian.PutUint16(mutant[end+8:], 0)
+		if err := verify(mutant); err == nil || !strings.Contains(err.Error(), "invalid wheel ZIP32 header layout") {
+			t.Fatalf("verify inconsistent per-disk record count: %v", err)
+		}
+	})
 }
